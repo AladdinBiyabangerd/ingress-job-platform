@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { hrefFor, languageLabel, text } from "../lib/copy";
 import { Shell } from "./shell";
 
+const PAGE_SIZE = 20;
 const REMOTE = /remote|uzaqdan|удал[её]н/i;
 const AZ = /[əğıöüşçƏĞİÖÜŞÇ]/;
 const RU = /[а-яёА-ЯЁ]/;
@@ -204,6 +205,7 @@ export function Home({ locale, jobs, error }) {
   const [sort, setSort] = useState("newest");
   const [salaryMin, setSalaryMin] = useState("");
   const [salaryMax, setSalaryMax] = useState("");
+  const [page, setPage] = useState(1);
 
   const languageOptions = useMemo(() => {
     const order = ["az", "en", "ru", "tr", "es", "uk", "de", "fr", "pt"];
@@ -272,6 +274,17 @@ export function Home({ locale, jobs, error }) {
     return sorted;
   }, [jobs, query, company, cities, sources, companies, languages, inDescription, withCity, remote, when, sort, salaryMin, salaryMax, t.lang]);
 
+  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return visible.slice(start, start + PAGE_SIZE);
+  }, [visible, currentPage]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, company, cities, sources, companies, languages, inDescription, withCity, remote, when, sort, salaryMin, salaryMax]);
+
   function clear() {
     setQuery("");
     setCompany("");
@@ -286,6 +299,15 @@ export function Home({ locale, jobs, error }) {
     setSort("newest");
     setSalaryMin("");
     setSalaryMax("");
+    setPage(1);
+  }
+
+  function goToPage(next) {
+    const clamped = Math.max(1, Math.min(totalPages, next));
+    setPage(clamped);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }
 
   return (
@@ -320,7 +342,7 @@ export function Home({ locale, jobs, error }) {
           <p className="count">{t.count(visible.length)}</p>
           {visible.length === 0 && !error ? <p className="job-empty">{t.empty}</p> : null}
           <div className="job-list">
-            {visible.map((job) => {
+            {pageItems.map((job) => {
               const when = postedOn(job.created_at, locale);
               const place = job.remote ? t.placeRemote : (job.city || t.noCity);
               return (
@@ -349,6 +371,27 @@ export function Home({ locale, jobs, error }) {
               );
             })}
           </div>
+          {visible.length > PAGE_SIZE ? (
+            <nav className="pager" aria-label={t.pageOf(currentPage, totalPages)}>
+              <button
+                type="button"
+                className="pager-btn"
+                disabled={currentPage <= 1}
+                onClick={() => goToPage(currentPage - 1)}
+              >
+                {t.pagePrev}
+              </button>
+              <span className="pager-status">{t.pageOf(currentPage, totalPages)}</span>
+              <button
+                type="button"
+                className="pager-btn"
+                disabled={currentPage >= totalPages}
+                onClick={() => goToPage(currentPage + 1)}
+              >
+                {t.pageNext}
+              </button>
+            </nav>
+          ) : null}
         </section>
         <aside className="filter-panel">
           <div className="filter-head">

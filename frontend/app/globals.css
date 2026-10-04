@@ -1218,6 +1218,50 @@ textarea { min-height: 120px; resize: vertical; }
   margin-top: 12px;
 }
 
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 4px 0 2px;
+}
+
+.pager-btn {
+  min-height: 40px;
+  border: 1px solid #dfe1e5;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #001FFF;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.pager-btn:hover:not(:disabled),
+.pager-btn:focus-visible:not(:disabled) {
+  background: #eaefff;
+  border-color: #cbd5ff;
+}
+
+.pager-btn:focus-visible {
+  outline: 2px solid #001FFF;
+  outline-offset: 2px;
+}
+
+.pager-btn:disabled {
+  color: #9aa1ab;
+  cursor: default;
+}
+
+.pager-status {
+  color: #656b75;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
 .job-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
