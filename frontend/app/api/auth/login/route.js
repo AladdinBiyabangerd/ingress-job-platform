@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { cookie, noStore, oidcConfig, safeReturnTo } from "../../../../lib/server/oidc";
+import { cookie, noStore, oidcConfig, readCookie, safeReturnTo } from "../../../../lib/server/oidc";
 
 export const runtime = "nodejs";
 
@@ -39,6 +39,9 @@ export async function GET(request) {
   }
   if (!saved.ok) return noStore(Response.json({ error: "auth_unavailable" }, { status: 503 }));
 
+  const alreadySignedIn = Boolean(
+    readCookie(request, "job_access_token") || readCookie(request, "job_refresh_token"),
+  );
   const params = new URLSearchParams({
     response_type: "code",
     client_id: config.clientId,
@@ -48,9 +51,13 @@ export async function GET(request) {
     nonce,
     code_challenge: challenge,
     code_challenge_method: "S256",
-    prompt: "login",
   });
+  // A job session already belongs to an Academy account. Keep that session
+  // and pass the role intent; do not force a second registration.
+  // New visitors still send prompt=login and land on the join flow.
+  if (!(intent && alreadySignedIn)) params.set("prompt", "login");
   if (intent) params.set("registration_intent", intent);
+  if (intent && alreadySignedIn) params.set("existing_account", "1");
 
   const response = new Response(null, {
     status: 302,
