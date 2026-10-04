@@ -247,7 +247,12 @@ export async function authorizedApi(request, path, init = {}) {
     return { upstream: new Response(null, { status: 503 }), setCookies: [] };
   }
   if (!refreshed.ok) {
-    return { upstream: new Response(null, { status: 401 }), setCookies: clearAuthCookies(request) };
+    // 401 = refresh token rejected (invalid_grant). 5xx = Academy/upstream
+    // blip — keep cookies so a temporary outage does not force re-login.
+    if (refreshed.status === 401) {
+      return { upstream: new Response(null, { status: 401 }), setCookies: clearAuthCookies(request) };
+    }
+    return { upstream: new Response(null, { status: 503 }), setCookies: [] };
   }
   const data = await refreshed.json();
   const setCookies = [cookie("job_access_token", data.access_token, clampAge(data.expires_in, 900, 3600))];

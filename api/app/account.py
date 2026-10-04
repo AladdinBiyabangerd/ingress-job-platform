@@ -131,6 +131,23 @@ def _remember_login_identity(id_token, subject: str) -> None:
         remember_contact_email(subject, found[1])
 
 
+_GRANT_ERRORS = frozenset({"invalid_grant", "invalid_token"})
+
+
+def _oauth_error(payload: object) -> str | None:
+    if not isinstance(payload, dict):
+        return None
+    error = payload.get("error")
+    return error if isinstance(error, str) and error in _GRANT_ERRORS else None
+
+
+def _reject_grant(exc: BaseException | None = None) -> HTTPException:
+    error = HTTPException(status_code=401, detail="Sessiya yenilənmədi")
+    if exc is not None:
+        raise error from exc
+    raise error
+
+
 def _post_form(body: dict) -> dict:
     data = urllib.parse.urlencode(body).encode()
     request = urllib.request.Request(
@@ -147,14 +164,27 @@ def _post_form(body: dict) -> dict:
         with urllib.request.urlopen(request, timeout=5) as response:
             raw = response.read(65536)
             payload = json.loads(raw.decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        try:
+            err_raw = exc.read(65536)
+            err_payload = json.loads(err_raw.decode("utf-8")) if err_raw else {}
+        except (json.JSONDecodeError, UnicodeError, TypeError):
+            err_payload = {}
+        if _oauth_error(err_payload):
+            _reject_grant(exc)
+        raise HTTPException(status_code=502, detail="Academy token mübadiləsi alınmadı") from exc
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, UnicodeError) as exc:
         raise HTTPException(status_code=502, detail="Academy token mübadiləsi alınmadı") from exc
     if not isinstance(payload, dict):
         raise HTTPException(status_code=502, detail="Academy token mübadiləsi alınmadı")
+    if _oauth_error(payload):
+        _reject_grant()
     return payload
 
 
 def _tokens_from(payload: dict, *, require_refresh: bool) -> dict:
+    if _oauth_error(payload):
+        _reject_grant()
     access = payload.get("access_token")
     if not isinstance(access, str) or not access:
         raise HTTPException(status_code=502, detail="Academy token mübadiləsi alınmadı")
