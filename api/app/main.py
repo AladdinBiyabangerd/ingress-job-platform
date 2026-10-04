@@ -60,7 +60,7 @@ class RequestTrace:
                 current.set_status(Status(StatusCode.ERROR))
 
 
-app = FastAPI(title="ingress-job", version="0.0.1")
+app = FastAPI(title="Ingress Job", version="0.0.1")
 app.add_middleware(RequestTrace)
 app.add_middleware(
     CORSMiddleware,

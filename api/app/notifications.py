@@ -35,81 +35,81 @@ _COPY = {
     "az": {
         "application_new": (
             "Yeni müraciət: {title}",
-            "«{title}» elanına ingress-job saytında yeni müraciət gəldi.",
+            "«{title}» elanına Ingress Job saytında yeni müraciət gəldi.",
         ),
         "application_seen": (
             "Müraciətinizə baxıldı: {title}",
-            "«{title}» elanına ingress-job saytında göndərdiyiniz müraciətə baxıldı.",
+            "«{title}» elanına Ingress Job saytında göndərdiyiniz müraciətə baxıldı.",
         ),
         "application_rejected": (
             "Müraciətiniz rədd edildi: {title}",
-            "«{title}» elanına ingress-job saytında göndərdiyiniz müraciət rədd edildi.",
+            "«{title}» elanına Ingress Job saytında göndərdiyiniz müraciət rədd edildi.",
         ),
         "ad_approved": (
             "Elanınız təsdiqləndi: {title}",
-            "«{title}» elanınız ingress-job saytında təsdiqləndi və dərc olundu.",
+            "«{title}» elanınız Ingress Job saytında təsdiqləndi və dərc olundu.",
         ),
         "ad_rejected": (
             "Elanınız rədd edildi: {title}",
-            "«{title}» elanınız ingress-job saytında rədd edildi.",
+            "«{title}» elanınız Ingress Job saytında rədd edildi.",
         ),
         "ad_review": (
             "Elanınız yenidən moderasiyadadır: {title}",
-            "«{title}» elanınız mühüm dəyişiklikdən sonra ingress-job saytında yenidən moderasiyadadır.",
+            "«{title}» elanınız mühüm dəyişiklikdən sonra Ingress Job saytında yenidən moderasiyadadır.",
         ),
         "reason": "Səbəb: {reason}",
     },
     "en": {
         "application_new": (
             "New application: {title}",
-            "A new application arrived on ingress-job for «{title}».",
+            "A new application arrived on Ingress Job for «{title}».",
         ),
         "application_seen": (
             "Your application was seen: {title}",
-            "Your application on ingress-job for «{title}» was marked as seen.",
+            "Your application on Ingress Job for «{title}» was marked as seen.",
         ),
         "application_rejected": (
             "Your application was rejected: {title}",
-            "Your application on ingress-job for «{title}» was rejected.",
+            "Your application on Ingress Job for «{title}» was rejected.",
         ),
         "ad_approved": (
             "Your ad was approved: {title}",
-            "Your ad «{title}» was approved and published on ingress-job.",
+            "Your ad «{title}» was approved and published on Ingress Job.",
         ),
         "ad_rejected": (
             "Your ad was rejected: {title}",
-            "Your ad «{title}» was rejected on ingress-job.",
+            "Your ad «{title}» was rejected on Ingress Job.",
         ),
         "ad_review": (
             "Your ad is back in review: {title}",
-            "Your published ad «{title}» went back to review on ingress-job after a significant edit.",
+            "Your published ad «{title}» went back to review on Ingress Job after a significant edit.",
         ),
         "reason": "Reason: {reason}",
     },
     "ru": {
         "application_new": (
             "Новый отклик: {title}",
-            "На ingress-job по объявлению «{title}» пришёл новый отклик.",
+            "На Ingress Job по объявлению «{title}» пришёл новый отклик.",
         ),
         "application_seen": (
             "Ваш отклик просмотрен: {title}",
-            "Ваш отклик на ingress-job по объявлению «{title}» отмечен как просмотренный.",
+            "Ваш отклик на Ingress Job по объявлению «{title}» отмечен как просмотренный.",
         ),
         "application_rejected": (
             "Ваш отклик отклонён: {title}",
-            "Ваш отклик на ingress-job по объявлению «{title}» отклонён.",
+            "Ваш отклик на Ingress Job по объявлению «{title}» отклонён.",
         ),
         "ad_approved": (
             "Ваше объявление одобрено: {title}",
-            "Объявление «{title}» одобрено и опубликовано на ingress-job.",
+            "Объявление «{title}» одобрено и опубликовано на Ingress Job.",
         ),
         "ad_rejected": (
             "Ваше объявление отклонено: {title}",
-            "Объявление «{title}» отклонено на ingress-job.",
+            "Объявление «{title}» отклонено на Ingress Job.",
         ),
         "ad_review": (
             "Ваше объявление снова на модерации: {title}",
-            "Опубликованное объявление «{title}» снова на модерации ingress-job после существенной правки.",
+            "Опубликованное объявление «{title}» снова на модерации Ingress Job после существенной правки.",
         ),
         "reason": "Причина: {reason}",
     },

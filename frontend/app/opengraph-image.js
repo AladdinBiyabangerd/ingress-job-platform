@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "ingress-job — open roles in Azerbaijan";
+export const alt = "Ingress Job — open roles in Azerbaijan";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -39,7 +39,7 @@ export default function OpenGraphImage() {
               background: "rgba(255,255,255,0.22)",
             }}
           />
-          ingress-job
+          Ingress Job
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div

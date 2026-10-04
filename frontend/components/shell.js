@@ -70,7 +70,7 @@ export function Shell({ locale, mode, jobId, children }) {
           <div className="top-left">
             <a className="brand" href={hrefFor(locale)}>
               <img className="mark" src="/ingress-mark.svg" alt="" aria-hidden="true" />
-              ingress-job
+              Ingress Job
             </a>
           </div>
           <div className="mode" role="tablist" aria-label={t.browse}>

@@ -1,11 +1,11 @@
-import { hrefFor } from "./copy";
+import { hrefFor, text } from "./copy";
 
 export const LOCALES = ["az", "en", "ru"];
 export const HTML_LANG = { az: "az", en: "en", ru: "ru" };
 const OG_LOCALE = { az: "az_AZ", en: "en_US", ru: "ru_RU" };
 
 export const SITE = {
-  name: "ingress-job",
+  name: "Ingress Job",
   themeColor: "#001FFF",
   backgroundColor: "#f6f5f1",
   logoPath: "/ingress-mark.svg",
@@ -19,7 +19,7 @@ export const SITE = {
 
 const HOME = {
   az: {
-    title: "ingress-job — Açıq iş elanları",
+    title: "Ingress Job — Açıq iş elanları",
     description:
       "Azərbaycanda açıq iş elanlarına baxın. Başlıq və ya şirkət üzrə axtarın, şəhər və dilə görə süzün.",
     keywords: [
@@ -28,15 +28,15 @@ const HOME = {
       "iş axtarışı",
       "Azərbaycan iş",
       "Bakı vakansiya",
-      "ingress-job",
+      "Ingress Job",
     ],
     breadcrumbHome: "Elanlar",
-    ogImageAlt: "ingress-job — açıq iş elanları",
+    ogImageAlt: "Ingress Job — açıq iş elanları",
     countryName: "Azərbaycan",
     knowsAbout: ["iş elanları", "vakansiyalar", "işə qəbul", "Azərbaycan əmək bazarı"],
   },
   en: {
-    title: "ingress-job — Open roles",
+    title: "Ingress Job — Open roles",
     description:
       "Browse open job listings in Azerbaijan. Search by title or company and filter by city and language.",
     keywords: [
@@ -44,15 +44,15 @@ const HOME = {
       "job listings",
       "vacancies Baku",
       "open roles",
-      "ingress-job",
+      "Ingress Job",
     ],
     breadcrumbHome: "Jobs",
-    ogImageAlt: "ingress-job — open job listings",
+    ogImageAlt: "Ingress Job — open job listings",
     countryName: "Azerbaijan",
     knowsAbout: ["job listings", "vacancies", "hiring", "Azerbaijan job market"],
   },
   ru: {
-    title: "ingress-job — Открытые вакансии",
+    title: "Ingress Job — Открытые вакансии",
     description:
       "Смотрите открытые вакансии в Азербайджане. Ищите по должности или компании, фильтруйте по городу и языку.",
     keywords: [
@@ -60,10 +60,10 @@ const HOME = {
       "работа Баку",
       "открытые вакансии",
       "поиск работы",
-      "ingress-job",
+      "Ingress Job",
     ],
     breadcrumbHome: "Вакансии",
-    ogImageAlt: "ingress-job — открытые вакансии",
+    ogImageAlt: "Ingress Job — открытые вакансии",
     countryName: "Азербайджан",
     knowsAbout: ["вакансии", "поиск работы", "найм", "рынок труда Азербайджана"],
   },
@@ -279,37 +279,54 @@ function organizationNode(locale) {
 
 export function homeJsonLd(locale = "az") {
   const copy = homeCopy(locale);
+  const faq = text(locale).faq;
   const origin = siteOrigin();
   const pageUrl = absoluteUrl(localePath(locale));
+  const graph = [
+    organizationNode(locale),
+    {
+      "@type": "WebSite",
+      "@id": `${origin}/#website`,
+      name: SITE.name,
+      url: origin,
+      description: copy.description,
+      publisher: { "@id": `${origin}/#organization` },
+      inLanguage: HTML_LANG[locale],
+    },
+    {
+      "@type": "CollectionPage",
+      "@id": `${pageUrl}#webpage`,
+      url: pageUrl,
+      name: copy.title,
+      description: copy.description,
+      isPartOf: { "@id": `${origin}/#website` },
+      about: { "@id": `${origin}/#organization` },
+      inLanguage: HTML_LANG[locale],
+    },
+  ];
+  if (faq?.items?.length) {
+    graph.push({
+      "@type": "FAQPage",
+      "@id": `${pageUrl}#faq`,
+      mainEntity: faq.items.map((item) => ({
+        "@type": "Question",
+        name: item.q,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: item.a,
+        },
+      })),
+    });
+  }
   return {
     "@context": "https://schema.org",
-    "@graph": [
-      organizationNode(locale),
-      {
-        "@type": "WebSite",
-        "@id": `${origin}/#website`,
-        name: SITE.name,
-        url: origin,
-        description: copy.description,
-        publisher: { "@id": `${origin}/#organization` },
-        inLanguage: HTML_LANG[locale],
-      },
-      {
-        "@type": "CollectionPage",
-        "@id": `${pageUrl}#webpage`,
-        url: pageUrl,
-        name: copy.title,
-        description: copy.description,
-        isPartOf: { "@id": `${origin}/#website` },
-        about: { "@id": `${origin}/#organization` },
-        inLanguage: HTML_LANG[locale],
-      },
-    ],
+    "@graph": graph,
   };
 }
 
 export function jobPostingJsonLd(job, locale = "az") {
   const copy = homeCopy(locale);
+  const ui = text(locale);
   const origin = siteOrigin();
   const homeUrl = absoluteUrl(localePath(locale));
   const url = absoluteUrl(localePath(locale, { jobId: job.id }));
@@ -394,7 +411,7 @@ export function jobPostingJsonLd(job, locale = "az") {
           {
             "@type": "ListItem",
             position: 1,
-            name: copy.breadcrumbHome,
+            name: ui.breadcrumbHome || copy.breadcrumbHome,
             item: homeUrl,
           },
           {

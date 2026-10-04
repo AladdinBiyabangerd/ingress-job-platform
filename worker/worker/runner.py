@@ -59,7 +59,12 @@ def _load_env(path: Path) -> None:
         value = value.strip()
         if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
             value = value[1:-1]
-        if key:
+        if not key:
+            continue
+        # Empty value in .env clears a shell-exported key (e.g. local OPENAI_API_KEY=).
+        if value == "":
+            os.environ.pop(key, None)
+        else:
             os.environ.setdefault(key, value)
 
 

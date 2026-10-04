@@ -20,6 +20,46 @@ export const copy = {
     noCity: "Şəhər göstərilməyib",
     source: "Mənbə",
     back: "Elanlara qayıt",
+    breadcrumbs: "Yol izi",
+    breadcrumbHome: "Elanlar",
+    faq: {
+      eyebrow: "Suallar",
+      title: "Tez-tez verilən suallar",
+      items: [
+        {
+          q: "Ingress Job nədir?",
+          a: "Ingress Job Azərbaycanda açıq iş elanlarını bir yerdə göstərən platformadır. Vəzifə, şirkət, şəhər, dil və əməkhaqqı üzrə axtarıb süzə bilərsiniz.",
+        },
+        {
+          q: "Elanlara baxmaq pulsuzdur?",
+          a: "Bəli. Açıq elanları hesab olmadan da oxuya bilərsiniz. Müraciət və elan yerləşdirmə üçün qeydiyyat lazımdır.",
+        },
+        {
+          q: "Necə axtarıb filtrləyə bilərəm?",
+          a: "Başlıq və ya şirkət üzrə axtarın; şəhər, mənbə, dil, tarix, uzaqdan iş və əməkhaqqı sərhədləri ilə siyahını daraldın.",
+        },
+        {
+          q: "Müraciət etmək üçün hesab lazımdır?",
+          a: "Bəli. Namizəd kimi qeydiyyatdan keçəndən sonra elana müraciət edə və müraciətlərinizi izləyə bilərsiniz.",
+        },
+        {
+          q: "İş elanı necə yerləşdirilir?",
+          a: "İşəgötürən kimi qeydiyyatdan keçin, şirkət profilini doldurun və elanı yazın. Dərcdən əvvəl elan moderasiyadan keçir.",
+        },
+        {
+          q: "Uzaqdan iş elanları varmı?",
+          a: "Bəli. Uzaqdan və ya şəhəri göstərilməyən elanları filtrlə seçə bilərsiniz; hibrid və ofis elanları da siyahıdadır.",
+        },
+        {
+          q: "Elanlar haradan gəlir?",
+          a: "Siyahıda həm platformada yazılmış elanlar, həm də toplanmış açıq mənbə elanları ola bilər. Hər elanda mənbə göstərilir.",
+        },
+        {
+          q: "Hansı dillərdə istifadə edə bilərəm?",
+          a: "Sayt Azərbaycan, İngilis və Rus dillərindədir. Elanın öz dili fərqli ola bilər — dil filtrindən istifadə edin.",
+        },
+      ],
+    },
     apply: "Müraciət et",
     original: "Orijinal elan",
     locked: "Hesab tələb olunur. Ünvan burada göstərilmir.",
@@ -226,6 +266,46 @@ export const copy = {
     noCity: "City not listed",
     source: "Source",
     back: "Back to jobs",
+    breadcrumbs: "Breadcrumb",
+    breadcrumbHome: "Jobs",
+    faq: {
+      eyebrow: "Questions",
+      title: "Common questions",
+      items: [
+        {
+          q: "What is Ingress Job?",
+          a: "Ingress Job is a board of open roles in Azerbaijan. Search and filter by title, company, city, language, and salary.",
+        },
+        {
+          q: "Is browsing free?",
+          a: "Yes. You can read open listings without an account. Applying and posting require registration.",
+        },
+        {
+          q: "How do I search and filter?",
+          a: "Search by title or company, then narrow the list by city, source, language, date, remote work, and salary range.",
+        },
+        {
+          q: "Do I need an account to apply?",
+          a: "Yes. Register as a candidate to apply to a role and track your applications.",
+        },
+        {
+          q: "How do I post a job?",
+          a: "Register as an employer, save your company profile, then write the ad. Listings go through moderation before they go public.",
+        },
+        {
+          q: "Are remote jobs included?",
+          a: "Yes. You can filter for remote or city-less roles; hybrid and office listings are in the list too.",
+        },
+        {
+          q: "Where do listings come from?",
+          a: "The board may include ads written on the platform and open listings gathered from other sources. Each job shows its source.",
+        },
+        {
+          q: "Which languages can I use?",
+          a: "The site is available in Azerbaijani, English, and Russian. A listing’s own language may differ — use the language filter.",
+        },
+      ],
+    },
     apply: "Apply",
     original: "Original listing",
     locked: "An account is required. The address is not shown here.",
@@ -432,6 +512,46 @@ export const copy = {
     noCity: "Город не указан",
     source: "Источник",
     back: "К вакансиям",
+    breadcrumbs: "Навигация",
+    breadcrumbHome: "Вакансии",
+    faq: {
+      eyebrow: "Вопросы",
+      title: "Частые вопросы",
+      items: [
+        {
+          q: "Что такое Ingress Job?",
+          a: "Ingress Job — площадка открытых вакансий в Азербайджане. Ищите и фильтруйте по должности, компании, городу, языку и зарплате.",
+        },
+        {
+          q: "Просмотр бесплатный?",
+          a: "Да. Открытые вакансии можно читать без аккаунта. Для отклика и размещения нужна регистрация.",
+        },
+        {
+          q: "Как искать и фильтровать?",
+          a: "Ищите по должности или компании, затем сужайте список по городу, источнику, языку, дате, удалённой работе и диапазону зарплаты.",
+        },
+        {
+          q: "Нужен ли аккаунт для отклика?",
+          a: "Да. Зарегистрируйтесь как кандидат — тогда сможете откликаться и следить за откликами.",
+        },
+        {
+          q: "Как разместить вакансию?",
+          a: "Зарегистрируйтесь как работодатель, заполните профиль компании и напишите объявление. Перед публикацией оно проходит модерацию.",
+        },
+        {
+          q: "Есть ли удалённые вакансии?",
+          a: "Да. Можно отфильтровать удалённые или без города; гибрид и офис тоже есть в списке.",
+        },
+        {
+          q: "Откуда берутся вакансии?",
+          a: "В списке могут быть объявления с платформы и открытые вакансии из других источников. У каждой вакансии указан источник.",
+        },
+        {
+          q: "На каких языках можно пользоваться?",
+          a: "Сайт доступен на азербайджанском, английском и русском. Язык самой вакансии может отличаться — используйте фильтр языка.",
+        },
+      ],
+    },
     apply: "Откликнуться",
     original: "Оригинал",
     locked: "Нужен аккаунт. Адрес здесь не показывается.",

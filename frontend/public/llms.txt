@@ -1,10 +1,10 @@
-# ingress-job
+# Ingress Job
 
 > Public job board for open roles in Azerbaijan. Browse listings, search by title or company, filter by city and language. Locales: az (default), en, ru.
 
 ## One-line entity
 
-ingress-job is a multilingual job listings site for Azerbaijan: public browse of open roles, employer posting after sign-in, and candidate applications. Private cabinets (post, company, applications, profile, admin) are not for indexing.
+Ingress Job is a multilingual job listings site for Azerbaijan: public browse of open roles, employer posting after sign-in, and candidate applications. Private cabinets (post, company, applications, profile, admin) are not for indexing.
 
 ## Key pages
 

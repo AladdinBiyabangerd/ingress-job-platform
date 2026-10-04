@@ -523,6 +523,20 @@ export function Home({ locale, jobs, error }) {
           ) : null}
         </aside>
       </div>
+      {t.faq?.items?.length ? (
+        <section className="home-faq" id="faq" aria-labelledby="home-faq-title">
+          <p className="home-faq-eyebrow">{t.faq.eyebrow}</p>
+          <h2 id="home-faq-title">{t.faq.title}</h2>
+          <div className="home-faq-list">
+            {t.faq.items.map((item, index) => (
+              <details key={item.q} open={index === 0}>
+                <summary>{item.q}</summary>
+                <p>{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+      ) : null}
       </div>
     </Shell>
   );

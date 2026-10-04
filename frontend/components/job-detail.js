@@ -87,10 +87,16 @@ export function JobDetail({ locale, job }) {
     <>
       <JsonLd data={jobPostingJsonLd(job, locale)} />
       <Shell locale={locale} mode="browse" jobId={job.id}>
-        <a className="back" href={hrefFor(locale)}>
-          <span aria-hidden="true">←</span>
-          {t.back}
-        </a>
+        <nav className="breadcrumbs" aria-label={t.breadcrumbs}>
+          <ol>
+            <li>
+              <a href={hrefFor(locale)}>{t.breadcrumbHome}</a>
+            </li>
+            <li>
+              <span aria-current="page">{job.title}</span>
+            </li>
+          </ol>
+        </nav>
         <article className="detail">
           {job.source_name ? <p className="source-pill">{job.source_name}</p> : null}
           <h1>{job.title}</h1>
