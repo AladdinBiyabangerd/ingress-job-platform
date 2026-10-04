@@ -1,7 +1,8 @@
 import { AccountActions } from "./account-actions";
+import { JsonLd } from "./json-ld";
 import { Shell } from "./shell";
 import { hrefFor, text } from "../lib/copy";
-import { jobPostingJsonLd, jsonLdScript } from "../lib/seo";
+import { jobPostingJsonLd } from "../lib/seo";
 
 function tidyLines(raw, title) {
   const lines = String(raw || "")
@@ -82,13 +83,9 @@ function blocks(raw, title) {
 export function JobDetail({ locale, job }) {
   const t = text(locale);
   const parts = blocks(job.text, job.title);
-  const jsonLd = jobPostingJsonLd(job, locale);
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
-      />
+      <JsonLd data={jobPostingJsonLd(job, locale)} />
       <Shell locale={locale} mode="browse" jobId={job.id}>
         <a className="back" href={hrefFor(locale)}>
           <span aria-hidden="true">←</span>

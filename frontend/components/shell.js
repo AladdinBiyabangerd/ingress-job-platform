@@ -62,6 +62,9 @@ export function Shell({ locale, mode, jobId, children }) {
 
   return (
     <>
+      <a className="skip-link" href="#main">
+        {locale === "ru" ? "К содержанию" : locale === "en" ? "Skip to content" : "Məzmuna keç"}
+      </a>
       <header className="top">
         <div className="top-inner">
           <div className="top-left">
@@ -102,7 +105,7 @@ export function Shell({ locale, mode, jobId, children }) {
           </div>
         </div>
       </header>
-      <main className="wrap">{children}</main>
+      <main id="main" className="wrap">{children}</main>
     </>
   );
 }

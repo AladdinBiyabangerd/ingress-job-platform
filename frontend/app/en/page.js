@@ -1,6 +1,7 @@
 import { Home } from "../../components/home";
+import { JsonLd } from "../../components/json-ld";
 import { getJobs } from "../../lib/server/jobs";
-import { homeMetadata } from "../../lib/seo";
+import { homeJsonLd, homeMetadata } from "../../lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +10,21 @@ export function generateMetadata() {
 }
 
 export default async function Page() {
+  const jsonLd = homeJsonLd("en");
   try {
     const jobs = await getJobs();
-    return <Home locale="en" jobs={jobs} error={false} />;
+    return (
+      <>
+        <JsonLd data={jsonLd} />
+        <Home locale="en" jobs={jobs} error={false} />
+      </>
+    );
   } catch {
-    return <Home locale="en" jobs={[]} error />;
+    return (
+      <>
+        <JsonLd data={jsonLd} />
+        <Home locale="en" jobs={[]} error />
+      </>
+    );
   }
 }

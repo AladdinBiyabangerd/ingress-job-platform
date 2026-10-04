@@ -1,5 +1,22 @@
 * { box-sizing: border-box; }
 
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0.75rem;
+  z-index: 100;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: #001FFF;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: 0.75rem;
+}
+
 html, body {
   margin: 0;
   background: #f6f5f1;

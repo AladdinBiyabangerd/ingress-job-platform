@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import "./globals.css";
 import { Plus_Jakarta_Sans } from "next/font/google";
-import { homeMetadata, siteOrigin } from "../lib/seo";
+import { SITE, homeMetadata, siteOrigin } from "../lib/seo";
 
 const sans = Plus_Jakarta_Sans({
   subsets: ["latin", "latin-ext"],
@@ -19,7 +19,33 @@ export const metadata = {
     template: "%s",
   },
   description: defaults.description,
-  applicationName: "ingress-job",
+  applicationName: SITE.name,
+  authors: [{ name: SITE.name }],
+  creator: SITE.name,
+  publisher: SITE.name,
+  keywords: defaults.keywords,
+  category: "jobs",
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    shortcut: ["/favicon.svg"],
+    apple: [{ url: "/ingress-mark.svg" }],
+  },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    title: SITE.name,
+    capable: true,
+    statusBarStyle: "default",
+  },
+  other: {
+    "geo.region": "AZ",
+    "geo.placename": "Azerbaijan",
+  },
+};
+
+export const viewport = {
+  themeColor: SITE.themeColor,
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default async function RootLayout({ children }) {
