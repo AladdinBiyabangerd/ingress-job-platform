@@ -69,24 +69,32 @@ export function Shell({ locale, mode, jobId, children }) {
               <img className="mark" src="/ingress-mark.svg" alt="" aria-hidden="true" />
               ingress-job
             </a>
-            <div className="mode" role="tablist" aria-label={t.browse}>
-              <a
-                role="tab"
-                aria-selected={mode === "browse"}
-                className={mode === "browse" ? "on" : ""}
-                href={hrefFor(locale, { mode: "browse" })}
-              >
-                {t.browse}
-              </a>
-              <a
-                role="tab"
-                aria-selected={mode === "post"}
-                className={mode === "post" ? "on" : ""}
-                href={hrefFor(locale, { mode: "post" })}
-              >
-                {t.post}
-              </a>
-            </div>
+          </div>
+          <div className="mode" role="tablist" aria-label={t.browse}>
+            <a
+              role="tab"
+              aria-selected={mode === "browse"}
+              className={mode === "browse" ? "on" : ""}
+              href={hrefFor(locale, { mode: "browse" })}
+            >
+              {t.browse}
+            </a>
+            <a
+              role="tab"
+              aria-selected={mode === "post"}
+              className={mode === "post" ? "on" : ""}
+              href={hrefFor(locale, { mode: "post" })}
+            >
+              {t.post}
+            </a>
+            <a
+              role="tab"
+              aria-selected={mode === "admin"}
+              className={mode === "admin" ? "on" : ""}
+              href={hrefFor(locale, { mode: "admin" })}
+            >
+              {t.admin}
+            </a>
           </div>
           <div className="top-right">
             <AccountBar locale={locale} returnTo={hrefFor(locale, { mode, jobId })} />

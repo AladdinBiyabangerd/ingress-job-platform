@@ -47,6 +47,7 @@ function fromJob(locale, job) {
 
 export function Admin({ locale }) {
   const t = text(locale);
+  const [tab, setTab] = useState("queue");
   const [items, setItems] = useState([]);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(null);
@@ -179,153 +180,210 @@ export function Admin({ locale }) {
     }
   }
 
+  const pendingCount = items.filter((job) => job.status === "pending").length;
+
   return (
     <div className="cabinet">
-      <div>
-        <h1>{t.adminTitle}</h1>
-        <p className="lede">{t.adminLede}</p>
+      <div className="cabinet-head">
+        <div>
+          <h1>{t.adminTitle}</h1>
+          <p className="lede">{t.adminLede}</p>
+        </div>
+        <div className="cabinet-tabs" role="tablist" aria-label={t.adminTitle}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "queue"}
+            className={tab === "queue" ? "on" : ""}
+            onClick={() => setTab("queue")}
+          >
+            {t.adminQueue}
+            {pendingCount ? <span className="cabinet-tab-count">{pendingCount}</span> : null}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "collected"}
+            className={tab === "collected" ? "on" : ""}
+            onClick={() => setTab("collected")}
+          >
+            {t.collectedTitle}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "manual"}
+            className={tab === "manual" ? "on" : ""}
+            onClick={() => setTab("manual")}
+          >
+            {t.manualTitle}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "applications"}
+            className={tab === "applications" ? "on" : ""}
+            onClick={() => setTab("applications")}
+          >
+            {t.applicationsTitle}
+            {applications.length ? <span className="cabinet-tab-count">{applications.length}</span> : null}
+          </button>
+        </div>
       </div>
       {error ? <p className="note">{error}</p> : null}
       {note ? <p className="note">{note}</p> : null}
-      {editing && form ? (
-        <form className="form-card" onSubmit={onSave}>
-          <h2>{t.editAd}</h2>
-          <label>
-            {t.language}
-            <select value={form.language} onChange={(event) => setField("language", event.target.value)}>
-              <option value="az">{t.langAz}</option>
-              <option value="en">{t.langEn}</option>
-              <option value="ru">{t.langRu}</option>
-            </select>
-          </label>
-          <label>
-            {t.adTitle}
-            <input value={form.title} maxLength={140} required onChange={(event) => setField("title", event.target.value)} />
-          </label>
-          <label>
-            {t.companyName}
-            <input value={form.company} maxLength={120} required onChange={(event) => setField("company", event.target.value)} />
-          </label>
-          <label>
-            {t.adCityOrRemote}
-            <input
-              value={form.city}
-              maxLength={80}
-              required={!form.remote}
-              disabled={form.remote}
-              onChange={(event) => setField("city", event.target.value)}
-            />
-          </label>
-          <label className="inline">
-            <input
-              type="checkbox"
-              checked={form.remote}
-              onChange={(event) => setField("remote", event.target.checked)}
-            />
-            <span>{t.placeRemote}</span>
-          </label>
-          <label>
-            {t.adBody}
-            <textarea value={form.text} maxLength={8000} required rows={8} onChange={(event) => setField("text", event.target.value)} />
-          </label>
-          <div className="split">
-            <label>
-              {t.adSalary}
-              <span className="hint">{t.adOptional}</span>
-              <input value={form.salary} maxLength={120} onChange={(event) => setField("salary", event.target.value)} />
-            </label>
-            <label>
-              {t.adJobType}
-              <span className="hint">{t.adOptional}</span>
-              <select value={form.job_type} onChange={(event) => setField("job_type", event.target.value)}>
-                {TYPES.map((value) => (
-                  <option key={value || "none"} value={value}>
-                    {value ? typeLabel(t, value) : t.adJobTypeNone}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <ApplyFormFields locale={locale} value={form.applicationForm} onChange={(applicationForm) => setField("applicationForm", applicationForm)} />
-          <div className="ad-actions">
-            <button type="submit" className="btn primary" disabled={busy}>{t.adSave}</button>
-            <button type="button" className="btn red" onClick={cancelEdit}>{t.adCancel}</button>
-          </div>
-        </form>
-      ) : null}
-      <section>
-        <h2 className="section-label">{t.adminQueue}</h2>
-        {items.length === 0 ? <p className="empty-line">{t.adminEmpty}</p> : null}
-        <div className="list">
-          {items.map((job) => (
-            <article key={job.id} className={job.status === "closed" || job.status === "rejected" ? "card closed" : "card"}>
-              <p className={statusClass(job.status)}>{statusLabel(t, job.status)}</p>
-              <h2>
-                {job.status === "published" ? (
-                  <a href={hrefFor(locale, { jobId: job.id })}>{job.title}</a>
-                ) : (
-                  job.title
-                )}
-              </h2>
-              <div className="meta">
-                <span>{job.company || t.noCompany}</span>
-                <span>{job.remote ? t.placeRemote : job.city || t.noCity}</span>
-                <span>{languageLabel(locale, job.language)}</span>
-                {job.job_type ? <span>{typeLabel(t, job.job_type)}</span> : null}
-                {job.salary ? <span>{job.salary}</span> : null}
+
+      {tab === "queue" ? (
+        <section className="cabinet-ads">
+          {editing && form ? (
+            <form className="form-card cabinet-form" onSubmit={onSave}>
+              <div className="cabinet-form-head">
+                <h2>{t.editAd}</h2>
               </div>
-              <p className="admin-body">{job.text}</p>
-              {job.reject_reason ? <p className="note">{t.rejectReason}: {job.reject_reason}</p> : null}
+              <div className="cabinet-form-layout">
+                <div className="cabinet-form-main">
+                  <div className="cabinet-grid">
+                    <label>
+                      {t.language}
+                      <select value={form.language} onChange={(event) => setField("language", event.target.value)}>
+                        <option value="az">{t.langAz}</option>
+                        <option value="en">{t.langEn}</option>
+                        <option value="ru">{t.langRu}</option>
+                      </select>
+                    </label>
+                    <label>
+                      {t.adTitle}
+                      <input value={form.title} maxLength={140} required onChange={(event) => setField("title", event.target.value)} />
+                    </label>
+                    <label>
+                      {t.companyName}
+                      <input value={form.company} maxLength={120} required onChange={(event) => setField("company", event.target.value)} />
+                    </label>
+                    <label>
+                      {t.adCityOrRemote}
+                      <input
+                        value={form.city}
+                        maxLength={80}
+                        required={!form.remote}
+                        disabled={form.remote}
+                        onChange={(event) => setField("city", event.target.value)}
+                      />
+                    </label>
+                    <label className="inline cabinet-remote">
+                      <input
+                        type="checkbox"
+                        checked={form.remote}
+                        onChange={(event) => setField("remote", event.target.checked)}
+                      />
+                      <span>{t.placeRemote}</span>
+                    </label>
+                    <label>
+                      {t.adSalary}
+                      <span className="hint">{t.adOptional}</span>
+                      <input value={form.salary} maxLength={120} onChange={(event) => setField("salary", event.target.value)} />
+                    </label>
+                    <label>
+                      {t.adJobType}
+                      <span className="hint">{t.adOptional}</span>
+                      <select value={form.job_type} onChange={(event) => setField("job_type", event.target.value)}>
+                        {TYPES.map((value) => (
+                          <option key={value || "none"} value={value}>
+                            {value ? typeLabel(t, value) : t.adJobTypeNone}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <label className="cabinet-body">
+                    {t.adBody}
+                    <textarea value={form.text} maxLength={8000} required rows={8} onChange={(event) => setField("text", event.target.value)} />
+                  </label>
+                </div>
+                <aside className="cabinet-form-side">
+                  <ApplyFormFields locale={locale} value={form.applicationForm} onChange={(applicationForm) => setField("applicationForm", applicationForm)} />
+                </aside>
+              </div>
               <div className="ad-actions">
-                {job.status !== "closed" ? (
-                  <button
-                    type="button"
-                    className="btn primary"
-                    onClick={() => {
-                      setEditing(job.id);
-                      setForm(fromJob(locale, job));
-                      setError("");
-                      setNote("");
-                    }}
-                  >
-                    {t.adEdit}
-                  </button>
-                ) : null}
-                {job.status === "pending" ? (
-                  <>
+                <button type="submit" className="btn primary" disabled={busy}>{t.adSave}</button>
+                <button type="button" className="btn red" onClick={cancelEdit}>{t.adCancel}</button>
+              </div>
+            </form>
+          ) : null}
+          {items.length === 0 ? <p className="empty-line">{t.adminEmpty}</p> : null}
+          <div className="list">
+            {items.map((job) => (
+              <article key={job.id} className={job.status === "closed" || job.status === "rejected" ? "card closed" : "card"}>
+                <p className={statusClass(job.status)}>{statusLabel(t, job.status)}</p>
+                <h2>
+                  {job.status === "published" ? (
+                    <a href={hrefFor(locale, { jobId: job.id })}>{job.title}</a>
+                  ) : (
+                    job.title
+                  )}
+                </h2>
+                <div className="meta">
+                  <span>{job.company || t.noCompany}</span>
+                  <span>{job.remote ? t.placeRemote : job.city || t.noCity}</span>
+                  <span>{languageLabel(locale, job.language)}</span>
+                  {job.job_type ? <span>{typeLabel(t, job.job_type)}</span> : null}
+                  {job.salary ? <span>{job.salary}</span> : null}
+                </div>
+                <p className="admin-body">{job.text}</p>
+                {job.reject_reason ? <p className="note">{t.rejectReason}: {job.reject_reason}</p> : null}
+                <div className="ad-actions">
+                  {job.status !== "closed" ? (
                     <button
                       type="button"
                       className="btn primary"
-                      onClick={() => act(job, "approve", null, t.adminApprovedNote)}
+                      onClick={() => {
+                        setEditing(job.id);
+                        setForm(fromJob(locale, job));
+                        setError("");
+                        setNote("");
+                      }}
                     >
-                      {t.adminApprove}
+                      {t.adEdit}
                     </button>
+                  ) : null}
+                  {job.status === "pending" ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn primary"
+                        onClick={() => act(job, "approve", null, t.adminApprovedNote)}
+                      >
+                        {t.adminApprove}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn red"
+                        onClick={() => rejectJob(job)}
+                      >
+                        {t.adminReject}
+                      </button>
+                    </>
+                  ) : null}
+                  {job.status !== "closed" ? (
                     <button
                       type="button"
                       className="btn red"
-                      onClick={() => rejectJob(job)}
+                      onClick={() => act(job, "close", t.adCloseAsk, t.adClosedNote)}
                     >
-                      {t.adminReject}
+                      {t.adClose}
                     </button>
-                  </>
-                ) : null}
-                {job.status !== "closed" ? (
-                  <button
-                    type="button"
-                    className="btn red"
-                    onClick={() => act(job, "close", t.adCloseAsk, t.adClosedNote)}
-                  >
-                    {t.adClose}
-                  </button>
-                ) : null}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-      <ManualAd locale={locale} onSaved={load} />
-      <CollectedAdmin locale={locale} />
-      <ApplicationList locale={locale} title={t.applicationsTitle} items={applications} mode="staff" onChanged={load} />
+                  ) : null}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {tab === "collected" ? <CollectedAdmin locale={locale} /> : null}
+      {tab === "manual" ? <ManualAd locale={locale} onSaved={load} /> : null}
+      {tab === "applications" ? (
+        <ApplicationList locale={locale} items={applications} mode="staff" onChanged={load} />
+      ) : null}
     </div>
   );
 }

@@ -89,9 +89,11 @@ export function ManualAd({ locale, onSaved }) {
   }
 
   return (
-    <form className="form-card" onSubmit={onSubmit}>
-      <h2>{t.manualTitle}</h2>
-      <p className="hint">{t.manualLede}</p>
+    <form className="form-card cabinet-form" onSubmit={onSubmit}>
+      <div className="cabinet-form-head">
+        <h2>{t.manualTitle}</h2>
+        <p className="hint">{t.manualLede}</p>
+      </div>
       {error ? <p className="note">{error}</p> : null}
       {note ? <p className="note">{note}</p> : null}
       <label>

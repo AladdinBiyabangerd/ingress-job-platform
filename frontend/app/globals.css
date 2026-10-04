@@ -24,10 +24,10 @@ button, input, select { font: inherit; }
   max-width: 1080px;
   margin: 0 auto;
   padding: 16px 28px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+  gap: 16px 20px;
 }
 
 .top-left,
@@ -39,11 +39,11 @@ button, input, select { font: inherit; }
 }
 
 .top-left {
-  flex: 1 1 auto;
+  justify-self: start;
 }
 
 .top-right {
-  flex: 0 0 auto;
+  justify-self: end;
   justify-content: flex-end;
 }
 
@@ -68,6 +68,7 @@ button, input, select { font: inherit; }
 
 .mode {
   display: inline-flex;
+  justify-self: center;
   background: #f6f5f1;
   border: 1px solid #dfe1e5;
   border-radius: 999px;
@@ -78,11 +79,12 @@ button, input, select { font: inherit; }
 .mode a {
   text-decoration: none;
   color: #656b75;
-  padding: 8px 14px;
+  padding: 8px 12px;
   border-radius: 999px;
   font-weight: 600;
   font-size: 14px;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .mode a.on {
@@ -393,18 +395,24 @@ input:focus, select:focus {
 @media (max-width: 760px) {
   .top-inner, .wrap { padding-left: 16px; padding-right: 16px; }
   .top-inner {
-    align-items: stretch;
-    flex-direction: column;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
     gap: 12px;
     min-width: 0;
   }
   .top-left,
   .top-right {
-    width: 100%;
-    justify-content: space-between;
+    width: auto;
   }
-  .top-left { flex-wrap: wrap; gap: 12px; }
-  .mode { max-width: 100%; }
+  .top-left { grid-column: 1; justify-self: start; }
+  .top-right { grid-column: 2; justify-self: end; }
+  .mode {
+    grid-column: 1 / -1;
+    justify-self: center;
+    max-width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
   .mode a, .language-trigger, .language-menu a, .account-link, .account-trigger, .account-dropdown a, .account-signout-btn, .text-btn, .register-menu a, .back, .btn {
     display: inline-flex;
     align-items: center;
@@ -923,15 +931,19 @@ textarea { min-height: 120px; resize: vertical; }
 }
 
 .cabinet-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  width: 100%;
-  max-width: 420px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: fit-content;
+  min-width: min(420px, 100%);
+  max-width: 100%;
+  margin-inline: auto;
   background: #f6f5f1;
   border: 1px solid #dfe1e5;
   border-radius: 999px;
   padding: 4px;
   gap: 2px;
+  justify-self: center;
 }
 
 .cabinet-tabs button {
@@ -939,6 +951,7 @@ textarea { min-height: 120px; resize: vertical; }
   align-items: center;
   justify-content: center;
   gap: 8px;
+  flex: 1 1 auto;
   border: 0;
   background: transparent;
   color: #656b75;
@@ -947,6 +960,7 @@ textarea { min-height: 120px; resize: vertical; }
   font-weight: 700;
   font-size: 14px;
   line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -1142,7 +1156,14 @@ textarea { min-height: 120px; resize: vertical; }
 @media (max-width: 760px) {
   .form-card .split { grid-template-columns: 1fr; }
   .cabinet-grid { grid-template-columns: 1fr; }
-  .cabinet-tabs { max-width: none; }
+  .cabinet-tabs {
+    width: 100%;
+    max-width: none;
+  }
+  .cabinet-tabs button {
+    flex: 1 1 calc(50% - 2px);
+    white-space: normal;
+  }
 }
 
 .profile-block h2 {

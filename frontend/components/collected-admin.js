@@ -123,8 +123,7 @@ export function CollectedAdmin({ locale }) {
   }
 
   return (
-    <section>
-      <h2 className="section-label">{t.collectedTitle}</h2>
+    <section className="cabinet-ads">
       <p className="lede">{t.collectedLede}</p>
       {error ? <p className="note">{error}</p> : null}
       {note ? <p className="note">{note}</p> : null}
