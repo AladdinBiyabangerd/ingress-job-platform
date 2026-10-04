@@ -901,24 +901,32 @@ textarea { min-height: 120px; resize: vertical; }
   text-decoration: none;
 }
 
+.wrap:has(.cabinet) {
+  max-width: 1120px;
+}
+
 .cabinet {
   display: grid;
-  gap: 18px;
-  max-width: 1080px;
+  gap: 16px;
+  width: 100%;
+  max-width: none;
 }
 
 .cabinet-head {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .cabinet-head .lede {
   max-width: 72ch;
+  margin: 0;
 }
 
 .cabinet-tabs {
-  display: inline-flex;
-  width: fit-content;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  max-width: 420px;
   background: #f6f5f1;
   border: 1px solid #dfe1e5;
   border-radius: 999px;
@@ -929,13 +937,14 @@ textarea { min-height: 120px; resize: vertical; }
 .cabinet-tabs button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   border: 0;
   background: transparent;
   color: #656b75;
-  padding: 8px 14px;
+  padding: 10px 14px;
   border-radius: 999px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
@@ -964,15 +973,37 @@ textarea { min-height: 120px; resize: vertical; }
   color: #20242b;
 }
 
-.cabinet-form {
+.form-card.cabinet-form {
+  width: 100%;
   max-width: none;
-  gap: 16px;
+  gap: 18px;
   padding: 22px 24px;
 }
 
 .cabinet-form-head {
   display: grid;
   gap: 6px;
+}
+
+.cabinet-form-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.9fr);
+  gap: 20px 28px;
+  align-items: start;
+}
+
+.cabinet-form-main,
+.cabinet-form-side {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.cabinet-form-side {
+  padding: 16px;
+  background: #f8f8f6;
+  border: 1px solid #e7e9ee;
+  border-radius: 16px;
 }
 
 .cabinet-grid {
@@ -998,12 +1029,13 @@ textarea { min-height: 120px; resize: vertical; }
 }
 
 .cabinet-body textarea {
-  min-height: 140px;
+  min-height: 180px;
 }
 
 .cabinet-ads {
   display: grid;
   gap: 14px;
+  width: 100%;
 }
 
 .form-card h2 {
@@ -1103,11 +1135,14 @@ textarea { min-height: 120px; resize: vertical; }
 
 .question-line { display: grid; gap: 8px; }
 
+@media (max-width: 900px) {
+  .cabinet-form-layout { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 760px) {
   .form-card .split { grid-template-columns: 1fr; }
   .cabinet-grid { grid-template-columns: 1fr; }
-  .cabinet-tabs { width: 100%; }
-  .cabinet-tabs button { flex: 1 1 0; justify-content: center; }
+  .cabinet-tabs { max-width: none; }
 }
 
 .profile-block h2 {

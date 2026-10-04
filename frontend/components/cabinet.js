@@ -209,7 +209,7 @@ export function Cabinet({ locale, me }) {
             className={tab === "create" ? "on" : ""}
             onClick={openCreate}
           >
-            {editing ? t.editAd : t.newAd}
+            {editing ? t.editAd : t.post}
           </button>
           <button
             type="button"
@@ -229,74 +229,80 @@ export function Cabinet({ locale, me }) {
       {tab === "create" ? (
         <form className="form-card cabinet-form" onSubmit={onSubmit}>
           <div className="cabinet-form-head">
-            <h2>{editing ? t.editAd : t.newAd}</h2>
+            <h2>{editing ? t.editAd : t.post}</h2>
             {editing && items.find((job) => job.id === editing)?.status === "rejected" ? <p className="hint">{t.resubmitHint}</p> : null}
             {editing && !me.staff && items.find((job) => job.id === editing)?.status === "published" ? <p className="hint">{t.reviewHint}</p> : null}
           </div>
-          <div className="cabinet-grid">
-            <label>
-              {t.language}
-              <select value={form.language} onChange={(event) => setField("language", event.target.value)}>
-                <option value="az">{t.langAz}</option>
-                <option value="en">{t.langEn}</option>
-                <option value="ru">{t.langRu}</option>
-              </select>
-            </label>
-            <label>
-              {t.companyName}
-              <input
-                value={form.company}
-                maxLength={120}
-                required
-                readOnly={!me.staff}
-                onChange={(event) => setField("company", event.target.value)}
-              />
-              {!me.staff ? <span className="hint">{t.companyLocked}</span> : null}
-            </label>
-            <label className="cabinet-span">
-              {t.adTitle}
-              <input value={form.title} maxLength={140} required onChange={(event) => setField("title", event.target.value)} />
-            </label>
-            <label>
-              {t.adCityOrRemote}
-              <input
-                value={form.city}
-                maxLength={80}
-                required={!form.remote}
-                disabled={form.remote}
-                onChange={(event) => setField("city", event.target.value)}
-              />
-            </label>
-            <label className="inline cabinet-remote">
-              <input
-                type="checkbox"
-                checked={form.remote}
-                onChange={(event) => setField("remote", event.target.checked)}
-              />
-              <span>{t.placeRemote}</span>
-            </label>
-            <label>
-              {t.adSalary}
-              <span className="hint">{t.adOptional}</span>
-              <input value={form.salary} maxLength={120} onChange={(event) => setField("salary", event.target.value)} />
-            </label>
-            <label>
-              {t.adJobType}
-              <span className="hint">{t.adOptional}</span>
-              <select value={form.job_type} onChange={(event) => setField("job_type", event.target.value)}>
-                {TYPES.map((value) => (
-                  <option key={value || "none"} value={value}>
-                    {value ? typeLabel(t, value) : t.adJobTypeNone}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <div className="cabinet-form-layout">
+            <div className="cabinet-form-main">
+              <div className="cabinet-grid">
+                <label>
+                  {t.language}
+                  <select value={form.language} onChange={(event) => setField("language", event.target.value)}>
+                    <option value="az">{t.langAz}</option>
+                    <option value="en">{t.langEn}</option>
+                    <option value="ru">{t.langRu}</option>
+                  </select>
+                </label>
+                <label>
+                  {t.companyName}
+                  <input
+                    value={form.company}
+                    maxLength={120}
+                    required
+                    readOnly={!me.staff}
+                    onChange={(event) => setField("company", event.target.value)}
+                  />
+                  {!me.staff ? <span className="hint">{t.companyLocked}</span> : null}
+                </label>
+                <label className="cabinet-span">
+                  {t.adTitle}
+                  <input value={form.title} maxLength={140} required onChange={(event) => setField("title", event.target.value)} />
+                </label>
+                <label>
+                  {t.adCityOrRemote}
+                  <input
+                    value={form.city}
+                    maxLength={80}
+                    required={!form.remote}
+                    disabled={form.remote}
+                    onChange={(event) => setField("city", event.target.value)}
+                  />
+                </label>
+                <label className="inline cabinet-remote">
+                  <input
+                    type="checkbox"
+                    checked={form.remote}
+                    onChange={(event) => setField("remote", event.target.checked)}
+                  />
+                  <span>{t.placeRemote}</span>
+                </label>
+                <label>
+                  {t.adSalary}
+                  <span className="hint">{t.adOptional}</span>
+                  <input value={form.salary} maxLength={120} onChange={(event) => setField("salary", event.target.value)} />
+                </label>
+                <label>
+                  {t.adJobType}
+                  <span className="hint">{t.adOptional}</span>
+                  <select value={form.job_type} onChange={(event) => setField("job_type", event.target.value)}>
+                    {TYPES.map((value) => (
+                      <option key={value || "none"} value={value}>
+                        {value ? typeLabel(t, value) : t.adJobTypeNone}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label className="cabinet-body">
+                {t.adBody}
+                <textarea value={form.text} maxLength={8000} required rows={8} onChange={(event) => setField("text", event.target.value)} />
+              </label>
+            </div>
+            <aside className="cabinet-form-side">
+              <ApplyFormFields locale={locale} value={form.applicationForm} onChange={(applicationForm) => setField("applicationForm", applicationForm)} />
+            </aside>
           </div>
-          <label className="cabinet-body">
-            {t.adBody}
-            <textarea value={form.text} maxLength={8000} required rows={6} onChange={(event) => setField("text", event.target.value)} />
-          </label>
-          <ApplyFormFields locale={locale} value={form.applicationForm} onChange={(applicationForm) => setField("applicationForm", applicationForm)} />
           <div className="ad-actions">
             <button type="submit" className="btn primary" disabled={busy}>{t.adSave}</button>
             {editing ? (
