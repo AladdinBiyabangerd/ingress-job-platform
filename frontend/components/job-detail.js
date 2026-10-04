@@ -1,6 +1,7 @@
 import { AccountActions } from "./account-actions";
 import { Shell } from "./shell";
 import { hrefFor, text } from "../lib/copy";
+import { jobPostingJsonLd, jsonLdScript } from "../lib/seo";
 
 function tidyLines(raw, title) {
   const lines = String(raw || "")
@@ -81,49 +82,56 @@ function blocks(raw, title) {
 export function JobDetail({ locale, job }) {
   const t = text(locale);
   const parts = blocks(job.text, job.title);
+  const jsonLd = jobPostingJsonLd(job, locale);
   return (
-    <Shell locale={locale} mode="browse" jobId={job.id}>
-      <a className="back" href={hrefFor(locale)}>
-        <span aria-hidden="true">←</span>
-        {t.back}
-      </a>
-      <article className="detail">
-        {job.source_name ? <p className="source-pill">{job.source_name}</p> : null}
-        <h1>{job.title}</h1>
-        <p className="meta line">
-          <span>{job.company || t.noCompany}</span>
-          <span>{job.remote ? t.placeRemote : (job.city || t.noCity)}</span>
-          {job.job_type === "ofis" ? <span>{t.jobOffice}</span> : null}
-          {job.job_type === "hibrid" ? <span>{t.jobHybrid}</span> : null}
-          {job.job_type === "uzaqdan" ? <span>{t.jobRemoteType}</span> : null}
-          {job.salary ? <span>{job.salary}</span> : null}
-        </p>
-        {parts.length ? (
-          <div className="posting">
-            {parts.map((part, index) => {
-              if (part.type === "heading") return <h2 key={index}>{part.text.replace(/:$/, "")}</h2>;
-              if (part.type === "list") {
-                return (
-                  <ul key={index}>
-                    {part.items.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                );
-              }
-              return <p key={index}>{part.text}</p>;
-            })}
-          </div>
-        ) : null}
-        <AccountActions
-          locale={locale}
-          jobId={job.id}
-          returnTo={hrefFor(locale, { jobId: job.id })}
-          onsite={Boolean(job.onsite)}
-          hasOriginal={Boolean(job.has_original)}
-          form={job.form}
-        />
-      </article>
-    </Shell>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
+      />
+      <Shell locale={locale} mode="browse" jobId={job.id}>
+        <a className="back" href={hrefFor(locale)}>
+          <span aria-hidden="true">←</span>
+          {t.back}
+        </a>
+        <article className="detail">
+          {job.source_name ? <p className="source-pill">{job.source_name}</p> : null}
+          <h1>{job.title}</h1>
+          <p className="meta line">
+            <span>{job.company || t.noCompany}</span>
+            <span>{job.remote ? t.placeRemote : (job.city || t.noCity)}</span>
+            {job.job_type === "ofis" ? <span>{t.jobOffice}</span> : null}
+            {job.job_type === "hibrid" ? <span>{t.jobHybrid}</span> : null}
+            {job.job_type === "uzaqdan" ? <span>{t.jobRemoteType}</span> : null}
+            {job.salary ? <span>{job.salary}</span> : null}
+          </p>
+          {parts.length ? (
+            <div className="posting">
+              {parts.map((part, index) => {
+                if (part.type === "heading") return <h2 key={index}>{part.text.replace(/:$/, "")}</h2>;
+                if (part.type === "list") {
+                  return (
+                    <ul key={index}>
+                      {part.items.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  );
+                }
+                return <p key={index}>{part.text}</p>;
+              })}
+            </div>
+          ) : null}
+          <AccountActions
+            locale={locale}
+            jobId={job.id}
+            returnTo={hrefFor(locale, { jobId: job.id })}
+            onsite={Boolean(job.onsite)}
+            hasOriginal={Boolean(job.has_original)}
+            form={job.form}
+          />
+        </article>
+      </Shell>
+    </>
   );
 }
