@@ -60,7 +60,27 @@ export function AccountBar({ locale, returnTo }) {
             </a>
           ) : null}
           {!me.employer && !me.staff ? <RegisterChoice locale={locale} returnTo={returnTo} /> : null}
-          <form method="post" action={`/api/auth/logout?returnTo=${encodeURIComponent(returnTo || "/")}`}>
+          <form
+            method="post"
+            action={`/api/auth/logout?returnTo=${encodeURIComponent(returnTo || "/")}`}
+            onSubmit={async (event) => {
+              event.preventDefault();
+              setMe({ authenticated: false });
+              const action = event.currentTarget.action;
+              try {
+                const res = await fetch(action, {
+                  method: "POST",
+                  credentials: "same-origin",
+                  redirect: "manual",
+                  cache: "no-store",
+                });
+                const location = res.headers.get("Location");
+                window.location.assign(location || returnTo || "/");
+              } catch {
+                window.location.assign(returnTo || "/");
+              }
+            }}
+          >
             <button type="submit" className="text-btn">{t.signOut}</button>
           </form>
         </>

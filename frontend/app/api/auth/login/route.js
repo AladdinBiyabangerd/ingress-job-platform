@@ -1,12 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
+import { NextResponse } from "next/server";
 import {
-  appendCookies,
-  clearAuthCookies,
-  cookie,
   noStore,
   oidcConfig,
   readCookie,
   safeReturnTo,
+  setAuthCookies,
 } from "../../../../lib/server/oidc";
 
 export const runtime = "nodejs";
@@ -69,9 +68,9 @@ export async function GET(request) {
   if (intent && alreadySignedIn) params.set("existing_account", "1");
   params.set("return_to", new URL(returnTo, `${config.origin}/`).toString());
 
-  const response = new Response(null, {
-    status: 302,
-    headers: { Location: `${config.authorizeUrl}?${params.toString()}` },
-  });
-  return noStore(appendCookies(response, [...clearAuthCookies(request), cookie("job_oidc_state", state, 600)]));
+  return noStore(setAuthCookies(
+    NextResponse.redirect(`${config.authorizeUrl}?${params.toString()}`, 302),
+    [["job_oidc_state", state, 600]],
+    request,
+  ));
 }

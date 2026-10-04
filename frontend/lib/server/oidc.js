@@ -1,6 +1,18 @@
+import { NextResponse } from "next/server";
 import { apiBase } from "../api";
 
 const SAFE_RETURN = /^\/(?:(?:en|ru)(?:\/jobs\/\d+|\/post|\/company|\/admin|\/applications|\/profile|\/notifications)?|jobs\/\d+|post|company|admin|applications|profile|notifications)?$/;
+const EXPIRED = new Date(0);
+const AUTH_COOKIE_NAMES = [
+  "job_access_token",
+  "job_refresh_token",
+  "job_oidc_state",
+  "job_oidc_nonce",
+  "job_pkce_verifier",
+  "job_pkce_challenge",
+  "job_session",
+  "job_token",
+];
 
 export function safeReturnTo(value) {
   const text = typeof value === "string" ? value.trim() : "";
@@ -46,21 +58,27 @@ export function readCookie(request, name) {
   return null;
 }
 
-export function cookie(name, value, maxAgeSeconds) {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}${secure}`;
+function cookieSecure() {
+  return process.env.NODE_ENV === "production";
 }
 
-const AUTH_COOKIE_NAMES = [
-  "job_access_token",
-  "job_refresh_token",
-  "job_oidc_state",
-  "job_oidc_nonce",
-  "job_pkce_verifier",
-  "job_pkce_challenge",
-  "job_session",
-  "job_token",
-];
+function cookieOptions(maxAgeSeconds) {
+  const options = {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: cookieSecure(),
+    maxAge: maxAgeSeconds,
+  };
+  if (maxAgeSeconds <= 0) options.expires = EXPIRED;
+  return options;
+}
+
+export function cookie(name, value, maxAgeSeconds) {
+  const secure = cookieSecure() ? "; Secure" : "";
+  const expires = maxAgeSeconds <= 0 ? "; Expires=Thu, 01 Jan 1970 00:00:00 GMT" : "";
+  return `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}${expires}${secure}`;
+}
 
 function authCookieNames(request) {
   const names = new Set(AUTH_COOKIE_NAMES);
@@ -76,6 +94,30 @@ export function clearAuthCookies(request) {
   return [...authCookieNames(request)].map((name) => cookie(name, "", 0));
 }
 
+function parseSetCookie(raw) {
+  const parts = String(raw).split(";").map((part) => part.trim()).filter(Boolean);
+  const [name, ...valueParts] = parts[0].split("=");
+  let value = valueParts.join("=");
+  try {
+    value = decodeURIComponent(value);
+  } catch {
+    // keep raw value
+  }
+  const options = { path: "/", httpOnly: false, sameSite: "lax", secure: false };
+  for (const part of parts.slice(1)) {
+    const eq = part.indexOf("=");
+    const key = (eq === -1 ? part : part.slice(0, eq)).trim().toLowerCase();
+    const val = eq === -1 ? "" : part.slice(eq + 1).trim();
+    if (key === "path") options.path = val || "/";
+    else if (key === "httponly") options.httpOnly = true;
+    else if (key === "secure") options.secure = true;
+    else if (key === "samesite") options.sameSite = val.toLowerCase();
+    else if (key === "max-age") options.maxAge = Number(val);
+    else if (key === "expires") options.expires = new Date(val);
+  }
+  return { name, value, options };
+}
+
 export function clampAge(value, fallback, max) {
   const number = Number(value);
   if (!Number.isFinite(number) || number <= 0) return fallback;
@@ -88,9 +130,56 @@ export function noStore(response) {
   return response;
 }
 
+export function asNextResponse(response) {
+  if (response instanceof NextResponse) return response;
+  return new NextResponse(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
 export function appendCookies(response, values) {
-  for (const value of values) response.headers.append("Set-Cookie", value);
+  if (!values?.length) return response;
+  const next = asNextResponse(response);
+  for (const raw of values) {
+    const { name, value, options } = parseSetCookie(raw);
+    next.cookies.set(name, value, options);
+  }
+  return next;
+}
+
+function appendOppositeSecureClears(response, names) {
+  // NextResponse.cookies.set rebuilds Set-Cookie from its jar and drops prior
+  // headers.append values, so opposite-Secure clears must be appended last.
+  const secure = cookieSecure();
+  const suffix = secure ? "" : "; Secure";
+  for (const name of names) {
+    response.headers.append(
+      "Set-Cookie",
+      `${name}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${suffix}`,
+    );
+  }
   return response;
+}
+
+export function clearAuthCookiesOn(response, request) {
+  const next = asNextResponse(response);
+  const names = [...authCookieNames(request)];
+  for (const name of names) next.cookies.set(name, "", cookieOptions(0));
+  return appendOppositeSecureClears(next, names);
+}
+
+export function setAuthCookies(response, entries, request) {
+  const next = asNextResponse(response);
+  const cleared = [...authCookieNames(request)];
+  for (const name of cleared) next.cookies.set(name, "", cookieOptions(0));
+  for (const [name, value, maxAgeSeconds] of entries) {
+    next.cookies.set(name, value, cookieOptions(maxAgeSeconds));
+  }
+  // Clear the opposite Secure slot for every auth name. An empty cookie with the
+  // other Secure flag does not overwrite the values written above.
+  return appendOppositeSecureClears(next, cleared);
 }
 
 export async function authorizedApi(request, path, init = {}) {

@@ -1,23 +1,20 @@
+import { NextResponse } from "next/server";
 import {
-  appendCookies,
   clampAge,
-  clearAuthCookies,
+  clearAuthCookiesOn,
   companyPath,
-  cookie,
   noStore,
   oidcConfig,
   readCookie,
   safeReturnTo,
+  setAuthCookies,
 } from "../../../../lib/server/oidc";
 
 export const runtime = "nodejs";
 
 function fail(request, origin, code) {
-  const response = new Response(null, {
-    status: 307,
-    headers: { Location: new URL(`/?sso_error=${encodeURIComponent(code)}`, origin).toString() },
-  });
-  return noStore(appendCookies(response, clearAuthCookies(request)));
+  const response = NextResponse.redirect(new URL(`/?sso_error=${encodeURIComponent(code)}`, origin), 307);
+  return noStore(clearAuthCookiesOn(response, request));
 }
 
 export async function GET(request) {
@@ -53,20 +50,19 @@ export async function GET(request) {
   let dest = safeReturnTo(data.return_to);
   if (data.me && data.me.needs_company_profile) dest = companyPath(dest);
 
-  const response = new Response(null, {
-    status: 307,
-    headers: { Location: new URL(dest, config.origin).toString() },
-  });
-  const cookies = [
-    cookie("job_oidc_state", "", 0),
-    cookie("job_access_token", data.access_token, clampAge(data.expires_in, 900, 3600)),
+  const entries = [
+    ["job_access_token", data.access_token, clampAge(data.expires_in, 900, 3600)],
   ];
   if (data.refresh_token) {
-    cookies.push(cookie(
+    entries.push([
       "job_refresh_token",
       data.refresh_token,
       clampAge(data.refresh_expires_in, 3600, 365 * 24 * 60 * 60),
-    ));
+    ]);
   }
-  return noStore(appendCookies(response, cookies));
+  return noStore(setAuthCookies(
+    NextResponse.redirect(new URL(dest, config.origin), 307),
+    entries,
+    request,
+  ));
 }
