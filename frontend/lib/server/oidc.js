@@ -14,11 +14,7 @@ export function companyPath(returnTo) {
 }
 
 export function oidcConfig(request) {
-  const url = new URL(request.url);
-  const configured = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
-  const railwayHost = (process.env.RAILWAY_PUBLIC_DOMAIN || "").trim();
-  const origin = configured
-    || (railwayHost ? `https://${railwayHost}` : `${url.protocol}//${url.host}`);
+  const origin = publicOrigin(request);
   const issuer = (process.env.JOB_OIDC_ISSUER || "http://127.0.0.1:8000/").replace(/\/?$/, "/");
   return {
     origin,
@@ -26,6 +22,13 @@ export function oidcConfig(request) {
     authorizeUrl: process.env.JOB_OIDC_AUTHORIZE_URL || new URL("portal/oauth/authorize", issuer).toString(),
     apiBase: apiBase(),
   };
+}
+
+export function publicOrigin(request) {
+  const url = new URL(request.url);
+  const configured = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "").trim().replace(/\/$/, "");
+  const railwayHost = (process.env.RAILWAY_PUBLIC_DOMAIN || "").trim();
+  return configured || (railwayHost ? `https://${railwayHost}` : `${url.protocol}//${url.host}`);
 }
 
 export function readCookie(request, name) {

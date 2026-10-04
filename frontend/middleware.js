@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiBase } from "./lib/api";
+import { publicOrigin } from "./lib/server/oidc";
 
 const COMPANY = new Set(["/company", "/en/company", "/ru/company"]);
 
@@ -19,7 +20,7 @@ export async function middleware(request) {
     const data = await me.json();
     if (data.needs_company_profile) {
       const prefix = pathname.startsWith("/en") ? "/en" : pathname.startsWith("/ru") ? "/ru" : "";
-      return NextResponse.redirect(new URL(`${prefix}/company`, request.url));
+      return NextResponse.redirect(new URL(`${prefix}/company`, publicOrigin(request)));
     }
   } catch {
     return NextResponse.next();

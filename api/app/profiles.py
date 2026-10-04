@@ -62,6 +62,15 @@ def _connect() -> sqlite3.Connection:
     )
     conn.execute(
         """
+        CREATE TABLE IF NOT EXISTS academy_identities (
+            subject TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS oidc_transactions (
             state TEXT PRIMARY KEY,
             verifier TEXT NOT NULL,
@@ -138,6 +147,42 @@ def save_profile(subject: str, company_name: str, city: str, about: str) -> dict
 
 def empty_candidate_profile() -> dict:
     return {"display_name": "", "phone": "", "email": ""}
+
+
+def academy_name_for(subject: str) -> str:
+    with _LOCK:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT name FROM academy_identities WHERE subject = ?",
+                (subject,),
+            ).fetchone()
+        finally:
+            conn.close()
+    return (row["name"] or "").strip() if row is not None else ""
+
+
+def remember_academy_name(subject: str, name: str) -> None:
+    who = (subject or "").strip()
+    value = _clean(name, NAME_MAX)
+    if not who or not value:
+        return
+    with _LOCK:
+        conn = _connect()
+        try:
+            conn.execute(
+                """
+                INSERT INTO academy_identities (subject, name, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(subject) DO UPDATE SET
+                    name = excluded.name,
+                    updated_at = excluded.updated_at
+                """,
+                (who, value, _now().isoformat()),
+            )
+            conn.commit()
+        finally:
+            conn.close()
 
 
 def candidate_profile_for(subject: str) -> dict:

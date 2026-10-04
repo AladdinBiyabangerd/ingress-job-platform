@@ -24,6 +24,7 @@ class AuthError(Exception):
 class VerifiedAccess:
     subject: str
     scopes: frozenset[str]
+    name: str = ""
 
 
 def _jwks_client() -> PyJWKClient:
@@ -73,11 +74,13 @@ def verify_access_token(token: str) -> VerifiedAccess:
     if not isinstance(scope_value, str):
         raise AuthError(401, "Hesab tələb olunur")
     scopes = frozenset(part for part in scope_value.split() if part)
-    return VerifiedAccess(subject=subject.strip(), scopes=scopes)
+    name = claims.get("name")
+    if not isinstance(name, str):
+        name = ""
+    return VerifiedAccess(subject=subject.strip(), scopes=scopes, name=name.strip())
 
 
-def email_from_id_token(token: str) -> tuple[str, str] | None:
-    """Read sub and email from an Academy id_token. Access tokens do not carry email."""
+def _id_token_claims(token: str) -> dict | None:
     if not token or token.count(".") != 2:
         return None
     issuer = settings.issuer()
@@ -86,7 +89,7 @@ def email_from_id_token(token: str) -> tuple[str, str] | None:
         return None
     try:
         signing_key = _jwks_client().get_signing_key_from_jwt(token)
-        claims = jwt.decode(
+        return jwt.decode(
             token,
             signing_key.key,
             algorithms=["RS256"],
@@ -97,12 +100,33 @@ def email_from_id_token(token: str) -> tuple[str, str] | None:
         )
     except (InvalidTokenError, PyJWKClientError, TimeoutError):
         return None
+
+
+def identity_from_id_token(token: str) -> tuple[str, str, str] | None:
+    """Read the verified subject, email, and display name from an Academy id_token."""
+    claims = _id_token_claims(token)
+    if not isinstance(claims, dict):
+        return None
     subject = claims.get("sub")
     email = claims.get("email")
-    if not isinstance(subject, str) or not isinstance(email, str):
+    name = claims.get("name")
+    if not isinstance(subject, str):
         return None
     subject = subject.strip()
-    email = email.strip()
-    if not subject or not email:
+    email = email.strip() if isinstance(email, str) else ""
+    if not isinstance(name, str) or not name.strip():
+        first = claims.get("given_name") if isinstance(claims.get("given_name"), str) else ""
+        last = claims.get("family_name") if isinstance(claims.get("family_name"), str) else ""
+        name = " ".join(part.strip() for part in (first, last) if part.strip())
+    name = name.strip()
+    if not subject or (not email and not name):
         return None
-    return subject, email
+    return subject, email, name
+
+
+def email_from_id_token(token: str) -> tuple[str, str] | None:
+    """Read sub and email from an Academy id_token. Access tokens do not carry email."""
+    found = identity_from_id_token(token)
+    if not found or not found[1]:
+        return None
+    return found[0], found[1]

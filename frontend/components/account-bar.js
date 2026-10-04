@@ -28,6 +28,11 @@ export function AccountBar({ locale, returnTo }) {
   }, []);
 
   const role = me?.staff ? t.roleStaff : me?.employer ? t.roleEmployer : me?.candidate ? t.roleCandidate : "";
+  const profileName = typeof me?.candidate_profile?.display_name === "string"
+    ? me.candidate_profile.display_name.trim()
+    : "";
+  const academyName = typeof me?.name === "string" ? me.name.trim() : "";
+  const accountLabel = [profileName || academyName, role || t.account].filter(Boolean).join(" · ");
 
   return (
     <div className="account-bar">
@@ -43,7 +48,7 @@ export function AccountBar({ locale, returnTo }) {
               </svg>
             </a>
           ) : null}
-          <span className="who">{role || t.account}</span>
+          <span className="who">{accountLabel}</span>
           {me.staff ? (
             <a className="text-btn" href={hrefFor(locale, { mode: "admin" })}>
               {t.admin}

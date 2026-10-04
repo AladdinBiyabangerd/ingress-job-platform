@@ -13,7 +13,16 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.auth_oidc import AuthError, VerifiedAccess, verify_access_token
 from app.config import settings
-from app.profiles import candidate_profile_for, profile_for, save_candidate_profile, save_profile, save_transaction, take_transaction
+from app.profiles import (
+    academy_name_for,
+    candidate_profile_for,
+    profile_for,
+    remember_academy_name,
+    save_candidate_profile,
+    save_profile,
+    save_transaction,
+    take_transaction,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["account"])
 
@@ -40,6 +49,7 @@ def account_payload(user: VerifiedAccess) -> dict:
     employer = "job:employer" in user.scopes
     candidate = "job:candidate" in user.scopes
     staff = "job:staff" in user.scopes
+    name = (user.name or "").strip() or academy_name_for(user.subject)
     return {
         "authenticated": True,
         "subject": user.subject,
@@ -47,6 +57,7 @@ def account_payload(user: VerifiedAccess) -> dict:
         "employer": employer,
         "candidate": candidate,
         "staff": staff,
+        "name": name,
         "company_profile": profile,
         "candidate_profile": candidate_profile_for(user.subject),
         "needs_company_profile": employer and not staff and not profile["complete"],
@@ -101,23 +112,23 @@ class RefreshIn(BaseModel):
     refresh_token: str = Field(min_length=20, max_length=4096)
 
 
-def _remember_login_email(id_token, subject: str) -> None:
-    """Keep Academy's address for later job mail. A bad token is ignored."""
+def _remember_login_identity(id_token, subject: str) -> None:
     if not isinstance(id_token, str) or id_token.count(".") != 2:
         return
     try:
-        from app.auth_oidc import email_from_id_token
-        from app.profiles import remember_contact_email
+        from app.auth_oidc import identity_from_id_token
 
-        found = email_from_id_token(id_token)
+        found = identity_from_id_token(id_token)
     except Exception:
         return
-    if not found:
+    if not found or found[0] != subject:
         return
-    token_subject, email = found
-    if token_subject != subject:
-        return
-    remember_contact_email(subject, email)
+    if found[2]:
+        remember_academy_name(subject, found[2])
+    if found[1]:
+        from app.profiles import remember_contact_email
+
+        remember_contact_email(subject, found[1])
 
 
 def _post_form(body: dict) -> dict:
@@ -163,6 +174,7 @@ def _tokens_from(payload: dict, *, require_refresh: bool) -> dict:
         refresh_expires = int(refresh_expires)
     except (TypeError, ValueError) as exc:
         raise HTTPException(status_code=502, detail="Academy token mübadiləsi alınmadı") from exc
+    _remember_login_identity(payload.get("id_token"), user.subject)
     issued = {
         "access_token": access,
         "expires_in": max(1, min(expires_in, 3600)),
@@ -170,7 +182,6 @@ def _tokens_from(payload: dict, *, require_refresh: bool) -> dict:
         "refresh_expires_in": max(1, min(refresh_expires, 365 * 24 * 60 * 60)),
         "me": account_payload(user),
     }
-    _remember_login_email(payload.get("id_token"), user.subject)
     return issued
 
 
