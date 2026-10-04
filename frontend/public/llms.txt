@@ -1,10 +1,16 @@
 # Ingress Job
 
-> Public job board for open roles in Azerbaijan. Browse listings, search by title or company, filter by city and language. Locales: az (default), en, ru.
+> Public job board for open roles in Azerbaijan. Part of the Ingress ecosystem (https://ingress.academy). Browse listings, search by title or company, filter by city and language. Locales: az (default), en, ru.
 
 ## One-line entity
 
-Ingress Job is a multilingual job listings site for Azerbaijan: public browse of open roles, employer posting after sign-in, and candidate applications. Private cabinets (post, company, applications, profile, admin) are not for indexing.
+Ingress Job is a multilingual job listings product in the Ingress ecosystem: public browse of open roles, employer posting after Ingress Academy sign-in, and candidate applications. Private cabinets (post, company, applications, profile, admin) are not for indexing.
+
+## Ecosystem
+
+- Parent / family: Ingress — https://ingress.academy
+- Identity / SSO: Ingress Academy account (OIDC)
+- This site is the jobs product; it is not the Academy learning portal
 
 ## Key pages
 

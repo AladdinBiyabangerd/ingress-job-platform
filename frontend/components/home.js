@@ -316,6 +316,7 @@ export function Home({ locale, jobs, error }) {
       <section className="hero">
         <div className="hero-top">
           <div>
+            <p className="eco-kicker">{t.ecosystemLine}</p>
             <h1>{t.heading}</h1>
             <p className="lede">{t.lede}</p>
           </div>

@@ -105,57 +105,73 @@ export function ProfileForm({ locale }) {
     <Shell locale={locale} mode="profile">
       {me === undefined ? null : showCompany || showApplicant ? (
         <div className="cabinet">
-          <div>
-            <h1>{t.profileTitle}</h1>
-            <p className="lede">{t.profileLede}</p>
+          <div className="cabinet-head">
+            <div>
+              <h1>{t.profileTitle}</h1>
+              <p className="lede">{t.profileLede}</p>
+            </div>
           </div>
-          {showCompany ? (
-            <form className="form-card profile-block" onSubmit={saveCompany}>
-              <h2>{t.companyTitle}</h2>
-              <p className="hint">{t.profileCompanyLede}</p>
-              {companyError ? <p className="note">{companyError}</p> : null}
-              {companyNote ? <p className="note">{companyNote}</p> : null}
-              <label>
-                {t.companyName}
-                <input value={companyName} maxLength={120} required onChange={(event) => setCompanyName(event.target.value)} />
-              </label>
-              <label>
-                {t.companyCity}
-                <input value={city} maxLength={80} required onChange={(event) => setCity(event.target.value)} />
-              </label>
-              <label>
-                {t.companyAbout}
-                <textarea value={about} maxLength={400} required rows={5} onChange={(event) => setAbout(event.target.value)} />
-              </label>
-              <button type="submit" className="btn primary">{t.companySave}</button>
-            </form>
-          ) : null}
-          {showApplicant ? (
-            <form className="form-card profile-block" onSubmit={saveApplicant}>
-              <h2>{t.profileApplicantTitle}</h2>
-              <p className="hint">{t.profileApplicantLede}</p>
-              {applicantError ? <p className="note">{applicantError}</p> : null}
-              {applicantNote ? <p className="note">{applicantNote}</p> : null}
-              <label>
-                {t.profileName}
-                <input value={displayName} maxLength={80} required onChange={(event) => setDisplayName(event.target.value)} />
-              </label>
-              <label>
-                {t.applyPhone}
-                <span className="hint">{t.adOptional}</span>
-                <input type="tel" value={phone} maxLength={40} onChange={(event) => setPhone(event.target.value)} />
-              </label>
-              <label>
-                {t.applyEmail}
-                <span className="hint">{t.adOptional}</span>
-                <input type="email" value={email} maxLength={120} onChange={(event) => setEmail(event.target.value)} />
-              </label>
-              <button type="submit" className="btn primary">{t.companySave}</button>
-            </form>
-          ) : null}
+          <div className={`profile-layout${showCompany && showApplicant ? " profile-layout-dual" : ""}`}>
+            {showCompany ? (
+              <form className="form-card profile-card" onSubmit={saveCompany}>
+                <div className="cabinet-form-head">
+                  <h2>{t.companyTitle}</h2>
+                  <p className="hint">{t.profileCompanyLede}</p>
+                </div>
+                {companyError ? <p className="note">{companyError}</p> : null}
+                {companyNote ? <p className="note">{companyNote}</p> : null}
+                <div className="profile-grid">
+                  <label>
+                    {t.companyName}
+                    <input value={companyName} maxLength={120} required onChange={(event) => setCompanyName(event.target.value)} />
+                  </label>
+                  <label>
+                    {t.companyCity}
+                    <input value={city} maxLength={80} required onChange={(event) => setCity(event.target.value)} />
+                  </label>
+                  <label className="profile-span">
+                    {t.companyAbout}
+                    <textarea value={about} maxLength={400} required rows={5} onChange={(event) => setAbout(event.target.value)} />
+                  </label>
+                </div>
+                <div className="ad-actions">
+                  <button type="submit" className="btn primary">{t.companySave}</button>
+                </div>
+              </form>
+            ) : null}
+            {showApplicant ? (
+              <form className="form-card profile-card" onSubmit={saveApplicant}>
+                <div className="cabinet-form-head">
+                  <h2>{t.profileApplicantTitle}</h2>
+                  <p className="hint">{t.profileApplicantLede}</p>
+                </div>
+                {applicantError ? <p className="note">{applicantError}</p> : null}
+                {applicantNote ? <p className="note">{applicantNote}</p> : null}
+                <div className="profile-grid">
+                  <label className="profile-span">
+                    {t.profileName}
+                    <input value={displayName} maxLength={80} required onChange={(event) => setDisplayName(event.target.value)} />
+                  </label>
+                  <label>
+                    {t.applyPhone}
+                    <span className="hint">{t.adOptional}</span>
+                    <input type="tel" value={phone} maxLength={40} onChange={(event) => setPhone(event.target.value)} />
+                  </label>
+                  <label>
+                    {t.applyEmail}
+                    <span className="hint">{t.adOptional}</span>
+                    <input type="email" value={email} maxLength={120} onChange={(event) => setEmail(event.target.value)} />
+                  </label>
+                </div>
+                <div className="ad-actions">
+                  <button type="submit" className="btn primary">{t.companySave}</button>
+                </div>
+              </form>
+            ) : null}
+          </div>
         </div>
       ) : (
-        <section className="empty">
+        <section className="empty profile-gate">
           <h1>{t.profileTitle}</h1>
           <p className="lede">{t.profileGate}</p>
           <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "profile" })} />

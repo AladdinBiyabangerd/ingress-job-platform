@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
+import { ingressUrl } from "../lib/ingress";
 import { AccountBar } from "./account-bar";
 
 const LOCALES = ["az", "en", "ru"];
@@ -106,6 +107,18 @@ export function Shell({ locale, mode, jobId, children }) {
         </div>
       </header>
       <main id="main" className="wrap">{children}</main>
+      <footer className="site-footer">
+        <div className="site-footer-inner">
+          <p className="site-footer-eco">
+            <span>{t.ecosystemLine}</span>
+            <span aria-hidden="true"> · </span>
+            <a href={ingressUrl(locale)} rel="noopener noreferrer" target="_blank">
+              {t.ecosystemLinkLabel}
+            </a>
+          </p>
+          <p className="site-footer-note">{t.ecosystemFooter}</p>
+        </div>
+      </footer>
     </>
   );
 }

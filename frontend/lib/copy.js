@@ -5,6 +5,9 @@ export const copy = {
     post: "Elan yarat",
     heading: "Açıq iş elanları",
     lede: "Başlıq və ya şirkət üzrə axtarın. Şəhər varsa, siyahını ona görə daraldın.",
+    ecosystemLine: "Ingress ekosisteminin bir hissəsi",
+    ecosystemLinkLabel: "Ingress Academy",
+    ecosystemFooter: "Ingress Job — Ingress ekosisteminin iş elanları məhsulu. Giriş Ingress Academy hesabı ilədir.",
     search: "Axtarış",
     searchPlaceholder: "Vəzifə və ya şirkət",
     openRole: "Aç",
@@ -28,11 +31,15 @@ export const copy = {
       items: [
         {
           q: "Ingress Job nədir?",
-          a: "Ingress Job Azərbaycanda açıq iş elanlarını bir yerdə göstərən platformadır. Vəzifə, şirkət, şəhər, dil və əməkhaqqı üzrə axtarıb süzə bilərsiniz.",
+          a: "Ingress Job Azərbaycanda açıq iş elanlarını bir yerdə göstərən platformadır və Ingress ekosisteminin bir hissəsidir. Vəzifə, şirkət, şəhər, dil və əməkhaqqı üzrə axtarıb süzə bilərsiniz.",
+        },
+        {
+          q: "Ingress ilə əlaqəsi nədir?",
+          a: "Ingress Job Ingress layihə ailəsinin məhsuludur. Giriş və qeydiyyat Ingress Academy hesabı ilə gedir — eyni hesab ekosistemdəki digər məhsullarda da istifadə oluna bilər.",
         },
         {
           q: "Elanlara baxmaq pulsuzdur?",
-          a: "Bəli. Açıq elanları hesab olmadan da oxuya bilərsiniz. Müraciət və elan yerləşdirmə üçün qeydiyyat lazımdır.",
+          a: "Bəli. Açıq elanları hesab olmadan da oxuya bilərsiniz. Müraciət və elan yerləşdirmə üçün Ingress Academy hesabı lazımdır.",
         },
         {
           q: "Necə axtarıb filtrləyə bilərəm?",
@@ -92,7 +99,7 @@ export const copy = {
     langEn: "İngilis",
         langRu: "Rus",
     register: "Qeydiyyat",
-    registerAsk: "Elan paylaşan, yoxsa müraciət edən?",
+    registerAsk: "Ingress Academy hesabı ilə: elan paylaşan, yoxsa müraciət edən?",
     registerPoster: "Elan paylaşan",
     registerCreator: "Müraciət edən",
     signOut: "Çıxış",
@@ -251,6 +258,9 @@ export const copy = {
     post: "Post a job",
     heading: "Open roles",
     lede: "Search by title or company. Narrow the list by city when a city is listed.",
+    ecosystemLine: "Part of the Ingress ecosystem",
+    ecosystemLinkLabel: "Ingress Academy",
+    ecosystemFooter: "Ingress Job is the job board in the Ingress ecosystem. Sign-in uses your Ingress Academy account.",
     search: "Search",
     searchPlaceholder: "Title or company",
     openRole: "Open",
@@ -274,11 +284,15 @@ export const copy = {
       items: [
         {
           q: "What is Ingress Job?",
-          a: "Ingress Job is a board of open roles in Azerbaijan. Search and filter by title, company, city, language, and salary.",
+          a: "Ingress Job is a board of open roles in Azerbaijan and part of the Ingress ecosystem. Search and filter by title, company, city, language, and salary.",
+        },
+        {
+          q: "How does it relate to Ingress?",
+          a: "Ingress Job is a product in the Ingress family. Sign-in and registration use your Ingress Academy account — the same account can work across other products in the ecosystem.",
         },
         {
           q: "Is browsing free?",
-          a: "Yes. You can read open listings without an account. Applying and posting require registration.",
+          a: "Yes. You can read open listings without an account. Applying and posting require an Ingress Academy account.",
         },
         {
           q: "How do I search and filter?",
@@ -338,7 +352,7 @@ export const copy = {
     langEn: "English",
         langRu: "Russian",
     register: "Register",
-    registerAsk: "Posting a job, or applying?",
+    registerAsk: "With an Ingress Academy account: posting a job, or applying?",
     registerPoster: "Posting a job",
     registerCreator: "Applying",
     signOut: "Sign out",
@@ -497,6 +511,9 @@ export const copy = {
     post: "Разместить вакансию",
     heading: "Открытые вакансии",
     lede: "Ищите по должности или компании. Если город указан, список можно сузить.",
+    ecosystemLine: "Часть экосистемы Ingress",
+    ecosystemLinkLabel: "Ingress Academy",
+    ecosystemFooter: "Ingress Job — площадка вакансий в экосистеме Ingress. Вход через аккаунт Ingress Academy.",
     search: "Поиск",
     searchPlaceholder: "Должность или компания",
     openRole: "Открыть",
@@ -520,11 +537,15 @@ export const copy = {
       items: [
         {
           q: "Что такое Ingress Job?",
-          a: "Ingress Job — площадка открытых вакансий в Азербайджане. Ищите и фильтруйте по должности, компании, городу, языку и зарплате.",
+          a: "Ingress Job — площадка открытых вакансий в Азербайджане и часть экосистемы Ingress. Ищите и фильтруйте по должности, компании, городу, языку и зарплате.",
+        },
+        {
+          q: "Как это связано с Ingress?",
+          a: "Ingress Job — продукт семейства Ingress. Вход и регистрация идут через аккаунт Ingress Academy — тот же аккаунт можно использовать в других продуктах экосистемы.",
         },
         {
           q: "Просмотр бесплатный?",
-          a: "Да. Открытые вакансии можно читать без аккаунта. Для отклика и размещения нужна регистрация.",
+          a: "Да. Открытые вакансии можно читать без аккаунта. Для отклика и размещения нужен аккаунт Ingress Academy.",
         },
         {
           q: "Как искать и фильтровать?",
@@ -584,7 +605,7 @@ export const copy = {
     langEn: "Английский",
         langRu: "Русский",
     register: "Регистрация",
-    registerAsk: "Публикуете вакансию или откликаетесь?",
+    registerAsk: "С аккаунтом Ingress Academy: публикуете вакансию или откликаетесь?",
     registerPoster: "Публикую вакансию",
     registerCreator: "Откликаюсь",
     signOut: "Выйти",

@@ -1,4 +1,5 @@
 import { hrefFor, text } from "./copy";
+import { INGRESS, ingressUrl } from "./ingress";
 
 export const LOCALES = ["az", "en", "ru"];
 export const HTML_LANG = { az: "az", en: "en", ru: "ru" };
@@ -21,7 +22,7 @@ const HOME = {
   az: {
     title: "Ingress Job — Açıq iş elanları",
     description:
-      "Azərbaycanda açıq iş elanlarına baxın. Başlıq və ya şirkət üzrə axtarın, şəhər və dilə görə süzün.",
+      "Ingress ekosisteminin iş elanları platforması. Azərbaycanda açıq vakansiyalara baxın; başlıq, şirkət, şəhər və dilə görə süzün.",
     keywords: [
       "iş elanları",
       "vakansiya",
@@ -29,43 +30,49 @@ const HOME = {
       "Azərbaycan iş",
       "Bakı vakansiya",
       "Ingress Job",
+      "Ingress",
+      "Ingress Academy",
     ],
     breadcrumbHome: "Elanlar",
     ogImageAlt: "Ingress Job — açıq iş elanları",
     countryName: "Azərbaycan",
-    knowsAbout: ["iş elanları", "vakansiyalar", "işə qəbul", "Azərbaycan əmək bazarı"],
+    knowsAbout: ["iş elanları", "vakansiyalar", "işə qəbul", "Azərbaycan əmək bazarı", "Ingress ekosistemi"],
   },
   en: {
     title: "Ingress Job — Open roles",
     description:
-      "Browse open job listings in Azerbaijan. Search by title or company and filter by city and language.",
+      "The job board in the Ingress ecosystem. Browse open roles in Azerbaijan; search by title or company and filter by city and language.",
     keywords: [
       "jobs Azerbaijan",
       "job listings",
       "vacancies Baku",
       "open roles",
       "Ingress Job",
+      "Ingress",
+      "Ingress Academy",
     ],
     breadcrumbHome: "Jobs",
     ogImageAlt: "Ingress Job — open job listings",
     countryName: "Azerbaijan",
-    knowsAbout: ["job listings", "vacancies", "hiring", "Azerbaijan job market"],
+    knowsAbout: ["job listings", "vacancies", "hiring", "Azerbaijan job market", "Ingress ecosystem"],
   },
   ru: {
     title: "Ingress Job — Открытые вакансии",
     description:
-      "Смотрите открытые вакансии в Азербайджане. Ищите по должности или компании, фильтруйте по городу и языку.",
+      "Площадка вакансий в экосистеме Ingress. Смотрите открытые вакансии в Азербайджане; ищите по должности или компании, фильтруйте по городу и языку.",
     keywords: [
       "вакансии Азербайджан",
       "работа Баку",
       "открытые вакансии",
       "поиск работы",
       "Ingress Job",
+      "Ingress",
+      "Ingress Academy",
     ],
     breadcrumbHome: "Вакансии",
     ogImageAlt: "Ingress Job — открытые вакансии",
     countryName: "Азербайджан",
-    knowsAbout: ["вакансии", "поиск работы", "найм", "рынок труда Азербайджана"],
+    knowsAbout: ["вакансии", "поиск работы", "найм", "рынок труда Азербайджана", "экосистема Ingress"],
   },
 };
 
@@ -301,6 +308,7 @@ function salaryJsonLd(salary) {
 function organizationNode(locale) {
   const copy = homeCopy(locale);
   const origin = siteOrigin();
+  const parentUrl = ingressUrl(locale);
   return {
     "@type": "Organization",
     "@id": `${origin}/#organization`,
@@ -315,6 +323,12 @@ function organizationNode(locale) {
     areaServed: {
       "@type": "Country",
       name: copy.countryName,
+    },
+    parentOrganization: {
+      "@type": "Organization",
+      name: INGRESS.name,
+      url: parentUrl,
+      sameAs: [INGRESS.url],
     },
   };
 }

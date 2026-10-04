@@ -44,6 +44,17 @@ export default function OpenGraphImage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div
             style={{
+              fontSize: 22,
+              fontWeight: 600,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              opacity: 0.88,
+            }}
+          >
+            Part of the Ingress ecosystem
+          </div>
+          <div
+            style={{
               fontSize: 72,
               fontWeight: 700,
               letterSpacing: "-0.04em",
@@ -54,7 +65,7 @@ export default function OpenGraphImage() {
             Open roles in Azerbaijan
           </div>
           <div style={{ fontSize: 30, opacity: 0.92, maxWidth: 820, lineHeight: 1.35 }}>
-            Browse job listings. Search by title or company. Filter by city and language.
+            Browse job listings. Search by title or company. Sign in with Ingress Academy.
           </div>
         </div>
       </div>
