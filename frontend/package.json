@@ -1,0 +1,15 @@
+{
+  "name": "ingress-job-web",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "next dev --port 3010",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0 --port ${PORT:-3010}"
+  },
+  "dependencies": {
+    "next": "^15.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

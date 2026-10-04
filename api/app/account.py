@@ -1,0 +1,268 @@
+"""Who the caller is, and whether the employer profile gate is still open."""
+
+from __future__ import annotations
+
+import json
+import re
+import urllib.error
+import urllib.parse
+import urllib.request
+
+from fastapi import APIRouter, Depends, Header, HTTPException
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.auth_oidc import AuthError, VerifiedAccess, verify_access_token
+from app.config import settings
+from app.profiles import candidate_profile_for, profile_for, save_candidate_profile, save_profile, save_transaction, take_transaction
+
+router = APIRouter(prefix="/api/v1", tags=["account"])
+
+_SAFE_RETURN = re.compile(
+    r"^/(?:(?:en|ru)(?:/jobs/\d+|/post|/company|/admin|/applications|/profile|/notifications)?|jobs/\d+|post|company|admin|applications|profile|notifications)?$"
+)
+_INTENTS = {"", "job_employer", "job_candidate"}
+_STATE = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
+_VERIFIER = re.compile(r"^[A-Za-z0-9_-]{43,128}$")
+
+
+def current_user(authorization: str | None = Header(default=None)) -> VerifiedAccess:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Hesab tələb olunur")
+    token = authorization.split(" ", 1)[1].strip()
+    try:
+        return verify_access_token(token)
+    except AuthError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
+
+
+def account_payload(user: VerifiedAccess) -> dict:
+    profile = profile_for(user.subject)
+    employer = "job:employer" in user.scopes
+    candidate = "job:candidate" in user.scopes
+    staff = "job:staff" in user.scopes
+    return {
+        "authenticated": True,
+        "subject": user.subject,
+        "scopes": sorted(user.scopes),
+        "employer": employer,
+        "candidate": candidate,
+        "staff": staff,
+        "company_profile": profile,
+        "candidate_profile": candidate_profile_for(user.subject),
+        "needs_company_profile": employer and not staff and not profile["complete"],
+    }
+
+
+def safe_return_to(value: str | None) -> str:
+    text = (value or "").strip() or "/"
+    if not _SAFE_RETURN.fullmatch(text):
+        return "/"
+    return text
+
+
+class CandidateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    display_name: str = Field(max_length=80)
+    phone: str = Field(default="", max_length=40)
+    email: str = Field(default="", max_length=120)
+
+
+class CompanyIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    company_name: str = Field(max_length=120)
+    city: str = Field(max_length=80)
+    about: str = Field(max_length=400)
+
+
+class TransactionIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    state: str
+    verifier: str
+    nonce: str
+    return_to: str
+    intent: str = ""
+    redirect_uri: str
+
+
+class ExchangeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    state: str
+    code: str = Field(min_length=1, max_length=4096)
+    redirect_uri: str
+
+
+class RefreshIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    refresh_token: str = Field(min_length=20, max_length=4096)
+
+
+def _remember_login_email(id_token, subject: str) -> None:
+    """Keep Academy's address for later job mail. A bad token is ignored."""
+    if not isinstance(id_token, str) or id_token.count(".") != 2:
+        return
+    try:
+        from app.auth_oidc import email_from_id_token
+        from app.profiles import remember_contact_email
+
+        found = email_from_id_token(id_token)
+    except Exception:
+        return
+    if not found:
+        return
+    token_subject, email = found
+    if token_subject != subject:
+        return
+    remember_contact_email(subject, email)
+
+
+def _post_form(body: dict) -> dict:
+    data = urllib.parse.urlencode(body).encode()
+    request = urllib.request.Request(
+        settings.oidc_token_url,
+        data=data,
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": "ingress-job-api/0.1",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=5) as response:
+            raw = response.read(65536)
+            payload = json.loads(raw.decode("utf-8"))
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, UnicodeError) as exc:
+        raise HTTPException(status_code=502, detail="Academy token mübadiləsi alınmadı") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=502, detail="Academy token mübadiləsi alınmadı")
+    return payload
+
+
+def _tokens_from(payload: dict, *, require_refresh: bool) -> dict:
+    access = payload.get("access_token")
+    if not isinstance(access, str) or not access:
+        raise HTTPException(status_code=502, detail="Academy token mübadiləsi alınmadı")
+    try:
+        user = verify_access_token(access)
+    except AuthError as exc:
+        raise HTTPException(status_code=502, detail="Academy token qəbul edilmədi") from exc
+    refresh = payload.get("refresh_token")
+    if require_refresh and (not isinstance(refresh, str) or len(refresh) < 20):
+        raise HTTPException(status_code=502, detail="Academy token mübadiləsi alınmadı")
+    if refresh is not None and (not isinstance(refresh, str) or len(refresh) > 4096):
+        raise HTTPException(status_code=502, detail="Academy token mübadiləsi alınmadı")
+    expires_in = payload.get("expires_in") or 900
+    refresh_expires = payload.get("refresh_expires_in") or 365 * 24 * 60 * 60
+    try:
+        expires_in = int(expires_in)
+        refresh_expires = int(refresh_expires)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail="Academy token mübadiləsi alınmadı") from exc
+    issued = {
+        "access_token": access,
+        "expires_in": max(1, min(expires_in, 3600)),
+        "refresh_token": refresh if isinstance(refresh, str) else None,
+        "refresh_expires_in": max(1, min(refresh_expires, 365 * 24 * 60 * 60)),
+        "me": account_payload(user),
+    }
+    _remember_login_email(payload.get("id_token"), user.subject)
+    return issued
+
+
+@router.get("/me")
+def read_me(user: VerifiedAccess = Depends(current_user)) -> dict:
+    return account_payload(user)
+
+
+@router.post("/company-profile")
+def write_company_profile(body: CompanyIn, user: VerifiedAccess = Depends(current_user)) -> dict:
+    if "job:employer" not in user.scopes and "job:staff" not in user.scopes:
+        raise HTTPException(status_code=403, detail="Şirkət profili işəgötürən hesabı tələb edir")
+    try:
+        profile = save_profile(user.subject, body.company_name, body.city, body.about)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="Şirkət adı, şəhər və qısa təsvir doldurulmalıdır",
+        ) from exc
+    return account_payload(
+        VerifiedAccess(subject=user.subject, scopes=user.scopes)
+    ) | {"company_profile": profile, "needs_company_profile": (
+        "job:employer" in user.scopes and "job:staff" not in user.scopes and not profile["complete"]
+    )}
+
+
+@router.post("/candidate-profile")
+def write_candidate_profile(body: CandidateIn, user: VerifiedAccess = Depends(current_user)) -> dict:
+    if "job:candidate" not in user.scopes and "job:staff" not in user.scopes:
+        raise HTTPException(status_code=403, detail="Namizəd profili namizəd hesabı tələb edir")
+    try:
+        profile = save_candidate_profile(user.subject, body.display_name, body.phone, body.email)
+    except ValueError as exc:
+        detail = {
+            "name": "Görünən ad yazılmalıdır",
+            "phone": "Telefon nömrəsi düzgün deyil",
+            "email": "E-poçt düzgün deyil",
+        }.get(str(exc), "Görünən ad yazılmalıdır")
+        raise HTTPException(status_code=422, detail=detail) from exc
+    payload = account_payload(VerifiedAccess(subject=user.subject, scopes=user.scopes))
+    payload["candidate_profile"] = profile
+    return payload
+
+
+@router.post("/auth/transactions", status_code=204)
+def create_transaction(body: TransactionIn) -> None:
+    if not _STATE.fullmatch(body.state) or not _VERIFIER.fullmatch(body.verifier):
+        raise HTTPException(status_code=400, detail="Giriş sorğusu yanlışdır")
+    if not _STATE.fullmatch(body.nonce) and not re.fullmatch(r"^[A-Za-z0-9_-]{16,128}$", body.nonce):
+        raise HTTPException(status_code=400, detail="Giriş sorğusu yanlışdır")
+    if body.intent not in _INTENTS:
+        raise HTTPException(status_code=400, detail="Giriş sorğusu yanlışdır")
+    if body.redirect_uri not in settings.redirect_uri_list():
+        raise HTTPException(status_code=400, detail="Giriş sorğusu yanlışdır")
+    save_transaction(
+        state=body.state,
+        verifier=body.verifier,
+        nonce=body.nonce,
+        return_to=safe_return_to(body.return_to),
+        intent=body.intent,
+        redirect_uri=body.redirect_uri,
+    )
+
+
+@router.post("/auth/exchange")
+def exchange(body: ExchangeIn) -> dict:
+    if not _STATE.fullmatch(body.state):
+        raise HTTPException(status_code=400, detail="Giriş sorğusu yanlışdır")
+    row = take_transaction(body.state)
+    if row is None or row["redirect_uri"] != body.redirect_uri:
+        raise HTTPException(status_code=400, detail="Giriş sorğusu yanlışdır")
+    payload = _post_form(
+        {
+            "grant_type": "authorization_code",
+            "code": body.code,
+            "redirect_uri": row["redirect_uri"],
+            "client_id": settings.oidc_client_id,
+            "code_verifier": row["verifier"],
+        }
+    )
+    issued = _tokens_from(payload, require_refresh=False)
+    issued["return_to"] = safe_return_to(row["return_to"])
+    return issued
+
+
+@router.post("/auth/refresh")
+def refresh(body: RefreshIn) -> dict:
+    payload = _post_form(
+        {
+            "grant_type": "refresh_token",
+            "refresh_token": body.refresh_token,
+            "client_id": settings.oidc_client_id,
+        }
+    )
+    return _tokens_from(payload, require_refresh=False)

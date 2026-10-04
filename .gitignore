@@ -1,0 +1,26 @@
+node_modules/
+.next/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+.DS_Store
+dist/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+api/data/
+worker/data/
+# Applicant CV uploads. docs/*.pdf stays in git.
+*.docx
+*.doc
+api/**/*.pdf
+worker/**/*.pdf
+cvs/
+.idea/
+tmp/
+*.log

@@ -1,0 +1,5 @@
+# Used when the service builder is Nixpacks instead of the Dockerfile.
+# ingress-academy keeps the same pair: Dockerfile plus nixpacks.toml.
+
+[start]
+cmd = "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8010}"

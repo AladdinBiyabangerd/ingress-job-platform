@@ -1,0 +1,118 @@
+"use client";
+
+import { useState } from "react";
+import { text } from "../lib/copy";
+
+export function appStatusLabel(t, status) {
+  if (status === "seen") return t.appSeen;
+  if (status === "rejected") return t.appRejected;
+  return t.appSubmitted;
+}
+
+function statusClass(status) {
+  if (status === "seen") return "source-pill live";
+  if (status === "rejected") return "source-pill rejected";
+  return "source-pill";
+}
+
+export function ApplicationList({ locale, title, items, hideEmpty = false, mode = "candidate", onChanged }) {
+  const t = text(locale);
+  const rows = Array.isArray(items) ? items : [];
+  const [error, setError] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(0);
+  if (hideEmpty && rows.length === 0) return null;
+
+  async function withdraw(item) {
+    if (!window.confirm(t.appWithdrawAsk)) return;
+    setError("");
+    setNote("");
+    setBusy(item.id);
+    const res = await fetch(`/api/auth/applications/${item.id}`, { method: "DELETE" });
+    setBusy(0);
+    if (!res.ok) {
+      setError(t.appStatusError);
+      return;
+    }
+    setNote(t.appWithdrawn);
+    if (onChanged) onChanged();
+  }
+
+  async function decide(item, status) {
+    let reason = "";
+    if (status === "rejected") {
+      const typed = window.prompt(t.appRejectAsk);
+      if (typed == null) return;
+      reason = typed;
+    }
+    setError("");
+    setNote("");
+    setBusy(item.id);
+    const path = mode === "staff" ? `/api/auth/admin/applications/${item.id}` : `/api/auth/cabinet/applications/${item.id}`;
+    const res = await fetch(path, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status, reason }),
+    });
+    setBusy(0);
+    if (!res.ok) {
+      setError(t.appStatusError);
+      return;
+    }
+    setNote(t.appUpdated);
+    if (onChanged) onChanged();
+  }
+
+  return (
+    <section>
+      {title ? <h2 className="section-label">{title}</h2> : null}
+      {error ? <p className="note">{error}</p> : null}
+      {note ? <p className="note">{note}</p> : null}
+      {rows.length === 0 ? <p className="empty-line">{t.applicationsEmpty}</p> : null}
+      <div className="list">
+        {rows.map((item) => (
+          <article key={item.id} className="card">
+            <p className={statusClass(item.status)}>{appStatusLabel(t, item.status)}</p>
+            <h2>{item.job_title}</h2>
+            <div className="meta">
+              {item.candidate_subject ? <span>{item.candidate_subject}</span> : null}
+              {item.created_at ? <span>{item.created_at}</span> : null}
+            </div>
+            {item.reason ? <p className="note">{t.rejectReason}: {item.reason}</p> : null}
+            {item.message ? <p className="admin-body">{item.message}</p> : null}
+            {item.phone ? <p className="admin-body">{t.applyPhone}: {item.phone}</p> : null}
+            {item.email ? <p className="admin-body">{t.applyEmail}: {item.email}</p> : null}
+            {(item.answers || []).filter((answer) => answer.answer).map((answer) => (
+              <p key={answer.question} className="admin-body">
+                <strong>{answer.question}</strong> {answer.answer}
+              </p>
+            ))}
+            {item.has_cv ? (
+              <a className="btn primary" href={`/api/auth/applications/${item.id}/cv`}>
+                {t.downloadCv}
+              </a>
+            ) : (
+              <p className="hint">{t.noCv}</p>
+            )}
+            <div className="ad-actions">
+              {mode === "candidate" ? (
+                <button type="button" className="btn red" disabled={busy === item.id} onClick={() => withdraw(item)}>
+                  {t.appWithdraw}
+                </button>
+              ) : (
+                <>
+                  <button type="button" className="btn primary" disabled={busy === item.id} onClick={() => decide(item, "seen")}>
+                    {t.appSeenAction}
+                  </button>
+                  <button type="button" className="btn red" disabled={busy === item.id} onClick={() => decide(item, "rejected")}>
+                    {t.appRejectAction}
+                  </button>
+                </>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}

@@ -1,0 +1,20 @@
+[project]
+name = "ingress-job-worker"
+version = "0.1.0"
+description = "ingress-job collector worker"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "httpx>=0.28,<1",
+  "beautifulsoup4>=4.12,<5",
+  "sentry-sdk>=2.0,<3",
+  "opentelemetry-sdk>=1.27,<2",
+  "opentelemetry-exporter-otlp-proto-http>=1.27,<2",
+  "psycopg[binary]>=3.2,<4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["worker"]
