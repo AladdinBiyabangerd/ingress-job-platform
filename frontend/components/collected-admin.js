@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { text } from "../lib/copy";
+import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
+import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
 
@@ -50,6 +52,8 @@ export function CollectedAdmin({ locale }) {
       cancelled = true;
     };
   }, [t.loadError]);
+
+  const { pageItems, currentPage, totalPages, pageSize, total, goToPage } = usePagination(items, LIST_PAGE_SIZE);
 
   function setField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -188,7 +192,7 @@ export function CollectedAdmin({ locale }) {
       ) : null}
       {items.length === 0 ? <p className="empty-line">{t.collectedEmpty}</p> : null}
       <div className="list">
-        {items.map((job) => (
+        {pageItems.map((job) => (
           <article key={job.id} className={job.hidden ? "card closed" : "card"}>
             <p className={job.hidden ? "source-pill closed" : "source-pill live"}>
               {job.hidden ? t.collectedHidden : t.statusPublished}
@@ -240,6 +244,14 @@ export function CollectedAdmin({ locale }) {
           </article>
         ))}
       </div>
+      <Pager
+        locale={locale}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={goToPage}
+      />
     </section>
   );
 }

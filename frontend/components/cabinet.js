@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { applyFormFromJob, applyFormPayload, applyFormReady, defaultApplyForm } from "../lib/apply-form";
 import { hrefFor, languageLabel, text } from "../lib/copy";
+import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
 import { ApplicationList } from "./application-list";
 import { ApplyFormFields } from "./apply-form-fields";
+import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
-const PAGE_SIZE = 10;
 
 function typeLabel(t, value) {
   if (value === "ofis") return t.jobOffice;
@@ -63,11 +64,11 @@ export function Cabinet({ locale, me }) {
   const [form, setForm] = useState(() => blank(locale, me));
   const [editing, setEditing] = useState(null);
   const [tab, setTab] = useState("create");
-  const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [applications, setApplications] = useState([]);
+  const { pageItems, currentPage, totalPages, pageSize, total, goToPage, resetPage } = usePagination(items, LIST_PAGE_SIZE);
 
   async function load() {
     const res = await fetch("/api/auth/cabinet/jobs", { cache: "no-store" });
@@ -90,17 +91,6 @@ export function Cabinet({ locale, me }) {
     };
   }, [t.loadError]);
 
-  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageItems = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return items.slice(start, start + PAGE_SIZE);
-  }, [items, currentPage]);
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
-
   function setField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
   }
@@ -119,10 +109,6 @@ export function Cabinet({ locale, me }) {
 
   function openMyAds() {
     setTab("ads");
-  }
-
-  function goToPage(next) {
-    setPage(Math.max(1, Math.min(totalPages, next)));
   }
 
   async function onSubmit(event) {
@@ -168,7 +154,7 @@ export function Cabinet({ locale, me }) {
     setNote(saved.status === "published" ? t.adSavedLive : t.adSavedPending);
     reset();
     setTab("ads");
-    setPage(1);
+    resetPage();
     try {
       await load();
     } catch {
@@ -367,27 +353,14 @@ export function Cabinet({ locale, me }) {
               </article>
             ))}
           </div>
-          {items.length > PAGE_SIZE ? (
-            <nav className="pager" aria-label={t.pageOf(currentPage, totalPages)}>
-              <button
-                type="button"
-                className="pager-btn"
-                disabled={currentPage <= 1}
-                onClick={() => goToPage(currentPage - 1)}
-              >
-                {t.pagePrev}
-              </button>
-              <span className="pager-status">{t.pageOf(currentPage, totalPages)}</span>
-              <button
-                type="button"
-                className="pager-btn"
-                disabled={currentPage >= totalPages}
-                onClick={() => goToPage(currentPage + 1)}
-              >
-                {t.pageNext}
-              </button>
-            </nav>
-          ) : null}
+          <Pager
+            locale={locale}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={goToPage}
+          />
         </section>
       )}
     </div>

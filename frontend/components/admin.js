@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { applyFormFromJob, applyFormPayload, applyFormReady } from "../lib/apply-form";
 import { hrefFor, languageLabel, text } from "../lib/copy";
+import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
 import { ApplicationList } from "./application-list";
 import { ApplyFormFields } from "./apply-form-fields";
 import { CollectedAdmin } from "./collected-admin";
 import { ManualAd } from "./manual-ad";
+import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
 
@@ -75,6 +77,8 @@ export function Admin({ locale }) {
       cancelled = true;
     };
   }, [t.loadError]);
+
+  const { pageItems, currentPage, totalPages, pageSize, total, goToPage } = usePagination(items, LIST_PAGE_SIZE);
 
   function setField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -311,7 +315,7 @@ export function Admin({ locale }) {
           ) : null}
           {items.length === 0 ? <p className="empty-line">{t.adminEmpty}</p> : null}
           <div className="list">
-            {items.map((job) => (
+            {pageItems.map((job) => (
               <article key={job.id} className={job.status === "closed" || job.status === "rejected" ? "card closed" : "card"}>
                 <p className={statusClass(job.status)}>{statusLabel(t, job.status)}</p>
                 <h2>
@@ -376,6 +380,14 @@ export function Admin({ locale }) {
               </article>
             ))}
           </div>
+          <Pager
+            locale={locale}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={goToPage}
+          />
         </section>
       ) : null}
 

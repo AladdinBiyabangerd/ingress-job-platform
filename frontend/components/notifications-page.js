@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
+import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
+import { Pager } from "./pager";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 
@@ -30,6 +32,7 @@ export function NotificationsPage({ locale }) {
   const [items, setItems] = useState([]);
   const [unread, setUnread] = useState(0);
   const [error, setError] = useState("");
+  const { pageItems, currentPage, totalPages, pageSize, total, goToPage } = usePagination(items, LIST_PAGE_SIZE);
 
   async function load() {
     const res = await fetch("/api/auth/notifications", { cache: "no-store" });
@@ -104,7 +107,7 @@ export function NotificationsPage({ locale }) {
             </button>
           ) : null}
           {items.length === 0 ? <p>{t.notificationsEmpty}</p> : null}
-          {items.map((item) => {
+          {pageItems.map((item) => {
             const key = LINES[item.kind];
             const line = key && typeof t[key] === "function" ? t[key](item.job_title || "") : item.job_title;
             return (
@@ -123,6 +126,14 @@ export function NotificationsPage({ locale }) {
               </article>
             );
           })}
+          <Pager
+            locale={locale}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={goToPage}
+          />
         </div>
       )}
     </Shell>

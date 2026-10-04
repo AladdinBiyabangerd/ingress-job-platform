@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { text } from "../lib/copy";
+import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
+import { Pager } from "./pager";
 
 export function appStatusLabel(t, status) {
   if (status === "seen") return t.appSeen;
@@ -21,7 +23,7 @@ export function ApplicationList({ locale, title, items, hideEmpty = false, mode 
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(0);
-  if (hideEmpty && rows.length === 0) return null;
+  const { pageItems, currentPage, totalPages, pageSize, total, goToPage } = usePagination(rows, LIST_PAGE_SIZE);
 
   async function withdraw(item) {
     if (!window.confirm(t.appWithdrawAsk)) return;
@@ -63,6 +65,8 @@ export function ApplicationList({ locale, title, items, hideEmpty = false, mode 
     if (onChanged) onChanged();
   }
 
+  if (hideEmpty && rows.length === 0) return null;
+
   return (
     <section>
       {title ? <h2 className="section-label">{title}</h2> : null}
@@ -70,7 +74,7 @@ export function ApplicationList({ locale, title, items, hideEmpty = false, mode 
       {note ? <p className="note">{note}</p> : null}
       {rows.length === 0 ? <p className="empty-line">{t.applicationsEmpty}</p> : null}
       <div className="list">
-        {rows.map((item) => (
+        {pageItems.map((item) => (
           <article key={item.id} className="card">
             <p className={statusClass(item.status)}>{appStatusLabel(t, item.status)}</p>
             <h2>{item.job_title}</h2>
@@ -113,6 +117,14 @@ export function ApplicationList({ locale, title, items, hideEmpty = false, mode 
           </article>
         ))}
       </div>
+      <Pager
+        locale={locale}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={goToPage}
+      />
     </section>
   );
 }
