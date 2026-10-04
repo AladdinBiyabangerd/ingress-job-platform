@@ -106,6 +106,7 @@ Set on the web service if the private-host wiring is not applied:
 | `JOB_OIDC_ISSUER` | Academy issuer. Unset locally keeps `http://127.0.0.1:8000/`. |
 | `JOB_OIDC_CLIENT_ID` | Default `job-web`. |
 | `JOB_OIDC_AUTHORIZE_URL` | Academy authorize URL. |
+| `JOB_OIDC_LOGOUT_URL` | Optional existing Academy end-session URL. |
 
 Set the same `DATABASE_URL` on the worker. `.railway/railway.ts` wires the
 Postgres service URL onto both services; do not point them at different

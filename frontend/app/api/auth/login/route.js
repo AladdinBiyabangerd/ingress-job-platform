@@ -1,5 +1,13 @@
 import { createHash, randomBytes } from "node:crypto";
-import { cookie, noStore, oidcConfig, readCookie, safeReturnTo } from "../../../../lib/server/oidc";
+import {
+  appendCookies,
+  clearAuthCookies,
+  cookie,
+  noStore,
+  oidcConfig,
+  readCookie,
+  safeReturnTo,
+} from "../../../../lib/server/oidc";
 
 export const runtime = "nodejs";
 
@@ -63,8 +71,5 @@ export async function GET(request) {
     status: 302,
     headers: { Location: `${config.authorizeUrl}?${params.toString()}` },
   });
-  response.headers.append("Set-Cookie", cookie("job_oidc_state", state, 600));
-  response.headers.append("Set-Cookie", cookie("job_access_token", "", 0));
-  response.headers.append("Set-Cookie", cookie("job_refresh_token", "", 0));
-  return noStore(response);
+  return noStore(appendCookies(response, [...clearAuthCookies(request), cookie("job_oidc_state", state, 600)]));
 }

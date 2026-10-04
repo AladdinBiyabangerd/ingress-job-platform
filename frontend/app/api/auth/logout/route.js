@@ -4,10 +4,14 @@ export const runtime = "nodejs";
 
 export async function POST(request) {
   const url = new URL(request.url);
+  const config = oidcConfig(request);
   const returnTo = safeReturnTo(url.searchParams.get("returnTo") || "/");
+  const location = config.logoutUrl
+    ? new URL(config.logoutUrl, config.origin).toString()
+    : new URL(returnTo, config.origin).toString();
   const response = new Response(null, {
     status: 303,
-    headers: { Location: new URL(returnTo, oidcConfig(request).origin).toString() },
+    headers: { Location: location },
   });
-  return noStore(appendCookies(response, clearAuthCookies()));
+  return noStore(appendCookies(response, clearAuthCookies(request)));
 }

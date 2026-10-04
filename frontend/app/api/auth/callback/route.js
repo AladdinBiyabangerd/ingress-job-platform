@@ -12,12 +12,12 @@ import {
 
 export const runtime = "nodejs";
 
-function fail(origin, code) {
+function fail(request, origin, code) {
   const response = new Response(null, {
     status: 307,
     headers: { Location: new URL(`/?sso_error=${encodeURIComponent(code)}`, origin).toString() },
   });
-  return noStore(appendCookies(response, clearAuthCookies()));
+  return noStore(appendCookies(response, clearAuthCookies(request)));
 }
 
 export async function GET(request) {
@@ -28,7 +28,7 @@ export async function GET(request) {
   const oauthError = url.searchParams.get("error");
   const expected = readCookie(request, "job_oidc_state");
   if (oauthError || !code || code.length > 4096 || !state || state !== expected) {
-    return fail(config.origin, oauthError ? "provider_error" : "invalid_callback");
+    return fail(request, config.origin, oauthError ? "provider_error" : "invalid_callback");
   }
 
   let exchanged;
@@ -44,12 +44,12 @@ export async function GET(request) {
       cache: "no-store",
     });
   } catch {
-    return fail(config.origin, "token_exchange_unavailable");
+    return fail(request, config.origin, "token_exchange_unavailable");
   }
-  if (!exchanged.ok) return fail(config.origin, "token_exchange");
+  if (!exchanged.ok) return fail(request, config.origin, "token_exchange");
 
   const data = await exchanged.json();
-  if (!data.access_token) return fail(config.origin, "invalid_token_response");
+  if (!data.access_token) return fail(request, config.origin, "invalid_token_response");
   let dest = safeReturnTo(data.return_to);
   if (data.me && data.me.needs_company_profile) dest = companyPath(dest);
 

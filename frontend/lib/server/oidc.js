@@ -20,6 +20,7 @@ export function oidcConfig(request) {
     origin,
     clientId: process.env.JOB_OIDC_CLIENT_ID || "job-web",
     authorizeUrl: process.env.JOB_OIDC_AUTHORIZE_URL || new URL("portal/oauth/authorize", issuer).toString(),
+    logoutUrl: process.env.JOB_OIDC_LOGOUT_URL || "",
     apiBase: apiBase(),
   };
 }
@@ -50,8 +51,29 @@ export function cookie(name, value, maxAgeSeconds) {
   return `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}${secure}`;
 }
 
-export function clearAuthCookies() {
-  return [cookie("job_oidc_state", "", 0), cookie("job_access_token", "", 0), cookie("job_refresh_token", "", 0)];
+const AUTH_COOKIE_NAMES = [
+  "job_access_token",
+  "job_refresh_token",
+  "job_oidc_state",
+  "job_oidc_nonce",
+  "job_pkce_verifier",
+  "job_pkce_challenge",
+  "job_session",
+  "job_token",
+];
+
+function authCookieNames(request) {
+  const names = new Set(AUTH_COOKIE_NAMES);
+  const header = request?.headers?.get("cookie") || "";
+  for (const item of header.split(";")) {
+    const name = item.trim().split("=", 1)[0];
+    if (/^job_(?:access|refresh|token|session|state|nonce|oidc_|pkce_)/.test(name)) names.add(name);
+  }
+  return names;
+}
+
+export function clearAuthCookies(request) {
+  return [...authCookieNames(request)].map((name) => cookie(name, "", 0));
 }
 
 export function clampAge(value, fallback, max) {
@@ -95,7 +117,7 @@ export async function authorizedApi(request, path, init = {}) {
 
   const refresh = readCookie(request, "job_refresh_token");
   if (!refresh) {
-    return { upstream: new Response(null, { status: 401 }), setCookies: access ? clearAuthCookies() : [] };
+    return { upstream: new Response(null, { status: 401 }), setCookies: access ? clearAuthCookies(request) : [] };
   }
 
   let refreshed;
@@ -110,7 +132,7 @@ export async function authorizedApi(request, path, init = {}) {
     return { upstream: new Response(null, { status: 503 }), setCookies: [] };
   }
   if (!refreshed.ok) {
-    return { upstream: new Response(null, { status: 401 }), setCookies: clearAuthCookies() };
+    return { upstream: new Response(null, { status: 401 }), setCookies: clearAuthCookies(request) };
   }
   const data = await refreshed.json();
   const setCookies = [cookie("job_access_token", data.access_token, clampAge(data.expires_in, 900, 3600))];
