@@ -119,3 +119,46 @@ def norm_key(title: str, company: str, city: str) -> str:
         return _WS.sub(" ", text).strip()
 
     return "|".join((norm(title), norm(company), norm(city)))
+
+
+def address_locality(location: object) -> str:
+    """City names from schema.org jobLocation. Several places stay readable."""
+    if isinstance(location, list):
+        cities: list[str] = []
+        for item in location:
+            city = address_locality(item)
+            if city and city not in cities:
+                cities.append(city)
+        return ", ".join(cities[:3])
+    if not isinstance(location, dict):
+        return ""
+    address = location.get("address") or {}
+    if isinstance(address, list):
+        address = address[0] if address else {}
+    if not isinstance(address, dict):
+        return ""
+    return clean(address.get("addressLocality") or "")
+
+
+def posting_item(html: str) -> dict | None:
+    """First public JobPosting: title, company, city, text, external id."""
+    postings = job_postings(html)
+    if not postings:
+        return None
+    job = postings[0]
+    title = clean(job.get("title"))
+    if not title:
+        return None
+    org = job.get("hiringOrganization") or {}
+    company = clean(org.get("name")) if isinstance(org, dict) else ""
+    ident = job.get("identifier") or {}
+    external_id = ""
+    if isinstance(ident, dict) and ident.get("value") is not None:
+        external_id = clean(ident.get("value"))
+    return {
+        "title": title,
+        "company": company,
+        "city": address_locality(job.get("jobLocation")),
+        "text": html_to_text(str(job.get("description") or "")),
+        "external_id": external_id,
+    }

@@ -10,9 +10,17 @@ from pathlib import Path
 from worker.observability import capture_exception, flush, init_observability, span
 from worker.connectors.boss import BossConnector
 from worker.connectors.busy import BusyConnector
+from worker.connectors.djinni import DjinniConnector
+from worker.connectors.ejob import EjobConnector
+from worker.connectors.glorri import GlorriConnector
 from worker.connectors.hellojob import HelloJobConnector
+from worker.connectors.hh1 import Hh1Connector
+from worker.connectors.hrx import HrxConnector
+from worker.connectors.jobsearch import JobSearchConnector
 from worker.connectors.remoteok import RemoteOkConnector
+from worker.connectors.wellfound import WellfoundConnector
 from worker.connectors.weworkremotely import WeWorkRemotelyConnector
+from worker.connectors.workaz import WorkAzConnector
 from worker.db import Store
 from worker.tidy import tidy_pending
 from worker.http import Disallowed, NotFound, PoliteClient, SourceBlocked, SourceFailed
@@ -28,6 +36,14 @@ BUILDERS = {
     "HelloJob": HelloJobConnector,
     "We Work Remotely": WeWorkRemotelyConnector,
     "Remote OK": RemoteOkConnector,
+    "Glorri": GlorriConnector,
+    "JobSearch.az": JobSearchConnector,
+    "HRX": HrxConnector,
+    "Work.az": WorkAzConnector,
+    "eJob.az": EjobConnector,
+    "hh1.az": Hh1Connector,
+    "Djinni": DjinniConnector,
+    "Wellfound": WellfoundConnector,
 }
 
 
