@@ -54,7 +54,7 @@ export async function GET(request) {
   });
   // A job session already belongs to an Academy account. Keep that session
   // and pass the role intent; do not force a second registration.
-  // New visitors still send prompt=login and land on the join flow.
+  // New visitors send prompt=login. Academy offers sign-in or a new account.
   if (!(intent && alreadySignedIn)) params.set("prompt", "login");
   if (intent) params.set("registration_intent", intent);
   if (intent && alreadySignedIn) params.set("existing_account", "1");
