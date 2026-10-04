@@ -64,11 +64,11 @@ export function Shell({ locale, mode, jobId, children }) {
     <>
       <header className="top">
         <div className="top-inner">
-          <a className="brand" href={hrefFor(locale)}>
-            <img className="mark" src="/ingress-mark.svg" alt="" aria-hidden="true" />
-            ingress-job
-          </a>
-          <div className="header-actions">
+          <div className="top-left">
+            <a className="brand" href={hrefFor(locale)}>
+              <img className="mark" src="/ingress-mark.svg" alt="" aria-hidden="true" />
+              ingress-job
+            </a>
             <div className="mode" role="tablist" aria-label={t.browse}>
               <a
                 role="tab"
@@ -87,6 +87,8 @@ export function Shell({ locale, mode, jobId, children }) {
                 {t.post}
               </a>
             </div>
+          </div>
+          <div className="top-right">
             <AccountBar locale={locale} returnTo={hrefFor(locale, { mode, jobId })} />
             <LanguageSwitcher locale={locale} mode={mode} jobId={jobId} />
           </div>

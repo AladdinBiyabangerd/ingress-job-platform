@@ -30,6 +30,23 @@ button, input, select { font: inherit; }
   gap: 20px;
 }
 
+.top-left,
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.top-left {
+  flex: 1 1 auto;
+}
+
+.top-right {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
@@ -39,6 +56,7 @@ button, input, select { font: inherit; }
   font-weight: 700;
   font-size: 20px;
   letter-spacing: -0.03em;
+  flex: 0 0 auto;
 }
 
 .mark {
@@ -46,14 +64,6 @@ button, input, select { font: inherit; }
   height: 28px;
   display: inline-block;
   flex: 0 0 auto;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
 .mode {
@@ -382,10 +392,20 @@ input:focus, select:focus {
 
 @media (max-width: 760px) {
   .top-inner, .wrap { padding-left: 16px; padding-right: 16px; }
-  .top-inner { align-items: flex-start; flex-direction: column; min-width: 0; }
-  .header-actions { width: 100%; min-width: 0; justify-content: flex-start; }
+  .top-inner {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+  .top-left,
+  .top-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .top-left { flex-wrap: wrap; gap: 12px; }
   .mode { max-width: 100%; }
-  .mode a, .language-trigger, .language-menu a, .account-link, .text-btn, .register-menu a, .back, .btn {
+  .mode a, .language-trigger, .language-menu a, .account-link, .account-trigger, .account-dropdown a, .account-signout-btn, .text-btn, .register-menu a, .back, .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -393,10 +413,14 @@ input:focus, select:focus {
   }
   .language-trigger { min-width: 44px; }
   .language-menu a { min-height: 44px; }
-  .account-link, .text-btn { padding: 8px 4px; }
-  .profile-btn, .bell { width: 44px; height: 44px; flex-basis: 44px; }
-  .register-menu { width: min(240px, calc(100vw - 32px)); }
+  .account-link { padding: 8px 4px; }
+  .account-trigger-text { display: none; }
+  .account-dropdown,
+  .register-menu { width: min(260px, calc(100vw - 32px)); }
+  .account-dropdown a,
+  .account-signout-btn,
   .register-menu a { justify-content: flex-start; }
+  .bell { width: 44px; height: 44px; flex-basis: 44px; }
   .check { min-height: 44px; align-items: center; }
   .filters { grid-template-columns: 1fr; }
   .form-card, .filters, .board, .detail { min-width: 0; max-width: 100%; }
@@ -628,7 +652,8 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 .account-bar {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .account-link {
@@ -638,10 +663,166 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
   font-size: 14px;
 }
 
-.who {
-  color: #656b75;
+.account-menu {
+  position: relative;
+  min-width: 0;
+}
+
+.account-trigger {
+  min-height: 36px;
+  max-width: 220px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dfe1e5;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #20242b;
+  padding: 4px 10px 4px 4px;
+  cursor: pointer;
+}
+
+.account-trigger:hover,
+.account-trigger[aria-expanded="true"] {
+  background: #eaefff;
+  border-color: #cbd5ff;
+}
+
+.account-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #eaefff;
+  color: #001FFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+}
+
+.account-avatar svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.account-trigger-text {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  text-align: left;
+}
+
+.account-trigger-name {
   font-size: 13px;
   font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-trigger-role {
+  font-size: 11px;
+  font-weight: 600;
+  color: #656b75;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-chevron {
+  color: #656b75;
+  font-size: 14px;
+  line-height: 0.7;
+  flex: 0 0 auto;
+}
+
+.account-dropdown {
+  position: absolute;
+  z-index: 12;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: #ffffff;
+  border: 1px solid #dfe1e5;
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(32, 36, 43, 0.08);
+}
+
+.account-dropdown-head {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid #eef0f3;
+  margin-bottom: 4px;
+}
+
+.account-dropdown-head strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #20242b;
+  overflow-wrap: anywhere;
+}
+
+.account-dropdown-head span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #656b75;
+}
+
+.account-dropdown a,
+.account-signout-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #20242b;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.account-dropdown a:hover,
+.account-signout-btn:hover {
+  background: #f6f5f1;
+}
+
+.account-dropdown-group {
+  display: grid;
+  gap: 4px;
+  padding: 8px 2px 4px;
+  border-top: 1px solid #eef0f3;
+  margin-top: 4px;
+}
+
+.account-dropdown-group p {
+  margin: 0;
+  padding: 0 8px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #656b75;
+}
+
+.account-signout {
+  margin: 4px 0 0;
+  padding-top: 4px;
+  border-top: 1px solid #eef0f3;
+}
+
+.account-signout-btn {
+  color: #F00051;
 }
 
 .account-error {
@@ -825,37 +1006,6 @@ textarea { min-height: 120px; resize: vertical; }
 
 @media (max-width: 760px) {
   .form-card .split { grid-template-columns: 1fr; }
-}
-
-.profile-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  border: 1px solid #dfe1e5;
-  background: #ffffff;
-  color: #001FFF;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  flex: 0 0 34px;
-}
-
-.profile-btn svg {
-  width: 18px;
-  height: 18px;
-  display: block;
-}
-
-.profile-btn:hover,
-.profile-btn:focus-visible {
-  border-color: #001FFF;
-  background: #eaefff;
-}
-
-.profile-btn:focus-visible {
-  outline: 2px solid #001FFF;
-  outline-offset: 2px;
 }
 
 .profile-block h2 {
