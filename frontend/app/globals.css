@@ -903,8 +903,107 @@ textarea { min-height: 120px; resize: vertical; }
 
 .cabinet {
   display: grid;
-  gap: 22px;
-  max-width: 760px;
+  gap: 18px;
+  max-width: 1080px;
+}
+
+.cabinet-head {
+  display: grid;
+  gap: 14px;
+}
+
+.cabinet-head .lede {
+  max-width: 72ch;
+}
+
+.cabinet-tabs {
+  display: inline-flex;
+  width: fit-content;
+  background: #f6f5f1;
+  border: 1px solid #dfe1e5;
+  border-radius: 999px;
+  padding: 4px;
+  gap: 2px;
+}
+
+.cabinet-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: #656b75;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cabinet-tabs button.on {
+  background: #001FFF;
+  color: #ffffff;
+}
+
+.cabinet-tab-count {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+
+.cabinet-tabs button:not(.on) .cabinet-tab-count {
+  background: #e7e9ee;
+  color: #20242b;
+}
+
+.cabinet-form {
+  max-width: none;
+  gap: 16px;
+  padding: 22px 24px;
+}
+
+.cabinet-form-head {
+  display: grid;
+  gap: 6px;
+}
+
+.cabinet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  align-items: start;
+}
+
+.cabinet-grid .cabinet-span {
+  grid-column: 1 / -1;
+}
+
+.cabinet-grid .cabinet-remote {
+  min-height: 40px;
+  align-self: end;
+  padding-bottom: 12px;
+}
+
+.cabinet-body {
+  display: grid;
+  gap: 6px;
+}
+
+.cabinet-body textarea {
+  min-height: 140px;
+}
+
+.cabinet-ads {
+  display: grid;
+  gap: 14px;
 }
 
 .form-card h2 {
@@ -1006,6 +1105,9 @@ textarea { min-height: 120px; resize: vertical; }
 
 @media (max-width: 760px) {
   .form-card .split { grid-template-columns: 1fr; }
+  .cabinet-grid { grid-template-columns: 1fr; }
+  .cabinet-tabs { width: 100%; }
+  .cabinet-tabs button { flex: 1 1 0; justify-content: center; }
 }
 
 .profile-block h2 {

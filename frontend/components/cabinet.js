@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { applyFormFromJob, applyFormPayload, applyFormReady, defaultApplyForm } from "../lib/apply-form";
 import { hrefFor, languageLabel, text } from "../lib/copy";
 import { ApplicationList } from "./application-list";
 import { ApplyFormFields } from "./apply-form-fields";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
+const PAGE_SIZE = 10;
 
 function typeLabel(t, value) {
   if (value === "ofis") return t.jobOffice;
@@ -61,6 +62,8 @@ export function Cabinet({ locale, me }) {
   const [items, setItems] = useState([]);
   const [form, setForm] = useState(() => blank(locale, me));
   const [editing, setEditing] = useState(null);
+  const [tab, setTab] = useState("create");
+  const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -87,6 +90,17 @@ export function Cabinet({ locale, me }) {
     };
   }, [t.loadError]);
 
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return items.slice(start, start + PAGE_SIZE);
+  }, [items, currentPage]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
   function setField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
   }
@@ -95,6 +109,20 @@ export function Cabinet({ locale, me }) {
     setEditing(null);
     setForm(blank(locale, me));
     setError("");
+  }
+
+  function openCreate() {
+    reset();
+    setNote("");
+    setTab("create");
+  }
+
+  function openMyAds() {
+    setTab("ads");
+  }
+
+  function goToPage(next) {
+    setPage(Math.max(1, Math.min(totalPages, next)));
   }
 
   async function onSubmit(event) {
@@ -139,6 +167,8 @@ export function Cabinet({ locale, me }) {
     }
     setNote(saved.status === "published" ? t.adSavedLive : t.adSavedPending);
     reset();
+    setTab("ads");
+    setPage(1);
     try {
       await load();
     } catch {
@@ -166,144 +196,194 @@ export function Cabinet({ locale, me }) {
 
   return (
     <div className="cabinet">
-      <div>
-        <h1>{t.postTitle}</h1>
-        <p className="lede">{t.cabinetLede}</p>
+      <div className="cabinet-head">
+        <div>
+          <h1>{t.postTitle}</h1>
+          <p className="lede">{t.cabinetLede}</p>
+        </div>
+        <div className="cabinet-tabs" role="tablist" aria-label={t.postTitle}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "create"}
+            className={tab === "create" ? "on" : ""}
+            onClick={openCreate}
+          >
+            {editing ? t.editAd : t.newAd}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "ads"}
+            className={tab === "ads" ? "on" : ""}
+            onClick={openMyAds}
+          >
+            {t.myAds}
+            {items.length ? <span className="cabinet-tab-count">{items.length}</span> : null}
+          </button>
+        </div>
       </div>
       {error ? <p className="note">{error}</p> : null}
       {note ? <p className="note">{note}</p> : null}
-      <form className="form-card" onSubmit={onSubmit}>
-        <h2>{editing ? t.editAd : t.newAd}</h2>
-        {editing && items.find((job) => job.id === editing)?.status === "rejected" ? <p className="hint">{t.resubmitHint}</p> : null}
-        {editing && !me.staff && items.find((job) => job.id === editing)?.status === "published" ? <p className="hint">{t.reviewHint}</p> : null}
-        <label>
-          {t.language}
-          <select value={form.language} onChange={(event) => setField("language", event.target.value)}>
-            <option value="az">{t.langAz}</option>
-            <option value="en">{t.langEn}</option>
-            <option value="ru">{t.langRu}</option>
-          </select>
-        </label>
-        <label>
-          {t.adTitle}
-          <input value={form.title} maxLength={140} required onChange={(event) => setField("title", event.target.value)} />
-        </label>
-        <label>
-          {t.companyName}
-          <input
-            value={form.company}
-            maxLength={120}
-            required
-            readOnly={!me.staff}
-            onChange={(event) => setField("company", event.target.value)}
-          />
-          {!me.staff ? <span className="hint">{t.companyLocked}</span> : null}
-        </label>
-        <label>
-          {t.adCityOrRemote}
-          <input
-            value={form.city}
-            maxLength={80}
-            required={!form.remote}
-            disabled={form.remote}
-            onChange={(event) => setField("city", event.target.value)}
-          />
-        </label>
-        <label className="inline">
-          <input
-            type="checkbox"
-            checked={form.remote}
-            onChange={(event) => setField("remote", event.target.checked)}
-          />
-          <span>{t.placeRemote}</span>
-        </label>
-        <label>
-          {t.adBody}
-          <textarea value={form.text} maxLength={8000} required rows={8} onChange={(event) => setField("text", event.target.value)} />
-        </label>
-        <div className="split">
-          <label>
-            {t.adSalary}
-            <span className="hint">{t.adOptional}</span>
-            <input value={form.salary} maxLength={120} onChange={(event) => setField("salary", event.target.value)} />
-          </label>
-          <label>
-            {t.adJobType}
-            <span className="hint">{t.adOptional}</span>
-            <select value={form.job_type} onChange={(event) => setField("job_type", event.target.value)}>
-              {TYPES.map((value) => (
-                <option key={value || "none"} value={value}>
-                  {value ? typeLabel(t, value) : t.adJobTypeNone}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <ApplyFormFields locale={locale} value={form.applicationForm} onChange={(applicationForm) => setField("applicationForm", applicationForm)} />
-        <div className="ad-actions">
-          <button type="submit" className="btn primary" disabled={busy}>{t.adSave}</button>
-          {editing ? (
-            <button type="button" className="btn red" onClick={reset}>{t.adCancel}</button>
-          ) : null}
-        </div>
-      </form>
-      <section>
-        <h2 className="section-label">{t.myAds}</h2>
-        {items.length === 0 ? <p className="empty-line">{t.cabinetEmpty}</p> : null}
-        <div className="list">
-          {items.map((job) => (
-            <article key={job.id} className={job.status === "closed" || job.status === "rejected" ? "card closed" : "card"}>
-              <p className={job.status === "published" ? "source-pill live" : job.status === "closed" ? "source-pill closed" : job.status === "rejected" ? "source-pill rejected" : "source-pill"}>
-                {statusLabel(t, job.status)}
-              </p>
-              <h2>
-                {job.status === "published" ? (
-                  <a href={hrefFor(locale, { jobId: job.id })}>{job.title}</a>
-                ) : (
-                  job.title
-                )}
-              </h2>
-              <div className="meta">
-                <span>{job.company || t.noCompany}</span>
-                <span>{job.remote ? t.placeRemote : job.city || t.noCity}</span>
-                <span>{languageLabel(locale, job.language)}</span>
-                {job.job_type ? <span>{typeLabel(t, job.job_type)}</span> : null}
-                {job.salary ? <span>{job.salary}</span> : null}
-              </div>
-              {job.status === "rejected" && job.reject_reason ? <p className="note">{t.rejectReason}: {job.reject_reason}</p> : null}
-              <ApplicationList
-                locale={locale}
-                title={t.ownerApplications}
-                items={applications.filter((item) => item.job_id === job.id)}
-                hideEmpty
-                mode="owner"
-                onChanged={load}
+
+      {tab === "create" ? (
+        <form className="form-card cabinet-form" onSubmit={onSubmit}>
+          <div className="cabinet-form-head">
+            <h2>{editing ? t.editAd : t.newAd}</h2>
+            {editing && items.find((job) => job.id === editing)?.status === "rejected" ? <p className="hint">{t.resubmitHint}</p> : null}
+            {editing && !me.staff && items.find((job) => job.id === editing)?.status === "published" ? <p className="hint">{t.reviewHint}</p> : null}
+          </div>
+          <div className="cabinet-grid">
+            <label>
+              {t.language}
+              <select value={form.language} onChange={(event) => setField("language", event.target.value)}>
+                <option value="az">{t.langAz}</option>
+                <option value="en">{t.langEn}</option>
+                <option value="ru">{t.langRu}</option>
+              </select>
+            </label>
+            <label>
+              {t.companyName}
+              <input
+                value={form.company}
+                maxLength={120}
+                required
+                readOnly={!me.staff}
+                onChange={(event) => setField("company", event.target.value)}
               />
-              <div className="ad-actions">
-                {canEdit(me, job) ? (
-                  <button
-                    type="button"
-                    className="btn primary"
-                    onClick={() => {
-                      setEditing(job.id);
-                      setForm(fromJob(locale, me, job));
-                      setError("");
-                      setNote("");
-                    }}
-                  >
-                    {t.adEdit}
-                  </button>
-                ) : null}
-                {job.status !== "closed" ? (
-                  <button type="button" className="btn red" onClick={() => closeAd(job)}>
-                    {t.adClose}
-                  </button>
-                ) : null}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+              {!me.staff ? <span className="hint">{t.companyLocked}</span> : null}
+            </label>
+            <label className="cabinet-span">
+              {t.adTitle}
+              <input value={form.title} maxLength={140} required onChange={(event) => setField("title", event.target.value)} />
+            </label>
+            <label>
+              {t.adCityOrRemote}
+              <input
+                value={form.city}
+                maxLength={80}
+                required={!form.remote}
+                disabled={form.remote}
+                onChange={(event) => setField("city", event.target.value)}
+              />
+            </label>
+            <label className="inline cabinet-remote">
+              <input
+                type="checkbox"
+                checked={form.remote}
+                onChange={(event) => setField("remote", event.target.checked)}
+              />
+              <span>{t.placeRemote}</span>
+            </label>
+            <label>
+              {t.adSalary}
+              <span className="hint">{t.adOptional}</span>
+              <input value={form.salary} maxLength={120} onChange={(event) => setField("salary", event.target.value)} />
+            </label>
+            <label>
+              {t.adJobType}
+              <span className="hint">{t.adOptional}</span>
+              <select value={form.job_type} onChange={(event) => setField("job_type", event.target.value)}>
+                {TYPES.map((value) => (
+                  <option key={value || "none"} value={value}>
+                    {value ? typeLabel(t, value) : t.adJobTypeNone}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label className="cabinet-body">
+            {t.adBody}
+            <textarea value={form.text} maxLength={8000} required rows={6} onChange={(event) => setField("text", event.target.value)} />
+          </label>
+          <ApplyFormFields locale={locale} value={form.applicationForm} onChange={(applicationForm) => setField("applicationForm", applicationForm)} />
+          <div className="ad-actions">
+            <button type="submit" className="btn primary" disabled={busy}>{t.adSave}</button>
+            {editing ? (
+              <button type="button" className="btn red" onClick={reset}>{t.adCancel}</button>
+            ) : null}
+          </div>
+        </form>
+      ) : (
+        <section className="cabinet-ads">
+          {items.length === 0 ? <p className="empty-line">{t.cabinetEmpty}</p> : null}
+          <div className="list">
+            {pageItems.map((job) => (
+              <article key={job.id} className={job.status === "closed" || job.status === "rejected" ? "card closed" : "card"}>
+                <p className={job.status === "published" ? "source-pill live" : job.status === "closed" ? "source-pill closed" : job.status === "rejected" ? "source-pill rejected" : "source-pill"}>
+                  {statusLabel(t, job.status)}
+                </p>
+                <h2>
+                  {job.status === "published" ? (
+                    <a href={hrefFor(locale, { jobId: job.id })}>{job.title}</a>
+                  ) : (
+                    job.title
+                  )}
+                </h2>
+                <div className="meta">
+                  <span>{job.company || t.noCompany}</span>
+                  <span>{job.remote ? t.placeRemote : job.city || t.noCity}</span>
+                  <span>{languageLabel(locale, job.language)}</span>
+                  {job.job_type ? <span>{typeLabel(t, job.job_type)}</span> : null}
+                  {job.salary ? <span>{job.salary}</span> : null}
+                </div>
+                {job.status === "rejected" && job.reject_reason ? <p className="note">{t.rejectReason}: {job.reject_reason}</p> : null}
+                <ApplicationList
+                  locale={locale}
+                  title={t.ownerApplications}
+                  items={applications.filter((item) => item.job_id === job.id)}
+                  hideEmpty
+                  mode="owner"
+                  onChanged={load}
+                />
+                <div className="ad-actions">
+                  {canEdit(me, job) ? (
+                    <button
+                      type="button"
+                      className="btn primary"
+                      onClick={() => {
+                        setEditing(job.id);
+                        setForm(fromJob(locale, me, job));
+                        setError("");
+                        setNote("");
+                        setTab("create");
+                      }}
+                    >
+                      {t.adEdit}
+                    </button>
+                  ) : null}
+                  {job.status !== "closed" ? (
+                    <button type="button" className="btn red" onClick={() => closeAd(job)}>
+                      {t.adClose}
+                    </button>
+                  ) : null}
+                </div>
+              </article>
+            ))}
+          </div>
+          {items.length > PAGE_SIZE ? (
+            <nav className="pager" aria-label={t.pageOf(currentPage, totalPages)}>
+              <button
+                type="button"
+                className="pager-btn"
+                disabled={currentPage <= 1}
+                onClick={() => goToPage(currentPage - 1)}
+              >
+                {t.pagePrev}
+              </button>
+              <span className="pager-status">{t.pageOf(currentPage, totalPages)}</span>
+              <button
+                type="button"
+                className="pager-btn"
+                disabled={currentPage >= totalPages}
+                onClick={() => goToPage(currentPage + 1)}
+              >
+                {t.pageNext}
+              </button>
+            </nav>
+          ) : null}
+        </section>
+      )}
     </div>
   );
 }
