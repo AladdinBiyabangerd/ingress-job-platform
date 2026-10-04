@@ -8,6 +8,7 @@ import {
   readCookie,
   safeReturnTo,
   setAuthCookies,
+  signedOut,
 } from "../../../../lib/server/oidc";
 
 export const runtime = "nodejs";
@@ -19,6 +20,11 @@ function fail(request, origin, code) {
 
 export async function GET(request) {
   const config = oidcConfig(request);
+  // Logout leaves a guest cookie. Ignore a silent authorize that still
+  // returns a code for the Academy session; do not start another login.
+  if (signedOut(request)) {
+    return noStore(clearAuthCookiesOn(NextResponse.redirect(new URL("/", config.origin), 303), request));
+  }
   const url = new URL(request.url);
   const code = url.searchParams.get("code") || "";
   const state = url.searchParams.get("state") || "";

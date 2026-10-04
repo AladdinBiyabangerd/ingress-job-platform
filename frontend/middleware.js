@@ -9,6 +9,7 @@ export async function middleware(request) {
   if (pathname.startsWith("/api") || pathname.startsWith("/_next") || COMPANY.has(pathname)) {
     return NextResponse.next();
   }
+  if (request.cookies.get("job_guest")?.value) return NextResponse.next();
   const access = request.cookies.get("job_access_token")?.value;
   if (!access) return NextResponse.next();
   try {

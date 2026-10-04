@@ -6,6 +6,7 @@ import {
   readCookie,
   safeReturnTo,
   setAuthCookies,
+  signedOut,
 } from "../../../../lib/server/oidc";
 
 export const runtime = "nodejs";
@@ -46,7 +47,8 @@ export async function GET(request) {
   }
   if (!saved.ok) return noStore(Response.json({ error: "auth_unavailable" }, { status: 503 }));
 
-  const alreadySignedIn = Boolean(
+  // A leftover refresh cookie after logout must not skip prompt=login.
+  const alreadySignedIn = !signedOut(request) && Boolean(
     readCookie(request, "job_access_token") || readCookie(request, "job_refresh_token"),
   );
   const params = new URLSearchParams({
