@@ -63,9 +63,11 @@ export async function GET(request) {
   // A job session already belongs to an Academy account. Keep that session
   // and pass the role intent; do not force a second registration.
   // New visitors send prompt=login. Academy offers sign-in or a new account.
+  // Do not call Academy logout from here.
   if (!(intent && alreadySignedIn)) params.set("prompt", "login");
   if (intent) params.set("registration_intent", intent);
   if (intent && alreadySignedIn) params.set("existing_account", "1");
+  params.set("return_to", new URL(returnTo, `${config.origin}/`).toString());
 
   const response = new Response(null, {
     status: 302,
