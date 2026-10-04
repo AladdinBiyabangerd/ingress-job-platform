@@ -1,31 +1,32 @@
 # Current task
 
 ## Completed
-- SEO / Google indexing (commit 4a577a4)
-- Auth refresh soft-logout (commit 8d3e41f)
-- Heselo-parity technical SEO (committed prior chat)
-- Visible job breadcrumb UI (this chat)
-- Home FAQ section + FAQPage schema, az/en/ru (this chat)
+- SEO / Google indexing, Heselo technical parity
+- Visible job breadcrumbs + home FAQ/FAQPage
+- Brand display name → Ingress Job
+- Local `OPENAI_API_KEY=` clears shell export (tidy off)
+- Google Jobs schema gaps #1–5 in `frontend/lib/seo.js`:
+  1. `hiringOrganization.sameAs` removed (no company site in public payload)
+  2. `TELECOMMUTE` only for fully remote; hybrid never gets it
+  3. `employmentType` omitted (ofis/hibrid/uzaqdan ≠ employment type)
+  4. Missing city/remote → country-level `jobLocation` (AZ)
+  5. `validThrough` = `datePosted` + 30 days
 
-## SEO parity vs heselo-landing
-Implemented technical SEO core (not heselo content/guides marketing layer):
-- Rich meta: keywords, geo, authors, robots max-image-preview/snippet
-- OG/Twitter `summary_large_image` + generated `/opengraph-image`
-- Home JSON-LD `@graph`: Organization, WebSite, CollectionPage, FAQPage
-- Job JSON-LD `@graph`: Organization, WebSite, WebPage, BreadcrumbList, JobPosting (+ salary/employment when available)
-- Visible job breadcrumbs + home FAQ UI (heselo-style, jobs-adapted)
-- `robots.txt` AI crawler allow-list + private path disallow
-- `llms.txt`, web manifest, favicon, skip-link
-- Apex canonical host (strip www)
+## Remaining (medium / low)
+6. Job description JSON-LD plain text → prefer HTML
+7. Salary always `AZN` + `MONTH`
+8. RU UI font: Plus Jakarta Sans without `cyrillic` subset
+9. Shared home OG image only — no per-job OG
+10. No `WebSite.potentialAction` SearchAction
+11. Organization has no `sameAs` (social) — only if real profiles exist
+12–14. City/category landings, GSC/Bing, footer `#faq` (out of scope / nice-to-have)
 
-## Remaining (optional)
-- Founder Person schema / social sameAs (if desired)
-- Pricing/OfferCatalog schemas (N/A unless monetized)
-- Guides/solutions content SEO (heselo-specific; not ported)
+## Decisions
+- TELECOMMUTE: `remote` or `job_type === "uzaqdan"`, never when `job_type === "hibrid"`
+- Location fallback: `PostalAddress` with `addressCountry: "AZ"` when no city
+- Job validity window: 30 days (`JOB_VALID_DAYS`)
 
 ## Relevant files
-- `frontend/lib/{seo,copy}.js`
-- `frontend/app/{layout,robots,manifest,opengraph-image,globals}.css|js`
-- `frontend/app/{page,en/page,ru/page}.js`
-- `frontend/components/{job-detail,home,json-ld,shell}.js`
-- `frontend/public/{llms.txt,favicon.svg}`
+- `frontend/lib/seo.js` — JobPosting fixes (done #1–5)
+- `frontend/app/layout.js` — font subsets (#8)
+- `frontend/components/{job-detail,home}.js`

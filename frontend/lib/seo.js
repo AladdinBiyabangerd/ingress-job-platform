@@ -227,11 +227,53 @@ export const privatePageMetadata = {
   },
 };
 
-function employmentType(job) {
-  if (job.job_type === "uzaqdan" || job.remote) return "FULL_TIME";
-  if (job.job_type === "hibrid") return "FULL_TIME";
-  if (job.job_type === "ofis") return "FULL_TIME";
-  return undefined;
+/** Days after datePosted before the JobPosting is treated as expired for Google Jobs. */
+const JOB_VALID_DAYS = 30;
+
+function isHybrid(job) {
+  return job.job_type === "hibrid";
+}
+
+/** Fully remote only — Google TELECOMMUTE must not be used for hybrid roles. */
+function isFullyRemote(job) {
+  if (isHybrid(job)) return false;
+  return Boolean(job.remote) || job.job_type === "uzaqdan";
+}
+
+function placeFromCity(city) {
+  const address = {
+    "@type": "PostalAddress",
+    addressCountry: "AZ",
+  };
+  const locality = String(city || "").trim();
+  if (locality) address.addressLocality = locality;
+  return {
+    "@type": "Place",
+    address,
+  };
+}
+
+function applyJobLocation(posting, job) {
+  const city = String(job.city || "").trim();
+  if (isFullyRemote(job)) {
+    posting.jobLocationType = "TELECOMMUTE";
+    posting.applicantLocationRequirements = {
+      "@type": "Country",
+      name: "AZ",
+    };
+    if (city) posting.jobLocation = placeFromCity(city);
+    return;
+  }
+  // Office / hybrid / unknown: physical Place only (country fallback if no city).
+  posting.jobLocation = placeFromCity(city);
+}
+
+function validThroughFromPosted(datePosted) {
+  const posted = Date.parse(datePosted || "");
+  if (!Number.isFinite(posted)) return undefined;
+  const through = new Date(posted);
+  through.setUTCDate(through.getUTCDate() + JOB_VALID_DAYS);
+  return through.toISOString();
 }
 
 function salaryJsonLd(salary) {
@@ -347,41 +389,14 @@ export function jobPostingJsonLd(job, locale = "az") {
     hiringOrganization: {
       "@type": "Organization",
       name: job.company || SITE.name,
-      sameAs: origin,
     },
     mainEntityOfPage: { "@id": `${url}#webpage` },
   };
-  const employment = employmentType(job);
-  if (employment) posting.employmentType = employment;
   const salary = salaryJsonLd(job.salary);
   if (salary) posting.baseSalary = salary;
-  if (job.remote || job.job_type === "uzaqdan") {
-    posting.jobLocationType = "TELECOMMUTE";
-    posting.applicantLocationRequirements = {
-      "@type": "Country",
-      name: "AZ",
-    };
-  }
-  if (job.city && !job.remote) {
-    posting.jobLocation = {
-      "@type": "Place",
-      address: {
-        "@type": "PostalAddress",
-        addressLocality: job.city,
-        addressCountry: "AZ",
-      },
-    };
-  } else if (job.job_type === "hibrid" && job.city) {
-    posting.jobLocation = {
-      "@type": "Place",
-      address: {
-        "@type": "PostalAddress",
-        addressLocality: job.city,
-        addressCountry: "AZ",
-      },
-    };
-    posting.jobLocationType = "TELECOMMUTE";
-  }
+  const validThrough = validThroughFromPosted(job.created_at);
+  if (validThrough) posting.validThrough = validThrough;
+  applyJobLocation(posting, job);
 
   return {
     "@context": "https://schema.org",
