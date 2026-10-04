@@ -28,8 +28,21 @@ _TABLE_INFO = re.compile(
 )
 
 
+_POSTGRES_SCHEMES = ("postgresql://", "postgres://", "postgresql+", "postgres+")
+
+
+def _clean_url(value: str | None) -> str:
+    return (value or "").strip().strip("'\"").strip()
+
+
 def postgres_enabled() -> bool:
-    return bool(os.environ.get("DATABASE_URL", "").strip())
+    """True only when DATABASE_URL looks like a PostgreSQL connection string.
+
+    Empty values, sqlite paths, and unresolved reference placeholders such as
+    ${{Postgres.DATABASE_URL}} all return False.
+    """
+    url = _clean_url(os.environ.get("DATABASE_URL")).lower()
+    return url.startswith(_POSTGRES_SCHEMES)
 
 
 def normalize_database_url(url: str) -> str:
@@ -280,7 +293,7 @@ class PostgresConnection:
 
 
 def connect(url: str | None = None) -> PostgresConnection:
-    chosen = (url if url is not None else os.environ.get("DATABASE_URL", "")).strip()
+    chosen = _clean_url(url if url is not None else os.environ.get("DATABASE_URL", ""))
     if not chosen:
         raise RuntimeError("DATABASE_URL is not set")
     return PostgresConnection(chosen)
