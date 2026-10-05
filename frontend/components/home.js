@@ -5,18 +5,8 @@ import { CATEGORY_ORDER, categoryLabel, hrefFor, languageLabel, text } from "../
 import { Shell } from "./shell";
 
 const PAGE_SIZE = 20;
-const REMOTE = /remote|uzaqdan|удал[её]н/i;
 const AZ = /[əğıöüşçƏĞİÖÜŞÇ]/;
 const RU = /[а-яёА-ЯЁ]/;
-
-function unique(jobs, key) {
-  const names = new Set();
-  for (const job of jobs) {
-    const value = (job[key] || "").trim();
-    if (value) names.add(value);
-  }
-  return Array.from(names).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-}
 
 function stackOf(job) {
   return Array.isArray(job.tech_stack) ? job.tech_stack : [];
@@ -154,13 +144,6 @@ function FilterIcon({ name }) {
       </svg>
     );
   }
-  if (name === "source") {
-    return (
-      <svg {...props}>
-        <path d="M4 2.75h8.5v10.5L8.25 11 4 13.25V2.75z" />
-      </svg>
-    );
-  }
   if (name === "salary") {
     return (
       <svg {...props}>
@@ -223,12 +206,8 @@ export function Home({ locale, jobs, error }) {
   const t = text(locale);
   const [query, setQuery] = useState("");
   const [company, setCompany] = useState("");
-  const [cities, setCities] = useState([]);
-  const [sources, setSources] = useState([]);
-  const [companies, setCompanies] = useState([]);
   const [languages, setLanguages] = useState([]);
   const [inDescription, setInDescription] = useState(true);
-  const [withCity, setWithCity] = useState(false);
   const [remote, setRemote] = useState(false);
   const [relocation, setRelocation] = useState(false);
   const [stacks, setStacks] = useState([]);
@@ -249,8 +228,6 @@ export function Home({ locale, jobs, error }) {
       return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi) || (a < b ? -1 : a > b ? 1 : 0);
     });
   }, [jobs]);
-  const cityOptions = useMemo(() => unique(jobs, "city"), [jobs, t.lang]);
-  const sourceOptions = useMemo(() => unique(jobs, "source_name"), [jobs, t.lang]);
   const techOptions = useMemo(() => {
     const counts = new Map();
     for (const job of jobs) {
@@ -275,11 +252,6 @@ export function Home({ locale, jobs, error }) {
       .sort((a, b) => rank(a[0]) - rank(b[0]))
       .map(([name, total]) => ({ name, total }));
   }, [jobs]);
-  const companyOptions = useMemo(() => {
-    const q = company.trim().toLowerCase();
-    return unique(jobs, "company").filter((name) => !q || name.toLowerCase().includes(q));
-  }, [jobs, company]);
-
   function toggle(list, setList, value) {
     setList(list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
   }
@@ -288,15 +260,8 @@ export function Home({ locale, jobs, error }) {
     const q = query.trim().toLowerCase();
     const companyQuery = company.trim().toLowerCase();
     const filtered = jobs.filter((job) => {
-      if (cities.length && !cities.includes(job.city)) return false;
-      if (sources.length && !sources.includes(job.source_name)) return false;
-      if (companies.length && !companies.includes(job.company)) return false;
       if (languages.length && !languages.includes(languageOf(job))) return false;
-      if (withCity && !job.city) return false;
-      if (remote) {
-        const looksRemote = job.remote || !job.city || REMOTE.test(`${job.title} ${job.text}`);
-        if (!looksRemote) return false;
-      }
+      if (remote && !(job.remote || job.job_type === "uzaqdan")) return false;
       if (relocation && !job.relocation) return false;
       if (categories.length && !categories.includes(job.category)) return false;
       if (stacks.length) {
@@ -335,7 +300,7 @@ export function Home({ locale, jobs, error }) {
       return sort === "oldest" ? at - bt : bt - at;
     });
     return sorted;
-  }, [jobs, query, company, cities, sources, companies, languages, inDescription, withCity, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax, t.lang]);
+  }, [jobs, query, company, languages, inDescription, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax, t.lang]);
 
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -346,17 +311,13 @@ export function Home({ locale, jobs, error }) {
 
   useEffect(() => {
     setPage(1);
-  }, [query, company, cities, sources, companies, languages, inDescription, withCity, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax]);
+  }, [query, company, languages, inDescription, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax]);
 
   function clear() {
     setQuery("");
     setCompany("");
-    setCities([]);
-    setSources([]);
-    setCompanies([]);
     setLanguages([]);
     setInDescription(true);
-    setWithCity(false);
     setRemote(false);
     setRelocation(false);
     setStacks([]);
@@ -524,24 +485,10 @@ export function Home({ locale, jobs, error }) {
               <GroupLabel icon="company">{t.companies}</GroupLabel>
               <input type="search" value={company} placeholder={t.companyPlaceholder} onChange={(event) => setCompany(event.target.value)} />
             </label>
-            {companyOptions.length ? (
-              <div className="checks scroll-set">
-                {companyOptions.map((name) => (
-                  <label key={name} className="check">
-                    <input type="checkbox" checked={companies.includes(name)} onChange={() => toggle(companies, setCompanies, name)} />
-                    <span>{name}</span>
-                  </label>
-                ))}
-              </div>
-            ) : null}
           </div>
           <label className="check">
-            <input type="checkbox" checked={withCity} onChange={(event) => setWithCity(event.target.checked)} />
-            <GroupLabel icon="with-city">{t.withCity}</GroupLabel>
-          </label>
-          <label className="check">
             <input type="checkbox" checked={remote} onChange={(event) => setRemote(event.target.checked)} />
-            <GroupLabel icon="remote">{t.remote}</GroupLabel>
+            <GroupLabel icon="remote">{t.remoteFilter}</GroupLabel>
           </label>
           <label className="check">
             <input type="checkbox" checked={relocation} onChange={(event) => setRelocation(event.target.checked)} />
@@ -609,38 +556,6 @@ export function Home({ locale, jobs, error }) {
             </div>
             <p className="salary-note">{t.salaryNote}</p>
           </div>
-          {sourceOptions.length ? (
-            <fieldset className="filter-group">
-              <legend className="filter-label">
-                <FilterIcon name="source" />
-                {t.sources}
-              </legend>
-              <div className="checks scroll-set">
-                {sourceOptions.map((name) => (
-                  <label key={name} className="check">
-                    <input type="checkbox" checked={sources.includes(name)} onChange={() => toggle(sources, setSources, name)} />
-                    <span>{name}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          ) : null}
-          {cityOptions.length ? (
-            <fieldset className="filter-group">
-              <legend className="filter-label">
-                <FilterIcon name="city" />
-                {t.city}
-              </legend>
-              <div className="checks scroll-set">
-                {cityOptions.map((name) => (
-                  <label key={name} className="check">
-                    <input type="checkbox" checked={cities.includes(name)} onChange={() => toggle(cities, setCities, name)} />
-                    <span>{name}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          ) : null}
         </aside>
       </div>
       {t.faq?.items?.length ? (
