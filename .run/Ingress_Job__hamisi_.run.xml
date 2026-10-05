@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Ingress Job (hamısı)" type="CompoundRunConfigurationType">
+    <toRun name="Ingress Job: API" type="ShConfigurationType" />
+    <toRun name="Ingress Job: Sayt" type="ShConfigurationType" />
+    <toRun name="Ingress Job: Toplayıcı" type="ShConfigurationType" />
+    <method v="2" />
+  </configuration>
+</component>
