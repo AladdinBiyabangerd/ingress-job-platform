@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { ingressUrl } from "../lib/ingress";
+import { navTabs } from "../lib/roles";
 import { useMediaQuery } from "../lib/use-media-query";
 import { AccountBar } from "./account-bar";
 
@@ -64,6 +65,13 @@ function MenuIcon({ open }) {
   );
 }
 
+function tabLabel(t, key) {
+  if (key === "companies") return t.navCompanies;
+  if (key === "post") return t.post;
+  if (key === "admin") return t.admin;
+  return t.browse;
+}
+
 /** Mobile-only dropdown with the nav links and account entries. Rendered only while open. */
 function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
   const t = text(locale);
@@ -90,12 +98,7 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
   }, [onClose, toggleRef]);
 
   const back = returnTo || hrefFor(locale);
-  const links = [
-    { key: "browse", label: t.browse },
-    { key: "companies", label: t.navCompanies },
-    { key: "post", label: t.post },
-  ];
-  if (me?.staff) links.push({ key: "admin", label: t.admin });
+  const links = navTabs(me).map((key) => ({ key, label: tabLabel(t, key) }));
 
   return (
     <nav id="mobile-nav" className="mobile-nav" aria-label={t.menuLabel} ref={panelRef}>
@@ -187,38 +190,17 @@ export function Shell({ locale, mode, jobId, companySlug, children }) {
             </a>
           </div>
           <div className="mode" role="tablist" aria-label={t.browse}>
-            <a
-              role="tab"
-              aria-selected={mode === "browse"}
-              className={mode === "browse" ? "on" : ""}
-              href={hrefFor(locale, { mode: "browse" })}
-            >
-              {t.browse}
-            </a>
-            <a
-              role="tab"
-              aria-selected={mode === "companies"}
-              className={mode === "companies" ? "on" : ""}
-              href={hrefFor(locale, { mode: "companies" })}
-            >
-              {t.navCompanies}
-            </a>
-            <a
-              role="tab"
-              aria-selected={mode === "post"}
-              className={mode === "post" ? "on" : ""}
-              href={hrefFor(locale, { mode: "post" })}
-            >
-              {t.post}
-            </a>
-            <a
-              role="tab"
-              aria-selected={mode === "admin"}
-              className={mode === "admin" ? "on" : ""}
-              href={hrefFor(locale, { mode: "admin" })}
-            >
-              {t.admin}
-            </a>
+            {navTabs(me).map((key) => (
+              <a
+                key={key}
+                role="tab"
+                aria-selected={mode === key}
+                className={mode === key ? "on" : ""}
+                href={hrefFor(locale, { mode: key })}
+              >
+                {tabLabel(t, key)}
+              </a>
+            ))}
           </div>
           <div className="top-right">
             <AccountBar locale={locale} returnTo={returnTo} onMe={setMe} />
