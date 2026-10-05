@@ -1,18 +1,21 @@
-"""Rules-only CV parser prototype (Phase 1.1). No AI."""
+"""Rules-only CV parser prototype (Phase 1.1 + OCR). No AI."""
 
 from __future__ import annotations
 
 import io
+import os
 import unittest
 from datetime import date
 from pathlib import Path
+from unittest.mock import patch
 
 from docx import Document
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
-from worker.cv_parse import PARSER_VERSION, extract_text, parse_bytes, parse_text
+from worker.cv_parse import PARSER_VERSION, extract, extract_text, parse_bytes, parse_text
 from worker.cv_parse.dates import merge_years, parse_month
+from worker.cv_parse.ocr import reset_ocr_cache
 from worker.cv_parse.sections import split_sections
 
 FIXTURES = Path(__file__).parent / "fixtures" / "cv"
@@ -133,10 +136,58 @@ class CvParseFilesTest(unittest.TestCase):
         text = extract_text(raw, filename="stack.pdf")
         self.assertIsInstance(text, str)
 
-    def test_unsupported_image_has_error(self):
-        profile = parse_bytes(b"\x89PNG\r\n", filename="scan.png")
+    def test_image_ocr_unavailable_has_error(self):
+        reset_ocr_cache()
+        with patch.dict(os.environ, {"CV_OCR_ENABLED": "1"}, clear=False):
+            with patch("worker.cv_parse.text.ocr_enabled", return_value=False):
+                with patch("worker.cv_parse.text.ocr_env_enabled", return_value=True):
+                    profile = parse_bytes(b"\x89PNG\r\n\x1a\n", filename="scan.png")
         self.assertEqual(profile["parse_meta"]["confidence"], 0.0)
-        self.assertEqual(profile["parse_meta"]["error"], "ocr_or_legacy_format_not_supported")
+        self.assertEqual(profile["parse_meta"]["error"], "ocr_unavailable")
+
+    def test_image_ocr_extracts_and_parses(self):
+        sample = (FIXTURES / "sample_backend.txt").read_text(encoding="utf-8")
+        pngish = b"\x89PNG\r\n\x1a\nfake"
+        with patch("worker.cv_parse.text.ocr_env_enabled", return_value=True):
+            with patch("worker.cv_parse.text.ocr_enabled", return_value=True):
+                with patch("worker.cv_parse.text.ocr_image_bytes", return_value=sample):
+                    profile = parse_bytes(pngish, filename="scan.png", content_type="image/png")
+        self.assertEqual(profile["contact"]["email"], "aysel.mammadli@example.com")
+        self.assertEqual(profile["parse_meta"]["text_extract"], "ocr")
+        self.assertGreaterEqual(profile["parse_meta"]["confidence"], 0.6)
+        names = {item["name"] for item in profile["skills"]}
+        self.assertIn("Java", names)
+
+    def test_pdf_low_text_uses_ocr_fallback(self):
+        writer = PdfWriter()
+        writer.add_blank_page(width=200, height=200)
+        out = io.BytesIO()
+        writer.write(out)
+        raw = out.getvalue()
+        ocr_body = (
+            "Aysel Mammadli\naysel.mammadli@example.com\n"
+            "Experience\nJava Developer at Acme\nJan 2020 – Present\n"
+            "Skills\nJava, Spring, Kafka\n"
+        )
+        with patch("worker.cv_parse.text.ocr_env_enabled", return_value=True):
+            with patch("worker.cv_parse.text.ocr_enabled", return_value=True):
+                with patch("worker.cv_parse.text.ocr_pdf_bytes", return_value=ocr_body) as ocr_mock:
+                    result = extract(raw, filename="scan.pdf")
+                    profile = parse_bytes(raw, filename="scan.pdf")
+        ocr_mock.assert_called()
+        self.assertEqual(result.source, "ocr")
+        self.assertIn("Java", result.text)
+        self.assertEqual(profile["parse_meta"]["text_extract"], "ocr")
+        self.assertIn("aysel.mammadli@example.com", profile["contact"]["email"])
+
+    def test_digital_pdf_skips_ocr(self):
+        text = "Contact\nperson@example.com\n" + ("Skills\nPython Django FastAPI PostgreSQL Docker\n" * 3)
+        with patch("worker.cv_parse.text._from_pdf", return_value=text):
+            with patch("worker.cv_parse.text.ocr_pdf_bytes") as ocr_mock:
+                result = extract(b"%PDF-fake", filename="cv.pdf")
+        ocr_mock.assert_not_called()
+        self.assertEqual(result.source, "pdf")
+        self.assertIn("person@example.com", result.text)
 
 
 if __name__ == "__main__":

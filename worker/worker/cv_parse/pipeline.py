@@ -8,10 +8,10 @@ from datetime import date
 from worker.cv_parse.contact import extract_contact
 from worker.cv_parse.dates import find_ranges, iso_month, merge_years
 from worker.cv_parse.sections import split_sections
-from worker.cv_parse.text import extract_text, unsupported_reason
+from worker.cv_parse.text import extract
 from worker.techstack import find_stack
 
-PARSER_VERSION = "1.0"
+PARSER_VERSION = "1.1"
 
 _SENIORITY_PAT = re.compile(
     r"(?i)\b(intern|junior|jr\.?|middle|mid-level|mid\b|senior|sr\.?|lead|principal|staff)\b"
@@ -31,16 +31,19 @@ def parse_bytes(
     content_type: str = "",
 ) -> dict:
     """Extract text from file bytes, then run the rules parser."""
-    reason = unsupported_reason(filename, content_type)
-    text = extract_text(data, filename=filename, content_type=content_type)
-    profile = parse_text(text)
-    if reason and not text:
-        meta = profile.setdefault("parse_meta", {})
-        meta["method"] = "rules"
+    extracted = extract(data, filename=filename, content_type=content_type)
+    profile = parse_text(extracted.text)
+    meta = profile.setdefault("parse_meta", {})
+    meta["method"] = "rules"
+    meta["parser_version"] = PARSER_VERSION
+    meta["source"] = "upload"
+    if extracted.source:
+        meta["text_extract"] = extracted.source
+    if extracted.error and not extracted.text:
         meta["confidence"] = 0.0
-        meta["error"] = reason
-        meta["parser_version"] = PARSER_VERSION
-        meta["source"] = "upload"
+        meta["error"] = extracted.error
+    elif extracted.error:
+        meta["extract_warning"] = extracted.error
     return profile
 
 

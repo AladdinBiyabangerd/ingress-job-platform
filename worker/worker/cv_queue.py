@@ -1,6 +1,6 @@
 """parse_cv_queue + candidate_profile stub (Phase 1.2).
 
-Enqueue on CV upload; worker drains with rules-only cv_parse. No AI #1.
+Enqueue on CV upload; worker drains with rules + OCR cv_parse. No AI #1.
 candidate_profile lives in the shared jobs DB (plan §12). It is separate from
 accounts.sqlite candidate_profiles (display name / phone / email only).
 """
