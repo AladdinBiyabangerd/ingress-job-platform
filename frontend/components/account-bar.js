@@ -106,6 +106,11 @@ export function AccountBar({ locale, returnTo, onMe }) {
                   </a>
                 ) : null}
                 {me.candidate || me.staff ? (
+                  <a role="menuitem" href={hrefFor(locale, { mode: "emailSettings" })} onClick={() => setOpen(false)}>
+                    {t.emailSettingsOpen}
+                  </a>
+                ) : null}
+                {me.candidate || me.staff ? (
                   <a role="menuitem" href={hrefFor(locale, { mode: "applications" })} onClick={() => setOpen(false)}>
                     {t.myApplications}
                   </a>

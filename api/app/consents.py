@@ -287,5 +287,28 @@ def save_consents(
         if visibility not in VISIBILITY_LEVELS:
             raise ValueError("visibility")
         _set_visibility(conn, user_id=subject, visibility=visibility)
+    # Opting into emails seeds weekly digests unless the user already chose prefs.
+    if grants.get("emails") is True:
+        from app.email_prefs import ensure_email_tables, get_prefs, save_prefs
+
+        ensure_email_tables(conn)
+        existing = conn.execute(
+            "SELECT frequency FROM email_prefs WHERE user_id = ?",
+            (subject,),
+        ).fetchone()
+        if existing is None:
+            save_prefs(
+                conn,
+                subject,
+                frequency="weekly",
+                digest=True,
+                high_match=True,
+                language=_pick_locale(lang),
+                clear_unsubscribe=True,
+            )
+        else:
+            prefs = get_prefs(conn, subject)
+            if prefs.get("frequency") == "none" and (prefs.get("unsubscribed_at") or "").strip():
+                pass  # keep explicit unsubscribe
     conn.commit()
     return consents_payload(conn, user_id=subject, lang=lang)

@@ -239,6 +239,24 @@ def _run_pass(store: Store) -> int:
             )
     except Exception:
         capture_exception()
+    try:
+        from worker.digests import trigger_email_jobs
+
+        mail_stats = trigger_email_jobs()
+        if mail_stats.get("skipped"):
+            print(f"email_jobs: skipped ({mail_stats.get('reason')})", flush=True)
+        elif mail_stats.get("ok"):
+            print(
+                "email_jobs: "
+                f"digest_sent={mail_stats.get('digest_sent', 0)} "
+                f"high_match_sent={mail_stats.get('high_match_sent', 0)} "
+                f"users={mail_stats.get('users', 0)}",
+                flush=True,
+            )
+        else:
+            print(f"email_jobs: failed ({mail_stats.get('reason')})", flush=True)
+    except Exception:
+        capture_exception()
     return 0
 
 

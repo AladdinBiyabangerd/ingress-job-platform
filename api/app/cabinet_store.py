@@ -321,9 +321,11 @@ def _apply_schema(conn) -> None:
     # (worker/worker/cv_queue.py). API ensures they exist when it opens first.
     from app.cv_queue import ensure_cv_queue_tables
     from app.consents import ensure_consent_tables
+    from app.email_prefs import ensure_email_tables
 
     ensure_cv_queue_tables(conn)
     ensure_consent_tables(conn)
+    ensure_email_tables(conn)
     from app.matching import ensure_match_tables
 
     ensure_match_tables(conn)

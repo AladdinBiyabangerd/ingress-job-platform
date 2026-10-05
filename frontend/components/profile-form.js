@@ -270,6 +270,9 @@ export function ProfileForm({ locale }) {
               <div className="cabinet-form-head">
                 <h2>{t.privacyTitle}</h2>
                 <p className="hint">{t.privacyLede}</p>
+                <p className="hint">
+                  <a href={hrefFor(locale, { mode: "emailSettings" })}>{t.emailSettingsOpen}</a>
+                </p>
               </div>
               {privacyError ? <p className="note">{privacyError}</p> : null}
               {privacyNote ? <p className="note">{privacyNote}</p> : null}

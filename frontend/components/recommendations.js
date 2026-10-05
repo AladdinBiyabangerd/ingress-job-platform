@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { hrefFor, text } from "../lib/copy";
+import { academyCourseUrl, hrefFor, text } from "../lib/copy";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 
@@ -203,6 +203,9 @@ export function Recommendations({ locale }) {
                           typeof item.share === "number" ? Math.round(item.share * 100) : null;
                         const growthPct =
                           typeof item.growth === "number" ? Math.round(item.growth * 100) : null;
+                        const courses = Array.isArray(item.academy_courses)
+                          ? item.academy_courses.filter(Boolean)
+                          : [];
                         return (
                           <li key={item.name}>
                             <strong>{item.name}</strong>
@@ -215,6 +218,23 @@ export function Recommendations({ locale }) {
                                 ]
                                   .filter(Boolean)
                                   .join(" · ")}
+                              </span>
+                            ) : null}
+                            {courses.length ? (
+                              <span className="hint">
+                                {" · "}
+                                {courses.map((courseId, index) => {
+                                  const href = academyCourseUrl(courseId);
+                                  if (!href) return null;
+                                  return (
+                                    <span key={String(courseId)}>
+                                      {index > 0 ? ", " : null}
+                                      <a href={href} target="_blank" rel="noreferrer">
+                                        {t.recommendationsGapCourse}
+                                      </a>
+                                    </span>
+                                  );
+                                })}
                               </span>
                             ) : null}
                           </li>

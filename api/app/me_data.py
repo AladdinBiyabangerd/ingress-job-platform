@@ -220,6 +220,14 @@ def delete_my_data(*, user_id: str) -> dict:
             # Live email/matching prefs removed; not kept as audit under real id.
             conn.execute("DELETE FROM consent WHERE user_id = ?", (subject,))
             try:
+                conn.execute("DELETE FROM email_prefs WHERE user_id = ?", (subject,))
+            except Exception:
+                pass
+            try:
+                conn.execute("DELETE FROM email_log WHERE user_id = ?", (subject,))
+            except Exception:
+                pass
+            try:
                 conn.execute("DELETE FROM match_feedback WHERE user_id = ?", (subject,))
             except Exception:
                 pass
