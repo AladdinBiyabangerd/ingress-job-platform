@@ -1,0 +1,35 @@
+{
+  "version": "1.0",
+  "notes": [
+    "Manual Ingress Academy career-path ↔ Ingress Job role map.",
+    "IDs are path slugs under https://ingress.academy/career-paths/ (AZ catalog).",
+    "Worker seeds this into role_taxonomy.academy_career_path_id (not runtime-static).",
+    "Only map when a path clearly matches the role; leave unmapped roles empty.",
+    "Prefer stable English slugs when AZ transliteration duplicates exist."
+  ],
+  "roles": {
+    "Java Developer": "ai-native-java-muhendisi",
+    "Backend Engineer": "backend-developer",
+    "Python Developer": "backend-developer",
+    "Go Developer": "backend-developer",
+    ".NET Developer": "backend-developer",
+    "Node.js Developer": "backend-developer",
+    "DevOps Engineer": "devops-engineer-path",
+    "Cloud Engineer": "devops-engineer-path",
+    "Platform Engineer": "devops-engineer-path",
+    "SRE": "site-reliability-engineer",
+    "Data Engineer": "data-muhndisi",
+    "Data Analyst": "ai-data-specialist",
+    "Data Scientist": "ai-data-specialist",
+    "ML Engineer": "ai-data-specialist",
+    "MLOps Engineer": "ai-data-specialist",
+    "QA Automation Engineer": "qa-muhndisi-sdet",
+    "SDET": "qa-muhndisi-sdet",
+    "Manual QA": "qa-muhndisi-sdet",
+    "SOC Analyst": "blue-team-v-soc-analitiki",
+    "Security Engineer": "cybersecurity-specialist",
+    "AppSec Engineer": "red-team-v-penetrasiya-testi-mutxssisi",
+    "IT Support": "it-dstyi-v-sistem-mutxssisi",
+    "Support Engineer": "it-dstyi-v-sistem-mutxssisi"
+  }
+}

@@ -17,21 +17,30 @@
       ],
       "category_hint": "language",
       "ad_count": 208,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "data-science-machine-learning-az",
+        "data-engineering-bootcamp-az",
+        "algorithms-data-structures-az"
+      ]
     },
     {
       "canonical_name": "AWS",
       "synonyms": [],
       "category_hint": "cloud",
       "ad_count": 170,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "cloud-computing-with-aws-and-terraform-az"
+      ]
     },
     {
       "canonical_name": "Kubernetes",
       "synonyms": [],
       "category_hint": "devops",
       "ad_count": 121,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "certified-kubernetes-administrator-cka-az",
+        "devops-engineer-az"
+      ]
     },
     {
       "canonical_name": "Go",
@@ -49,14 +58,20 @@
       ],
       "category_hint": "devops",
       "ad_count": 107,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "devops-engineer-az"
+      ]
     },
     {
       "canonical_name": "SQL",
       "synonyms": [],
       "category_hint": "language",
       "ad_count": 102,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "oracle-sql-az",
+        "postgresql-database-administration-az",
+        "data-analytics-foundation-az"
+      ]
     },
     {
       "canonical_name": "TypeScript",
@@ -65,7 +80,10 @@
       ],
       "category_hint": "language",
       "ad_count": 102,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "frontend-react-development-az",
+        "advanced-frontend-development-az"
+      ]
     },
     {
       "canonical_name": "LLM",
@@ -74,7 +92,11 @@
       ],
       "category_hint": "ml",
       "ad_count": 100,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "ai-agents-prompt-engineering-az",
+        "ai-for-everyone",
+        "ai-solution-builder-from-real-world-problem-to-working-prototype-pitch-az"
+      ]
     },
     {
       "canonical_name": "React",
@@ -84,28 +106,40 @@
       ],
       "category_hint": "frontend",
       "ad_count": 89,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "frontend-react-development-az",
+        "advanced-frontend-development-az"
+      ]
     },
     {
       "canonical_name": "Java",
       "synonyms": [],
       "category_hint": "language",
       "ad_count": 87,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "java-se-oca-az",
+        "junior-java-and-ai-engineer-az",
+        "senior-java-and-ai-engineer-az"
+      ]
     },
     {
       "canonical_name": "Docker",
       "synonyms": [],
       "category_hint": "devops",
       "ad_count": 85,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "devops-engineer-az",
+        "certified-kubernetes-administrator-cka-az"
+      ]
     },
     {
       "canonical_name": "Azure",
       "synonyms": [],
       "category_hint": "cloud",
       "ad_count": 78,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "azure-administrator-az"
+      ]
     },
     {
       "canonical_name": "GCP",
@@ -123,14 +157,18 @@
       ],
       "category_hint": "data",
       "ad_count": 76,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "postgresql-database-administration-az"
+      ]
     },
     {
       "canonical_name": "Terraform",
       "synonyms": [],
       "category_hint": "devops",
       "ad_count": 72,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "cloud-computing-with-aws-and-terraform-az"
+      ]
     },
     {
       "canonical_name": "JavaScript",
@@ -139,14 +177,19 @@
       ],
       "category_hint": "language",
       "ad_count": 58,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "frontend-react-development-az",
+        "advanced-frontend-development-az"
+      ]
     },
     {
       "canonical_name": "Kafka",
       "synonyms": [],
       "category_hint": "data",
       "ad_count": 47,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "advanced-backend-microservices-development-az"
+      ]
     },
     {
       "canonical_name": "Node.js",
@@ -156,21 +199,29 @@
       ],
       "category_hint": "backend",
       "ad_count": 47,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "advanced-backend-microservices-development-az"
+      ]
     },
     {
       "canonical_name": "Linux",
       "synonyms": [],
       "category_hint": "devops",
       "ad_count": 43,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "linux-foundation-az",
+        "red-hat-certified-system-administrator-rhcsa-az"
+      ]
     },
     {
       "canonical_name": "MySQL",
       "synonyms": [],
       "category_hint": "data",
       "ad_count": 36,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "oracle-sql-az",
+        "data-analytics-foundation-az"
+      ]
     },
     {
       "canonical_name": "Ruby",
@@ -221,7 +272,9 @@
       "synonyms": [],
       "category_hint": "data",
       "ad_count": 27,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "advanced-backend-microservices-development-az"
+      ]
     },
     {
       "canonical_name": "C#",
@@ -230,14 +283,19 @@
       ],
       "category_hint": "language",
       "ad_count": 26,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "c-az",
+        "advanced-csharp-backend-development-az"
+      ]
     },
     {
       "canonical_name": "GitHub Actions",
       "synonyms": [],
       "category_hint": "devops",
       "ad_count": 26,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "devops-engineer-az"
+      ]
     },
     {
       "canonical_name": "Rust",
@@ -253,7 +311,9 @@
       ],
       "category_hint": "data",
       "ad_count": 24,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "data-engineering-bootcamp-az"
+      ]
     },
     {
       "canonical_name": "Angular",
@@ -262,14 +322,19 @@
       ],
       "category_hint": "frontend",
       "ad_count": 21,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "advanced-frontend-development-az"
+      ]
     },
     {
       "canonical_name": "Grafana",
       "synonyms": [],
       "category_hint": "devops",
       "ad_count": 21,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "site-reliability-engineering-sre-bootcamp",
+        "devops-engineer-az"
+      ]
     },
     {
       "canonical_name": "Bash",
@@ -285,7 +350,9 @@
       "synonyms": [],
       "category_hint": "data",
       "ad_count": 19,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "data-engineering-bootcamp-az"
+      ]
     },
     {
       "canonical_name": ".NET",
@@ -296,14 +363,20 @@
       ],
       "category_hint": "language",
       "ad_count": 18,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "c-az",
+        "advanced-csharp-backend-development-az"
+      ]
     },
     {
       "canonical_name": "Datadog",
       "synonyms": [],
       "category_hint": "devops",
       "ad_count": 18,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "site-reliability-engineering-sre-bootcamp",
+        "devops-engineer-az"
+      ]
     },
     {
       "canonical_name": "DynamoDB",
@@ -324,14 +397,18 @@
       "synonyms": [],
       "category_hint": "ml",
       "ad_count": 18,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "data-science-machine-learning-az"
+      ]
     },
     {
       "canonical_name": "BigQuery",
       "synonyms": [],
       "category_hint": "data",
       "ad_count": 17,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "data-engineering-bootcamp-az"
+      ]
     },
     {
       "canonical_name": "GraphQL",
@@ -355,7 +432,9 @@
       "synonyms": [],
       "category_hint": "data",
       "ad_count": 16,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "data-engineering-bootcamp-az"
+      ]
     },
     {
       "canonical_name": "Scala",
@@ -387,14 +466,18 @@
       ],
       "category_hint": "frontend",
       "ad_count": 15,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "frontend-react-development-az"
+      ]
     },
     {
       "canonical_name": "Jenkins",
       "synonyms": [],
       "category_hint": "devops",
       "ad_count": 15,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "devops-engineer-az"
+      ]
     },
     {
       "canonical_name": "CSS",
@@ -405,7 +488,9 @@
       ],
       "category_hint": "frontend",
       "ad_count": 14,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "frontend-react-development-az"
+      ]
     },
     {
       "canonical_name": "PHP",
@@ -419,7 +504,10 @@
       "synonyms": [],
       "category_hint": "devops",
       "ad_count": 14,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "site-reliability-engineering-sre-bootcamp",
+        "devops-engineer-az"
+      ]
     },
     {
       "canonical_name": "Spring",
@@ -429,7 +517,11 @@
       ],
       "category_hint": "backend",
       "ad_count": 14,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "junior-java-and-ai-engineer-az",
+        "senior-java-and-ai-engineer-az",
+        "advanced-backend-microservices-development-az"
+      ]
     },
     {
       "canonical_name": "C",
@@ -460,14 +552,18 @@
       ],
       "category_hint": "frontend",
       "ad_count": 13,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "advanced-frontend-development-az"
+      ]
     },
     {
       "canonical_name": "Ansible",
       "synonyms": [],
       "category_hint": "devops",
       "ad_count": 12,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "devops-engineer-az"
+      ]
     },
     {
       "canonical_name": "Django",
@@ -481,7 +577,10 @@
       "synonyms": [],
       "category_hint": "devops",
       "ad_count": 12,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "certified-kubernetes-administrator-cka-az",
+        "devops-engineer-az"
+      ]
     },
     {
       "canonical_name": "Next.js",
@@ -491,28 +590,38 @@
       ],
       "category_hint": "frontend",
       "ad_count": 12,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "frontend-react-development-az",
+        "advanced-frontend-development-az"
+      ]
     },
     {
       "canonical_name": "Playwright",
       "synonyms": [],
       "category_hint": "qa",
       "ad_count": 12,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "qa-automation-az",
+        "qa-dan-sdet-bootcamp"
+      ]
     },
     {
       "canonical_name": "Databricks",
       "synonyms": [],
       "category_hint": "data",
       "ad_count": 11,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "data-engineering-bootcamp-az"
+      ]
     },
     {
       "canonical_name": "dbt",
       "synonyms": [],
       "category_hint": "data",
       "ad_count": 11,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "data-engineering-bootcamp-az"
+      ]
     },
     {
       "canonical_name": "Figma",
@@ -526,21 +635,28 @@
       "synonyms": [],
       "category_hint": "data",
       "ad_count": 11,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "data-analytics-foundation-az",
+        "data-science-machine-learning-az"
+      ]
     },
     {
       "canonical_name": "RabbitMQ",
       "synonyms": [],
       "category_hint": "data",
       "ad_count": 9,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "advanced-backend-microservices-development-az"
+      ]
     },
     {
       "canonical_name": "scikit-learn",
       "synonyms": [],
       "category_hint": "ml",
       "ad_count": 8,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "data-science-machine-learning-az"
+      ]
     },
     {
       "canonical_name": "Ethereum",
@@ -554,28 +670,38 @@
       "synonyms": [],
       "category_hint": "backend",
       "ad_count": 7,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "advanced-backend-microservices-development-az"
+      ]
     },
     {
       "canonical_name": "Tailwind",
       "synonyms": [],
       "category_hint": "frontend",
       "ad_count": 7,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "frontend-react-development-az",
+        "advanced-frontend-development-az"
+      ]
     },
     {
       "canonical_name": "TensorFlow",
       "synonyms": [],
       "category_hint": "ml",
       "ad_count": 6,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "data-science-machine-learning-az"
+      ]
     },
     {
       "canonical_name": "Cypress",
       "synonyms": [],
       "category_hint": "qa",
       "ad_count": 5,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "qa-automation-az",
+        "qa-dan-sdet-bootcamp"
+      ]
     },
     {
       "canonical_name": "Shopify",
@@ -610,14 +736,18 @@
       "synonyms": [],
       "category_hint": "backend",
       "ad_count": 4,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "advanced-backend-microservices-development-az"
+      ]
     },
     {
       "canonical_name": "Nginx",
       "synonyms": [],
       "category_hint": "devops",
       "ad_count": 4,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "devops-engineer-az"
+      ]
     },
     {
       "canonical_name": "Phoenix",
@@ -631,7 +761,10 @@
       "synonyms": [],
       "category_hint": "qa",
       "ad_count": 4,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "qa-automation-az",
+        "qa-dan-sdet-bootcamp"
+      ]
     },
     {
       "canonical_name": "Solidity",
@@ -661,14 +794,18 @@
       "synonyms": [],
       "category_hint": "qa",
       "ad_count": 3,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "qa-automation-az"
+      ]
     },
     {
       "canonical_name": "Svelte",
       "synonyms": [],
       "category_hint": "frontend",
       "ad_count": 3,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "advanced-frontend-development-az"
+      ]
     },
     {
       "canonical_name": "Laravel",
@@ -698,7 +835,9 @@
       ],
       "category_hint": "backend",
       "ad_count": 1,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "advanced-backend-microservices-development-az"
+      ]
     },
     {
       "canonical_name": "Haskell",
@@ -719,7 +858,9 @@
       "synonyms": [],
       "category_hint": "frontend",
       "ad_count": 1,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "frontend-react-development-az"
+      ]
     },
     {
       "canonical_name": "Unreal Engine",
@@ -754,7 +895,9 @@
       "synonyms": [],
       "category_hint": "frontend",
       "ad_count": 0,
-      "academy_course_ids": []
+      "academy_course_ids": [
+        "advanced-frontend-development-az"
+      ]
     }
   ],
   "notes": [
@@ -762,7 +905,8 @@
     "canonical_name + synonyms come from the existing curated extractor.",
     "ad_count is a local snapshot from jobs.tech_stack; re-run this script to refresh.",
     "Unknown tech_stack values (not in the curated list) are listed under unknown_in_ads.",
-    "Worker loads the packaged copy at worker/worker/skill_dictionary_v1.json."
+    "Worker loads the packaged copy at worker/worker/skill_dictionary_v1.json.",
+    "academy_course_ids merged from docs/cv-ai/academy-course-skill-map-v1.json."
   ],
   "unknown_in_ads": []
 }

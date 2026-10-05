@@ -85,6 +85,27 @@ class RolesTest(unittest.TestCase):
         count = self.store.conn.execute("SELECT COUNT(*) FROM role_taxonomy").fetchone()[0]
         self.assertEqual(int(count), first_roles)
 
+    def test_seed_writes_academy_career_path_id(self):
+        row = self.store.conn.execute(
+            """
+            SELECT academy_career_path_id FROM role_taxonomy
+            WHERE canonical_name = ?
+            """,
+            ("Java Developer",),
+        ).fetchone()
+        self.assertIsNotNone(row)
+        self.assertEqual(row["academy_career_path_id"], "ai-native-java-muhendisi")
+
+        empty = self.store.conn.execute(
+            """
+            SELECT academy_career_path_id FROM role_taxonomy
+            WHERE canonical_name = ?
+            """,
+            ("React Developer",),
+        ).fetchone()
+        self.assertIsNotNone(empty)
+        self.assertEqual(empty["academy_career_path_id"], "")
+
 
 if __name__ == "__main__":
     unittest.main()

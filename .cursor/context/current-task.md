@@ -2,26 +2,27 @@
 
 ## Completed
 - Phase 0–2.12 (matches, trends, digests, skill pairs, etc.) — see prior notes
-- Profile review UX: CV upload on `/profile/review` + manual fill + redesign
-- Profile review **Sıfırla** button: `DELETE /api/v1/profile` + BFF; clears profile + open parse jobs; returns to chooser
+- Profile review UX + Sıfırla; CV parse v1.5–v1.6
+- `/profile` layout: sticky footer + split cards
+- Academy skill↔course map v1 (~57 skills, `/trainings/` + UTM)
+- Academy role↔career-path map v1 (~23 roles); seeded into `role_taxonomy.academy_career_path_id`; skill-gap/roles/`/me/skills`/digest
 
 ## Decisions
-- `POST /api/v1/profile/cv` stores CV (same PDF/DOC/DOCX ≤5MB rules) and enqueues `parse_cv_queue` without an application
-- Frontend BFF: `POST /api/auth/cv-profile/cv`
-- Empty profile shows chooser (upload vs manual); parsed/manual form always editable
-- UI polls profile while parse is pending/processing
-- Reset confirms, then deletes `candidate_profile` and fails open `parse_cv_queue` rows
+- Courses attach to skills (`academy_course_ids`); career paths attach to roles (`academy_career_path_id`) — both DB-seeded, not runtime-static JSON
+- Prefer stable English career-path slugs when AZ transliteration duplicates exist
 
 ## Remaining
 - AI #2 re-rank when Postgres + pgvector available
-- Academy `academy_course_ids` map
 - Ops SPF/DKIM; consolidate worker+API `ai_gateway`
+- Spot-check logged-in `/me/skills` course + career-path links in real session
+- Extend course/path maps when Academy catalog grows
 
 ## Relevant files
-- `api/app/routers/profile.py`, `api/app/cv_profile.py`, `api/app/applications.py`
-- `frontend/components/profile-review.js`, `frontend/lib/copy.js`, `frontend/app/globals.css`
-- `frontend/app/api/auth/cv-profile/route.js`, `frontend/app/api/auth/cv-profile/cv/route.js`
-- `api/tests/test_cv_profile.py`
+- `docs/cv-ai/academy-career-path-role-map-v1.json`
+- `api/app/academy_paths.py`
+- `api/app/skill_gap.py` / `role_suggestions.py` / `digests.py`
+- `frontend/lib/copy.js` (`academyCareerPathUrl`)
+- `frontend/components/me-skills.js`
 
 ## Continue prompt (new chat)
-Profile review reset done. Next: Academy skill↔course map or AI #2 blockers. Read `.cursor/context/current-task.md`.
+Academy career-path links on `/me/skills` (role map v1). Next: AI #2 or ops SPF/DKIM / ai_gateway consolidate. Read `.cursor/context/current-task.md`.

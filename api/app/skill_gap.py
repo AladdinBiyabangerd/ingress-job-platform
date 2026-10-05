@@ -83,22 +83,41 @@ def _resolve_role(conn, role: str | None) -> dict | None:
     try:
         row = conn.execute(
             """
-            SELECT id, canonical_name, category
+            SELECT id, canonical_name, category, academy_career_path_id
             FROM role_taxonomy
             WHERE lower(canonical_name) = lower(?)
             """,
             (name,),
         ).fetchone()
     except Exception:
-        return None
+        # Older DBs without academy_career_path_id.
+        try:
+            row = conn.execute(
+                """
+                SELECT id, canonical_name, category
+                FROM role_taxonomy
+                WHERE lower(canonical_name) = lower(?)
+                """,
+                (name,),
+            ).fetchone()
+        except Exception:
+            return None
     if row is None:
         # Synonym match (JSON array stored as text).
         try:
             rows = conn.execute(
-                "SELECT id, canonical_name, category, synonyms FROM role_taxonomy"
+                """
+                SELECT id, canonical_name, category, synonyms, academy_career_path_id
+                FROM role_taxonomy
+                """
             ).fetchall()
         except Exception:
-            return None
+            try:
+                rows = conn.execute(
+                    "SELECT id, canonical_name, category, synonyms FROM role_taxonomy"
+                ).fetchall()
+            except Exception:
+                return None
         needle = name.lower()
         for item in rows:
             synonyms = _parse_json_list(_row_get(item, "synonyms", 3))
@@ -107,10 +126,29 @@ def _resolve_role(conn, role: str | None) -> dict | None:
                 break
     if row is None:
         return None
+    path_id = ""
+    try:
+        path_id = str(row["academy_career_path_id"] or "").strip()
+    except (KeyError, IndexError, TypeError):
+        # Tuple layouts:
+        #   id, name, category, path
+        #   id, name, category, synonyms, path
+        for idx in (3, 4):
+            try:
+                value = row[idx]
+            except (KeyError, IndexError, TypeError):
+                continue
+            # Synonyms column is JSON text starting with '[' — skip it.
+            text = str(value or "").strip()
+            if text.startswith("["):
+                continue
+            path_id = text.strip("/")
+            break
     return {
         "id": int(_row_get(row, "id", 0)),
         "canonical_name": str(_row_get(row, "canonical_name", 1) or ""),
         "category": str(_row_get(row, "category", 2) or ""),
+        "academy_career_path_id": path_id,
     }
 
 
@@ -191,6 +229,7 @@ def skill_gap_payload(
     base = {
         "role": None,
         "category": "",
+        "academy_career_path": "",
         "have": [],
         "missing": [],
         "matching_consent": matching,
@@ -210,6 +249,7 @@ def skill_gap_payload(
 
     base["role"] = resolved["canonical_name"]
     base["category"] = resolved["category"]
+    base["academy_career_path"] = str(resolved.get("academy_career_path_id") or "").strip()
     targets = _role_target_skills(conn, resolved["id"], chosen_top)
     if not targets:
         return base

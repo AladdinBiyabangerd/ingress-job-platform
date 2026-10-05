@@ -155,13 +155,22 @@ def _score_roles(
     lang: str,
 ) -> list[dict[str, Any]]:
     try:
-        roles = conn.execute(
-            """
-            SELECT id, canonical_name, category
-            FROM role_taxonomy
-            ORDER BY canonical_name
-            """
-        ).fetchall()
+        try:
+            roles = conn.execute(
+                """
+                SELECT id, canonical_name, category, academy_career_path_id
+                FROM role_taxonomy
+                ORDER BY canonical_name
+                """
+            ).fetchall()
+        except Exception:
+            roles = conn.execute(
+                """
+                SELECT id, canonical_name, category
+                FROM role_taxonomy
+                ORDER BY canonical_name
+                """
+            ).fetchall()
     except Exception:
         return []
 
@@ -212,6 +221,9 @@ def _score_roles(
                 "score": score,
                 "have": have,
                 "missing": missing,
+                "academy_career_path": str(
+                    _row_get(role, "academy_career_path_id", 3) or ""
+                ).strip(),
                 "explanation": _format_explanation(lang, have, missing),
             }
         )

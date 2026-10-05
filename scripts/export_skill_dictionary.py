@@ -24,6 +24,52 @@ WORKER_DIR = ROOT / "worker"
 OUT_DIR = ROOT / "docs" / "cv-ai"
 # Packaged copy used by the worker image (Docker context is worker/).
 PACKAGED_SEED = WORKER_DIR / "worker" / "skill_dictionary_v1.json"
+ACADEMY_COURSE_MAP = OUT_DIR / "academy-course-skill-map-v1.json"
+
+
+def load_academy_course_map(path: Path | None = None) -> dict[str, list[str]]:
+    """canonical_name → ordered Academy training slugs (manual map)."""
+    chosen = path or ACADEMY_COURSE_MAP
+    if not chosen.is_file():
+        return {}
+    data = json.loads(chosen.read_text(encoding="utf-8"))
+    raw = data.get("skills") if isinstance(data, dict) else None
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, list[str]] = {}
+    for name, courses in raw.items():
+        key = str(name or "").strip()
+        if not key or not isinstance(courses, list):
+            continue
+        cleaned = []
+        seen: set[str] = set()
+        for item in courses:
+            slug = str(item or "").strip().strip("/")
+            if not slug or slug in seen:
+                continue
+            seen.add(slug)
+            cleaned.append(slug)
+        if cleaned:
+            out[key] = cleaned
+    return out
+
+
+def apply_academy_course_map(
+    skills: list[dict], mapping: dict[str, list[str]] | None = None
+) -> int:
+    """Fill academy_course_ids from the manual map. Returns skills updated."""
+    course_map = mapping if mapping is not None else load_academy_course_map()
+    updated = 0
+    for row in skills:
+        name = str(row.get("canonical_name") or "").strip()
+        courses = list(course_map.get(name) or [])
+        prev = row.get("academy_course_ids") or []
+        if not isinstance(prev, list):
+            prev = []
+        if courses != [str(x) for x in prev]:
+            updated += 1
+        row["academy_course_ids"] = courses
+    return updated
 
 # Mirrors comment groups in worker/worker/techstack.py (_TECH).
 _CATEGORY_BY_CANONICAL: dict[str, str] = {
@@ -201,6 +247,7 @@ def main() -> int:
         )
 
     skills.sort(key=lambda row: (-row["ad_count"], row["canonical_name"].lower()))
+    mapped = apply_academy_course_map(skills)
 
     unknown_in_ads = sorted(
         name for name in freq if name not in {s["canonical_name"] for s in skills}
@@ -222,6 +269,7 @@ def main() -> int:
             "Seed for skill_dictionary table (Phase 0).",
             "canonical_name + synonyms come from the existing curated extractor.",
             "ad_count is a local snapshot from jobs.tech_stack; re-run this script to refresh.",
+            "academy_course_ids merged from docs/cv-ai/academy-course-skill-map-v1.json.",
             "Unknown tech_stack values (not in the curated list) are listed under unknown_in_ads.",
             "Worker loads the packaged copy at worker/worker/skill_dictionary_v1.json.",
         ],
@@ -253,6 +301,7 @@ def main() -> int:
     print(f"wrote {dict_path.relative_to(ROOT)} ({len(skills)} skills)")
     print(f"wrote {PACKAGED_SEED.relative_to(ROOT)}")
     print(f"wrote {freq_path.relative_to(ROOT)} ({len(freq)} observed)")
+    print(f"academy course map: {mapped} skills with courses")
     if unknown_in_ads:
         print(f"warning: {len(unknown_in_ads)} tech_stack values not in curated list")
     return 0

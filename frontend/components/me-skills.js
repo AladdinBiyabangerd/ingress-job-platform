@@ -1,9 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { academyCourseUrl, hrefFor, text } from "../lib/copy";
+import { academyCareerPathUrl, academyCourseUrl, hrefFor, text } from "../lib/copy";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
+
+function CareerPathLink({ t, pathId }) {
+  const href = academyCareerPathUrl(pathId);
+  if (!href) return null;
+  return (
+    <p className="hint">
+      <a href={href} target="_blank" rel="noreferrer">
+        {t.recommendationsGapCareerPath}
+      </a>
+    </p>
+  );
+}
 
 function SkillMeta({ t, item }) {
   const sharePct = typeof item.share === "number" ? Math.round(item.share * 100) : null;
@@ -189,6 +201,7 @@ export function MeSkills({ locale }) {
               <h2>
                 {t.recommendationsGap}: {activeRole}
               </h2>
+              <CareerPathLink t={t} pathId={gap?.academy_career_path} />
               {!gap?.missing?.length && !gap?.have?.length ? (
                 <p className="hint">{t.recommendationsGapEmpty}</p>
               ) : (

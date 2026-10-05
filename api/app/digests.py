@@ -33,6 +33,33 @@ HIGH_MATCH_MIN_SCORE = float(os.environ.get("HIGH_MATCH_MIN_SCORE") or "0.75")
 DIGEST_MATCH_LIMIT = 5
 HIGH_MATCH_LOOKBACK_HOURS = int(os.environ.get("HIGH_MATCH_LOOKBACK_HOURS") or "26")
 BATCH_PAUSE_EVERY = int(os.environ.get("DIGEST_BATCH_SIZE") or "30")
+ACADEMY_COURSE_BASE = (
+    os.environ.get("ACADEMY_COURSE_BASE")
+    or os.environ.get("NEXT_PUBLIC_ACADEMY_COURSE_BASE")
+    or "https://ingress.academy/trainings/"
+).rstrip("/") + "/"
+
+
+def academy_course_url(course_id: str, *, utm_medium: str = "digest") -> str:
+    slug = str(course_id or "").strip().strip("/")
+    if not slug:
+        return ""
+    from urllib.parse import urlencode
+
+    qs = urlencode(
+        {
+            "utm_source": "ingress_job",
+            "utm_medium": utm_medium,
+            "utm_campaign": "academy_cross_sell",
+        }
+    )
+    return f"{ACADEMY_COURSE_BASE}{slug}/?{qs}"
+
+
+def academy_career_path_url(path_id: str, *, utm_medium: str = "digest") -> str:
+    from app.academy_paths import academy_career_path_url as _url
+
+    return _url(path_id, utm_medium=utm_medium)
 
 COPY = {
     "az": {
@@ -159,7 +186,15 @@ def _gap_tip(conn, *, user_id: str, lang: str) -> str:
         return ""
     courses = tip.get("academy_courses") or []
     if courses:
+        href = academy_course_url(str(courses[0]))
+        if href:
+            return f"{name} → {href}"
         return f"{name} → {courses[0]}"
+    path_id = str(gap.get("academy_career_path") or "").strip()
+    if path_id:
+        href = academy_career_path_url(path_id)
+        if href:
+            return f"{name} → {href}"
     return name
 
 

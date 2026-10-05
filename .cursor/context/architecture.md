@@ -43,7 +43,7 @@ compose.yaml
 - CV profile review: `GET/PUT /api/v1/profile` + `/profile/review`; `profile_edit_log`; status draft→confirmed
 - Role suggestions: `GET /api/v1/me/roles` (signature skill weights × years_factor; matching consent; BFF `/api/auth/me/roles`)
 - Job matches: `GET /api/v1/me/matches` structured score (skills/seniority/location/language/freshness); AI #2 off on SQLite; feedback `POST .../matches/{id}/feedback` → `match_feedback`
-- Skill gap: `GET /api/v1/me/skill-gap?role=` from `role_skill_weight`; share/growth from `skill_trend_daily` when present
+- Skill gap: `GET /api/v1/me/skill-gap?role=` from `role_skill_weight`; share/growth from `skill_trend_daily` when present; Academy course links from `skill_dictionary.academy_course_ids` (map → seed); Academy career-path from `role_taxonomy.academy_career_path_id` (map `docs/cv-ai/academy-career-path-role-map-v1.json` → worker seed; base `/career-paths/`)
 - Skill trends: worker `skill_trends.refresh_skill_trends` → `skill_trend_daily` + `skill_pair_daily`; public `GET /api/v1/trends`; UI `/trends`
 - Trend salary signals: worker `salary_parse` annualizes free-text `jobs.salary` (currency+period required, no FX) into `salary_median/currency/n/low/high`; API shows `salary` on trends when `n >= 5`
 - Skill pairs: ordered co-occurrence in `skill_pair_daily`; trends items expose top `often_with` (share among base-skill ads, min 10 base ads); skill-gap missing skills get best pair vs candidate’s have skills
@@ -52,6 +52,7 @@ compose.yaml
 - Email click tracking: HMAC `/r/<token>` (frontend proxy → `GET /api/v1/r/{token}` → 302 job page); logs `email_click`; digests/high-match use tracked URLs only
 - AI #4 digest intro: API `ai_gateway` + `digest_intro` (optional 2–3 sentences; `DIGEST_AI_INTRO_ENABLED`; soft-fail to static copy; shares jobs-DB `ai_cache`/`ai_usage_daily` with worker CV AI #1)
 - AI #2 re-rank still off (needs pgvector + embeddings; not implemented)
+- Academy cross-sell: ~57 skills mapped to training slugs; UI/digest UTM `utm_source=ingress_job`
 - Data rights: `GET /api/v1/me/export` (zip: export.json + CVs); `DELETE /api/v1/me` (hard-delete; audit → pseudonym). Account identity remains `GET /api/v1/me`
 
 ## Integrations

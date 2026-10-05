@@ -2,6 +2,7 @@
 
 Deterministic only: seed from the packaged JSON under existing job categories.
 Signature skills link to skill_dictionary by canonical name. No AI.
+Academy career-path slugs live on role_taxonomy.academy_career_path_id (seeded).
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ CREATE TABLE IF NOT EXISTS role_taxonomy (
     canonical_name TEXT NOT NULL UNIQUE,
     category TEXT NOT NULL,
     synonyms TEXT NOT NULL DEFAULT '[]',
+    academy_career_path_id TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL DEFAULT ''
 );
 
@@ -54,10 +56,48 @@ def seed_path() -> Path:
     )
 
 
+def career_path_map_path() -> Path:
+    packaged = Path(__file__).with_name("academy_career_path_role_map_v1.json")
+    if packaged.is_file():
+        return packaged
+    return (
+        Path(__file__).resolve().parents[2]
+        / "docs"
+        / "cv-ai"
+        / "academy-career-path-role-map-v1.json"
+    )
+
+
+def load_career_path_map(path: Path | None = None) -> dict[str, str]:
+    """canonical_name → Academy career-path slug."""
+    chosen = path or career_path_map_path()
+    if not chosen.is_file():
+        return {}
+    data = json.loads(chosen.read_text(encoding="utf-8"))
+    raw = data.get("roles") if isinstance(data, dict) else None
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, str] = {}
+    for name, slug in raw.items():
+        key = str(name or "").strip()
+        path_id = str(slug or "").strip().strip("/")
+        if key and path_id:
+            out[key] = path_id
+    return out
+
+
 def ensure_role_tables(conn) -> None:
     conn.executescript(SCHEMA)
     for sql in INDEXES:
         conn.execute(sql)
+    try:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(role_taxonomy)")}
+    except Exception:
+        return
+    if "academy_career_path_id" not in cols:
+        conn.execute(
+            "ALTER TABLE role_taxonomy ADD COLUMN academy_career_path_id TEXT NOT NULL DEFAULT ''"
+        )
 
 
 def load_seed(path: Path | None = None) -> list[dict]:
@@ -86,18 +126,23 @@ def seed_role_taxonomy(conn, path: Path | None = None) -> tuple[int, int]:
     """Upsert roles and signature skill weights. Returns (roles_written, weights_written).
 
     Unknown skill names are skipped. Categories outside techstack.CATEGORIES are skipped.
+    academy_career_path_id comes from the role seed field or the career-path map.
     """
     ensure_role_tables(conn)
     roles = load_seed(path)
     skill_ids = _skill_ids_by_name(conn)
+    path_map = load_career_path_map()
     stamp = _now()
 
     role_sql = """
-        INSERT INTO role_taxonomy (canonical_name, category, synonyms, updated_at)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO role_taxonomy (
+            canonical_name, category, synonyms, academy_career_path_id, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(canonical_name) DO UPDATE SET
             category = excluded.category,
             synonyms = excluded.synonyms,
+            academy_career_path_id = excluded.academy_career_path_id,
             updated_at = excluded.updated_at
     """
     roles_written = 0
@@ -111,12 +156,16 @@ def seed_role_taxonomy(conn, path: Path | None = None) -> tuple[int, int]:
         synonyms = item.get("synonyms") or []
         if not isinstance(synonyms, list):
             synonyms = []
+        path_id = str(item.get("academy_career_path_id") or "").strip().strip("/")
+        if not path_id:
+            path_id = path_map.get(name, "")
         conn.execute(
             role_sql,
             (
                 name,
                 category,
                 json.dumps([str(x) for x in synonyms], ensure_ascii=False),
+                path_id,
                 stamp,
             ),
         )

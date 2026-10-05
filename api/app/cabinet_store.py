@@ -281,6 +281,7 @@ def _apply_schema(conn) -> None:
             canonical_name TEXT NOT NULL UNIQUE,
             category TEXT NOT NULL,
             synonyms TEXT NOT NULL DEFAULT '[]',
+            academy_career_path_id TEXT NOT NULL DEFAULT '',
             updated_at TEXT NOT NULL DEFAULT ''
         );
         CREATE TABLE IF NOT EXISTS role_skill_weight (
@@ -323,6 +324,11 @@ def _apply_schema(conn) -> None:
     ):
         if name not in trend_cols:
             conn.execute(f"ALTER TABLE skill_trend_daily ADD COLUMN {name} {decl}")
+    role_cols = {row[1] for row in conn.execute("PRAGMA table_info(role_taxonomy)")}
+    if "academy_career_path_id" not in role_cols:
+        conn.execute(
+            "ALTER TABLE role_taxonomy ADD COLUMN academy_career_path_id TEXT NOT NULL DEFAULT ''"
+        )
     conn.execute("CREATE INDEX IF NOT EXISTS job_skill_skill ON job_skill(skill_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS job_skill_job ON job_skill(job_id)")
     conn.execute(
