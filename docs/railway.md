@@ -11,12 +11,13 @@ the files. Nothing here has been applied.
 
 | Service | Directory | What a push builds | Process |
 |---|---|---|---|
-| api | `api/` | `api/Dockerfile` (or `api/nixpacks.toml`) | `uvicorn` on `$PORT` (no healthcheck) |
+| api | repo root (`.`) | `api/Dockerfile` via `RAILWAY_DOCKERFILE_PATH` | `uvicorn` on `$PORT` (no healthcheck); installs `api` + `worker` for in-process CV parse |
 | web | `frontend/` | `frontend/Dockerfile` (or `frontend/nixpacks.toml`) | `next start` on `$PORT` (no healthcheck) |
-| worker | `worker/` | `worker/Dockerfile` (or `worker/nixpacks.toml`) | `python -m worker` once per hour, then exit |
+| worker | `worker/` | `worker/Dockerfile` (or `worker/nixpacks.toml`) | `python -m worker` once per hour, then exit (job crawl; CV drain only as backup) |
 
-The worker cron is `0 * * * *` UTC. It must exit. Local Mac scheduling is still
-`python -m worker schedule` and is unchanged.
+CV parse runs in the API after upload (background thread drains `parse_cv_queue`). The
+worker cron is for crawling ads (`0 * * * *` UTC) and must exit. Local Mac
+scheduling is still `python -m worker schedule` and is unchanged.
 
 `.railway/railway.ts` also creates:
 

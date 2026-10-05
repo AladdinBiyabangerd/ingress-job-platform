@@ -641,39 +641,11 @@ def save_profile(
             conn.close()
 
 
-def _kick_worker_parse_cv() -> None:
-    """Best-effort: ask the local worker to drain the parse queue now.
-
-    Safe no-op when the worker package/venv is absent (e.g. API-only deploy).
-    The scheduled worker also drains pending CVs every ~30s between crawls.
-    """
-    import os
-    import subprocess
-    import sys
-    from pathlib import Path
-
-    repo = Path(__file__).resolve().parents[2]
-    worker_dir = repo / "worker"
-    py = worker_dir / ".venv" / "bin" / "python"
-    if not py.is_file():
-        py = Path(sys.executable)
-    try:
-        subprocess.Popen(
-            [str(py), "-m", "worker", "parse-cv"],
-            cwd=str(worker_dir),
-            env=os.environ.copy(),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
-    except Exception:
-        pass
-
-
 def upload_profile_cv(*, user_id: str, filename: str, data: bytes) -> dict:
     """Store a CV for profile parsing (no job application) and enqueue parse."""
     from app.applications import store_uploaded_cv
     from app.cabinet_store import _LOCK, _connect
+    from app.cv_parse_jobs import schedule_parse_cv_drain
     from app.cv_queue import enqueue_parse
 
     subject = (user_id or "").strip()
@@ -711,5 +683,5 @@ def upload_profile_cv(*, user_id: str, filename: str, data: bytes) -> dict:
             payload["queued"] = True
         finally:
             conn.close()
-    _kick_worker_parse_cv()
+    schedule_parse_cv_drain()
     return payload

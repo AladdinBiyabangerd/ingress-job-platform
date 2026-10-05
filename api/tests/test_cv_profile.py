@@ -228,6 +228,7 @@ class CvProfileTests(unittest.TestCase):
         with (
             self._auth("job:candidate", "person-6"),
             patch("app.applications.CV_ROOT", cvs),
+            patch("app.cv_parse_jobs.schedule_parse_cv_drain") as kick,
         ):
             res = self.client.post(
                 "/api/v1/profile/cv",
@@ -239,6 +240,7 @@ class CvProfileTests(unittest.TestCase):
         self.assertTrue(body.get("queued"))
         self.assertEqual(body["parse_status"], "pending")
         self.assertEqual(body["cv_name"], "resume.pdf")
+        kick.assert_called_once()
         with sqlite3.connect(self.db) as conn:
             conn.row_factory = sqlite3.Row
             row = conn.execute(
@@ -252,6 +254,69 @@ class CvProfileTests(unittest.TestCase):
         stored = list(cvs.iterdir())
         self.assertEqual(len(stored), 1)
         self.assertTrue(stored[0].name.endswith(".pdf"))
+
+    def test_drain_parse_cv_queue_now_writes_profile(self):
+        cvs = Path(self.tmp.name) / "cvs"
+        cvs.mkdir()
+        stored = "a" * 32 + ".pdf"
+        (cvs / stored).write_bytes(b"%PDF-1.4 fake")
+        with sqlite3.connect(self.db) as conn:
+            ensure_cv_queue_tables(conn)
+            conn.execute(
+                """
+                INSERT INTO parse_cv_queue (
+                    user_id, cv_file_key, cv_name, application_id, status, attempts,
+                    error, created_at, started_at, finished_at
+                ) VALUES (?, ?, 'resume.pdf', NULL, 'pending', 0, '', 't', '', '')
+                """,
+                ("person-7", stored),
+            )
+            conn.commit()
+
+        def fake_drain(conn, *, limit=20, cv_root=None):
+            now = "2026-01-01T00:00:00+00:00"
+            conn.execute(
+                """
+                UPDATE parse_cv_queue
+                SET status = 'done', finished_at = ?, attempts = attempts + 1
+                WHERE user_id = ? AND status = 'pending'
+                """,
+                (now, "person-7"),
+            )
+            conn.execute(
+                """
+                INSERT INTO candidate_profile (
+                    user_id, cv_file_key, data, headline, seniority, total_years,
+                    status, parse_method, confidence, visibility, updated_at
+                ) VALUES (?, ?, ?, 'Backend Developer', 'middle', 5.5,
+                          'draft', 'rules', 0.9, 'hidden', ?)
+                """,
+                ("person-7", stored, json.dumps(SAMPLE), now),
+            )
+            return {"claimed": 1, "done": 1, "failed": 0}
+
+        with (
+            patch("app.applications.CV_ROOT", cvs),
+            patch("app.cv_parse_jobs._drain_fn", return_value=fake_drain),
+        ):
+            from app.cv_parse_jobs import drain_parse_cv_queue_now
+
+            stats = drain_parse_cv_queue_now()
+        self.assertEqual(stats.get("claimed"), 1)
+        self.assertEqual(stats.get("done"), 1)
+        with sqlite3.connect(self.db) as conn:
+            conn.row_factory = sqlite3.Row
+            queue = conn.execute(
+                "SELECT status FROM parse_cv_queue WHERE user_id = ?",
+                ("person-7",),
+            ).fetchone()
+            profile = conn.execute(
+                "SELECT headline, status FROM candidate_profile WHERE user_id = ?",
+                ("person-7",),
+            ).fetchone()
+        self.assertEqual(queue["status"], "done")
+        self.assertEqual(profile["headline"], "Backend Developer")
+        self.assertEqual(profile["status"], "draft")
 
 
 if __name__ == "__main__":

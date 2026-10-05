@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.apply_form import parse_stored
 from app.cabinet_store import CabinetError, _LOCK, _connect, _now
+from app.cv_parse_jobs import schedule_parse_cv_drain
 from app.cv_queue import enqueue_parse
 from app.object_storage import bucket_config, delete_object, get_object, put_object
 
@@ -447,6 +448,8 @@ def create_application(subject: str, job_id: int, fields: dict, cv: tuple[str, b
         if stored_name:
             _delete_stored(stored_name)
         raise CabinetError(404, "Elan tapılmadı")
+    if stored_name:
+        schedule_parse_cv_drain()
     return _view(row, reviewer=False)
 
 

@@ -1,7 +1,8 @@
 """Enqueue CV parse jobs (Phase 1.2).
 
-Schema matches worker/worker/cv_queue.py. The worker drains the queue with
-rules-only cv_parse; the API only inserts pending rows on CV upload.
+Schema matches worker/worker/cv_queue.py. The API inserts pending rows on CV
+upload and drains them in-process via app.cv_parse_jobs (async background).
+The hourly crawl worker may still drain stranded rows as a backup.
 """
 
 from __future__ import annotations

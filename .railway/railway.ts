@@ -18,12 +18,16 @@ export default defineRailway(() => {
   };
 
   const api = service("api", {
-    root: "api",
+    // Repo root so the Dockerfile can install api + worker (in-process CV parse).
+    root: ".",
     start: "sh -c 'exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8010}'",
     env: {
       ...storageEnv,
       DEBUG: "False",
       DATABASE_URL: db.env.DATABASE_URL,
+      RAILWAY_DOCKERFILE_PATH: "api/Dockerfile",
+      CV_OCR_ENABLED: "1",
+      CV_OCR_LANG: "eng",
     },
   });
 

@@ -37,8 +37,8 @@ compose.yaml
 - Candidate applications + CV upload
 - Staff moderation (manual role): approve/reject/edit, crawled job tools
 - Aggregation: remote/relocation IT sources (API/RSS/ATS); Jooble/Reed gated by API keys + monthly budgets
-- CV parse queue (`parse_cv_queue` → rules `worker.cv_parse` + Tesseract OCR + AI #1 if confidence < 0.55 → jobs-DB `candidate_profile` stub); accounts.sqlite `candidate_profiles` remains contact-only
-- `ai_gateway` (worker): PII redact, `ai_cache`, daily call budget, cost log, OTEL spans; OpenAI small model for CV fallback
+- CV parse: API enqueues `parse_cv_queue` then drains in-process (`app.cv_parse_jobs` background thread → `worker.cv_parse` + OCR + AI #1 if confidence < 0.55 → jobs-DB `candidate_profile`); hourly crawl worker may drain stranded rows; accounts.sqlite `candidate_profiles` remains contact-only
+- `ai_gateway` (worker package, also loaded by API for CV fallback): PII redact, `ai_cache`, daily call budget, cost log, OTEL spans; OpenAI small model for CV fallback
 - Consents (`consent` in jobs DB; `GET/PUT /api/v1/consents`); copy from `docs/cv-ai/consent-copy-v1.json`; visibility on `candidate_profile`
 - CV profile review: `GET/PUT /api/v1/profile` + `/profile/review`; `profile_edit_log`; status draft→confirmed
 - Role suggestions: `GET /api/v1/me/roles` (signature skill weights × years_factor; matching consent; BFF `/api/auth/me/roles`)

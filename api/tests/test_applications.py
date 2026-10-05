@@ -26,13 +26,16 @@ class ApplicationTests(unittest.TestCase):
         self.cvs = root / "cvs"
         self.path_patch = patch("app.sqlite_jobs.DB_PATH", self.db)
         self.cv_patch = patch("app.applications.CV_ROOT", self.cvs)
+        self.drain_patch = patch("app.applications.schedule_parse_cv_drain")
         self.path_patch.start()
         self.cv_patch.start()
+        self.drain_patch.start()
         ensure_schema(create=True)
         self.client = TestClient(app)
         save_profile("apply-employer", "Ingress MMC", "Baki", "Aciq vakansiyalar.")
 
     def tearDown(self):
+        self.drain_patch.stop()
         self.cv_patch.stop()
         self.path_patch.stop()
         self.tmp.cleanup()
