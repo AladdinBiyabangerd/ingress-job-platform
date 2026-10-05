@@ -61,9 +61,9 @@ export async function GET(request) {
     code_challenge: challenge,
     code_challenge_method: "S256",
   });
-  // Always force Academy to pick an account. Skipping prompt=login after logout
-  // left the previous job cookies in place and reopened Tofig while Portal was
-  // already on a different user.
+  // Always prompt=login. After job logout, Academy must not silently reuse the
+  // portal session — that only stays when existing_account=1 (live job session
+  // adding employer/candidate). See ingress-academy portal/oidc/views.py.
   params.set("prompt", "login");
   if (intent) params.set("registration_intent", intent);
   if (intent && alreadySignedIn) params.set("existing_account", "1");
