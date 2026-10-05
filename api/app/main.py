@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.observability import init_observability, otel_enabled
 from app.runtime_env import load_local_env
-from app.routers import admin, applications, cabinet, companies, consents, health, jobs, notifications, profile
+from app.routers import admin, applications, cabinet, companies, consents, health, jobs, me, notifications, profile
 from app.account import router as account_router
 
 load_local_env(Path(__file__).resolve().parents[1] / ".env")
@@ -77,4 +77,5 @@ app.include_router(admin.router)
 app.include_router(applications.router)
 app.include_router(consents.router)
 app.include_router(profile.router)
+app.include_router(me.router)
 app.include_router(notifications.router)

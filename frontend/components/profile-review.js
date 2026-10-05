@@ -68,9 +68,20 @@ export function ProfileReview({ locale }) {
   const [skillDraft, setSkillDraft] = useState("");
   const [skillYearsDraft, setSkillYearsDraft] = useState("");
   const [lowFields, setLowFields] = useState([]);
+  const [rolesPayload, setRolesPayload] = useState(null);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+
+  function loadRoles() {
+    const lang = locale === "en" || locale === "ru" ? locale : "az";
+    return fetch(`/api/auth/me/roles?lang=${lang}`, { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setRolesPayload(data);
+      })
+      .catch(() => {});
+  }
 
   const setters = {
     setHeadline,
@@ -110,6 +121,13 @@ export function ProfileReview({ locale }) {
         if (cancelled || !data) return;
         setPayload(data);
         applyPayload(data, setters);
+      })
+      .catch(() => {});
+    const lang = locale === "en" || locale === "ru" ? locale : "az";
+    fetch(`/api/auth/me/roles?lang=${lang}`, { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setRolesPayload(data);
       })
       .catch(() => {});
     return () => {
@@ -169,6 +187,7 @@ export function ProfileReview({ locale }) {
       setPayload(data);
       applyPayload(data, setters);
       setNote(confirm ? t.profileReviewConfirmed : t.profileReviewSaved);
+      await loadRoles();
     } catch {
       setError(t.profileReviewError);
     } finally {
@@ -410,6 +429,39 @@ export function ProfileReview({ locale }) {
                   </div>
                 ))}
               </div>
+
+              {rolesPayload ? (
+                <div className="profile-review-roles">
+                  <div className="cabinet-form-head">
+                    <h2>{t.profileReviewRolesTitle}</h2>
+                  </div>
+                  {!rolesPayload.matching_consent ? (
+                    <p className="hint">
+                      {t.profileReviewRolesConsent}{" "}
+                      <a href={hrefFor(locale, { mode: "profile" })}>{t.profileReviewRolesConsentLink}</a>
+                    </p>
+                  ) : !rolesPayload.roles?.length ? (
+                    <p className="hint">{t.profileReviewRolesEmpty}</p>
+                  ) : (
+                    <ul className="role-suggest-list">
+                      {rolesPayload.roles.map((role) => (
+                        <li key={role.canonical_name} className="role-suggest-item">
+                          <div className="role-suggest-head">
+                            <strong>{role.canonical_name}</strong>
+                            <span className="hint">
+                              {role.category}
+                              {typeof role.score === "number"
+                                ? ` · ${t.profileReviewRolesScore(role.score)}`
+                                : ""}
+                            </span>
+                          </div>
+                          {role.explanation ? <p className="hint">{role.explanation}</p> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : null}
 
               <div className="ad-actions">
                 <button type="submit" className="btn" disabled={busy}>
