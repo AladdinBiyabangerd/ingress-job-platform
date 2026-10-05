@@ -1675,6 +1675,12 @@ textarea { min-height: 120px; resize: vertical; }
   font-size: 0.84rem;
 }
 
+.cv-parse-progress-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .cv-parse-progress-track {
   position: relative;
   height: 6px;

@@ -206,6 +206,39 @@ class CvProfileTests(unittest.TestCase):
             ).fetchone()
         self.assertEqual(log["action"], "clear")
 
+    def test_cancel_open_parse_keeps_profile(self):
+        self._seed_draft("person-cancel")
+        with sqlite3.connect(self.db) as conn:
+            conn.execute(
+                """
+                INSERT INTO parse_cv_queue (
+                    user_id, cv_file_key, cv_name, application_id, status,
+                    attempts, error, created_at, started_at, finished_at
+                ) VALUES (?, ?, ?, NULL, 'pending', 0, '', ?, '', '')
+                """,
+                ("person-cancel", "cvs/x.pdf", "x.pdf", "2020-01-01T00:00:00+00:00"),
+            )
+            conn.commit()
+        with self._auth("job:candidate", "person-cancel"):
+            res = self.client.post("/api/v1/profile/cv/cancel", headers=self.headers)
+        self.assertEqual(res.status_code, 200, res.text)
+        body = res.json()
+        self.assertTrue(body["exists"])
+        self.assertEqual(body["parse_status"], "failed")
+        with sqlite3.connect(self.db) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT status, error FROM parse_cv_queue WHERE user_id = ? ORDER BY id DESC",
+                ("person-cancel",),
+            ).fetchone()
+            profile = conn.execute(
+                "SELECT id FROM candidate_profile WHERE user_id = ?",
+                ("person-cancel",),
+            ).fetchone()
+        self.assertEqual(row["status"], "failed")
+        self.assertIn("cancelled", row["error"])
+        self.assertIsNotNone(profile)
+
     def test_employer_forbidden_and_guest_unauthorized(self):
         with self._auth("job:employer", "hr-1"):
             denied = self.client.get("/api/v1/profile", headers=self.headers)

@@ -479,6 +479,40 @@ def _log_edit(
     )
 
 
+def _fail_open_parse_jobs(conn, *, user_id: str, error: str) -> int:
+    cur = conn.execute(
+        """
+        UPDATE parse_cv_queue
+        SET status = 'failed', error = ?, finished_at = ?
+        WHERE user_id = ? AND status IN ('pending', 'processing')
+        """,
+        ((error or "cancelled")[:1000], _now(), user_id),
+    )
+    return int(cur.rowcount or 0)
+
+
+def cancel_open_parse(*, user_id: str) -> dict:
+    """Mark open CV parse jobs failed without wiping the profile."""
+    from app.cabinet_store import _LOCK, _connect
+
+    subject = (user_id or "").strip()
+    if not subject:
+        raise ValueError("user_id")
+
+    with _LOCK:
+        conn = _connect()
+        try:
+            ensure_profile_tables(conn)
+            before = _profile_payload(conn, user_id=subject)
+            if before.get("parse_status") in PARSE_QUEUE_OPEN:
+                _fail_open_parse_jobs(conn, user_id=subject, error="cancelled by user")
+            after = _profile_payload(conn, user_id=subject)
+            conn.commit()
+            return after
+        finally:
+            conn.close()
+
+
 def clear_profile(*, user_id: str) -> dict:
     """Wipe candidate_profile and cancel open parse jobs so the user can start over."""
     from app.cabinet_store import _LOCK, _connect
@@ -499,14 +533,7 @@ def clear_profile(*, user_id: str) -> dict:
             profile_id = int(_row_get(row, "id", 0)) if row is not None else None
             if row is not None:
                 conn.execute("DELETE FROM candidate_profile WHERE user_id = ?", (subject,))
-            conn.execute(
-                """
-                UPDATE parse_cv_queue
-                SET status = 'failed', error = 'cleared by user', finished_at = ?
-                WHERE user_id = ? AND status IN ('pending', 'processing')
-                """,
-                (_now(), subject),
-            )
+            _fail_open_parse_jobs(conn, user_id=subject, error="cleared by user")
             after = _profile_payload(conn, user_id=subject)
             if before.get("exists") or before.get("parse_status") in PARSE_QUEUE_OPEN:
                 _log_edit(

@@ -13,7 +13,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.account import current_user
 from app.auth_oidc import VerifiedAccess
 from app.cabinet_store import CabinetError
-from app.cv_profile import SENIORITY_VALUES, clear_profile, read_profile, save_profile, upload_profile_cv
+from app.cv_profile import (
+    SENIORITY_VALUES,
+    cancel_open_parse,
+    clear_profile,
+    read_profile,
+    save_profile,
+    upload_profile_cv,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["profile"])
 
@@ -76,6 +83,16 @@ def delete_profile(user: VerifiedAccess = Depends(current_user)) -> dict:
         return clear_profile(user_id=user.subject)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail="Profili sıfırlamaq olmadı") from exc
+
+
+@router.post("/profile/cv/cancel")
+def post_profile_cv_cancel(user: VerifiedAccess = Depends(current_user)) -> dict:
+    """Cancel a stuck pending/processing CV parse without wiping the profile."""
+    _require_candidate(user)
+    try:
+        return cancel_open_parse(user_id=user.subject)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="CV təhlilini ləğv etmək olmadı") from exc
 
 
 @router.post("/profile/cv")

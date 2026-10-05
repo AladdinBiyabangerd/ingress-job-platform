@@ -83,7 +83,7 @@ function parseStep(uploading, parseStatus) {
   return 1;
 }
 
-function ParseProgress({ t, uploading, parseStatus, fileName }) {
+function ParseProgress({ t, uploading, parseStatus, fileName, onCancel, cancelBusy }) {
   const step = parseStep(uploading, parseStatus);
   const steps = [
     { key: "upload", label: t.profileReviewStepUpload },
@@ -112,6 +112,13 @@ function ParseProgress({ t, uploading, parseStatus, fileName }) {
         })}
       </ol>
       <p className="hint">{t.profileReviewPending}</p>
+      {onCancel ? (
+        <div className="cv-parse-progress-actions">
+          <button type="button" className="btn ghost" disabled={cancelBusy || uploading} onClick={onCancel}>
+            {t.profileReviewCancelParse}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -220,6 +227,17 @@ export function ProfileReview({ locale }) {
       if (cancelled) return;
       if (pollLeft.current <= 0) {
         setPolling(false);
+        try {
+          const res = await fetch("/api/auth/cv-profile/cv/cancel", { method: "POST" });
+          const data = await res.json().catch(() => null);
+          if (!cancelled && data) {
+            setPayload(data);
+            if (!data.exists) setEntry(null);
+          }
+        } catch {
+          /* ignore — user can cancel manually */
+        }
+        if (!cancelled) setError(t.profileReviewStalled);
         return;
       }
       pollLeft.current -= 1;
@@ -380,6 +398,31 @@ export function ProfileReview({ locale }) {
     setRolesPayload(null);
   }
 
+  async function cancelParse() {
+    setError("");
+    setNote("");
+    setBusy(true);
+    setPolling(false);
+    pollLeft.current = 0;
+    try {
+      const res = await fetch("/api/auth/cv-profile/cv/cancel", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(t.profileReviewFailed);
+        return;
+      }
+      setPayload(data);
+      if (!data.exists) {
+        setEntry(null);
+      }
+      setError(t.profileReviewFailed);
+    } catch {
+      setError(t.profileReviewFailed);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function resetProfile() {
     if (!window.confirm(t.profileReviewResetConfirm)) return;
     setError("");
@@ -508,6 +551,8 @@ export function ProfileReview({ locale }) {
                   uploading={uploading}
                   parseStatus={payload?.parse_status}
                   fileName={cvName}
+                  onCancel={cancelParse}
+                  cancelBusy={busy}
                 />
               ) : (
                 <>
@@ -802,7 +847,7 @@ export function ProfileReview({ locale }) {
                 <button
                   type="button"
                   className="btn red"
-                  disabled={busy || uploading || isParsing}
+                  disabled={busy || uploading}
                   onClick={resetProfile}
                 >
                   {t.profileReviewReset}
