@@ -1,0 +1,767 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-10-05T07:52:45Z",
+  "source": {
+    "techstack_module": "worker/worker/techstack.py",
+    "jobs_db": "worker/data/jobs.sqlite",
+    "total_jobs": 896,
+    "jobs_with_tech_stack": 415,
+    "unique_skills_in_ads": 93,
+    "dictionary_size": 98
+  },
+  "skills": [
+    {
+      "canonical_name": "Python",
+      "synonyms": [
+        "py"
+      ],
+      "category_hint": "language",
+      "ad_count": 179,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "AWS",
+      "synonyms": [],
+      "category_hint": "cloud",
+      "ad_count": 145,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Kubernetes",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 107,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "CI/CD",
+      "synonyms": [
+        "cicd"
+      ],
+      "category_hint": "devops",
+      "ad_count": 97,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "TypeScript",
+      "synonyms": [
+        "ts"
+      ],
+      "category_hint": "language",
+      "ad_count": 95,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SQL",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 88,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Go",
+      "synonyms": [
+        "golang"
+      ],
+      "category_hint": "language",
+      "ad_count": 87,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "LLM",
+      "synonyms": [
+        "llms"
+      ],
+      "category_hint": "ml",
+      "ad_count": 83,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "React",
+      "synonyms": [
+        "react.js",
+        "reactjs"
+      ],
+      "category_hint": "frontend",
+      "ad_count": 82,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Docker",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 75,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Java",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 73,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "PostgreSQL",
+      "synonyms": [
+        "postgres"
+      ],
+      "category_hint": "data",
+      "ad_count": 71,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Azure",
+      "synonyms": [],
+      "category_hint": "cloud",
+      "ad_count": 68,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Terraform",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 65,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "GCP",
+      "synonyms": [
+        "google cloud"
+      ],
+      "category_hint": "cloud",
+      "ad_count": 64,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "JavaScript",
+      "synonyms": [
+        "js"
+      ],
+      "category_hint": "language",
+      "ad_count": 49,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Node.js",
+      "synonyms": [
+        "node",
+        "nodejs"
+      ],
+      "category_hint": "backend",
+      "ad_count": 43,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Linux",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 42,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Kafka",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 38,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "MySQL",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 30,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Ruby",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 29,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "GitHub Actions",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 25,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Redis",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 25,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "iOS",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 24,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Rust",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 24,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "C++",
+      "synonyms": [
+        "cpp"
+      ],
+      "category_hint": "language",
+      "ad_count": 23,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Elasticsearch",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 23,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Kotlin",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 23,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Android",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 22,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "C#",
+      "synonyms": [
+        "csharp"
+      ],
+      "category_hint": "language",
+      "ad_count": 22,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Angular",
+      "synonyms": [
+        "angularjs"
+      ],
+      "category_hint": "frontend",
+      "ad_count": 21,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Spark",
+      "synonyms": [
+        "apache spark"
+      ],
+      "category_hint": "data",
+      "ad_count": 19,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": ".NET",
+      "synonyms": [
+        ".net core",
+        "asp.net",
+        "dotnet"
+      ],
+      "category_hint": "language",
+      "ad_count": 18,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Bash",
+      "synonyms": [
+        "shell"
+      ],
+      "category_hint": "language",
+      "ad_count": 18,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Grafana",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 18,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Snowflake",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 17,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "BigQuery",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 16,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "DynamoDB",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 16,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "MongoDB",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 16,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Scala",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 16,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "GraphQL",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 15,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "HTML",
+      "synonyms": [
+        "html5"
+      ],
+      "category_hint": "frontend",
+      "ad_count": 15,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "CSS",
+      "synonyms": [
+        "css3",
+        "sass",
+        "scss"
+      ],
+      "category_hint": "frontend",
+      "ad_count": 14,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Ruby on Rails",
+      "synonyms": [
+        "rails",
+        "ror"
+      ],
+      "category_hint": "backend",
+      "ad_count": 14,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Spring",
+      "synonyms": [
+        "spring boot",
+        "springboot"
+      ],
+      "category_hint": "backend",
+      "ad_count": 14,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Jenkins",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 13,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "PHP",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 13,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Prometheus",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 13,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Swift",
+      "synonyms": [
+        "swiftui"
+      ],
+      "category_hint": "language",
+      "ad_count": 13,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Airflow",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 12,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Datadog",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 12,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Elixir",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 12,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Helm",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 12,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Playwright",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 12,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "PyTorch",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 12,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Ansible",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 11,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "C",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 11,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "dbt",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 11,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Django",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 11,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "FastAPI",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 11,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Figma",
+      "synonyms": [],
+      "category_hint": "design",
+      "ad_count": 11,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Next.js",
+      "synonyms": [
+        "next",
+        "nextjs"
+      ],
+      "category_hint": "frontend",
+      "ad_count": 11,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "React Native",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 11,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Vue.js",
+      "synonyms": [
+        "vue",
+        "vuejs"
+      ],
+      "category_hint": "frontend",
+      "ad_count": 11,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Pandas",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 10,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "RabbitMQ",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 8,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Databricks",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 7,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "scikit-learn",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 7,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Tailwind",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 7,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Ethereum",
+      "synonyms": [],
+      "category_hint": "web3",
+      "ad_count": 6,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "gRPC",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 6,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Cypress",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 5,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Shopify",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 5,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Cassandra",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 4,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "ClickHouse",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 4,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Flask",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 4,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "NestJS",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 4,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Nginx",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 4,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Phoenix",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 4,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Selenium",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 4,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Solidity",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 4,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Symfony",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 4,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "TensorFlow",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 4,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Jest",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 3,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Svelte",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 3,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Laravel",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 2,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Unity",
+      "synonyms": [
+        "unity3d"
+      ],
+      "category_hint": "gamedev",
+      "ad_count": 2,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "WordPress",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 2,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Erlang",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 1,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Express",
+      "synonyms": [
+        "expressjs"
+      ],
+      "category_hint": "backend",
+      "ad_count": 1,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Objective-C",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 1,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Redux",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 1,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Unreal Engine",
+      "synonyms": [],
+      "category_hint": "gamedev",
+      "ad_count": 1,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Clojure",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Dart",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Flutter",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Haskell",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Nuxt",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    }
+  ],
+  "notes": [
+    "Seed for skill_dictionary table (Phase 0). Schema/migration is a later step.",
+    "canonical_name + synonyms come from the existing curated extractor.",
+    "ad_count is a local snapshot from jobs.tech_stack; re-run this script to refresh.",
+    "Unknown tech_stack values (not in the curated list) are listed under unknown_in_ads."
+  ],
+  "unknown_in_ads": []
+}
