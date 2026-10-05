@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CATEGORY_ORDER, categoryLabel, languageLabel, text } from "../lib/copy";
 import { JobCard } from "./job-card";
 import { Shell } from "./shell";
+import { PageHeader } from "./page-header";
 
 const PAGE_SIZE = 20;
 const AZ = /[əğıöüşçƏĞİÖÜŞÇ]/;
@@ -325,17 +326,9 @@ export function Home({ locale, jobs, error }) {
   return (
     <Shell locale={locale} mode="browse">
       <div className="home">
-      <section className="hero">
-        <div className="hero-top">
-          <div>
-            <p className="eco-kicker">{t.ecosystemLine}</p>
-            <h1>{t.heading}</h1>
-            <p className="lede">{t.lede}</p>
-          </div>
-          <p className="hero-count">{t.count(jobs.length)}</p>
-        </div>
+      <PageHeader title={t.heading} count={t.count(jobs.length)} lede={t.lede}>
         <form className="hero-search" role="search" onSubmit={(event) => event.preventDefault()}>
-          <label className="hero-search-label" htmlFor="job-search">{t.search}</label>
+          <label className="visually-hidden" htmlFor="job-search">{t.search}</label>
           <div className="hero-search-bar">
             <FilterIcon name="search" />
             <input
@@ -348,7 +341,7 @@ export function Home({ locale, jobs, error }) {
             />
           </div>
         </form>
-      </section>
+      </PageHeader>
       {error ? <p className="note">{t.loadError}</p> : null}
       <div className="board">
         <section className="results">

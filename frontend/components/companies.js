@@ -1,4 +1,5 @@
 import { CompanyAvatar, Popularity, companyHref } from "./company-bits";
+import { PageHeader } from "./page-header";
 import { Shell } from "./shell";
 import { SortSelect } from "./sort-select";
 import { categoryLabel, hrefFor, text } from "../lib/copy";
@@ -119,14 +120,12 @@ export function CompaniesPage({ locale, data, error, q, sort }) {
           </li>
         </ol>
       </nav>
-      <section className="companies-hero">
-        <div className="hero-top">
-          <div>
-            <h1>{t.companiesTitle}</h1>
-            <p className="lede">{t.companiesLede}</p>
-          </div>
-          {data ? <p className="hero-count">{t.companiesCount(data.companies)}</p> : null}
-        </div>
+      <PageHeader
+        className="companies-hero"
+        title={t.companiesTitle}
+        count={data ? t.companiesCount(data.companies) : null}
+        lede={t.companiesLede}
+      >
         <form className="companies-tools" role="search" method="get" action={hrefFor(locale, { mode: "companies" })}>
           <label className="companies-search">
             <span className="visually-hidden">{t.companiesSearch}</span>
@@ -140,12 +139,12 @@ export function CompaniesPage({ locale, data, error, q, sort }) {
             />
           </label>
           <label className="companies-sort">
-            <span>{t.sort}</span>
+            <span className="visually-hidden">{t.sort}</span>
             <SortSelect name="sort" value={sort} options={sortOptions(t)} label={t.sort} id="companies-sort" />
           </label>
           <button type="submit" className="btn primary">{t.companiesSearchButton}</button>
         </form>
-      </section>
+      </PageHeader>
       {error ? <p className="note">{t.loadError}</p> : null}
       {!error ? (
         <p className="count companies-count" aria-live="polite">
