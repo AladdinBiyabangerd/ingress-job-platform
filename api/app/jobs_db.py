@@ -146,7 +146,18 @@ def _split_script(script: str) -> list[str]:
     return parts
 
 
-_NO_ID_TABLES = {"tidy_batch_jobs", "maintenance_steps"}
+# Composite / non-integer PKs — Postgres adapter must not append RETURNING id.
+_NO_ID_TABLES = {
+    "ai_cache",
+    "ai_usage_daily",
+    "api_usage",
+    "job_skill",
+    "maintenance_steps",
+    "role_skill_weight",
+    "skill_pair_daily",
+    "skill_trend_daily",
+    "tidy_batch_jobs",
+}
 
 
 def _wants_returning(sql: str) -> bool:

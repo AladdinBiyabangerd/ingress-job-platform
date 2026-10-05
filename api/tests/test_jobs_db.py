@@ -49,4 +49,14 @@ class WantsReturningTest(unittest.TestCase):
             )
         )
         self.assertFalse(_wants_returning("INSERT INTO tidy_batch_jobs (batch_id, job_id) VALUES (?, ?)"))
+        self.assertFalse(
+            _wants_returning(
+                "INSERT INTO role_skill_weight (role_id, skill_id, weight, group_key) VALUES (?, ?, ?, ?)"
+            )
+        )
+        self.assertFalse(
+            _wants_returning(
+                "INSERT INTO job_skill (job_id, skill_id, source) VALUES (?, ?, ?)"
+            )
+        )
 
