@@ -203,6 +203,37 @@ class CvProfileTests(unittest.TestCase):
             )
         self.assertEqual(bad.status_code, 422)
 
+    def test_upload_cv_enqueues_parse(self):
+        cvs = Path(self.tmp.name) / "cvs"
+        cvs.mkdir()
+        with (
+            self._auth("job:candidate", "person-6"),
+            patch("app.applications.CV_ROOT", cvs),
+        ):
+            res = self.client.post(
+                "/api/v1/profile/cv",
+                headers=self.headers,
+                files={"cv": ("resume.pdf", b"%PDF-1.4 fake", "application/pdf")},
+            )
+        self.assertEqual(res.status_code, 200, res.text)
+        body = res.json()
+        self.assertTrue(body.get("queued"))
+        self.assertEqual(body["parse_status"], "pending")
+        self.assertEqual(body["cv_name"], "resume.pdf")
+        with sqlite3.connect(self.db) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT user_id, cv_name, status, application_id FROM parse_cv_queue WHERE user_id = ?",
+                ("person-6",),
+            ).fetchone()
+        self.assertIsNotNone(row)
+        self.assertEqual(row["cv_name"], "resume.pdf")
+        self.assertEqual(row["status"], "pending")
+        self.assertIsNone(row["application_id"])
+        stored = list(cvs.iterdir())
+        self.assertEqual(len(stored), 1)
+        self.assertTrue(stored[0].name.endswith(".pdf"))
+
 
 if __name__ == "__main__":
     unittest.main()

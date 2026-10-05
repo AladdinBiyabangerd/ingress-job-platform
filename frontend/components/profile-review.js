@@ -1,11 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 
 const SENIORITY = ["", "intern", "junior", "middle", "senior", "lead", "principal", "staff"];
+const CV_ACCEPT =
+  ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const POLL_MS = 2000;
+const POLL_MAX = 45;
+
+function emptyWork() {
+  return { title: "", company: "", start: "", end: "", location: "", summary: "", skills: [] };
+}
 
 function applyPayload(data, setters) {
   const profile = data?.profile || {};
@@ -53,10 +61,54 @@ function FieldMark({ show, label }) {
   return <span className="profile-review-warn">{label}</span>;
 }
 
+function parseOpen(status) {
+  return status === "pending" || status === "processing";
+}
+
+function parseStep(uploading, parseStatus) {
+  if (uploading) return 0;
+  if (parseStatus === "processing") return 2;
+  return 1;
+}
+
+function ParseProgress({ t, uploading, parseStatus, fileName }) {
+  const step = parseStep(uploading, parseStatus);
+  const steps = [
+    { key: "upload", label: t.profileReviewStepUpload },
+    { key: "queue", label: t.profileReviewStepQueue },
+    { key: "parse", label: t.profileReviewStepParse },
+  ];
+  return (
+    <div className="cv-parse-progress" role="status" aria-live="polite" aria-busy="true">
+      <div className="cv-parse-progress-head">
+        <strong>{t.profileReviewProgressTitle}</strong>
+        <span className="hint">{steps[step]?.label}</span>
+      </div>
+      {fileName ? <p className="hint cv-parse-progress-file">{fileName}</p> : null}
+      <div className="cv-parse-progress-track is-indeterminate" aria-hidden="true">
+        <div className="cv-parse-progress-fill" />
+      </div>
+      <ol className="cv-parse-steps">
+        {steps.map((item, index) => {
+          const state = index < step ? "done" : index === step ? "active" : "todo";
+          return (
+            <li key={item.key} className={`cv-parse-step is-${state}`}>
+              <span className="cv-parse-step-dot" aria-hidden="true" />
+              <span>{item.label}</span>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="hint">{t.profileReviewPending}</p>
+    </div>
+  );
+}
+
 export function ProfileReview({ locale }) {
   const t = text(locale);
   const [me, setMe] = useState(undefined);
   const [payload, setPayload] = useState(null);
+  const [entry, setEntry] = useState(null);
   const [headline, setHeadline] = useState("");
   const [seniority, setSeniority] = useState("");
   const [totalYears, setTotalYears] = useState("");
@@ -72,6 +124,11 @@ export function ProfileReview({ locale }) {
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [polling, setPolling] = useState(false);
+  const [cvName, setCvName] = useState("");
+  const fileRef = useRef(null);
+  const pollLeft = useRef(0);
 
   function loadRoles() {
     const lang = locale === "en" || locale === "ru" ? locale : "az";
@@ -112,6 +169,22 @@ export function ProfileReview({ locale }) {
 
   const allowed = Boolean(me?.authenticated && (me.candidate || me.staff));
 
+  function ingestProfile(data) {
+    setPayload(data);
+    if (data?.exists) {
+      applyPayload(data, setters);
+      setEntry("form");
+      if (parseOpen(data.parse_status)) {
+        setPolling(true);
+        pollLeft.current = POLL_MAX;
+      }
+    } else if (parseOpen(data?.parse_status)) {
+      setEntry("upload");
+      setPolling(true);
+      pollLeft.current = POLL_MAX;
+    }
+  }
+
   useEffect(() => {
     if (!allowed) return undefined;
     let cancelled = false;
@@ -119,22 +192,60 @@ export function ProfileReview({ locale }) {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (cancelled || !data) return;
-        setPayload(data);
-        applyPayload(data, setters);
+        ingestProfile(data);
       })
       .catch(() => {});
-    const lang = locale === "en" || locale === "ru" ? locale : "az";
-    fetch(`/api/auth/me/roles?lang=${lang}`, { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!cancelled && data) setRolesPayload(data);
-      })
-      .catch(() => {});
+    loadRoles();
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load once when access is known
   }, [allowed]);
+
+  useEffect(() => {
+    if (!polling || !allowed) return undefined;
+    let cancelled = false;
+    const tick = async () => {
+      if (cancelled) return;
+      if (pollLeft.current <= 0) {
+        setPolling(false);
+        return;
+      }
+      pollLeft.current -= 1;
+      try {
+        const res = await fetch("/api/auth/cv-profile", { cache: "no-store" });
+        const data = await res.json().catch(() => null);
+        if (cancelled || !data) return;
+        setPayload(data);
+        if (data.parse_status === "failed") {
+          setPolling(false);
+          setError(t.profileReviewFailed);
+          return;
+        }
+        if (parseOpen(data.parse_status)) {
+          return;
+        }
+        if (data.exists) {
+          applyPayload(data, setters);
+          setEntry("form");
+          setPolling(false);
+          setNote(t.profileReviewFilledFromCv);
+          await loadRoles();
+          return;
+        }
+        setPolling(false);
+      } catch {
+        /* keep polling */
+      }
+    };
+    const id = setInterval(tick, POLL_MS);
+    tick();
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- poll while flagged
+  }, [polling, allowed]);
 
   function buildBody(confirm) {
     const yearsValue = totalYears.trim() === "" ? null : Number(totalYears);
@@ -156,15 +267,17 @@ export function ProfileReview({ locale }) {
             level: item.level || "",
             source: item.source || "user",
           })),
-        work_history: work.map((item) => ({
-          title: item.title,
-          company: item.company,
-          start: item.start,
-          end: item.end || null,
-          location: item.location || "",
-          summary: item.summary || "",
-          skills: item.skills || [],
-        })),
+        work_history: work
+          .filter((item) => item.title.trim() || item.company.trim())
+          .map((item) => ({
+            title: item.title,
+            company: item.company,
+            start: item.start,
+            end: item.end || null,
+            location: item.location || "",
+            summary: item.summary || "",
+            skills: item.skills || [],
+          })),
       },
     };
   }
@@ -186,6 +299,7 @@ export function ProfileReview({ locale }) {
       }
       setPayload(data);
       applyPayload(data, setters);
+      setEntry("form");
       setNote(confirm ? t.profileReviewConfirmed : t.profileReviewSaved);
       await loadRoles();
     } catch {
@@ -193,6 +307,49 @@ export function ProfileReview({ locale }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function uploadCv(file) {
+    if (!file) return;
+    setError("");
+    setNote("");
+    setUploading(true);
+    setCvName(file.name || "");
+    try {
+      const body = new FormData();
+      body.set("cv", file);
+      const res = await fetch("/api/auth/cv-profile/cv", { method: "POST", body });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(res.status === 422 ? t.applyCvRequired : t.profileReviewUploadError);
+        return;
+      }
+      setPayload(data);
+      setEntry("upload");
+      setNote(t.profileReviewUploadQueued);
+      setPolling(true);
+      pollLeft.current = POLL_MAX;
+    } catch {
+      setError(t.profileReviewUploadError);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  function startManual() {
+    setError("");
+    setNote("");
+    setEntry("manual");
+    setHeadline("");
+    setSeniority("");
+    setTotalYears("");
+    setFullName("");
+    setEmail("");
+    setPhone("");
+    setSkills([]);
+    setWork([emptyWork()]);
+    setLowFields([]);
   }
 
   function addSkill(event) {
@@ -224,14 +381,25 @@ export function ProfileReview({ locale }) {
     setWork((current) => current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
 
+  function addWork() {
+    setWork((current) => [...current, emptyWork()]);
+  }
+
+  function removeWork(index) {
+    setWork((current) => current.filter((_, i) => i !== index));
+  }
+
   const statusLabel =
     payload?.status === "confirmed" ? t.profileReviewStatusConfirmed : t.profileReviewStatusDraft;
   const warn = (field) => lowFields.includes(field);
+  const showForm = entry === "form" || entry === "manual" || Boolean(payload?.exists);
+  const showChooser = allowed && payload && !payload.exists && !parseOpen(payload.parse_status) && !entry;
+  const isParsing = uploading || polling || parseOpen(payload?.parse_status);
 
   return (
     <Shell locale={locale} mode="profileReview">
       {me === undefined ? null : allowed ? (
-        <div className="cabinet">
+        <div className="cabinet profile-review-page">
           <div className="cabinet-head">
             <div>
               <h1>{t.profileReviewTitle}</h1>
@@ -242,242 +410,355 @@ export function ProfileReview({ locale }) {
             </a>
           </div>
 
-          {!payload ? null : !payload.exists ? (
-            <section className="form-card profile-card">
-              <p className="hint">
-                {payload.parse_status === "pending" || payload.parse_status === "processing"
-                  ? t.profileReviewPending
-                  : payload.parse_status === "failed"
-                    ? t.profileReviewFailed
-                    : t.profileReviewEmpty}
-              </p>
-              <div className="ad-actions">
-                <a className="btn primary" href={hrefFor(locale, { mode: "applications" })}>
-                  {t.myApplications}
-                </a>
+          {error ? <p className="note profile-review-flash">{error}</p> : null}
+          {note ? <p className="note profile-review-flash ok">{note}</p> : null}
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept={CV_ACCEPT}
+            hidden
+            onChange={(event) => uploadCv(event.target.files?.[0] || null)}
+          />
+
+          {showChooser ? (
+            <section className="profile-review-chooser" aria-label={t.profileReviewChooserTitle}>
+              <h2>{t.profileReviewChooserTitle}</h2>
+              <p className="hint">{t.profileReviewChooserLede}</p>
+              {payload.parse_status === "failed" ? <p className="hint">{t.profileReviewFailed}</p> : null}
+              <div className="profile-review-options">
+                <button
+                  type="button"
+                  className="profile-review-option"
+                  onClick={() => {
+                    setEntry("upload");
+                    fileRef.current?.click();
+                  }}
+                >
+                  <strong>{t.profileReviewOptionUpload}</strong>
+                  <span>{t.profileReviewOptionUploadHint}</span>
+                </button>
+                <button type="button" className="profile-review-option" onClick={startManual}>
+                  <strong>{t.profileReviewOptionManual}</strong>
+                  <span>{t.profileReviewOptionManualHint}</span>
+                </button>
               </div>
             </section>
-          ) : (
+          ) : null}
+
+          {(entry === "upload" || showForm || isParsing) && !showChooser ? (
+            <section className={`profile-review-source${isParsing ? " is-parsing" : ""}`}>
+              {isParsing ? (
+                <ParseProgress
+                  t={t}
+                  uploading={uploading}
+                  parseStatus={payload?.parse_status}
+                  fileName={cvName}
+                />
+              ) : (
+                <>
+                  <div className="profile-review-source-copy">
+                    <h2>{t.profileReviewUploadTitle}</h2>
+                    <p className="hint">
+                      {cvName ? t.profileReviewUploadedName(cvName) : t.profileReviewUploadHint}
+                    </p>
+                  </div>
+                  <div className="profile-review-source-actions">
+                    <button
+                      type="button"
+                      className="btn primary"
+                      disabled={uploading || busy}
+                      onClick={() => fileRef.current?.click()}
+                    >
+                      {showForm ? t.profileReviewReuploadCta : t.profileReviewUploadCta}
+                    </button>
+                    {!showForm ? (
+                      <button type="button" className="btn ghost" onClick={startManual} disabled={uploading}>
+                        {t.profileReviewOptionManual}
+                      </button>
+                    ) : null}
+                  </div>
+                </>
+              )}
+            </section>
+          ) : null}
+
+          {showForm ? (
             <form
-              className="form-card profile-card profile-review"
+              className="profile-review-form"
               onSubmit={(event) => {
                 event.preventDefault();
                 submit(false);
               }}
             >
               <div className="profile-review-meta">
-                <span className={`profile-review-status status-${payload.status || "draft"}`}>
-                  {statusLabel}
+                <span className={`profile-review-status status-${payload?.status || "draft"}`}>
+                  {payload?.exists ? statusLabel : t.profileReviewStatusDraft}
                 </span>
-                {typeof payload.confidence === "number" ? (
+                {typeof payload?.confidence === "number" ? (
                   <span className="hint">{t.profileReviewConfidence(payload.confidence)}</span>
                 ) : null}
-                {payload.parse_status === "pending" || payload.parse_status === "processing" ? (
-                  <p className="hint">{t.profileReviewPending}</p>
+                {entry === "manual" && !payload?.exists ? (
+                  <span className="hint">{t.profileReviewManualBadge}</span>
                 ) : null}
               </div>
 
-              {error ? <p className="note">{error}</p> : null}
-              {note ? <p className="note">{note}</p> : null}
-
-              <div className={`profile-grid${warn("contact") ? " field-warn" : ""}`}>
-                <div className="cabinet-form-head profile-span">
-                  <h2>{t.profileReviewContact}</h2>
-                  <FieldMark show={warn("contact")} label={t.profileReviewCheck} />
-                </div>
-                <label>
-                  {t.profileReviewFullName}
-                  <input value={fullName} maxLength={120} onChange={(event) => setFullName(event.target.value)} />
-                </label>
-                <label>
-                  {t.applyEmail}
-                  <input type="email" value={email} maxLength={120} onChange={(event) => setEmail(event.target.value)} />
-                </label>
-                <label>
-                  {t.applyPhone}
-                  <input type="tel" value={phone} maxLength={40} onChange={(event) => setPhone(event.target.value)} />
-                </label>
-              </div>
-
-              <div className="profile-grid">
-                <label className={`profile-span${warn("headline") ? " field-warn" : ""}`}>
-                  {t.profileReviewHeadline}
-                  <FieldMark show={warn("headline")} label={t.profileReviewCheck} />
-                  <input value={headline} maxLength={200} onChange={(event) => setHeadline(event.target.value)} />
-                </label>
-                <label className={warn("seniority") ? "field-warn" : undefined}>
-                  {t.profileReviewSeniority}
-                  <FieldMark show={warn("seniority")} label={t.profileReviewCheck} />
-                  <select value={seniority} onChange={(event) => setSeniority(event.target.value)}>
-                    {SENIORITY.map((value) => (
-                      <option key={value || "empty"} value={value}>
-                        {value || "—"}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className={warn("total_years") ? "field-warn" : undefined}>
-                  {t.profileReviewYears}
-                  <FieldMark show={warn("total_years")} label={t.profileReviewCheck} />
-                  <input
-                    type="number"
-                    min="0"
-                    max="60"
-                    step="0.1"
-                    value={totalYears}
-                    onChange={(event) => setTotalYears(event.target.value)}
-                  />
-                </label>
-              </div>
-
-              <div className={`profile-review-skills${warn("skills") ? " field-warn" : ""}`}>
-                <div className="cabinet-form-head">
-                  <h2>{t.profileReviewSkills}</h2>
-                  <FieldMark show={warn("skills")} label={t.profileReviewCheck} />
-                </div>
-                <div className="skill-chip-list">
-                  {skills.map((skill, index) => (
-                    <div key={`${skill.name}-${index}`} className="skill-chip">
-                      <input
-                        className="skill-chip-name"
-                        value={skill.name}
-                        maxLength={60}
-                        aria-label={t.profileReviewSkillName}
-                        onChange={(event) => updateSkill(index, { name: event.target.value })}
-                      />
-                      <input
-                        className="skill-chip-years"
-                        type="number"
-                        min="0"
-                        max="60"
-                        step="0.5"
-                        placeholder={t.profileReviewSkillYears}
-                        value={skill.years}
-                        aria-label={t.profileReviewSkillYears}
-                        onChange={(event) => updateSkill(index, { years: event.target.value })}
-                      />
-                      <button type="button" className="btn ghost skill-chip-remove" onClick={() => removeSkill(index)}>
-                        ×
-                      </button>
+              <div className="profile-review-layout">
+                <div className="profile-review-col">
+                  <section className={`review-panel${warn("contact") ? " field-warn" : ""}`}>
+                    <header className="review-panel-head">
+                      <h2>{t.profileReviewContact}</h2>
+                      <FieldMark show={warn("contact")} label={t.profileReviewCheck} />
+                    </header>
+                    <div className="profile-grid profile-grid-contact">
+                      <label>
+                        {t.profileReviewFullName}
+                        <input
+                          value={fullName}
+                          maxLength={120}
+                          onChange={(event) => setFullName(event.target.value)}
+                        />
+                      </label>
+                      <label>
+                        {t.applyEmail}
+                        <input
+                          type="email"
+                          value={email}
+                          maxLength={120}
+                          onChange={(event) => setEmail(event.target.value)}
+                        />
+                      </label>
+                      <label>
+                        {t.applyPhone}
+                        <input
+                          type="tel"
+                          value={phone}
+                          maxLength={40}
+                          onChange={(event) => setPhone(event.target.value)}
+                        />
+                      </label>
                     </div>
-                  ))}
+                  </section>
+
+                  <section className="review-panel">
+                    <header className="review-panel-head">
+                      <h2>{t.profileReviewBasics}</h2>
+                    </header>
+                    <div className="profile-grid profile-grid-basics">
+                      <label className={`profile-span${warn("headline") ? " field-warn" : ""}`}>
+                        {t.profileReviewHeadline}
+                        <FieldMark show={warn("headline")} label={t.profileReviewCheck} />
+                        <input
+                          value={headline}
+                          maxLength={200}
+                          onChange={(event) => setHeadline(event.target.value)}
+                        />
+                      </label>
+                      <label className={warn("seniority") ? "field-warn" : undefined}>
+                        {t.profileReviewSeniority}
+                        <FieldMark show={warn("seniority")} label={t.profileReviewCheck} />
+                        <select value={seniority} onChange={(event) => setSeniority(event.target.value)}>
+                          {SENIORITY.map((value) => (
+                            <option key={value || "empty"} value={value}>
+                              {value || "—"}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className={warn("total_years") ? "field-warn" : undefined}>
+                        {t.profileReviewYears}
+                        <FieldMark show={warn("total_years")} label={t.profileReviewCheck} />
+                        <input
+                          type="number"
+                          min="0"
+                          max="60"
+                          step="0.1"
+                          value={totalYears}
+                          onChange={(event) => setTotalYears(event.target.value)}
+                        />
+                      </label>
+                    </div>
+                  </section>
+
+                  <section className={`review-panel${warn("skills") ? " field-warn" : ""}`}>
+                    <header className="review-panel-head">
+                      <h2>{t.profileReviewSkills}</h2>
+                      <FieldMark show={warn("skills")} label={t.profileReviewCheck} />
+                    </header>
+                    <div className="skill-chip-box">
+                      {skills.length ? (
+                        <div className="skill-chip-cloud" role="list">
+                          {skills.map((skill, index) => (
+                            <div key={`${skill.name}-${index}`} className="skill-pill" role="listitem">
+                              <button
+                                type="button"
+                                className="skill-pill-main"
+                                title={t.profileReviewSkillEdit}
+                                onClick={() => {
+                                  setSkillDraft(skill.name);
+                                  setSkillYearsDraft(skill.years || "");
+                                  removeSkill(index);
+                                }}
+                              >
+                                <span className="skill-pill-name">{skill.name}</span>
+                                {skill.years ? (
+                                  <span className="skill-pill-years">
+                                    {skill.years} {t.profileReviewSkillYears}
+                                  </span>
+                                ) : null}
+                              </button>
+                              <button
+                                type="button"
+                                className="skill-pill-remove"
+                                onClick={() => removeSkill(index)}
+                                aria-label={t.profileReviewRemove}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="hint">{t.profileReviewSkillsEmpty}</p>
+                      )}
+                      <div className="skill-add-row">
+                        <input
+                          value={skillDraft}
+                          maxLength={60}
+                          placeholder={t.profileReviewSkillName}
+                          onChange={(event) => setSkillDraft(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") addSkill(event);
+                          }}
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          max="60"
+                          step="0.5"
+                          value={skillYearsDraft}
+                          placeholder={t.profileReviewSkillYears}
+                          onChange={(event) => setSkillYearsDraft(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") addSkill(event);
+                          }}
+                        />
+                        <button type="button" className="btn" onClick={addSkill}>
+                          {t.profileReviewSkillAdd}
+                        </button>
+                      </div>
+                    </div>
+                  </section>
                 </div>
-                <div className="skill-add-row">
-                  <input
-                    value={skillDraft}
-                    maxLength={60}
-                    placeholder={t.profileReviewSkillName}
-                    onChange={(event) => setSkillDraft(event.target.value)}
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    max="60"
-                    step="0.5"
-                    value={skillYearsDraft}
-                    placeholder={t.profileReviewSkillYears}
-                    onChange={(event) => setSkillYearsDraft(event.target.value)}
-                  />
-                  <button type="button" className="btn" onClick={addSkill}>
-                    {t.profileReviewSkillAdd}
-                  </button>
+
+                <div className="profile-review-col">
+                  <section className={`review-panel${warn("work_history") ? " field-warn" : ""}`}>
+                    <header className="review-panel-head">
+                      <h2>{t.profileReviewWork}</h2>
+                      <FieldMark show={warn("work_history")} label={t.profileReviewCheck} />
+                    </header>
+                    {work.length === 0 ? <p className="hint">{t.profileReviewWorkEmpty}</p> : null}
+                    {work.map((job, index) => (
+                      <div key={`job-${index}`} className="work-block">
+                        <div className="work-block-head">
+                          <span className="hint">{t.profileReviewWorkItem(index + 1)}</span>
+                          <button type="button" className="btn ghost small" onClick={() => removeWork(index)}>
+                            {t.profileReviewRemove}
+                          </button>
+                        </div>
+                        <div className="profile-grid profile-grid-work">
+                          <label>
+                            {t.profileReviewJobTitle}
+                            <input
+                              value={job.title}
+                              maxLength={120}
+                              onChange={(event) => updateWork(index, { title: event.target.value })}
+                            />
+                          </label>
+                          <label>
+                            {t.profileReviewCompany}
+                            <input
+                              value={job.company}
+                              maxLength={120}
+                              onChange={(event) => updateWork(index, { company: event.target.value })}
+                            />
+                          </label>
+                          <label>
+                            {t.profileReviewStart}
+                            <input
+                              value={job.start}
+                              maxLength={20}
+                              placeholder="2021-03"
+                              onChange={(event) => updateWork(index, { start: event.target.value })}
+                            />
+                          </label>
+                          <label>
+                            {t.profileReviewEnd}
+                            <input
+                              value={job.end || ""}
+                              maxLength={20}
+                              placeholder={t.profileReviewPresent}
+                              onChange={(event) => updateWork(index, { end: event.target.value })}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" className="btn ghost" onClick={addWork}>
+                      {t.profileReviewWorkAdd}
+                    </button>
+                  </section>
+
+                  {rolesPayload ? (
+                    <section className="review-panel review-panel-muted">
+                      <header className="review-panel-head">
+                        <h2>{t.profileReviewRolesTitle}</h2>
+                      </header>
+                      {!rolesPayload.matching_consent ? (
+                        <p className="hint">
+                          {t.profileReviewRolesConsent}{" "}
+                          <a href={hrefFor(locale, { mode: "profile" })}>{t.profileReviewRolesConsentLink}</a>
+                        </p>
+                      ) : !rolesPayload.roles?.length ? (
+                        <p className="hint">{t.profileReviewRolesEmpty}</p>
+                      ) : (
+                        <ul className="role-suggest-list">
+                          {rolesPayload.roles.map((role) => (
+                            <li key={role.canonical_name} className="role-suggest-item">
+                              <div className="role-suggest-head">
+                                <strong>{role.canonical_name}</strong>
+                                <span className="hint">
+                                  {role.category}
+                                  {typeof role.score === "number"
+                                    ? ` · ${t.profileReviewRolesScore(role.score)}`
+                                    : ""}
+                                </span>
+                              </div>
+                              {role.explanation ? <p className="hint">{role.explanation}</p> : null}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </section>
+                  ) : null}
                 </div>
               </div>
 
-              <div className={`profile-review-work${warn("work_history") ? " field-warn" : ""}`}>
-                <div className="cabinet-form-head">
-                  <h2>{t.profileReviewWork}</h2>
-                  <FieldMark show={warn("work_history")} label={t.profileReviewCheck} />
-                </div>
-                {work.length === 0 ? <p className="hint">—</p> : null}
-                {work.map((job, index) => (
-                  <div key={`job-${index}`} className="profile-grid work-row">
-                    <label>
-                      {t.profileReviewJobTitle}
-                      <input
-                        value={job.title}
-                        maxLength={120}
-                        onChange={(event) => updateWork(index, { title: event.target.value })}
-                      />
-                    </label>
-                    <label>
-                      {t.profileReviewCompany}
-                      <input
-                        value={job.company}
-                        maxLength={120}
-                        onChange={(event) => updateWork(index, { company: event.target.value })}
-                      />
-                    </label>
-                    <label>
-                      {t.profileReviewStart}
-                      <input
-                        value={job.start}
-                        maxLength={20}
-                        placeholder="2021-03"
-                        onChange={(event) => updateWork(index, { start: event.target.value })}
-                      />
-                    </label>
-                    <label>
-                      {t.profileReviewEnd}
-                      <input
-                        value={job.end || ""}
-                        maxLength={20}
-                        placeholder={t.profileReviewPresent}
-                        onChange={(event) => updateWork(index, { end: event.target.value })}
-                      />
-                    </label>
-                  </div>
-                ))}
-              </div>
-
-              {rolesPayload ? (
-                <div className="profile-review-roles">
-                  <div className="cabinet-form-head">
-                    <h2>{t.profileReviewRolesTitle}</h2>
-                  </div>
-                  {!rolesPayload.matching_consent ? (
-                    <p className="hint">
-                      {t.profileReviewRolesConsent}{" "}
-                      <a href={hrefFor(locale, { mode: "profile" })}>{t.profileReviewRolesConsentLink}</a>
-                    </p>
-                  ) : !rolesPayload.roles?.length ? (
-                    <p className="hint">{t.profileReviewRolesEmpty}</p>
-                  ) : (
-                    <ul className="role-suggest-list">
-                      {rolesPayload.roles.map((role) => (
-                        <li key={role.canonical_name} className="role-suggest-item">
-                          <div className="role-suggest-head">
-                            <strong>{role.canonical_name}</strong>
-                            <span className="hint">
-                              {role.category}
-                              {typeof role.score === "number"
-                                ? ` · ${t.profileReviewRolesScore(role.score)}`
-                                : ""}
-                            </span>
-                          </div>
-                          {role.explanation ? <p className="hint">{role.explanation}</p> : null}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ) : null}
-
-              <div className="ad-actions">
-                <button type="submit" className="btn" disabled={busy}>
+              <div className="profile-review-actions">
+                <button type="submit" className="btn" disabled={busy || uploading}>
                   {t.profileReviewSave}
                 </button>
                 <button
                   type="button"
                   className="btn primary"
-                  disabled={busy}
+                  disabled={busy || uploading}
                   onClick={() => submit(true)}
                 >
                   {t.profileReviewConfirm}
                 </button>
               </div>
             </form>
-          )}
+          ) : null}
         </div>
       ) : (
         <section className="empty profile-gate">

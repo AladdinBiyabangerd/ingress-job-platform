@@ -128,8 +128,13 @@ def main(argv: list[str]) -> int:
 def _main(argv: list[str]) -> int:
     if len(argv) >= 2 and argv[1] == "probe":
         return _probe(argv[2:])
-    if len(argv) > 2 or (len(argv) == 2 and argv[1] not in {"list", "schedule"}):
-        print('usage: python -m worker [list|schedule|probe ["Source name" ...]]', flush=True)
+    if len(argv) >= 2 and argv[1] == "parse-cv":
+        return _parse_cv_only()
+    if len(argv) > 2 or (len(argv) == 2 and argv[1] not in {"list", "schedule", "parse-cv"}):
+        print(
+            'usage: python -m worker [list|schedule|parse-cv|probe ["Source name" ...]]',
+            flush=True,
+        )
         return 2
     if len(argv) == 2 and argv[1] == "schedule":
         return _schedule()
@@ -143,8 +148,42 @@ def _main(argv: list[str]) -> int:
         store.close()
 
 
+def _drain_cvs(store: Store, *, label: str = "parse_cv") -> dict[str, int]:
+    """Process pending CV parse jobs. Safe to call mid-schedule; no crawl lock."""
+    with store.conn:
+        stats = drain_parse_cv_queue(store.conn)
+    if stats.get("claimed"):
+        print(
+            f"{label}: "
+            f"claimed={stats['claimed']} "
+            f"done={stats.get('done', 0)} "
+            f"failed={stats.get('failed', 0)}",
+            flush=True,
+        )
+    return stats
+
+
+def _parse_cv_only() -> int:
+    """Drain parse_cv_queue without running the job crawl."""
+    store = Store()
+    try:
+        stats = _drain_cvs(store)
+        if not stats.get("claimed"):
+            print("parse_cv: nothing pending", flush=True)
+        return 0
+    finally:
+        store.close()
+
+
+CV_POLL_SECONDS = 30
+
+
 def _schedule() -> int:
-    """Repeat the one-pass collect and tidy every hour. One process only."""
+    """Repeat the one-pass collect and tidy every hour. One process only.
+
+    CV parse runs at the start of each pass and every CV_POLL_SECONDS while
+    waiting, so uploads are not stuck behind a long crawl.
+    """
     LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
     lock_file = LOCK_PATH.open("a+")
     try:
@@ -167,7 +206,17 @@ def _schedule() -> int:
         if wait < 0:
             wait = 0
         print(f"next pass in {int(wait)}s", flush=True)
-        time.sleep(wait)
+        while wait > 0:
+            chunk = min(CV_POLL_SECONDS, wait)
+            time.sleep(chunk)
+            wait -= chunk
+            poller = Store()
+            try:
+                _drain_cvs(poller, label="parse_cv.poll")
+            except Exception:
+                capture_exception()
+            finally:
+                poller.close()
 
 
 def _run(store: Store) -> int:
@@ -177,6 +226,11 @@ def _run(store: Store) -> int:
 
 def _run_pass(store: Store) -> int:
     print("not connectors: " + NOT_CONNECTORS, flush=True)
+    # CV parse first — do not leave uploads waiting behind a long crawl.
+    try:
+        _drain_cvs(store)
+    except Exception:
+        capture_exception()
     for row in store.disabled_sources():
         env_name = row["api_key_env"]
         if env_name:
@@ -213,16 +267,7 @@ def _run_pass(store: Store) -> int:
     if saved or queued:
         print(f"tidy: saved={saved} queued={queued}", flush=True)
     try:
-        with store.conn:
-            cv_stats = drain_parse_cv_queue(store.conn)
-        if cv_stats.get("claimed"):
-            print(
-                "parse_cv: "
-                f"claimed={cv_stats['claimed']} "
-                f"done={cv_stats.get('done', 0)} "
-                f"failed={cv_stats.get('failed', 0)}",
-                flush=True,
-            )
+        _drain_cvs(store, label="parse_cv.end")
     except Exception:
         capture_exception()
     try:

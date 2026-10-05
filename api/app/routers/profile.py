@@ -1,15 +1,19 @@
-"""GET/PUT /api/v1/profile — structured CV profile review (plan §13.1)."""
+"""GET/PUT /api/v1/profile — structured CV profile review (plan §13.1).
+
+POST /api/v1/profile/cv — upload CV for parse without a job application.
+"""
 
 from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.account import current_user
 from app.auth_oidc import VerifiedAccess
-from app.cv_profile import SENIORITY_VALUES, read_profile, save_profile
+from app.cabinet_store import CabinetError
+from app.cv_profile import SENIORITY_VALUES, read_profile, save_profile, upload_profile_cv
 
 router = APIRouter(prefix="/api/v1", tags=["profile"])
 
@@ -63,3 +67,23 @@ def put_profile(body: ProfileIn, user: VerifiedAccess = Depends(current_user)) -
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail="Profil məlumatı yanlışdır") from exc
+
+
+@router.post("/profile/cv")
+async def post_profile_cv(request: Request, user: VerifiedAccess = Depends(current_user)) -> dict:
+    _require_candidate(user)
+    ctype = (request.headers.get("content-type") or "").lower()
+    if "multipart/form-data" not in ctype:
+        raise HTTPException(status_code=422, detail="CV faylı PDF, DOC və ya DOCX olmalıdır və 5 MB-dan böyük ola bilməz")
+    form = await request.form()
+    try:
+        upload = form.get("cv")
+        if upload is None or not getattr(upload, "filename", None):
+            raise HTTPException(status_code=422, detail="CV faylı PDF, DOC və ya DOCX olmalıdır və 5 MB-dan böyük ola bilməz")
+        data = await upload.read()
+        try:
+            return upload_profile_cv(user_id=user.subject, filename=upload.filename or "", data=data)
+        except CabinetError as exc:
+            raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
+    finally:
+        await form.close()

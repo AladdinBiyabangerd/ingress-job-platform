@@ -282,6 +282,12 @@ def _write_cv(ext: str, data: bytes) -> str:
     return stored
 
 
+def store_uploaded_cv(filename: str, data: bytes) -> tuple[str, str]:
+    """Validate and persist a CV upload. Returns (original_name, stored_key)."""
+    original, ext, payload = _cv_parts(filename, data)
+    return original, _write_cv(ext, payload)
+
+
 def _checked(form: dict, fields: dict, cv: tuple[str, bytes] | None) -> tuple[str, str, str, str, str, bytes]:
     message = _message(fields.get("message") or "", enabled=form["message"]["enabled"], required=form["message"]["required"])
     phone = _phone(fields.get("phone") or "", enabled=form["phone"]["enabled"], required=form["phone"]["required"])

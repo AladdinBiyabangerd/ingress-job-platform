@@ -13,7 +13,7 @@ from worker.cv_parse.sections import split_sections
 from worker.cv_parse.text import extract
 from worker.techstack import find_stack
 
-PARSER_VERSION = "1.2"
+PARSER_VERSION = "1.3"
 
 _SENIORITY_PAT = re.compile(
     r"(?i)\b(intern|junior|jr\.?|middle|mid-level|mid\b|senior|sr\.?|lead|principal|staff)\b"
@@ -106,6 +106,18 @@ def parse_text(text: str) -> dict:
 
 
 def _headline(text: str, sections: dict[str, str], work: list[dict]) -> str:
+    for line in text.splitlines()[:12]:
+        line = line.strip()
+        if not line or len(line) > 80:
+            continue
+        low = line.lower()
+        if any(k in low for k in ("@", "http", "linkedin", "github", "tel", "+994", "email", "telefon", "veb:")):
+            continue
+        if re.search(
+            r"(?i)\b(developer|engineer|devops|analyst|designer|manager|qa|sre|mentor)\b",
+            line,
+        ):
+            return line[:120]
     summary = sections.get("summary") or ""
     for line in summary.splitlines():
         line = line.strip()
@@ -113,18 +125,6 @@ def _headline(text: str, sections: dict[str, str], work: list[dict]) -> str:
             return line[:120]
     if work and work[0].get("title"):
         return str(work[0]["title"])[:120]
-    for line in text.splitlines()[:12]:
-        line = line.strip()
-        if not line or len(line) > 80:
-            continue
-        low = line.lower()
-        if any(k in low for k in ("@", "http", "linkedin", "github", "tel", "+994")):
-            continue
-        if re.search(
-            r"(?i)\b(developer|engineer|devops|analyst|designer|manager|qa|sre)\b",
-            line,
-        ):
-            return line[:120]
     return ""
 
 
@@ -171,7 +171,7 @@ def _work_history(experience_text: str) -> tuple[list[dict], list[dict]]:
         present = bool(
             end_s
             and re.match(
-                r"(?i)present|current|now|hal-hazırda|настоящее",
+                r"(?i)present|current|now|hal-hazırda|hazırda|hazirda|indi|настоящее",
                 end_s,
             )
         )
@@ -193,42 +193,92 @@ def _work_history(experience_text: str) -> tuple[list[dict], list[dict]]:
     return history, dated
 
 
+def _looks_like_bullet(line: str) -> bool:
+    s = line.strip()
+    if not s:
+        return False
+    if s[0] in {"-", "•", "●", "*", "–", "—"}:
+        return True
+    # Long prose / duty lines are not job titles.
+    return len(s) > 90
+
+
 def _split_jobs(text: str) -> list[str]:
+    """Split experience into job blocks.
+
+    Supports AZ ATS layout::
+
+        Software Engineer
+        VTB Bank | Full-time | Feb 2026 – Present
+        Built APIs...
+    """
     lines = text.splitlines()
-    chunks: list[list[str]] = []
-    current: list[str] = []
-    for line in lines:
-        if find_ranges(line) and current:
-            chunks.append(current)
-            current = [line]
-        else:
-            current.append(line)
-    if current:
-        chunks.append(current)
-    if len(chunks) <= 1:
+    date_idxs = [i for i, line in enumerate(lines) if find_ranges(line)]
+    if not date_idxs:
         parts = re.split(r"\n\s*\n", text.strip())
         return [p.strip() for p in parts if p.strip()]
-    return ["\n".join(c).strip() for c in chunks if "".join(c).strip()]
+
+    starts: list[int] = []
+    for di in date_idxs:
+        j = di - 1
+        while j >= 0 and not lines[j].strip():
+            j -= 1
+        if j >= 0 and not find_ranges(lines[j]) and not _looks_like_bullet(lines[j]):
+            start = j
+        else:
+            start = di
+        if not starts or start >= starts[-1]:
+            if starts and start == starts[-1]:
+                continue
+            starts.append(start)
+    chunks: list[str] = []
+    for i, start in enumerate(starts):
+        end = starts[i + 1] if i + 1 < len(starts) else len(lines)
+        block = "\n".join(lines[start:end]).strip()
+        if block:
+            chunks.append(block)
+    return chunks or [text.strip()]
 
 
 def _title_company(block: str) -> tuple[str, str]:
     lines = [ln.strip() for ln in block.splitlines() if ln.strip()]
+    if not lines:
+        return "", ""
+    # Title on line 1, "Company | type | dates" (or Company — dates) on line 2.
+    if len(lines) >= 2 and find_ranges(lines[1]):
+        title = lines[0][:120]
+        company_line = lines[1]
+        company = company_line.split("|")[0].strip()
+        company = re.split(r"\s+[–—-]\s+", company)[0].strip()
+        if company and not find_ranges(company):
+            return title, company[:120]
     for line in lines[:4]:
-        if find_ranges(line) and len(line) < 40:
+        if find_ranges(line) and "|" not in line and len(line) < 40:
             continue
-        m = _JOB_LINE.match(line) or _TITLE_COMPANY.match(line)
+        m = _JOB_LINE.match(line)
         if m:
             return m.group("title").strip()[:120], m.group("company").strip()[:120]
-    title = lines[0][:120] if lines else ""
-    company = lines[1][:120] if len(lines) > 1 and not find_ranges(lines[1]) else ""
+        if "|" in line and not find_ranges(line):
+            m = _TITLE_COMPANY.match(line)
+            if m:
+                return m.group("title").strip()[:120], m.group("company").strip()[:120]
+    title = lines[0][:120]
+    company = ""
+    if len(lines) > 1 and not find_ranges(lines[1]):
+        company = lines[1].split("|")[0].strip()[:120]
     return title, company
 
 
 def _job_summary(block: str) -> str:
     lines = []
+    skipped_header = 0
     for line in block.splitlines():
         line = line.strip()
         if not line or find_ranges(line):
+            continue
+        # Skip title + company header lines.
+        if skipped_header < 2 and len(line) <= 90 and not _looks_like_bullet(line):
+            skipped_header += 1
             continue
         lines.append(line)
         if len(lines) >= 4:

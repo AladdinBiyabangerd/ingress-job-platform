@@ -1397,20 +1397,337 @@ textarea { min-height: 120px; resize: vertical; }
   border-top: 1px solid #e8eaee;
 }
 
+.profile-review-page {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  max-width: none;
+}
+
+.profile-review-page .cabinet-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+.profile-review-page .cabinet-head h1 {
+  font-size: 1.35rem;
+  margin: 0;
+}
+
+.profile-review-page .cabinet-head .lede {
+  font-size: 0.92rem;
+  max-width: 56ch;
+  margin: 4px 0 0;
+}
+
+.profile-review-page .profile-grid {
+  gap: 8px 12px;
+}
+
+.profile-review-page .profile-grid-contact {
+  grid-template-columns: 1fr;
+}
+
+.profile-review-page .profile-grid-basics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.profile-review-page .profile-grid-work {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.profile-review-flash {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.profile-review-flash.ok {
+  color: #166534;
+}
+
+.profile-review-chooser,
+.profile-review-source {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #dfe1e5;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.profile-review-form {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+
+.profile-review-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.profile-review-col {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.profile-review-col .review-panel {
+  background: #ffffff;
+  border: 1px solid #dfe1e5;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.profile-review-chooser h2,
+.profile-review-source h2,
+.review-panel h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+}
+
+.profile-review-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.profile-review-option {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  padding: 12px 12px;
+  border: 1px solid #d7dde5;
+  border-radius: 12px;
+  background: #fafbfc;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.profile-review-option:hover,
+.profile-review-option:focus-visible {
+  border-color: #001FFF;
+  background: #f3f6ff;
+  outline: none;
+}
+
+.profile-review-option strong {
+  font-size: 0.95rem;
+  color: #001FFF;
+}
+
+.profile-review-option span {
+  color: #656b75;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.profile-review-source {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.profile-review-source.is-parsing {
+  grid-template-columns: 1fr;
+}
+
+.profile-review-source-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.profile-review-source-copy .hint,
+.profile-review-chooser .hint {
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+.profile-review-source-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.profile-review-source-actions .btn {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+
+.cv-parse-progress {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+.cv-parse-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cv-parse-progress-head strong {
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+}
+
+.cv-parse-progress-file {
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+.cv-parse-progress-track {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: #e8eaee;
+  overflow: hidden;
+}
+
+.cv-parse-progress-track.is-indeterminate .cv-parse-progress-fill {
+  width: 36%;
+  height: 100%;
+  border-radius: inherit;
+  background: #001FFF;
+  animation: cv-parse-indeterminate 1.2s ease-in-out infinite;
+}
+
+.cv-parse-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.cv-parse-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.8rem;
+  color: #656b75;
+}
+
+.cv-parse-step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: #d7dde5;
+}
+
+.cv-parse-step.is-done {
+  color: #166534;
+  font-weight: 600;
+}
+
+.cv-parse-step.is-done .cv-parse-step-dot {
+  background: #22c55e;
+}
+
+.cv-parse-step.is-active {
+  color: #001FFF;
+  font-weight: 700;
+}
+
+.cv-parse-step.is-active .cv-parse-step-dot {
+  background: #001FFF;
+  box-shadow: 0 0 0 3px #eaefff;
+  animation: cv-parse-pulse 1.2s ease-in-out infinite;
+}
+
+.cv-parse-progress .hint {
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+@keyframes cv-parse-indeterminate {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
+}
+
+@keyframes cv-parse-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px #eaefff; }
+  50% { box-shadow: 0 0 0 4px #dce4ff; }
+}
+
+.profile-review-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.profile-review-form input,
+.profile-review-form select,
+.profile-review-form textarea {
+  background: #ffffff;
+  border: 1px solid #dfe1e5;
+  border-radius: 10px;
+  padding: 8px 10px;
+  outline: none;
+  width: 100%;
+  font: inherit;
+  font-size: 0.92rem;
+}
+
+.profile-review-form input:focus,
+.profile-review-form select:focus,
+.profile-review-form textarea:focus {
+  border-color: #001FFF;
+  box-shadow: 0 0 0 2px #eaefff;
+}
+
+.review-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.review-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  align-items: center;
+}
+
+.review-panel-muted {
+  background: #fafbfc;
+}
+
 .profile-review-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 16px;
+  gap: 6px 10px;
   align-items: center;
-  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #dfe1e5;
+  border-radius: 12px;
 }
 
 .profile-review-status {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
+  padding: 2px 8px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   background: #eef1f5;
   color: #334155;
@@ -1423,29 +1740,198 @@ textarea { min-height: 120px; resize: vertical; }
 
 .profile-review-warn {
   display: inline-block;
-  margin-left: 8px;
-  padding: 2px 8px;
+  padding: 1px 7px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: #92400e;
-  background: #fef3c7;
+  color: #334155;
+  background: #eef1f5;
 }
 
 .field-warn input,
-.field-warn select,
-.profile-review-skills.field-warn .skill-chip,
-.profile-review-work.field-warn .work-row {
-  border-color: #f59e0b;
-  background: #fffbeb;
+.field-warn select {
+  border-color: #9db4d0;
+  box-shadow: inset 2px 0 0 #001FFF;
 }
 
-.profile-review-skills,
-.profile-review-work,
-.profile-review-roles {
+.review-panel.field-warn {
+  border-left: 2px solid #001FFF;
+  padding-left: 10px;
+  margin-left: -2px;
+}
+
+.review-panel.field-warn .work-block {
+  border-color: #d7dde5;
+  background: #fafbfc;
+}
+
+.skill-chip-box {
   display: grid;
-  gap: 12px;
-  margin-top: 18px;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #e8eaee;
+  border-radius: 12px;
+  background: #fafbfc;
+}
+
+.skill-chip-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.skill-pill {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+  border: 1px solid #cfd6e0;
+  border-radius: 10px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.skill-pill-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.skill-pill-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.skill-pill-years {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #656b75;
+  white-space: nowrap;
+}
+
+.skill-pill-remove {
+  min-width: 32px;
+  border: 0;
+  border-left: 1px solid #e8eaee;
+  background: #fff;
+  color: #656b75;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.skill-pill:hover,
+.skill-pill:focus-within {
+  border-color: #001FFF;
+}
+
+.skill-pill-main:hover,
+.skill-pill-main:focus-visible {
+  background: #f3f6ff;
+  outline: none;
+}
+
+.skill-pill-remove:hover,
+.skill-pill-remove:focus-visible {
+  background: #f3f6ff;
+  color: #001FFF;
+  outline: none;
+}
+
+.work-block {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #e8eaee;
+  border-radius: 10px;
+  background: #fafbfc;
+}
+
+.work-block-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #dfe1e5;
+  border-radius: 12px;
+  position: sticky;
+  bottom: 8px;
+  background: #ffffff;
+  box-shadow: 0 -4px 16px rgba(32, 36, 43, 0.04);
+}
+
+.profile-review-actions .btn {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 900px) {
+  .profile-review-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-review-page .profile-grid-basics,
+  .profile-review-page .profile-grid-work {
+    grid-template-columns: 1fr;
+  }
+}
+
+.profile-review-page .skill-add-row {
+  grid-template-columns: minmax(0, 1fr) 72px auto;
+  gap: 6px;
+}
+
+.profile-review-page .skill-add-row .btn {
+  padding: 8px 10px;
+  font-size: 0.88rem;
+}
+
+.profile-review-page .role-suggest-item {
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.profile-review-page .btn.small {
+  padding: 4px 8px;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 760px) {
+  .profile-review-options {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-review-source {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-review-source-actions {
+    justify-content: stretch;
+  }
+
+  .profile-review-source-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  .cv-parse-steps {
+    grid-template-columns: 1fr;
+  }
 }
 
 .role-suggest-list {
@@ -1595,56 +2081,17 @@ textarea { min-height: 120px; resize: vertical; }
   background: #eff6ff;
 }
 
-.skill-chip-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.skill-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border: 1px solid #d7dde5;
-  border-radius: 999px;
-  background: #f8fafc;
-}
-
-.skill-chip-name {
-  width: 110px;
-  border: 0;
-  background: transparent;
-  padding: 0 4px;
-}
-
-.skill-chip-years {
-  width: 64px;
-  border: 0;
-  background: #fff;
-  border-radius: 8px;
-  padding: 4px 6px;
-}
-
-.skill-chip-remove {
-  min-width: 28px;
-  padding: 2px 8px;
-  line-height: 1;
-}
-
 .skill-add-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 100px auto;
   gap: 8px;
 }
 
-.work-row {
-  padding-top: 8px;
-  border-top: 1px solid #e8edf3;
-}
-
 @media (max-width: 720px) {
-  .skill-add-row { grid-template-columns: 1fr; }
+  .skill-add-row,
+  .profile-review-page .skill-add-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .form-card.profile-privacy {

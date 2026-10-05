@@ -6,6 +6,8 @@ import re
 from calendar import monthrange
 from datetime import date
 
+from worker.cv_parse.locale import fold_az
+
 _MONTHS = {
     "jan": 1,
     "january": 1,
@@ -89,8 +91,8 @@ _MONTHS = {
 }
 
 _PRESENT = re.compile(
-    r"(?i)^(present|current|now|today|hal-hazırda|halhazirda|indi|настоящее|"
-    r"настоящее\s+время|по\s+настоящее|n\/a|tbd)$"
+    r"(?i)^(present|current|now|today|hal-hazırda|halhazirda|hazırda|hazirda|"
+    r"indi|настоящее|настоящее\s+время|по\s+настоящее|n\/a|tbd)$"
 )
 
 _RANGE = re.compile(
@@ -98,7 +100,7 @@ _RANGE = re.compile(
     r"(?P<start>"
     r"(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec|"
     r"january|february|march|april|june|july|august|september|october|november|december|"
-    r"yan|yanvar|fev|fevral|mart|aprel|iyn|iyun|iyl|iyul|avq|avqust|sen|sentyabr|"
+    r"yan|yanvar|fev|fevral|mart|aprel|may|iyn|iyun|iyl|iyul|avq|avqust|sen|sentyabr|"
     r"okt|oktyabr|noy|noyabr|dek|dekabr|"
     r"янв(?:арь|аря)?|фев(?:раль|раля)?|мар(?:та?)?|апр(?:ель|еля)?|мая?|"
     r"июн(?:ь|я)?|июл(?:ь|я)?|авг(?:уста?)?|сен(?:тябрь|тября)?|"
@@ -110,11 +112,11 @@ _RANGE = re.compile(
     r")"
     r"\s*(?:–|—|-|to|until|через|dək|:)\s*"
     r"(?P<end>"
-    r"present|current|now|today|hal-hazırda|halhazirda|indi|"
+    r"present|current|now|today|hal-hazırda|halhazirda|hazırda|hazirda|indi|"
     r"настоящее(?:\s+время)?|по\s+настоящее|"
     r"(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec|"
     r"january|february|march|april|june|july|august|september|october|november|december|"
-    r"yan|yanvar|fev|fevral|mart|aprel|iyn|iyun|iyl|iyul|avq|avqust|sen|sentyabr|"
+    r"yan|yanvar|fev|fevral|mart|aprel|may|iyn|iyun|iyl|iyul|avq|avqust|sen|sentyabr|"
     r"okt|oktyabr|noy|noyabr|dek|dekabr|"
     r"янв(?:арь|аря)?|фев(?:раль|раля)?|мар(?:та?)?|апр(?:ель|еля)?|мая?|"
     r"июн(?:ь|я)?|июл(?:ь|я)?|авг(?:уста?)?|сен(?:тябрь|тября)?|"
@@ -129,7 +131,7 @@ _RANGE = re.compile(
 
 def parse_month(token: str, *, end: bool = False) -> date | None:
     """Parse a month/year token into a date (day = 1, or month-end when end=True)."""
-    raw = (token or "").strip()
+    raw = fold_az((token or "").strip())
     if not raw:
         return None
     if _PRESENT.match(raw):
@@ -138,7 +140,7 @@ def parse_month(token: str, *, end: bool = False) -> date | None:
             return today
         return date(today.year, today.month, 1)
     raw = raw.replace(".", "/").replace("-", " ")
-    parts = [p for p in re.split(r"[\s/]+", raw.lower()) if p]
+    parts = [p for p in re.split(r"[\s/]+", raw) if p]
     if not parts:
         return None
     year = None
@@ -174,7 +176,8 @@ def parse_month(token: str, *, end: bool = False) -> date | None:
 def find_ranges(text: str) -> list[tuple[date, date, str, str]]:
     """Return (start, end, start_token, end_token) for each range in text."""
     out: list[tuple[date, date, str, str]] = []
-    for m in _RANGE.finditer(text or ""):
+    folded = fold_az(text or "")
+    for m in _RANGE.finditer(folded):
         start = parse_month(m.group("start"), end=False)
         end = parse_month(m.group("end"), end=True)
         if start and end and end >= start:

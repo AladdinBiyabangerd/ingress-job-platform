@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import re
 
+from worker.cv_parse.locale import fold_az
+
 # canonical section -> heading aliases (matched as a whole line, optional trailing :)
 _HEADINGS: dict[str, tuple[str, ...]] = {
     "experience": (
@@ -35,6 +37,7 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
         "tech stack",
         "tools",
         "bacarıqlar",
+        "bacariqlar",
         "texniki bacarıqlar",
         "навыки",
         "ключевые навыки",
@@ -44,6 +47,7 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
         "languages",
         "language skills",
         "dillər",
+        "diller",
         "языки",
     ),
     "summary": (
@@ -52,6 +56,8 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
         "about",
         "about me",
         "objective",
+        "xülasə",
+        "xulase",
         "haqqında",
         "о себе",
         "резюме",
@@ -60,6 +66,7 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
         "projects",
         "personal projects",
         "layihələr",
+        "layiheler",
         "проекты",
     ),
     "certifications": (
@@ -73,7 +80,7 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
 _ALIAS_TO_CANON: dict[str, str] = {}
 for _canon, _aliases in _HEADINGS.items():
     for _alias in _aliases:
-        _ALIAS_TO_CANON[_alias.lower()] = _canon
+        _ALIAS_TO_CANON[fold_az(_alias)] = _canon
 
 _HEADING_RE = re.compile(
     r"^\s*(?P<title>[A-Za-zА-Яа-яƏəÖöÜüĞğÇçŞşİı /&+\-]{2,60})\s*:?\s*$",
@@ -108,8 +115,8 @@ def _heading_name(line: str) -> str | None:
     m = _HEADING_RE.match(line)
     if not m:
         return None
-    title = re.sub(r"\s+", " ", m.group("title")).strip().lower().rstrip(":")
+    title = fold_az(re.sub(r"\s+", " ", m.group("title")).strip().rstrip(":"))
     if title in _ALIAS_TO_CANON:
         return _ALIAS_TO_CANON[title]
-    title = re.sub(r"^(?:[0-9ivx]+\.|[0-9]+)\)?\s*", "", title, flags=re.I).strip()
+    title = re.sub(r"^(?:[0-9ivx]+\.|[0-9]+)\)?\s*", "", title).strip()
     return _ALIAS_TO_CANON.get(title)
