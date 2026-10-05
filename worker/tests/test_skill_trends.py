@@ -43,13 +43,14 @@ class SkillTrendsTest(unittest.TestCase):
         relocation: int = 0,
         status: str = "published",
         hidden: int = 0,
+        salary: str = "",
     ) -> int:
         cur = self.store.conn.execute(
             """
             INSERT INTO jobs (
                 title, company, city, text, status, created_at, norm_key,
-                tech_stack, remote, relocation, category, hidden
-            ) VALUES (?, 'Co', '', '', ?, ?, ?, '[]', ?, ?, ?, ?)
+                tech_stack, remote, relocation, category, hidden, salary
+            ) VALUES (?, 'Co', '', '', ?, ?, ?, '[]', ?, ?, ?, ?, ?)
             """,
             (
                 title,
@@ -60,6 +61,7 @@ class SkillTrendsTest(unittest.TestCase):
                 relocation,
                 category,
                 hidden,
+                salary,
             ),
         )
         job_id = int(cur.lastrowid)
@@ -152,6 +154,44 @@ class SkillTrendsTest(unittest.TestCase):
         # Only days within the 3-day window relative to "today" get rows;
         # 2026-09-01 is outside unless today is near it. Assert shape only.
         self.assertTrue(all(len(d) == 10 for d in days))
+
+    def test_aggregate_salary_median(self):
+        self._insert_job(
+            title="A",
+            day="2026-10-06",
+            skills=["Python"],
+            salary="40,000 GBP per annum",
+        )
+        self._insert_job(
+            title="B",
+            day="2026-10-06",
+            skills=["Python"],
+            salary="60,000 GBP per year",
+        )
+        self._insert_job(
+            title="C",
+            day="2026-10-06",
+            skills=["Python"],
+            salary="negotiable",
+        )
+        aggregate_skill_trends(self.store.conn, "2026-10-06")
+        self.store.conn.commit()
+        py = self._skill_id("Python")
+        row = self.store.conn.execute(
+            """
+            SELECT ad_count, salary_median, salary_currency, salary_n,
+                   salary_low, salary_high
+            FROM skill_trend_daily
+            WHERE day = '2026-10-06' AND skill_id = ?
+            """,
+            (py,),
+        ).fetchone()
+        self.assertEqual(int(row["ad_count"]), 3)
+        self.assertEqual(str(row["salary_currency"]), "GBP")
+        self.assertEqual(int(row["salary_n"]), 2)
+        self.assertEqual(float(row["salary_median"]), 50000.0)
+        self.assertEqual(float(row["salary_low"]), 40000.0)
+        self.assertEqual(float(row["salary_high"]), 60000.0)
 
 
 if __name__ == "__main__":

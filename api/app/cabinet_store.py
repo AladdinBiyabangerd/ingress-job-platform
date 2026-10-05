@@ -298,10 +298,23 @@ def _apply_schema(conn) -> None:
             relocation INTEGER NOT NULL DEFAULT 0,
             ad_count INTEGER NOT NULL DEFAULT 0,
             salary_median REAL,
+            salary_currency TEXT NOT NULL DEFAULT '',
+            salary_n INTEGER NOT NULL DEFAULT 0,
+            salary_low REAL,
+            salary_high REAL,
             PRIMARY KEY (day, skill_id, category, region, remote, relocation)
         );
         """
     )
+    trend_cols = {row[1] for row in conn.execute("PRAGMA table_info(skill_trend_daily)")}
+    for name, decl in (
+        ("salary_currency", "TEXT NOT NULL DEFAULT ''"),
+        ("salary_n", "INTEGER NOT NULL DEFAULT 0"),
+        ("salary_low", "REAL"),
+        ("salary_high", "REAL"),
+    ):
+        if name not in trend_cols:
+            conn.execute(f"ALTER TABLE skill_trend_daily ADD COLUMN {name} {decl}")
     conn.execute("CREATE INDEX IF NOT EXISTS job_skill_skill ON job_skill(skill_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS job_skill_job ON job_skill(job_id)")
     conn.execute(

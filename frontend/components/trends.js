@@ -14,6 +14,28 @@ function growthLabel(t, growth) {
   return `${t.trendsGrowth}: ${sign}${value}%`;
 }
 
+function formatMoney(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return Math.round(value).toLocaleString("en-US");
+}
+
+function salaryLabel(t, salary) {
+  if (!salary || typeof salary !== "object") return null;
+  const median = formatMoney(salary.median);
+  const currency = String(salary.currency || "").trim();
+  const n = typeof salary.n === "number" ? salary.n : 0;
+  if (!median || !currency || n <= 0) return null;
+  const low = formatMoney(salary.low);
+  const high = formatMoney(salary.high);
+  const range =
+    low && high && low !== high && low !== median
+      ? t.trendsSalaryRange(low, high, currency)
+      : null;
+  return [t.trendsSalary(median, currency), range, t.trendsSalaryN(n)]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export function TrendsPage({ locale, data, error }) {
   const t = text(locale);
   const items = Array.isArray(data?.items) ? data.items : [];
@@ -48,6 +70,7 @@ export function TrendsPage({ locale, data, error }) {
             {items.map((item, index) => {
               const share = pct(item.share);
               const growth = growthLabel(t, item.growth_wow);
+              const salary = salaryLabel(t, item.salary);
               return (
                 <li key={item.skill_id || item.name} className="trends-item">
                   <span className="trends-rank">{index + 1}</span>
@@ -60,6 +83,7 @@ export function TrendsPage({ locale, data, error }) {
                           ? `${t.trendsAds}: ${item.ad_count}`
                           : null,
                         growth,
+                        salary,
                       ]
                         .filter(Boolean)
                         .join(" · ")}

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
+from statistics import median
 from typing import Any
 
 DEFAULT_LIMIT = 30
@@ -11,7 +13,16 @@ MAX_LIMIT = 100
 DEFAULT_WINDOW_DAYS = 7
 MAX_WINDOW_DAYS = 56
 MIN_ADS_FOR_GROWTH = 20
+# Salary is scarcer than skill mentions — show only with enough parseable samples.
+MIN_SALARY_SAMPLES = 5
 GROWTH_EPS = 1e-6
+
+_SALARY_COLUMNS = (
+    ("salary_currency", "TEXT NOT NULL DEFAULT ''"),
+    ("salary_n", "INTEGER NOT NULL DEFAULT 0"),
+    ("salary_low", "REAL"),
+    ("salary_high", "REAL"),
+)
 
 DISCLAIMER = {
     "az": "Trendlər yalnız Ingress Job-un izlədiyi elanlar əsasında hesablanır, bütün bazarı əks etdirmir.",
@@ -84,10 +95,27 @@ def ensure_trend_tables(conn) -> None:
             relocation INTEGER NOT NULL DEFAULT 0,
             ad_count INTEGER NOT NULL DEFAULT 0,
             salary_median REAL,
+            salary_currency TEXT NOT NULL DEFAULT '',
+            salary_n INTEGER NOT NULL DEFAULT 0,
+            salary_low REAL,
+            salary_high REAL,
             PRIMARY KEY (day, skill_id, category, region, remote, relocation)
         );
         """
     )
+    try:
+        existing = {
+            str(row[1])
+            for row in conn.execute("PRAGMA table_info(skill_trend_daily)").fetchall()
+        }
+    except Exception:
+        existing = set()
+    for name, decl in _SALARY_COLUMNS:
+        if name not in existing:
+            try:
+                conn.execute(f"ALTER TABLE skill_trend_daily ADD COLUMN {name} {decl}")
+            except Exception:
+                pass
     conn.execute(
         "CREATE INDEX IF NOT EXISTS skill_trend_daily_skill_day ON skill_trend_daily(skill_id, day)"
     )
@@ -221,6 +249,99 @@ def growth_wow(current_share: float, prior_share: float, *, ad_count: int) -> fl
     return round((float(current_share) - float(prior_share)) / prior, 4)
 
 
+def combine_salary_days(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Merge daily salary rows for one skill. Same currency only; suppress if n low."""
+    by_currency: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        currency = str(row.get("currency") or "").strip().upper()
+        n = int(row.get("n") or 0)
+        med = row.get("median")
+        if not currency or n <= 0 or not isinstance(med, (int, float)):
+            continue
+        by_currency[currency].append(
+            {
+                "median": float(med),
+                "n": n,
+                "low": float(row["low"]) if isinstance(row.get("low"), (int, float)) else float(med),
+                "high": float(row["high"])
+                if isinstance(row.get("high"), (int, float))
+                else float(med),
+            }
+        )
+    if not by_currency:
+        return None
+    currency, parts = max(by_currency.items(), key=lambda kv: (sum(p["n"] for p in kv[1]), kv[0]))
+    total_n = sum(p["n"] for p in parts)
+    if total_n < MIN_SALARY_SAMPLES:
+        return None
+    expanded: list[float] = []
+    for part in parts:
+        expanded.extend([part["median"]] * part["n"])
+    return {
+        "median": round(float(median(expanded)), 2),
+        "low": round(min(p["low"] for p in parts), 2),
+        "high": round(max(p["high"] for p in parts), 2),
+        "currency": currency,
+        "period": "year",
+        "n": total_n,
+    }
+
+
+def _skill_salaries(
+    conn,
+    *,
+    start: str,
+    end: str,
+    category: str,
+    region: str,
+    skill_ids: list[int],
+) -> dict[int, dict]:
+    if not skill_ids:
+        return {}
+    clauses = [
+        "day >= ?",
+        "day <= ?",
+        "COALESCE(salary_n, 0) > 0",
+        f"skill_id IN ({','.join('?' for _ in skill_ids)})",
+    ]
+    params: list[Any] = [start, end, *skill_ids]
+    if category:
+        clauses.append("category = ?")
+        params.append(category)
+    if region:
+        clauses.append("region = ?")
+        params.append(region)
+    sql = f"""
+        SELECT skill_id, salary_median, salary_currency, salary_n, salary_low, salary_high
+        FROM skill_trend_daily
+        WHERE {' AND '.join(clauses)}
+    """
+    try:
+        rows = conn.execute(sql, params).fetchall()
+    except Exception:
+        return {}
+    by_skill: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        skill_id = int(_row_get(row, "skill_id", 0) or 0)
+        if skill_id <= 0:
+            continue
+        by_skill[skill_id].append(
+            {
+                "median": _row_get(row, "salary_median", 1),
+                "currency": _row_get(row, "salary_currency", 2),
+                "n": _row_get(row, "salary_n", 3),
+                "low": _row_get(row, "salary_low", 4),
+                "high": _row_get(row, "salary_high", 5),
+            }
+        )
+    out: dict[int, dict] = {}
+    for skill_id, parts in by_skill.items():
+        combined = combine_salary_days(parts)
+        if combined is not None:
+            out[skill_id] = combined
+    return out
+
+
 def trends_payload(
     conn,
     *,
@@ -249,7 +370,16 @@ def trends_payload(
     )
 
     ranked = sorted(current.items(), key=lambda kv: (-kv[1], kv[0]))[:chosen_limit]
-    meta = _skill_meta(conn, [skill_id for skill_id, _ in ranked])
+    skill_ids = [skill_id for skill_id, _ in ranked]
+    meta = _skill_meta(conn, skill_ids)
+    salaries = _skill_salaries(
+        conn,
+        start=cur_start,
+        end=cur_end,
+        category=cat,
+        region=reg,
+        skill_ids=skill_ids,
+    )
     items: list[dict] = []
     for skill_id, ad_count in ranked:
         info = meta.get(skill_id) or {}
@@ -268,6 +398,7 @@ def trends_payload(
                 "growth_wow": growth_wow(share, prior_share, ad_count=ad_count),
                 "category_hint": str(info.get("category_hint") or ""),
                 "academy_courses": list(info.get("academy_courses") or []),
+                "salary": salaries.get(skill_id),
             }
         )
 

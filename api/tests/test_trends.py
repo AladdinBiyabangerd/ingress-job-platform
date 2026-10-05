@@ -15,7 +15,13 @@ from app.auth_oidc import VerifiedAccess
 from app.cabinet_store import ensure_schema
 from app.cv_queue import ensure_cv_queue_tables
 from app.main import app
-from app.trends import MIN_ADS_FOR_GROWTH, growth_wow, trends_payload
+from app.trends import (
+    MIN_ADS_FOR_GROWTH,
+    MIN_SALARY_SAMPLES,
+    combine_salary_days,
+    growth_wow,
+    trends_payload,
+)
 
 
 def user(scopes: str, subject: str) -> VerifiedAccess:
@@ -140,6 +146,26 @@ class TrendsTests(unittest.TestCase):
         self.assertIsNotNone(value)
         self.assertAlmostEqual(value, (0.5 - 0.4) / 0.4, places=3)
 
+    def test_combine_salary_days_requires_min_samples(self):
+        few = [
+            {"median": 50000, "currency": "GBP", "n": MIN_SALARY_SAMPLES - 1, "low": 40_000, "high": 60_000}
+        ]
+        self.assertIsNone(combine_salary_days(few))
+        enough = [
+            {
+                "median": 50000,
+                "currency": "GBP",
+                "n": MIN_SALARY_SAMPLES,
+                "low": 40_000,
+                "high": 60_000,
+            }
+        ]
+        combined = combine_salary_days(enough)
+        self.assertIsNotNone(combined)
+        self.assertEqual(combined["currency"], "GBP")
+        self.assertEqual(combined["n"], MIN_SALARY_SAMPLES)
+        self.assertEqual(combined["median"], 50000.0)
+
     def test_public_trends_endpoint(self):
         self._seed_trend_rows()
         res = self.client.get("/api/v1/trends?category=Backend&lang=en&window_days=7")
@@ -167,6 +193,31 @@ class TrendsTests(unittest.TestCase):
         java = next(item for item in payload["items"] if item["name"] == "Java")
         # 30 skill ads / 30 Backend jobs on 2026-10-05 in the 7d window
         self.assertGreater(java["share"], 0.5)
+
+    def test_trends_payload_salary_signal(self):
+        ids = self._skill_ids()
+        self._insert_job(title="SalJob", day="2026-10-05", category="Backend")
+        with sqlite3.connect(self.db) as conn:
+            conn.execute(
+                """
+                INSERT INTO skill_trend_daily (
+                    day, skill_id, category, region, remote, relocation, ad_count,
+                    salary_median, salary_currency, salary_n, salary_low, salary_high
+                ) VALUES (?, ?, 'Backend', '', 1, 0, 10, 55000, 'GBP', ?, 40000, 70000)
+                """,
+                ("2026-10-05", ids["Java"], MIN_SALARY_SAMPLES),
+            )
+            conn.commit()
+            conn.row_factory = sqlite3.Row
+            payload = trends_payload(
+                conn, category="Backend", window_days=7, lang="en"
+            )
+        java = next(item for item in payload["items"] if item["name"] == "Java")
+        self.assertIsNotNone(java["salary"])
+        self.assertEqual(java["salary"]["currency"], "GBP")
+        self.assertEqual(java["salary"]["n"], MIN_SALARY_SAMPLES)
+        self.assertEqual(java["salary"]["median"], 55000.0)
+        self.assertEqual(java["salary"]["period"], "year")
 
     def test_skill_gap_gets_share_when_trends_present(self):
         ids = self._skill_ids()
