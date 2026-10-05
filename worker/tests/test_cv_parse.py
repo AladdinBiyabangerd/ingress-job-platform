@@ -1,4 +1,4 @@
-"""Rules-only CV parser prototype (Phase 1.1 + OCR). No AI."""
+"""CV parser (Phase 1.1 + OCR + AI #1 soft path)."""
 
 from __future__ import annotations
 
@@ -22,6 +22,14 @@ FIXTURES = Path(__file__).parent / "fixtures" / "cv"
 
 
 class CvParseTextTest(unittest.TestCase):
+    def setUp(self):
+        # Keep these tests on the rules/OCR path even if a local API key is set.
+        self._env = patch.dict(os.environ, {"CV_AI_FALLBACK_ENABLED": "0"}, clear=False)
+        self._env.start()
+
+    def tearDown(self):
+        self._env.stop()
+
     def test_sample_backend_extracts_contact_skills_and_years(self):
         text = (FIXTURES / "sample_backend.txt").read_text(encoding="utf-8")
         profile = parse_text(text)
@@ -87,6 +95,13 @@ Baku State
 
 
 class CvParseFilesTest(unittest.TestCase):
+    def setUp(self):
+        self._env = patch.dict(os.environ, {"CV_AI_FALLBACK_ENABLED": "0"}, clear=False)
+        self._env.start()
+
+    def tearDown(self):
+        self._env.stop()
+
     def test_plain_text_bytes(self):
         data = b"Ada Lovelace\nada@example.com\nSkills\nPython, Django\n"
         profile = parse_bytes(data, filename="cv.txt")

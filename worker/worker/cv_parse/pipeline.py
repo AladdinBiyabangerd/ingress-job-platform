@@ -1,17 +1,19 @@
-"""Orchestrate rules-only CV → profile JSON (plan §5.2). No AI."""
+"""Orchestrate CV → profile JSON (plan §5.2): rules first, AI #1 if low confidence."""
 
 from __future__ import annotations
 
 import re
+import sqlite3
 from datetime import date
 
+from worker.cv_parse.ai_fallback import maybe_ai_fallback
 from worker.cv_parse.contact import extract_contact
 from worker.cv_parse.dates import find_ranges, iso_month, merge_years
 from worker.cv_parse.sections import split_sections
 from worker.cv_parse.text import extract
 from worker.techstack import find_stack
 
-PARSER_VERSION = "1.1"
+PARSER_VERSION = "1.2"
 
 _SENIORITY_PAT = re.compile(
     r"(?i)\b(intern|junior|jr\.?|middle|mid-level|mid\b|senior|sr\.?|lead|principal|staff)\b"
@@ -29,8 +31,10 @@ def parse_bytes(
     *,
     filename: str = "",
     content_type: str = "",
+    conn: sqlite3.Connection | None = None,
+    ai_fallback: bool = True,
 ) -> dict:
-    """Extract text from file bytes, then run the rules parser."""
+    """Extract text, rules-parse, then optional AI #1 when confidence is low."""
     extracted = extract(data, filename=filename, content_type=content_type)
     profile = parse_text(extracted.text)
     meta = profile.setdefault("parse_meta", {})
@@ -44,6 +48,9 @@ def parse_bytes(
         meta["error"] = extracted.error
     elif extracted.error:
         meta["extract_warning"] = extracted.error
+    if ai_fallback and extracted.text:
+        profile = maybe_ai_fallback(profile, extracted.text, conn=conn)
+        profile.setdefault("parse_meta", {})["parser_version"] = PARSER_VERSION
     return profile
 
 

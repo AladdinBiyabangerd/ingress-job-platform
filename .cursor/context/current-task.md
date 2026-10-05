@@ -9,13 +9,15 @@
 - Phase 1.4: profile confirm screen (`/profile/review`)
 - Phase 1.5: role suggestions (`GET /api/v1/me/roles`)
 - Phase 1.6: OCR text extract for scans (Tesseract)
-  - Images (png/jpg/…) via Pillow + pytesseract
-  - Low-text PDFs (<40 chars digital extract) → pypdfium2 render + OCR
-  - Soft-fail: `ocr_unavailable` / `ocr_disabled` / `ocr_empty` in `parse_meta.error`
-  - `parse_meta.text_extract`: `pdf` | `docx` | `text` | `ocr` | `pdf+ocr`
-  - Env: `CV_OCR_ENABLED` (default on), `CV_OCR_LANG` (default `eng`), `CV_OCR_SCALE`
-  - Worker Docker installs `tesseract-ocr`; deps in `worker/pyproject.toml`
-  - Tests: `worker/tests/test_cv_parse.py` (mocked OCR paths)
+- Phase 1.7: AI #1 fallback + `ai_gateway` skeleton
+  - `worker/worker/ai_gateway/`: redact, cache (`ai_cache`), daily budget (`ai_usage_daily`), cost estimate, OTEL span, feature flag
+  - Trigger: rules `confidence` < `CV_AI_LOW_CONFIDENCE` (default 0.55)
+  - PII mask → OpenAI structured JSON → skill dictionary + in-text filter
+  - Contact always from rules; soft-fail keeps rules profile
+  - `parse_meta.method`: `rules` | `llm`; `prompt_version`: `cv-parse-ai1-v1`
+  - Parser version `1.2`
+  - Env: `OPENAI_API_KEY`, `AI_GATEWAY_ENABLED`, `AI_GATEWAY_MODEL`, `AI_GATEWAY_DAILY_CALL_LIMIT`, `CV_AI_FALLBACK_ENABLED`, `CV_AI_LOW_CONFIDENCE`
+  - Tests: `worker/tests/test_ai_gateway.py`, `test_cv_ai_fallback.py`
 
 ## Decisions
 - Deterministic first; AI only at the 4 named plan points
@@ -28,22 +30,24 @@
 - No matching consent → empty roles + `matching_consent: false` (not 403)
 - OCR before AI #1 (plan §17: measure rules/OCR first, then add LLM fallback)
 - OCR optional at runtime: digital CVs still parse if Tesseract missing
-- Parser version bumped to `1.1` (extract path metadata)
+- AI gateway default-on only when `OPENAI_API_KEY` set; over-budget → AI-less mode
+- LLM never receives raw PII; skills not in dictionary or CV text are dropped
 
 ## Remaining
-- Later Phase 1: AI #1 fallback (low confidence), export/delete
+- Later Phase 1: export/delete (`GET/DELETE /api/v1/me`)
 - Phase 2+: `/me/matches`, skill-gap, feedback, `/me/recommendations` page
 - Optional: `/profile/cv` upload page (plan §13.2); parse still enqueue on apply
 - Optional: dedicated `/settings/privacy`; privacy lives on `/profile` for now
 - Optional: anonymized test CV set (plan §17.2); aze/rus Tessdata packs in Docker
 - Optional: local `brew install tesseract` for real OCR smoke tests
+- Optional: copy `ai_gateway` into API when matching/embeddings need it
 
 ## Relevant files
-- `worker/worker/cv_parse/ocr.py`, `text.py`, `pipeline.py`
-- `worker/Dockerfile`, `worker/pyproject.toml`, `worker/uv.lock`
-- `worker/tests/test_cv_parse.py`
-- `api/app/role_suggestions.py`, `api/app/routers/me.py`
-- `docs/ingress-job-cv-ai-plan.pdf` (§5.1 / §14 / §17)
+- `worker/worker/ai_gateway/` (`gateway.py`, `redact.py`)
+- `worker/worker/cv_parse/ai_fallback.py`, `pipeline.py`
+- `worker/worker/cv_queue.py`
+- `worker/tests/test_ai_gateway.py`, `test_cv_ai_fallback.py`
+- `docs/ingress-job-cv-ai-plan.pdf` (§5.1 / §11 / §17)
 
 ## Continue prompt (new chat)
-Phase 1 next: AI #1 parse fallback when rules confidence is low (PII mask → structured LLM JSON → dictionary filter). Or export/delete (`GET/DELETE /api/v1/me`). Read `.cursor/context/current-task.md` and plan §5.1 AI #1 rules + §11 ai_gateway.
+Phase 1 next: export/delete (`GET/DELETE /api/v1/me` — JSON + original CV files; hard-delete profile/skills/embeddings/CV/email prefs; audit keeps pseudonym). Read `.cursor/context/current-task.md` and plan §10.3.

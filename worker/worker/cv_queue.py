@@ -1,6 +1,6 @@
 """parse_cv_queue + candidate_profile stub (Phase 1.2).
 
-Enqueue on CV upload; worker drains with rules + OCR cv_parse. No AI #1.
+Enqueue on CV upload; worker drains with rules + OCR + AI #1 fallback.
 candidate_profile lives in the shared jobs DB (plan §12). It is separate from
 accounts.sqlite candidate_profiles (display name / phone / email only).
 """
@@ -12,6 +12,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
+from worker.ai_gateway import ensure_ai_tables
 from worker.cv_files import read_cv
 from worker.cv_parse import parse_bytes
 
@@ -286,7 +287,7 @@ def _process_one(conn, row: sqlite3.Row, *, root: Path | None) -> str:
     if data is None:
         _finish(conn, int(row["id"]), status="failed", error="cv_missing")
         return "failed"
-    profile = parse_bytes(data, filename=row["cv_name"] or stored)
+    profile = parse_bytes(data, filename=row["cv_name"] or stored, conn=conn)
     upsert_candidate_profile(
         conn,
         user_id=row["user_id"],
@@ -308,8 +309,9 @@ def drain_parse_cv_queue(
     limit: int = PER_RUN,
     cv_root: Path | None = None,
 ) -> dict[str, int]:
-    """Claim pending jobs and run rules-only parse. Returns status counts."""
+    """Claim pending jobs and run rules (+ AI #1 if needed). Returns status counts."""
     ensure_cv_queue_tables(conn)
+    ensure_ai_tables(conn)
     stats = {"claimed": 0, "done": 0, "failed": 0}
     claimed = _claim(conn, limit)
     stats["claimed"] = len(claimed)
