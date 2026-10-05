@@ -302,8 +302,10 @@ def _apply_schema(conn) -> None:
     # Same parse_cv_queue / candidate_profile tables the worker drains
     # (worker/worker/cv_queue.py). API ensures they exist when it opens first.
     from app.cv_queue import ensure_cv_queue_tables
+    from app.consents import ensure_consent_tables
 
     ensure_cv_queue_tables(conn)
+    ensure_consent_tables(conn)
     hide_retired_local(conn)
     conn.commit()
 

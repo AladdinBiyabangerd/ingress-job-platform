@@ -5,6 +5,7 @@ import { loginHref } from "../lib/auth-link";
 import { applyFormFromJob } from "../lib/apply-form";
 import { text } from "../lib/copy";
 import { ApplicationList, appStatusLabel } from "./application-list";
+import { ConsentFields, grantsFromPayload } from "./consent-fields";
 
 const CV_OK = /\.(pdf|doc|docx)$/i;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -26,6 +27,8 @@ export function AccountActions({ locale, jobId, returnTo, onsite, hasOriginal, f
   const [profile, setProfile] = useState(null);
   const [phoneEdited, setPhoneEdited] = useState(false);
   const [emailEdited, setEmailEdited] = useState(false);
+  const [consentPayload, setConsentPayload] = useState(null);
+  const [grants, setGrants] = useState({ matching: false, emails: false, recruiter_visibility: false });
 
   useEffect(() => {
     let cancelled = false;
@@ -61,6 +64,24 @@ export function AccountActions({ locale, jobId, returnTo, onsite, hasOriginal, f
     if (phoneOn && !phoneEdited) setPhone(profile.phone || "");
     if (emailOn && !emailEdited) setEmail(profile.email || "");
   }, [profile, phoneOn, emailOn, phoneEdited, emailEdited]);
+
+  const showConsents = Boolean(onsite && spec?.cv?.enabled);
+
+  useEffect(() => {
+    if (!showConsents) return undefined;
+    let cancelled = false;
+    fetch(`/api/auth/consents?lang=${encodeURIComponent(locale)}`, { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        setConsentPayload(data);
+        setGrants(grantsFromPayload(data));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [showConsents, locale]);
 
   const current = mine.find((item) => item.job_id === jobId);
 
@@ -138,6 +159,13 @@ export function AccountActions({ locale, jobId, returnTo, onsite, hasOriginal, f
       setError(res.status === 422 ? t.applyFieldRequired : t.applyError);
       return;
     }
+    if (showConsents && consentPayload) {
+      await fetch(`/api/auth/consents?lang=${encodeURIComponent(locale)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(grants),
+      }).catch(() => {});
+    }
     setMessage("");
     setPhoneEdited(false);
     setEmailEdited(false);
@@ -207,6 +235,17 @@ export function AccountActions({ locale, jobId, returnTo, onsite, hasOriginal, f
                 onChange={(event) => setFile(event.target.files?.[0] || null)}
               />
             </label>
+          ) : null}
+          {showConsents && consentPayload ? (
+            <ConsentFields
+              payload={consentPayload}
+              grants={grants}
+              visibility={consentPayload.visibility || "anonymous"}
+              onGrantChange={(kind, value) => setGrants((current) => ({ ...current, [kind]: value }))}
+              onVisibilityChange={() => {}}
+              showVisibility={false}
+              idPrefix={`apply-consent-${jobId}`}
+            />
           ) : null}
           <div className="ad-actions">
             <button type="submit" className="btn primary" disabled={busy}>{t.applySend}</button>

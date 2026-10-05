@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
+import { ConsentFields, grantsFromPayload } from "./consent-fields";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 
@@ -20,6 +21,11 @@ export function ProfileForm({ locale }) {
   const [companyNote, setCompanyNote] = useState("");
   const [applicantError, setApplicantError] = useState("");
   const [applicantNote, setApplicantNote] = useState("");
+  const [consentPayload, setConsentPayload] = useState(null);
+  const [grants, setGrants] = useState({ matching: false, emails: false, recruiter_visibility: false });
+  const [visibility, setVisibility] = useState("anonymous");
+  const [privacyError, setPrivacyError] = useState("");
+  const [privacyNote, setPrivacyNote] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -47,6 +53,23 @@ export function ProfileForm({ locale }) {
 
   const showCompany = Boolean(me?.authenticated && (me.employer || me.staff));
   const showApplicant = Boolean(me?.authenticated && (me.candidate || me.staff));
+
+  useEffect(() => {
+    if (!showApplicant) return undefined;
+    let cancelled = false;
+    fetch(`/api/auth/consents?lang=${encodeURIComponent(locale)}`, { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        setConsentPayload(data);
+        setGrants(grantsFromPayload(data));
+        setVisibility(data.visibility || "anonymous");
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [showApplicant, locale]);
 
   async function saveCompany(event) {
     event.preventDefault();
@@ -99,6 +122,26 @@ export function ProfileForm({ locale }) {
     setPhone(person.phone || "");
     setEmail(person.email || "");
     setApplicantNote(t.profileSaved);
+  }
+
+  async function savePrivacy(event) {
+    event.preventDefault();
+    setPrivacyError("");
+    setPrivacyNote("");
+    const res = await fetch(`/api/auth/consents?lang=${encodeURIComponent(locale)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...grants, visibility }),
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setPrivacyError(t.privacyError);
+      return;
+    }
+    setConsentPayload(payload);
+    setGrants(grantsFromPayload(payload));
+    setVisibility(payload.visibility || visibility);
+    setPrivacyNote(t.privacySaved);
   }
 
   return (
@@ -169,6 +212,27 @@ export function ProfileForm({ locale }) {
               </form>
             ) : null}
           </div>
+          {showApplicant && consentPayload ? (
+            <form className="form-card profile-card profile-privacy" onSubmit={savePrivacy}>
+              <div className="cabinet-form-head">
+                <h2>{t.privacyTitle}</h2>
+                <p className="hint">{t.privacyLede}</p>
+              </div>
+              {privacyError ? <p className="note">{privacyError}</p> : null}
+              {privacyNote ? <p className="note">{privacyNote}</p> : null}
+              <ConsentFields
+                payload={consentPayload}
+                grants={grants}
+                visibility={visibility}
+                onGrantChange={(kind, value) => setGrants((current) => ({ ...current, [kind]: value }))}
+                onVisibilityChange={setVisibility}
+                idPrefix="profile-consent"
+              />
+              <div className="ad-actions">
+                <button type="submit" className="btn primary">{t.companySave}</button>
+              </div>
+            </form>
+          ) : null}
         </div>
       ) : (
         <section className="empty profile-gate">

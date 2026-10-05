@@ -38,6 +38,7 @@ compose.yaml
 - Staff moderation (manual role): approve/reject/edit, crawled job tools
 - Aggregation: remote/relocation IT sources (API/RSS/ATS); Jooble/Reed gated by API keys + monthly budgets
 - CV parse queue (`parse_cv_queue` → rules `worker.cv_parse` → jobs-DB `candidate_profile` stub); accounts.sqlite `candidate_profiles` remains contact-only
+- Consents (`consent` in jobs DB; `GET/PUT /api/v1/consents`); copy from `docs/cv-ai/consent-copy-v1.json`; visibility on `candidate_profile`
 
 ## Integrations
 

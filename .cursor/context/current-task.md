@@ -16,6 +16,12 @@
   - Worker: one-time enqueue of existing application CVs; drain in each pass via `parse_bytes`
   - CV bytes: local `CV_ROOT` / `api/data/cvs` or S3 (`boto3` on worker)
   - Tests: `worker/tests/test_cv_queue.py`; apply test asserts queue row
+- Phase 1.3: consent API/UI using `consent-copy-v1.json`
+  - Jobs-DB table `consent` (user_id, kind, granted, version, ts, ip, ua)
+  - `GET/PUT /api/v1/consents` (+ BFF `/api/auth/consents`); copy localized az/en/ru
+  - Visibility (`hidden`/`anonymous`/`public`) stored on `candidate_profile`
+  - UI: privacy form on `/profile`; consent checkboxes on apply when CV enabled
+  - Tests: `api/tests/test_consents.py`
 
 ## Decisions
 - Principle: deterministic first; AI only at the 4 named points in the plan
@@ -23,21 +29,22 @@
 - Parser skills reuse curated `techstack` patterns (same canonical names as skill_dictionary)
 - `candidate_profile` (jobs DB) ≠ `candidate_profiles` (accounts.sqlite contact fields)
 - Confirmed profiles are never overwritten by automatic parse
-- No profile confirm UI / consent API / AI #1 in 1.2
+- Consent copy remains stub pending legal review; API serves `docs/cv-ai/consent-copy-v1.json`
+- Defaults: all consents off; visibility default `anonymous` (copy); profile stub may still be `hidden` until user sets it
 
 ## Remaining
-- Phase 1.3: consent API/UI using `consent-copy-v1.json`
-- Later in Phase 1: profile confirm screen, role suggestions, OCR, AI #1 fallback
+- Later in Phase 1: profile confirm screen, role suggestions, OCR, AI #1 fallback, export/delete
 - Optional: real anonymized test CV set (plan §17.2) — not inventable in-repo
 - Optional later: dedicated 1–5 min CV-parse schedule (plan §4 / §13.3); currently runs on hourly pass
+- Optional: dedicated `/profile/cv` and `/settings/privacy` routes (plan §13.2); privacy lives on `/profile` for now
 
 ## Relevant files
-- `worker/worker/cv_queue.py`, `worker/worker/cv_files.py`
-- `worker/worker/cv_parse/`, `worker/worker/runner.py`, `worker/worker/db.py`
-- `api/app/cv_queue.py`, `api/app/applications.py`, `api/app/cabinet_store.py`
-- `worker/tests/test_cv_queue.py`
+- `api/app/consents.py`, `api/app/routers/consents.py`, `api/tests/test_consents.py`
+- `frontend/components/consent-fields.js`, `frontend/components/profile-form.js`
+- `frontend/components/account-actions.js`, `frontend/app/api/auth/consents/route.js`
 - `docs/cv-ai/consent-copy-v1.json`
+- `worker/worker/cv_queue.py`, `worker/worker/cv_parse/`
 - `docs/ingress-job-cv-ai-plan.pdf`
 
 ## Continue prompt (new chat)
-Phase 1.3: consent API/UI using `docs/cv-ai/consent-copy-v1.json`. Read `.cursor/context/current-task.md` and plan §12 consent / §13.1 `/api/consents`.
+Phase 1 next: profile confirm screen (`/profile/review`) using draft `candidate_profile` from jobs DB. Read `.cursor/context/current-task.md` and plan §5 / §13.2.

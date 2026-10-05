@@ -1372,6 +1372,36 @@ textarea { min-height: 120px; resize: vertical; }
   .profile-grid { grid-template-columns: 1fr; }
 }
 
+.consent-fields {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.consent-item,
+.consent-visibility {
+  display: grid;
+  gap: 4px;
+}
+
+.consent-legal {
+  font-style: italic;
+}
+
+.consent-fields .consent-visibility {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid #e8eaee;
+}
+
+.form-card.profile-privacy {
+  margin-top: 16px;
+  height: auto;
+}
+
 .bell {
   position: relative;
   width: 34px;
