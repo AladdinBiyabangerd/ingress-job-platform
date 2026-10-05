@@ -18,7 +18,9 @@ class AtsGroupsTest(unittest.TestCase):
             self.assertIn(name, BUILDERS)
             self.assertGreaterEqual(len(boards), 3, name)
             self.assertEqual(len(set(boards)), len(boards), name)
-        self.assertEqual(enabled, set(BUILDERS))
+        names = {row["name"] for row in SOURCES}
+        self.assertTrue(enabled <= set(BUILDERS))
+        self.assertTrue(set(BUILDERS) <= names)
 
     def test_rotation_covers_all_boards(self):
         cls = ATS_GROUP_CONNECTORS["Greenhouse boards (US West)"]

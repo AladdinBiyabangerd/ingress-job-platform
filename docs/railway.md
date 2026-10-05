@@ -117,7 +117,10 @@ when the key is missing (hh.ru answers 403 to anonymous API calls). With
 `JOOBLE_API_KEY` set, Jooble runs at most every 6 hours with 3 requests and
 stops for the month at 450 counted requests (`JOOBLE_MONTHLY_BUDGET`, table
 `api_usage`). The key's 500-request limit is shared by every environment that
-uses it, so set it on one worker only.
+uses it, so set it on one worker only. `REED_API_KEY` feeds the Reed.co.uk
+connector (every 6 hours, soft monthly cap `REED_MONTHLY_BUDGET`, default
+3000), but the Reed row stays switched off while www.reed.co.uk/robots.txt
+disallows `/api/`; setting the key alone does not start it.
 
 CV upload uses the bucket only when `BUCKET_NAME`, `BUCKET_ACCESS_KEY`, and
 `BUCKET_SECRET_KEY` are all set. Otherwise files stay in `api/data/cvs/`.

@@ -355,7 +355,18 @@ SOURCES: list[dict] = [
         "https://www.reed.co.uk/api/1.0/search",
         enabled=False,
         go="pending",
-        note="Açar olmadan sönülüdür. /api/ açarsız çağırılmır. HTML toplanmır.",
+        note=(
+            "Konnektor hazırdır, amma sönülüdür: www.reed.co.uk/robots.txt bütün botlar üçün "
+            "\"Disallow: /api/\" yazır və qaydamız robots.txt-ə uyğun olmayan URL-i oxumamaqdır. "
+            "Sahib bu açarlı rəsmi API üçün istisnaya razı olsa, sətir enabled=True, go=\"go\" edilir. "
+            "Dizayn: yalnız REED_API_KEY olduqda (HTTP Basic, açar istifadəçi adı), ən çox 6 saatda bir, "
+            "saniyədə 1 sorğu, 5 IT axtarışı (remote software developer, software engineer, devops "
+            "engineer, data engineer, frontend developer), 1-ci səhifə (50 nəticə), yalnız yeni "
+            "texniki elan üçün detal sorğusu (keçiddə ən çox 30). Sorğular api_usage cədvəlində ay üzrə "
+            "sayılır, REED_MONTHLY_BUDGET (standart 3000) dolanda Reed çağırılmır. Maaş GBP ilə "
+            "salary sütununa yazılır, link reed.co.uk-dakı orijinal elandır. Reed-in müraciət sayı saxlanmır."
+        ),
+        credit_note="Jobs from the Reed.co.uk Jobseeker API. The link opens the original ad on reed.co.uk.",
         api_key_env="REED_API_KEY",
     ),
     _row(

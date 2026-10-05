@@ -26,6 +26,7 @@ from worker.connectors.ats import (
 from worker.connectors.boards import JapanDevConnector, RelocateMeConnector, RemoteFirstJobsConnector
 from worker.connectors.djinni import DjinniConnector
 from worker.connectors.jooble import JoobleConnector
+from worker.connectors.reed import ReedConnector
 from worker.connectors.regional import (
     GetOnBoardConnector,
     HasjobConnector,
@@ -78,6 +79,9 @@ BUILDERS = {
     "Remote First Jobs": RemoteFirstJobsConnector,
     **ATS_GROUP_CONNECTORS,
     "Jooble": JoobleConnector,
+    # Built and tested, but its catalog row stays off: robots.txt has
+    # "Disallow: /api/" (see connectors/reed.py and the catalog note).
+    "Reed.co.uk": ReedConnector,
     "Workable boards (Europe)": WorkableConnector,
     "Recruitee boards (Netherlands)": RecruiteeConnector,
     "Personio boards (Germany)": PersonioConnector,

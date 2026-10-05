@@ -141,34 +141,55 @@ class PoliteClient:
     def get_text(self, url: str, accept: str | None = None) -> str:
         return self.get(url, accept=accept).text
 
-    def get_json(self, url: str):
-        return self.get(url, accept="application/json").json()
+    def get_json(self, url: str, *, auth: tuple[str, str] | None = None, shown: str | None = None):
+        response = self.get(url, accept="application/json", auth=auth, shown=shown)
+        try:
+            return response.json()
+        except ValueError:
+            raise SourceFailed(f"non-JSON answer from {shown or url}") from None
 
-    def get(self, url: str, accept: str | None = None) -> httpx.Response:
+    def get(
+        self,
+        url: str,
+        accept: str | None = None,
+        *,
+        auth: tuple[str, str] | None = None,
+        shown: str | None = None,
+    ) -> httpx.Response:
+        """robots.txt is checked for the exact URL first. ``auth`` is HTTP Basic
+        for keyed official APIs; ``shown`` replaces the URL in error messages."""
+        label = shown or url
         self._check_url(url)
         if not self.allowed(url):
-            raise Disallowed(url)
+            raise Disallowed(label)
         self._pause(_host(url))
         headers = {"Accept": accept} if accept else None
         try:
-            response = self._http.get(url, headers=headers)
+            if auth is not None:
+                response = self._http.get(url, headers=headers, auth=auth)
+            else:
+                response = self._http.get(url, headers=headers)
         except httpx.TimeoutException as exc:
-            raise SourceFailed(f"timeout for {url}") from exc
+            raise SourceFailed(f"timeout for {label}") from (None if auth else exc)
         except httpx.HTTPError as exc:
-            raise SourceFailed(f"request failed for {url}: {exc.__class__.__name__}") from exc
+            raise SourceFailed(
+                f"request failed for {label}: {exc.__class__.__name__}"
+            ) from (None if auth else exc)
         final = str(response.url)
         self._check_url(final)
         if _host(final) != _host(url):
+            if auth is not None:
+                raise SourceFailed(f"unexpected redirect for {label}")
             self._ensure_robots(final)
         if not self.allowed(final):
-            raise Disallowed(final)
+            raise Disallowed(shown or final)
         if response.status_code in BLOCK_STATUSES:
-            raise SourceBlocked(f"HTTP {response.status_code} for {url}")
+            raise SourceBlocked(f"HTTP {response.status_code} for {label}")
         if response.status_code == 404:
-            raise NotFound(url)
+            raise NotFound(label)
         if response.status_code >= 400:
-            raise SourceFailed(f"HTTP {response.status_code} for {url}")
-        self._reject_challenge(response.text[:2000], url)
+            raise SourceFailed(f"HTTP {response.status_code} for {label}")
+        self._reject_challenge(response.text[:2000], label)
         return response
 
     def post_json(self, url: str, payload: dict, *, shown: str | None = None):

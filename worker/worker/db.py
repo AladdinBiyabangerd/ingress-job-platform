@@ -196,6 +196,10 @@ class Store:
             # Normalized tech category (techstack.CATEGORIES), "-" = not a tech
             # role, '' = not classified yet.
             "category": "TEXT NOT NULL DEFAULT ''",
+            # Free-text salary shown on the ad, same declaration as the API side
+            # (cabinet_store). Sources with structured pay (Reed) fill it,
+            # e.g. "45,000–55,000 GBP per annum".
+            "salary": "TEXT NOT NULL DEFAULT ''",
         }
         for name, decl in alters.items():
             if name not in cols:
@@ -341,6 +345,7 @@ class Store:
         remote = 1 if item.get("remote") else 0
         relocation = 1 if item.get("relocation") else 0
         category = str(item.get("job_category") or "")[:40]
+        salary = str(item.get("salary") or "").strip()[:120]
         key = norm_key(title, company, city)
         seen = now_iso()
         with self.conn:
@@ -385,6 +390,10 @@ class Store:
                             stack_json, remote, relocation, category, existing["job_id"],
                         ),
                     )
+                    if salary:
+                        self.conn.execute(
+                            "UPDATE jobs SET salary = ? WHERE id = ?", (salary, existing["job_id"])
+                        )
                     self._set_norm_key(int(existing["job_id"]), key)
                 return "updated"
             job = self.conn.execute("SELECT id FROM jobs WHERE norm_key = ?", (key,)).fetchone()
@@ -404,6 +413,8 @@ class Store:
                 )
                 job_id = int(cur.lastrowid)
                 kind = "created"
+                if salary:
+                    self.conn.execute("UPDATE jobs SET salary = ? WHERE id = ?", (salary, job_id))
             self.conn.execute(
                 """
                 INSERT INTO job_sources (
