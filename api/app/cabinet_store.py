@@ -289,6 +289,17 @@ def _apply_schema(conn) -> None:
             weight REAL NOT NULL,
             PRIMARY KEY (role_id, skill_id)
         );
+        CREATE TABLE IF NOT EXISTS skill_trend_daily (
+            day TEXT NOT NULL,
+            skill_id INTEGER NOT NULL REFERENCES skill_dictionary(id),
+            category TEXT NOT NULL DEFAULT '',
+            region TEXT NOT NULL DEFAULT '',
+            remote INTEGER NOT NULL DEFAULT 0,
+            relocation INTEGER NOT NULL DEFAULT 0,
+            ad_count INTEGER NOT NULL DEFAULT 0,
+            salary_median REAL,
+            PRIMARY KEY (day, skill_id, category, region, remote, relocation)
+        );
         """
     )
     conn.execute("CREATE INDEX IF NOT EXISTS job_skill_skill ON job_skill(skill_id)")
@@ -299,6 +310,13 @@ def _apply_schema(conn) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS role_skill_weight_skill ON role_skill_weight(skill_id)"
     )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS skill_trend_daily_skill_day ON skill_trend_daily(skill_id, day)"
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS skill_trend_daily_day ON skill_trend_daily(day)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS skill_trend_daily_category_day ON skill_trend_daily(category, day)"
+    )
     # Same parse_cv_queue / candidate_profile tables the worker drains
     # (worker/worker/cv_queue.py). API ensures they exist when it opens first.
     from app.cv_queue import ensure_cv_queue_tables
@@ -306,6 +324,9 @@ def _apply_schema(conn) -> None:
 
     ensure_cv_queue_tables(conn)
     ensure_consent_tables(conn)
+    from app.matching import ensure_match_tables
+
+    ensure_match_tables(conn)
     hide_retired_local(conn)
     conn.commit()
 

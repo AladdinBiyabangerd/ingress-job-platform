@@ -67,6 +67,7 @@ function MenuIcon({ open }) {
 
 function tabLabel(t, key) {
   if (key === "companies") return t.navCompanies;
+  if (key === "trends") return t.navTrends;
   if (key === "post") return t.post;
   if (key === "admin") return t.admin;
   return t.browse;
@@ -121,6 +122,13 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
             <li>
               <a href={hrefFor(locale, { mode: "profile" })} aria-current={mode === "profile" ? "page" : undefined}>
                 {t.profileOpen}
+              </a>
+            </li>
+          ) : null}
+          {me.candidate || me.staff ? (
+            <li>
+              <a href={hrefFor(locale, { mode: "recommendations" })} aria-current={mode === "recommendations" ? "page" : undefined}>
+                {t.recommendationsOpen}
               </a>
             </li>
           ) : null}

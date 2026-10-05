@@ -42,6 +42,10 @@ compose.yaml
 - Consents (`consent` in jobs DB; `GET/PUT /api/v1/consents`); copy from `docs/cv-ai/consent-copy-v1.json`; visibility on `candidate_profile`
 - CV profile review: `GET/PUT /api/v1/profile` + `/profile/review`; `profile_edit_log`; status draft→confirmed
 - Role suggestions: `GET /api/v1/me/roles` (signature skill weights × years_factor; matching consent; BFF `/api/auth/me/roles`)
+- Job matches: `GET /api/v1/me/matches` structured score (skills/seniority/location/language/freshness); AI #2 off on SQLite; feedback `POST .../matches/{id}/feedback` → `match_feedback`
+- Skill gap: `GET /api/v1/me/skill-gap?role=` from `role_skill_weight`; share/growth from `skill_trend_daily` when present
+- Skill trends: worker `skill_trends.refresh_skill_trends` → `skill_trend_daily`; public `GET /api/v1/trends`; UI `/trends`
+- UI: `/me/recommendations` (roles + matches + gap + 👍/👎); BFF under `/api/auth/me/*`
 - Data rights: `GET /api/v1/me/export` (zip: export.json + CVs); `DELETE /api/v1/me` (hard-delete; audit → pseudonym). Account identity remains `GET /api/v1/me`
 
 ## Integrations

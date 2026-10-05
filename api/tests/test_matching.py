@@ -1,0 +1,283 @@
+"""GET /api/v1/me/matches + feedback — structured scoring (Phase 2)."""
+
+import json
+import sqlite3
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from fastapi.testclient import TestClient
+
+from app.auth_oidc import VerifiedAccess
+from app.cabinet_store import ensure_schema
+from app.cv_queue import ensure_cv_queue_tables
+from app.main import app
+from app.matching import detect_job_seniority, seniority_score
+
+
+def user(scopes: str, subject: str) -> VerifiedAccess:
+    return VerifiedAccess(subject=subject, scopes=frozenset(scopes.split()))
+
+
+SAMPLE = {
+    "contact": {"full_name": "Aysel", "email": "aysel@example.com", "phone": "", "city": "", "country": ""},
+    "headline": "Backend Developer",
+    "seniority": "middle",
+    "total_years": 5.0,
+    "work_history": [],
+    "skills": [
+        {"name": "Java", "years": 5, "level": "advanced", "source": "cv"},
+        {"name": "Spring", "years": 4, "level": "advanced", "source": "cv"},
+        {"name": "Kafka", "years": 2, "level": "", "source": "cv"},
+    ],
+    "languages": [{"code": "en", "name": "English"}],
+    "education": [],
+    "desired_roles": [],
+    "preferences": {"remote": True, "relocation": True, "relocation_countries": [], "needs_visa_sponsorship": None},
+    "salary_expectation": {},
+    "parse_meta": {"method": "rules", "confidence": 0.8, "parser_version": "1.0"},
+}
+
+
+class MatchingTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.db = root / "jobs.sqlite"
+        self.path_patch = patch("app.sqlite_jobs.DB_PATH", self.db)
+        self.path_patch.start()
+        from app import cabinet_store
+
+        cabinet_store._ENSURED.clear()
+        ensure_schema(create=True)
+        self._seed_skills()
+        self.client = TestClient(app)
+        self.headers = {"Authorization": "Bearer test"}
+
+    def tearDown(self):
+        self.path_patch.stop()
+        from app import cabinet_store
+
+        cabinet_store._ENSURED.clear()
+        self.tmp.cleanup()
+
+    def _auth(self, scopes: str, subject: str):
+        return patch("app.account.verify_access_token", return_value=user(scopes, subject))
+
+    def _seed_skills(self):
+        with sqlite3.connect(self.db) as conn:
+            conn.row_factory = sqlite3.Row
+            for name in ("Java", "Spring", "Kafka", "React", "TypeScript"):
+                conn.execute(
+                    """
+                    INSERT INTO skill_dictionary (canonical_name, synonyms, category_hint, academy_course_ids, updated_at)
+                    VALUES (?, '[]', '', '[]', '2026-10-05T12:00:00+00:00')
+                    """,
+                    (name,),
+                )
+            conn.commit()
+
+    def _skill_ids(self):
+        with sqlite3.connect(self.db) as conn:
+            conn.row_factory = sqlite3.Row
+            return {
+                row["canonical_name"]: row["id"]
+                for row in conn.execute("SELECT id, canonical_name FROM skill_dictionary")
+            }
+
+    def _seed_profile(self, subject: str, *, skills=None, prefs=None, status: str = "confirmed"):
+        data = dict(SAMPLE)
+        if skills is not None:
+            data["skills"] = skills
+        if prefs is not None:
+            data["preferences"] = prefs
+        with sqlite3.connect(self.db) as conn:
+            ensure_cv_queue_tables(conn)
+            conn.execute(
+                """
+                INSERT INTO candidate_profile (
+                    user_id, cv_file_key, data, headline, seniority, total_years,
+                    status, parse_method, confidence, visibility, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'anonymous', ?)
+                """,
+                (
+                    subject,
+                    "cvs/aysel.pdf",
+                    json.dumps(data, ensure_ascii=False),
+                    data["headline"],
+                    data["seniority"],
+                    data["total_years"],
+                    status,
+                    "rules",
+                    0.8,
+                    "2026-10-05T12:00:00+00:00",
+                ),
+            )
+            conn.commit()
+
+    def _insert_job(self, *, title, skills, remote=1, relocation=1, language="en", created_at="2026-10-01T12:00:00+00:00"):
+        ids = self._skill_ids()
+        with sqlite3.connect(self.db) as conn:
+            cur = conn.execute(
+                """
+                INSERT INTO jobs (
+                    title, company, city, text, status, created_at, norm_key,
+                    remote, relocation, language, category, tech_stack
+                ) VALUES (?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, 'Backend', ?)
+                """,
+                (
+                    title,
+                    "Acme",
+                    "Berlin",
+                    "Java Spring Kafka role",
+                    created_at,
+                    f"norm-{title}-{created_at}",
+                    remote,
+                    relocation,
+                    language,
+                    json.dumps(skills),
+                ),
+            )
+            job_id = int(cur.lastrowid)
+            for name in skills:
+                conn.execute(
+                    "INSERT INTO job_skill (job_id, skill_id, source) VALUES (?, ?, 'tech_stack')",
+                    (job_id, ids[name]),
+                )
+            conn.commit()
+        return job_id
+
+    def _grant_matching(self, subject: str):
+        with self._auth("job:candidate", subject):
+            res = self.client.put(
+                "/api/v1/consents",
+                headers=self.headers,
+                json={"matching": True},
+            )
+        self.assertEqual(res.status_code, 200, res.text)
+
+    def test_detect_seniority_from_title(self):
+        self.assertEqual(detect_job_seniority("Senior Java Developer"), "senior")
+        self.assertEqual(detect_job_seniority("Junior React Engineer"), "junior")
+        self.assertEqual(seniority_score("middle", "senior"), 0.6)
+        self.assertEqual(seniority_score("senior", "senior"), 1.0)
+
+    def test_ranks_overlapping_job_higher(self):
+        subject = "match-1"
+        self._seed_profile(subject)
+        java_id = self._insert_job(title="Senior Java Developer", skills=["Java", "Spring", "Kafka"])
+        react_id = self._insert_job(title="React Developer", skills=["React", "TypeScript"])
+        self._grant_matching(subject)
+        with self._auth("job:candidate", subject):
+            res = self.client.get("/api/v1/me/matches?lang=en&limit=10", headers=self.headers)
+        self.assertEqual(res.status_code, 200, res.text)
+        body = res.json()
+        self.assertTrue(body["matching_consent"])
+        self.assertFalse(body["ai_rerank"])
+        ids = [item["job_id"] for item in body["matches"]]
+        self.assertIn(java_id, ids)
+        self.assertNotIn(react_id, ids)  # zero skill overlap skipped
+        top = body["matches"][0]
+        self.assertEqual(top["job_id"], java_id)
+        self.assertGreater(top["score"], 0.4)
+        self.assertIn("Java", top["have"])
+        self.assertIn("skills match", top["explanation"])
+        self.assertIn("Remote", top["explanation"])
+
+    def test_no_matching_consent_returns_empty(self):
+        subject = "match-2"
+        self._seed_profile(subject)
+        self._insert_job(title="Java Developer", skills=["Java", "Spring"])
+        with self._auth("job:candidate", subject):
+            res = self.client.get("/api/v1/me/matches", headers=self.headers)
+        self.assertEqual(res.status_code, 200, res.text)
+        body = res.json()
+        self.assertFalse(body["matching_consent"])
+        self.assertEqual(body["matches"], [])
+
+    def test_feedback_up_and_down(self):
+        subject = "match-fb"
+        self._seed_profile(subject)
+        job_id = self._insert_job(title="Java Developer", skills=["Java", "Spring"])
+        self._grant_matching(subject)
+        with self._auth("job:candidate", subject):
+            up = self.client.post(
+                f"/api/v1/me/matches/{job_id}/feedback",
+                headers=self.headers,
+                json={"vote": "up"},
+            )
+            self.assertEqual(up.status_code, 200, up.text)
+            self.assertEqual(up.json()["vote"], "up")
+            down = self.client.post(
+                f"/api/v1/me/matches/{job_id}/feedback",
+                headers=self.headers,
+                json={"vote": "down", "reason": "location"},
+            )
+            self.assertEqual(down.status_code, 200, down.text)
+            self.assertEqual(down.json()["reason"], "location")
+            listed = self.client.get("/api/v1/me/matches", headers=self.headers)
+        self.assertEqual(listed.status_code, 200, listed.text)
+        fb = listed.json()["matches"][0]["feedback"]
+        self.assertEqual(fb["vote"], "down")
+        self.assertEqual(fb["reason"], "location")
+
+    def test_feedback_requires_consent(self):
+        subject = "match-fb-consent"
+        self._seed_profile(subject)
+        job_id = self._insert_job(title="Java Developer", skills=["Java"])
+        with self._auth("job:candidate", subject):
+            res = self.client.post(
+                f"/api/v1/me/matches/{job_id}/feedback",
+                headers=self.headers,
+                json={"vote": "up"},
+            )
+        self.assertEqual(res.status_code, 403)
+
+    def test_employer_forbidden(self):
+        with self._auth("job:employer", "match-emp"):
+            res = self.client.get("/api/v1/me/matches", headers=self.headers)
+        self.assertEqual(res.status_code, 403)
+
+    def test_skill_gap_for_role(self):
+        subject = "gap-1"
+        self._seed_profile(
+            subject,
+            skills=[
+                {"name": "Java", "years": 5, "level": "", "source": "cv"},
+                {"name": "Spring", "years": 3, "level": "", "source": "cv"},
+            ],
+        )
+        ids = self._skill_ids()
+        with sqlite3.connect(self.db) as conn:
+            conn.execute(
+                """
+                INSERT INTO role_taxonomy (canonical_name, category, synonyms, updated_at)
+                VALUES ('Java Developer', 'Backend', '[]', '2026-10-05T12:00:00+00:00')
+                """
+            )
+            role_id = conn.execute(
+                "SELECT id FROM role_taxonomy WHERE canonical_name = 'Java Developer'"
+            ).fetchone()[0]
+            for name, weight in (("Java", 1.0), ("Spring", 0.8), ("Kafka", 0.4)):
+                conn.execute(
+                    "INSERT INTO role_skill_weight (role_id, skill_id, weight) VALUES (?, ?, ?)",
+                    (role_id, ids[name], weight),
+                )
+            conn.commit()
+        self._grant_matching(subject)
+        with self._auth("job:candidate", subject):
+            res = self.client.get(
+                "/api/v1/me/skill-gap?role=Java%20Developer&lang=en",
+                headers=self.headers,
+            )
+        self.assertEqual(res.status_code, 200, res.text)
+        body = res.json()
+        self.assertEqual(body["role"], "Java Developer")
+        self.assertEqual([x["name"] for x in body["have"]], ["Java", "Spring"])
+        self.assertEqual([x["name"] for x in body["missing"]], ["Kafka"])
+        self.assertIn("Learn next: Kafka", body["explanation"])
+
+
+if __name__ == "__main__":
+    unittest.main()

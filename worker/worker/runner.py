@@ -225,6 +225,20 @@ def _run_pass(store: Store) -> int:
             )
     except Exception:
         capture_exception()
+    try:
+        from worker.skill_trends import refresh_skill_trends
+
+        with store.conn:
+            trend_stats = refresh_skill_trends(store.conn)
+        if trend_stats.get("groups") or trend_stats.get("mode") == "backfill":
+            print(
+                "skill_trends: "
+                f"mode={trend_stats.get('mode')} "
+                f"groups={trend_stats.get('groups', 0)}",
+                flush=True,
+            )
+    except Exception:
+        capture_exception()
     return 0
 
 

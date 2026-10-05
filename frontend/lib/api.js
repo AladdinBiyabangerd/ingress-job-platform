@@ -43,3 +43,21 @@ export async function fetchJob(id) {
   if (!res.ok) throw new Error(`job ${res.status}`);
   return res.json();
 }
+
+export async function fetchTrends({
+  category = "",
+  region = "",
+  limit = 30,
+  windowDays = 7,
+  lang = "az",
+} = {}) {
+  const params = new URLSearchParams();
+  if (category) params.set("category", category);
+  if (region) params.set("region", region);
+  if (limit) params.set("limit", String(limit));
+  if (windowDays) params.set("window_days", String(windowDays));
+  if (lang) params.set("lang", lang);
+  const res = await fetch(`${apiBase()}/api/v1/trends?${params.toString()}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`trends ${res.status}`);
+  return res.json();
+}

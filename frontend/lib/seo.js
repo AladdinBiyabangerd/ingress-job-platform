@@ -258,6 +258,35 @@ export function companiesMetadata(locale = "az") {
   });
 }
 
+const TRENDS_COPY = {
+  az: {
+    title: "Bacarıq trendləri",
+    description:
+      "Ingress Job-un izlədiyi elanlarda bacarıq tələbinin payı və həftəlik dəyişimi. Bütün bazarı əks etdirmir.",
+  },
+  en: {
+    title: "Skill trends",
+    description:
+      "Skill demand share and week-over-week change in listings Ingress Job tracks — not the whole market.",
+  },
+  ru: {
+    title: "Тренды навыков",
+    description:
+      "Доля спроса на навыки и недельное изменение в вакансиях, которые отслеживает Ingress Job — не весь рынок.",
+  },
+};
+
+export function trendsMetadata(locale = "az") {
+  const copy = TRENDS_COPY[locale] || TRENDS_COPY.az;
+  return sharedMeta({
+    locale,
+    title: `${copy.title} | ${SITE.name}`,
+    description: copy.description,
+    path: localePath(locale, { mode: "trends" }),
+    route: { mode: "trends" },
+  });
+}
+
 export function companyMetadata(locale, company) {
   if (!company) {
     return { title: SITE.name, robots: { index: false, follow: false, googleBot: { index: false, follow: false } } };
