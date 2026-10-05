@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CATEGORY_ORDER, categoryLabel, languageLabel, text } from "../lib/copy";
+import { lockBodyScroll, trapTab } from "../lib/focus-trap";
+import { useMediaQuery } from "../lib/use-media-query";
 import { JobCard } from "./job-card";
 import { Shell } from "./shell";
 import { PageHeader } from "./page-header";
@@ -83,6 +85,15 @@ function FilterIcon({ name }) {
     "aria-hidden": "true",
     focusable: "false",
   };
+  if (name === "filter") {
+    return (
+      <svg {...props}>
+        <path d="M2.5 4.5h7M12.5 4.5h1M2.5 11.5h1M6.5 11.5h7" />
+        <circle cx="11" cy="4.5" r="1.5" />
+        <circle cx="5" cy="11.5" r="1.5" />
+      </svg>
+    );
+  }
   if (name === "sort") {
     return (
       <svg {...props}>
@@ -203,6 +214,13 @@ export function Home({ locale, jobs, error }) {
   const [salaryMin, setSalaryMin] = useState("");
   const [salaryMax, setSalaryMax] = useState("");
   const [page, setPage] = useState(1);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const compact = useMediaQuery("(max-width: 900px)");
+  const drawerOpen = compact && filtersOpen;
+  const panelRef = useRef(null);
+  const toggleRef = useRef(null);
+  const closeRef = useRef(null);
+  const resultsRef = useRef(null);
 
   const languageOptions = useMemo(() => {
     const order = ["az", "en", "ru", "tr", "es", "uk", "de", "fr", "pt"];
@@ -315,6 +333,49 @@ export function Home({ locale, jobs, error }) {
     setPage(1);
   }
 
+  const activeFilters =
+    languages.length +
+    categories.length +
+    stacks.length +
+    (remote ? 1 : 0) +
+    (relocation ? 1 : 0) +
+    (company.trim() ? 1 : 0) +
+    (when !== "any" ? 1 : 0) +
+    (salaryMin.trim() || salaryMax.trim() ? 1 : 0);
+
+  useEffect(() => {
+    if (!compact) setFiltersOpen(false);
+  }, [compact]);
+
+  useEffect(() => {
+    if (!drawerOpen) return undefined;
+    const toggle = toggleRef.current;
+    const unlock = lockBodyScroll();
+    closeRef.current?.focus();
+    function onKey(event) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setFiltersOpen(false);
+        return;
+      }
+      trapTab(event, panelRef.current);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      unlock();
+      toggle?.focus({ preventScroll: true });
+    };
+  }, [drawerOpen]);
+
+  function applyFilters() {
+    setFiltersOpen(false);
+    const top = resultsRef.current?.getBoundingClientRect().top;
+    if (typeof top === "number" && top < 0) {
+      window.scrollTo({ top: window.scrollY + top - 12, behavior: "smooth" });
+    }
+  }
+
   function goToPage(next) {
     const clamped = Math.max(1, Math.min(totalPages, next));
     setPage(clamped);
@@ -344,8 +405,28 @@ export function Home({ locale, jobs, error }) {
       </PageHeader>
       {error ? <p className="note">{t.loadError}</p> : null}
       <div className="board">
-        <section className="results">
-          <p className="count">{t.count(visible.length)}</p>
+        <section className="results" ref={resultsRef}>
+          <div className="results-bar">
+            <p className="count">{t.count(visible.length)}</p>
+            <button
+              ref={toggleRef}
+              type="button"
+              className="filters-toggle"
+              aria-haspopup="dialog"
+              aria-expanded={drawerOpen}
+              aria-controls="job-filters"
+              onClick={() => setFiltersOpen(true)}
+            >
+              <FilterIcon name="filter" />
+              {t.filters}
+              {activeFilters ? (
+                <>
+                  <span className="filters-badge" aria-hidden="true">{activeFilters}</span>
+                  <span className="visually-hidden">{`, ${t.filtersActive(activeFilters)}`}</span>
+                </>
+              ) : null}
+            </button>
+          </div>
           {visible.length === 0 && !error ? <p className="job-empty">{t.empty}</p> : null}
           <div className="job-list">
             {pageItems.map((job) => (
@@ -374,10 +455,31 @@ export function Home({ locale, jobs, error }) {
             </nav>
           ) : null}
         </section>
-        <aside className="filter-panel">
+        <aside
+          ref={panelRef}
+          id="job-filters"
+          className={drawerOpen ? "filter-panel is-open" : "filter-panel"}
+          role={drawerOpen ? "dialog" : undefined}
+          aria-modal={drawerOpen ? "true" : undefined}
+          aria-labelledby="job-filters-title"
+        >
           <div className="filter-head">
-            <h2>{t.filters}</h2>
-            <button type="button" className="text-btn" onClick={clear}>{t.clear}</button>
+            <h2 id="job-filters-title">{t.filters}</h2>
+            {drawerOpen ? (
+              <button
+                ref={closeRef}
+                type="button"
+                className="filter-close"
+                aria-label={t.filtersClose}
+                onClick={() => setFiltersOpen(false)}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
+            ) : (
+              <button type="button" className="text-btn" onClick={clear}>{t.clear}</button>
+            )}
           </div>
           <label className="stack">
             <GroupLabel icon="sort">{t.sort}</GroupLabel>
@@ -492,7 +594,17 @@ export function Home({ locale, jobs, error }) {
             </div>
             <p className="salary-note">{t.salaryNote}</p>
           </div>
+          {drawerOpen ? (
+            <div className="filter-actions">
+              <button type="button" className="btn" onClick={clear}>{t.filtersClear}</button>
+              <button type="button" className="btn primary" onClick={applyFilters}>
+                {t.filtersApply}{" "}
+                <span className="filter-actions-count">({t.count(visible.length)})</span>
+              </button>
+            </div>
+          ) : null}
         </aside>
+        {drawerOpen ? <div className="filter-backdrop" aria-hidden="true" onClick={() => setFiltersOpen(false)} /> : null}
       </div>
       {t.faq?.items?.length ? (
         <section className="home-faq" id="faq" aria-labelledby="home-faq-title">

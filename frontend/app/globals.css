@@ -2499,3 +2499,215 @@ span.pager-btn {
   .companies-sort select { width: 100%; min-height: 40px; }
   .company-header { padding: 18px; }
 }
+
+/* Mobile navbar: one slim row with a hamburger menu */
+.top { position: relative; z-index: 30; }
+
+.nav-toggle { display: none; }
+
+.mobile-nav {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: calc(100vh - 56px);
+  overflow: auto;
+  padding: 8px 16px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #dfe1e5;
+  box-shadow: 0 18px 30px rgba(9, 15, 40, 0.12);
+}
+
+.mobile-nav-links {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mobile-nav-links a,
+.mobile-nav-signout {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: #20242b;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mobile-nav-links a[aria-current="page"] {
+  background: #eef1ff;
+  color: #001FFF;
+}
+
+.mobile-nav-signout { color: #b42318; }
+
+.mobile-nav-account {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #eceef1;
+}
+
+.mobile-nav-account .mobile-nav-links { margin-top: 0; }
+
+.mobile-nav-note {
+  margin: 4px 12px 6px;
+  color: #656b75;
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .top-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 56px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    box-sizing: border-box;
+  }
+  .top-left { flex: 0 1 auto; min-width: 0; }
+  .top-right { flex: 0 0 auto; gap: 6px; }
+  .wrap { padding-top: 16px; }
+  .top .mode,
+  .top-right .register-choice { display: none; }
+  .brand { gap: 8px; font-size: 18px; }
+  .mark { width: 26px; height: 26px; }
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid #dfe1e5;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #092F84;
+    cursor: pointer;
+  }
+  .nav-toggle[aria-expanded="true"] {
+    border-color: #001FFF;
+    background: #eef1ff;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-nav { display: none; }
+}
+
+/* Job filters: sidebar on desktop, bottom sheet on small screens */
+.results-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.filters-toggle { display: none; }
+
+@media (max-width: 900px) {
+  .filter-panel { display: none; }
+  .filter-panel.is-open {
+    display: flex;
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    max-height: 88vh;
+    max-height: 88dvh;
+    padding: 0 16px;
+    border-radius: 20px 20px 0 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    box-shadow: 0 -18px 40px rgba(9, 15, 40, 0.25);
+  }
+  .filter-panel.is-open .filter-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 12px 0 10px;
+    border-bottom: 1px solid #eceef1;
+  }
+  .filter-panel.is-open .filter-head h2 { cursor: default; font-size: 17px; }
+  .filter-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(9, 15, 40, 0.45);
+  }
+  .filters-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1px solid #dfe1e5;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #092F84;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .filters-toggle[aria-expanded="true"] { border-color: #001FFF; }
+  .filters-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #001FFF;
+    color: #ffffff;
+    font-size: 12px;
+    line-height: 1;
+  }
+  .filter-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #20242b;
+    cursor: pointer;
+  }
+  .filter-actions {
+    position: sticky;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 10px;
+    margin-top: auto;
+    padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid #eceef1;
+    background: #ffffff;
+  }
+  .filter-actions .btn {
+    justify-content: center;
+    min-height: 48px;
+  }
+  .filter-actions-count {
+    margin-left: 6px;
+    font-weight: 500;
+    opacity: 0.85;
+  }
+}

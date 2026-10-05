@@ -6,12 +6,14 @@ import { hrefFor, text } from "../lib/copy";
 import { NotificationsBell } from "./notifications-bell";
 import { RegisterChoice } from "./register-choice";
 
-export function AccountBar({ locale, returnTo }) {
+export function AccountBar({ locale, returnTo, onMe }) {
   const t = text(locale);
   const [me, setMe] = useState(null);
   const [ssoError, setSsoError] = useState(false);
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
+  const onMeRef = useRef(onMe);
+  onMeRef.current = onMe;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -20,10 +22,14 @@ export function AccountBar({ locale, returnTo }) {
     fetch("/api/auth/me", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        if (!cancelled) setMe(data);
+        if (cancelled) return;
+        setMe(data);
+        onMeRef.current?.(data);
       })
       .catch(() => {
-        if (!cancelled) setMe({ authenticated: false });
+        if (cancelled) return;
+        setMe({ authenticated: false });
+        onMeRef.current?.({ authenticated: false });
       });
     return () => {
       cancelled = true;

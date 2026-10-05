@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { ingressUrl } from "../lib/ingress";
+import { useMediaQuery } from "../lib/use-media-query";
 import { AccountBar } from "./account-bar";
 
 const LOCALES = ["az", "en", "ru"];
@@ -54,12 +56,122 @@ function LanguageSwitcher({ locale, mode, jobId, companySlug }) {
   );
 }
 
+function MenuIcon({ open }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false">
+      {open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+    </svg>
+  );
+}
+
+/** Mobile-only dropdown with the nav links and account entries. Rendered only while open. */
+function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
+  const t = text(locale);
+  const panelRef = useRef(null);
+
+  useEffect(() => {
+    panelRef.current?.querySelector("a, button")?.focus();
+    function onKey(event) {
+      if (event.key === "Escape") {
+        onClose();
+        toggleRef.current?.focus();
+      }
+    }
+    function onPointer(event) {
+      if (panelRef.current?.contains(event.target) || toggleRef.current?.contains(event.target)) return;
+      onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer);
+    };
+  }, [onClose, toggleRef]);
+
+  const back = returnTo || hrefFor(locale);
+  const links = [
+    { key: "browse", label: t.browse },
+    { key: "companies", label: t.navCompanies },
+    { key: "post", label: t.post },
+  ];
+  if (me?.staff) links.push({ key: "admin", label: t.admin });
+
+  return (
+    <nav id="mobile-nav" className="mobile-nav" aria-label={t.menuLabel} ref={panelRef}>
+      <ul className="mobile-nav-links">
+        {links.map((link) => (
+          <li key={link.key}>
+            <a
+              href={hrefFor(locale, { mode: link.key })}
+              className={mode === link.key ? "on" : ""}
+              aria-current={mode === link.key ? "page" : undefined}
+            >
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+      {me?.authenticated ? (
+        <ul className="mobile-nav-links mobile-nav-account">
+          {me.employer || me.candidate || me.staff ? (
+            <li>
+              <a href={hrefFor(locale, { mode: "profile" })} aria-current={mode === "profile" ? "page" : undefined}>
+                {t.profileOpen}
+              </a>
+            </li>
+          ) : null}
+          {me.candidate || me.staff ? (
+            <li>
+              <a href={hrefFor(locale, { mode: "applications" })} aria-current={mode === "applications" ? "page" : undefined}>
+                {t.myApplications}
+              </a>
+            </li>
+          ) : null}
+          <li>
+            <a href={hrefFor(locale, { mode: "notifications" })} aria-current={mode === "notifications" ? "page" : undefined}>
+              {t.notifications}
+            </a>
+          </li>
+          <li>
+            <form method="post" action={`/api/auth/logout?returnTo=${encodeURIComponent(back)}`}>
+              <button type="submit" className="mobile-nav-signout">{t.signOut}</button>
+            </form>
+          </li>
+        </ul>
+      ) : me ? (
+        <div className="mobile-nav-account">
+          <p className="mobile-nav-note">{t.register} · {t.registerAsk}</p>
+          <ul className="mobile-nav-links">
+            <li>
+              <a href={loginHref({ intent: "job_candidate", returnTo: back })}>{t.registerCreator}</a>
+            </li>
+            <li>
+              <a href={loginHref({ intent: "job_employer", returnTo: hrefFor(locale, { mode: "post" }) })}>{t.registerPoster}</a>
+            </li>
+          </ul>
+        </div>
+      ) : null}
+    </nav>
+  );
+}
+
 export function Shell({ locale, mode, jobId, companySlug, children }) {
   const t = text(locale);
+  const [me, setMe] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const toggleRef = useRef(null);
+  const compact = useMediaQuery("(max-width: 768px)");
+  const returnTo = hrefFor(locale, { mode, jobId, companySlug });
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   useEffect(() => {
     document.documentElement.lang = t.lang;
   }, [t.lang]);
+
+  useEffect(() => {
+    if (!compact) setMenuOpen(false);
+  }, [compact]);
 
   return (
     <>
@@ -109,10 +221,24 @@ export function Shell({ locale, mode, jobId, companySlug, children }) {
             </a>
           </div>
           <div className="top-right">
-            <AccountBar locale={locale} returnTo={hrefFor(locale, { mode, jobId, companySlug })} />
+            <AccountBar locale={locale} returnTo={returnTo} onMe={setMe} />
             <LanguageSwitcher locale={locale} mode={mode} jobId={jobId} companySlug={companySlug} />
+            <button
+              ref={toggleRef}
+              type="button"
+              className="nav-toggle"
+              aria-expanded={menuOpen}
+              aria-controls="mobile-nav"
+              aria-label={menuOpen ? t.menuClose : t.menuOpen}
+              onClick={() => setMenuOpen((value) => !value)}
+            >
+              <MenuIcon open={menuOpen} />
+            </button>
           </div>
         </div>
+        {menuOpen && compact ? (
+          <MobileNav locale={locale} mode={mode} me={me} returnTo={returnTo} onClose={closeMenu} toggleRef={toggleRef} />
+        ) : null}
       </header>
       <main id="main" className="wrap">{children}</main>
       <footer className="site-footer">
