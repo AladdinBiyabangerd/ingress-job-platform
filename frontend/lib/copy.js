@@ -373,6 +373,13 @@ export const copy = {
     recommendationsFeedbackSaved: "Rəy saxlanıldı.",
     recommendationsFeedbackError: "Rəyi saxlamaq olmadı.",
     recommendationsGapCourse: "Academy kursu",
+    recommendationsGapLink: "Bacarıq boşluğu və Academy kursları",
+    skillsOpen: "Bacarıqlar",
+    skillsTitle: "Bacarıqlar və boşluq",
+    skillsLede: "Hədəf rol üçün boşluq analizi və Ingress Academy kurs linkləri. Pay və artım Ingress Job-un izlədiyi elanlardandır.",
+    skillsGate: "Bacarıq analizi namizəd hesabı tələb edir.",
+    skillsTargetRole: "Hədəf rol",
+    skillsHave: "Sizdə var",
     emailSettingsOpen: "E-poçt seçimləri",
     emailSettingsTitle: "E-poçt seçimləri",
     emailSettingsLede: "Dayjest və yüksək uyğunluq bildirişlərinin tezliyi. Tranzaksion məktublar ayrıca qalır.",
@@ -786,6 +793,13 @@ export const copy = {
     recommendationsFeedbackSaved: "Feedback saved.",
     recommendationsFeedbackError: "Could not save feedback.",
     recommendationsGapCourse: "Academy course",
+    recommendationsGapLink: "Skill gap and Academy courses",
+    skillsOpen: "Skills",
+    skillsTitle: "Skills and gaps",
+    skillsLede: "Gap analysis for a target role plus Ingress Academy course links. Share and growth come from listings Ingress Job tracks.",
+    skillsGate: "Skill analysis requires a candidate account.",
+    skillsTargetRole: "Target role",
+    skillsHave: "You have",
     emailSettingsOpen: "Email settings",
     emailSettingsTitle: "Email settings",
     emailSettingsLede: "Frequency for digests and high-match alerts. Transactional mail stays separate.",
@@ -1199,6 +1213,13 @@ export const copy = {
     recommendationsFeedbackSaved: "Отзыв сохранён.",
     recommendationsFeedbackError: "Не удалось сохранить отзыв.",
     recommendationsGapCourse: "Курс Academy",
+    recommendationsGapLink: "Пробел в навыках и курсы Academy",
+    skillsOpen: "Навыки",
+    skillsTitle: "Навыки и пробелы",
+    skillsLede: "Анализ пробела для целевой роли и ссылки на курсы Ingress Academy. Доля и рост — по вакансиям, которые отслеживает Ingress Job.",
+    skillsGate: "Анализ навыков доступен только кандидатам.",
+    skillsTargetRole: "Целевая роль",
+    skillsHave: "У вас есть",
     emailSettingsOpen: "Настройки почты",
     emailSettingsTitle: "Настройки почты",
     emailSettingsLede: "Частота дайджестов и оповещений о сильных совпадениях. Транзакционные письма отдельно.",
@@ -1306,6 +1327,7 @@ export function hrefFor(locale, { mode = "browse", jobId, companySlug } = {}) {
   if (mode === "profile") return `${base}/profile`;
   if (mode === "profileReview") return `${base}/profile/review`;
   if (mode === "recommendations") return `${base}/me/recommendations`;
+  if (mode === "skills") return `${base}/me/skills`;
   if (mode === "emailSettings") return `${base}/settings/emails`;
   if (mode === "notifications") return `${base}/notifications`;
   return base || "/";

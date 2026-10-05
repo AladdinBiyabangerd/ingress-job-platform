@@ -134,6 +134,13 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
           ) : null}
           {me.candidate || me.staff ? (
             <li>
+              <a href={hrefFor(locale, { mode: "skills" })} aria-current={mode === "skills" ? "page" : undefined}>
+                {t.skillsOpen}
+              </a>
+            </li>
+          ) : null}
+          {me.candidate || me.staff ? (
+            <li>
               <a href={hrefFor(locale, { mode: "applications" })} aria-current={mode === "applications" ? "page" : undefined}>
                 {t.myApplications}
               </a>

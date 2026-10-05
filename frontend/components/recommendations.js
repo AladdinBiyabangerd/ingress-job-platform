@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { academyCourseUrl, hrefFor, text } from "../lib/copy";
+import { hrefFor, text } from "../lib/copy";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 
@@ -21,8 +21,6 @@ export function Recommendations({ locale }) {
   const [me, setMe] = useState(undefined);
   const [roles, setRoles] = useState(null);
   const [matches, setMatches] = useState(null);
-  const [gap, setGap] = useState(null);
-  const [activeRole, setActiveRole] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
@@ -57,8 +55,6 @@ export function Recommendations({ locale }) {
         if (cancelled) return;
         setRoles(rolesPayload);
         setMatches(matchesPayload);
-        const topRole = rolesPayload?.roles?.[0]?.canonical_name || "";
-        setActiveRole(topRole);
       })
       .catch(() => {
         if (!cancelled) {
@@ -70,26 +66,6 @@ export function Recommendations({ locale }) {
       cancelled = true;
     };
   }, [me, lang]);
-
-  useEffect(() => {
-    if (!me || !(me.candidate || me.staff) || !activeRole) {
-      setGap(null);
-      return undefined;
-    }
-    let cancelled = false;
-    const qs = new URLSearchParams({ lang, role: activeRole });
-    fetch(`/api/auth/me/skill-gap?${qs}`, { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!cancelled) setGap(data);
-      })
-      .catch(() => {
-        if (!cancelled) setGap(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [me, lang, activeRole]);
 
   async function sendFeedback(jobId, vote, reason = "") {
     setBusyId(jobId);
@@ -159,93 +135,24 @@ export function Recommendations({ locale }) {
               <ul className="role-suggest-list">
                 {roles.roles.map((role) => (
                   <li key={role.canonical_name} className="role-suggest-item">
-                    <button
-                      type="button"
-                      className={
-                        activeRole === role.canonical_name
-                          ? "role-suggest-pick on"
-                          : "role-suggest-pick"
-                      }
-                      onClick={() => setActiveRole(role.canonical_name)}
-                    >
-                      <span className="role-suggest-head">
-                        <strong>{role.canonical_name}</strong>
-                        <span className="hint">
-                          {role.category}
-                          {typeof role.score === "number"
-                            ? ` · ${t.recommendationsScore(role.score)}`
-                            : ""}
-                        </span>
+                    <div className="role-suggest-head">
+                      <strong>{role.canonical_name}</strong>
+                      <span className="hint">
+                        {role.category}
+                        {typeof role.score === "number"
+                          ? ` · ${t.recommendationsScore(role.score)}`
+                          : ""}
                       </span>
-                      {role.explanation ? <p className="hint">{role.explanation}</p> : null}
-                    </button>
+                    </div>
+                    {role.explanation ? <p className="hint">{role.explanation}</p> : null}
                   </li>
                 ))}
               </ul>
             )}
+            <p className="hint">
+              <a href={hrefFor(locale, { mode: "skills" })}>{t.recommendationsGapLink}</a>
+            </p>
           </section>
-
-          {activeRole ? (
-            <section className="recommendations-section">
-              <h2>
-                {t.recommendationsGap}: {activeRole}
-              </h2>
-              {!gap?.missing?.length && !gap?.have?.length ? (
-                <p className="hint">{t.recommendationsGapEmpty}</p>
-              ) : (
-                <>
-                  {gap?.explanation ? <p className="hint">{gap.explanation}</p> : null}
-                  {gap?.missing?.length ? (
-                    <ul className="gap-list">
-                      <li className="hint">{t.recommendationsGapLearn}</li>
-                      {gap.missing.map((item) => {
-                        const sharePct =
-                          typeof item.share === "number" ? Math.round(item.share * 100) : null;
-                        const growthPct =
-                          typeof item.growth === "number" ? Math.round(item.growth * 100) : null;
-                        const courses = Array.isArray(item.academy_courses)
-                          ? item.academy_courses.filter(Boolean)
-                          : [];
-                        return (
-                          <li key={item.name}>
-                            <strong>{item.name}</strong>
-                            {sharePct !== null || growthPct !== null ? (
-                              <span className="hint">
-                                {" · "}
-                                {[
-                                  sharePct !== null ? t.recommendationsGapShare(sharePct) : null,
-                                  growthPct !== null ? t.recommendationsGapGrowth(growthPct) : null,
-                                ]
-                                  .filter(Boolean)
-                                  .join(" · ")}
-                              </span>
-                            ) : null}
-                            {courses.length ? (
-                              <span className="hint">
-                                {" · "}
-                                {courses.map((courseId, index) => {
-                                  const href = academyCourseUrl(courseId);
-                                  if (!href) return null;
-                                  return (
-                                    <span key={String(courseId)}>
-                                      {index > 0 ? ", " : null}
-                                      <a href={href} target="_blank" rel="noreferrer">
-                                        {t.recommendationsGapCourse}
-                                      </a>
-                                    </span>
-                                  );
-                                })}
-                              </span>
-                            ) : null}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : null}
-                </>
-              )}
-            </section>
-          ) : null}
 
           <section className="recommendations-section">
             <h2>{t.recommendationsJobs}</h2>
