@@ -20,6 +20,10 @@ export default async function sitemap() {
     entry(localePath(locale), { priority: locale === "az" ? 1 : 0.9 }),
   );
 
+  for (const locale of LOCALES) {
+    entries.push({ ...entry(localePath(locale, { mode: "companies" }), { priority: 0.6 }), alternates: { languages: hreflangMap({ mode: "companies" }) } });
+  }
+
   try {
     const jobs = await fetchJobs();
     for (const job of jobs) {

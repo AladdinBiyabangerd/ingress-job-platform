@@ -1,3 +1,11 @@
+function ruPlural(n, one, few, many) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+}
+
 export const copy = {
   az: {
     lang: "az",
@@ -84,6 +92,36 @@ export const copy = {
     techPlaceholder: "Texnologiya axtarın",
     categoryFilter: "Kateqoriya",
     sourceSite: "Mənbə saytı",
+    navCompanies: "Şirkətlər",
+    companiesTitle: "Şirkətlər",
+    companiesLede: "Açıq vakansiyası olan şirkətlər: neçə elan, hansı texnologiyalar və nə qədər müraciət.",
+    companiesSearch: "Şirkət axtar",
+    companiesSearchButton: "Axtar",
+    sortMostJobs: "Ən çox elan",
+    sortAZ: "A–Z",
+    sortMostApplications: "Ən çox müraciət",
+    companiesCount: (n) => `${n} şirkət`,
+    companiesEmpty: "Bu axtarışa uyğun şirkət tapılmadı.",
+    companiesEmptyAll: "Hələ açıq elanı olan şirkət yoxdur.",
+    companiesReset: "Bütün şirkətlər",
+    companiesLoading: "Şirkətlər yüklənir…",
+    openJobs: (n) => `${n} açıq elan`,
+    statOpenJobs: "Açıq elan",
+    statApplications: "Müraciət",
+    statPerJob: "Elan başına",
+    statPopularity: "Populyarlıq",
+    popularityHelp: "Populyarlıq: platformadakı açıq elanlara bu sayt vasitəsilə göndərilən bütün müraciətlərdən bu şirkətin payı.",
+    statLocations: "Yerlər",
+    statRemoteShare: "Uzaqdan iş payı",
+    remoteJobs: (n) => `${n} uzaqdan`,
+    relocationJobs: (n) => `${n} relokasiya`,
+    companyJobs: "Şirkətin açıq elanları",
+    companyCategories: "Kateqoriyalar",
+    latestPosted: "Son elan",
+    applicationsCount: (n) => `${n} müraciət`,
+    applicationsNone: "Hələ müraciət yoxdur, ilk sən ol",
+    applicationsFirst: "İlk müraciət edən ol",
+    applicationsNote: "Yalnız bu sayt vasitəsilə göndərilən müraciətlər sayılır.",
     keyFacts: "Əsas məlumatlar",
     factLocation: "Yer",
     factPosted: "Dərc tarixi",
@@ -344,6 +382,36 @@ export const copy = {
     techPlaceholder: "Find a technology",
     categoryFilter: "Category",
     sourceSite: "Source site",
+    navCompanies: "Companies",
+    companiesTitle: "Companies",
+    companiesLede: "Companies with open roles: how many jobs, which tech, and how many applications.",
+    companiesSearch: "Search companies",
+    companiesSearchButton: "Search",
+    sortMostJobs: "Most jobs",
+    sortAZ: "A–Z",
+    sortMostApplications: "Most applications",
+    companiesCount: (n) => `${n} ${n === 1 ? "company" : "companies"}`,
+    companiesEmpty: "No companies match this search.",
+    companiesEmptyAll: "No companies with open jobs yet.",
+    companiesReset: "All companies",
+    companiesLoading: "Loading companies…",
+    openJobs: (n) => `${n} open ${n === 1 ? "job" : "jobs"}`,
+    statOpenJobs: "Open jobs",
+    statApplications: "Applications",
+    statPerJob: "Per job",
+    statPopularity: "Popularity",
+    popularityHelp: "Popularity: this company's share of all applications sent through this site to open jobs on the platform.",
+    statLocations: "Locations",
+    statRemoteShare: "Remote share",
+    remoteJobs: (n) => `${n} remote`,
+    relocationJobs: (n) => `${n} with relocation`,
+    companyJobs: "Open jobs at this company",
+    companyCategories: "Categories",
+    latestPosted: "Latest job",
+    applicationsCount: (n) => `${n} ${n === 1 ? "application" : "applications"}`,
+    applicationsNone: "No applications yet — be the first",
+    applicationsFirst: "Be the first to apply",
+    applicationsNote: "Only applications sent through this site are counted.",
     keyFacts: "Key facts",
     factLocation: "Location",
     factPosted: "Posted",
@@ -604,6 +672,36 @@ export const copy = {
     techPlaceholder: "Найти технологию",
     categoryFilter: "Категория",
     sourceSite: "Сайт источника",
+    navCompanies: "Компании",
+    companiesTitle: "Компании",
+    companiesLede: "Компании с открытыми вакансиями: сколько вакансий, какие технологии и сколько откликов.",
+    companiesSearch: "Поиск компании",
+    companiesSearchButton: "Найти",
+    sortMostJobs: "Больше вакансий",
+    sortAZ: "А–Я",
+    sortMostApplications: "Больше откликов",
+    companiesCount: (n) => `${n} ${ruPlural(n, "компания", "компании", "компаний")}`,
+    companiesEmpty: "Компании по этому запросу не найдены.",
+    companiesEmptyAll: "Пока нет компаний с открытыми вакансиями.",
+    companiesReset: "Все компании",
+    companiesLoading: "Загружаем компании…",
+    openJobs: (n) => `${n} ${ruPlural(n, "открытая вакансия", "открытые вакансии", "открытых вакансий")}`,
+    statOpenJobs: "Открытые вакансии",
+    statApplications: "Отклики",
+    statPerJob: "На вакансию",
+    statPopularity: "Популярность",
+    popularityHelp: "Популярность: доля компании среди всех откликов, отправленных через этот сайт на открытые вакансии платформы.",
+    statLocations: "Локации",
+    statRemoteShare: "Доля удалённых",
+    remoteJobs: (n) => `${n} удалённо`,
+    relocationJobs: (n) => `${n} с релокацией`,
+    companyJobs: "Открытые вакансии компании",
+    companyCategories: "Категории",
+    latestPosted: "Последняя вакансия",
+    applicationsCount: (n) => `${n} ${ruPlural(n, "отклик", "отклика", "откликов")}`,
+    applicationsNone: "Откликов пока нет — будьте первым",
+    applicationsFirst: "Откликнитесь первым",
+    applicationsNote: "Учитываются только отклики, отправленные через этот сайт.",
     keyFacts: "Основное",
     factLocation: "Локация",
     factPosted: "Опубликовано",
@@ -826,9 +924,11 @@ export function languageLabel(locale, code) {
 }
 
 
-export function hrefFor(locale, { mode = "browse", jobId } = {}) {
+export function hrefFor(locale, { mode = "browse", jobId, companySlug } = {}) {
   const base = locale === "az" ? "" : `/${locale}`;
   if (jobId) return `${base}/jobs/${jobId}`;
+  if (companySlug) return `${base}/companies/${encodeURIComponent(companySlug)}`;
+  if (mode === "companies") return `${base}/companies`;
   if (mode === "post") return `${base}/post`;
   if (mode === "company") return `${base}/company`;
   if (mode === "admin") return `${base}/admin`;

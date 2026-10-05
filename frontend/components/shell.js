@@ -7,7 +7,7 @@ import { AccountBar } from "./account-bar";
 
 const LOCALES = ["az", "en", "ru"];
 
-function LanguageSwitcher({ locale, mode, jobId }) {
+function LanguageSwitcher({ locale, mode, jobId, companySlug }) {
   const [open, setOpen] = useState(false);
   const switcherRef = useRef(null);
 
@@ -38,7 +38,7 @@ function LanguageSwitcher({ locale, mode, jobId }) {
           {LOCALES.map((code) => (
             <a
               key={code}
-              href={hrefFor(code, { mode, jobId })}
+              href={hrefFor(code, { mode, jobId, companySlug })}
               className={code === locale ? "on" : ""}
               hrefLang={code}
               aria-current={code === locale ? "true" : undefined}
@@ -54,7 +54,7 @@ function LanguageSwitcher({ locale, mode, jobId }) {
   );
 }
 
-export function Shell({ locale, mode, jobId, children }) {
+export function Shell({ locale, mode, jobId, companySlug, children }) {
   const t = text(locale);
 
   useEffect(() => {
@@ -85,6 +85,14 @@ export function Shell({ locale, mode, jobId, children }) {
             </a>
             <a
               role="tab"
+              aria-selected={mode === "companies"}
+              className={mode === "companies" ? "on" : ""}
+              href={hrefFor(locale, { mode: "companies" })}
+            >
+              {t.navCompanies}
+            </a>
+            <a
+              role="tab"
               aria-selected={mode === "post"}
               className={mode === "post" ? "on" : ""}
               href={hrefFor(locale, { mode: "post" })}
@@ -101,8 +109,8 @@ export function Shell({ locale, mode, jobId, children }) {
             </a>
           </div>
           <div className="top-right">
-            <AccountBar locale={locale} returnTo={hrefFor(locale, { mode, jobId })} />
-            <LanguageSwitcher locale={locale} mode={mode} jobId={jobId} />
+            <AccountBar locale={locale} returnTo={hrefFor(locale, { mode, jobId, companySlug })} />
+            <LanguageSwitcher locale={locale} mode={mode} jobId={jobId} companySlug={companySlug} />
           </div>
         </div>
       </header>

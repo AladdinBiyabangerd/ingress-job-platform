@@ -18,6 +18,7 @@ import sqlite3
 from pathlib import Path
 
 from app.apply_form import parse_stored
+from app.companies import application_count, application_counts, company_slug
 
 def _db_path() -> Path:
     configured = os.environ.get("JOBS_DB_PATH", "").strip()
@@ -210,7 +211,7 @@ def _homepage(value: object) -> str:
     return url if re.match(r"(?i)^https?://[^\s\"<>]+$", url) else ""
 
 
-def _public(row: sqlite3.Row) -> dict:
+def _public(row: sqlite3.Row, applications: dict[int, int] | None = None) -> dict:
     title = _plain(row["title"] or "")
     body = public_text(row["text"] or "")
     stored = (row["language"] or "").strip().lower()
@@ -218,10 +219,13 @@ def _public(row: sqlite3.Row) -> dict:
     job_type = (row["job_type"] or "").strip().lower()
     if job_type not in {"ofis", "hibrid", "uzaqdan"}:
         job_type = ""
+    company = _plain(row["company"] or "")
+    onsite = bool((row["owner_subject"] or "").strip())
     return {
         "id": int(row["id"]),
         "title": title,
-        "company": _plain(row["company"] or ""),
+        "company": company,
+        "company_slug": company_slug(company),
         "city": _plain(row["city"] or ""),
         "remote": bool(int(row["remote"] or 0)),
         "relocation": bool(int(row["relocation"] or 0)),
@@ -233,7 +237,9 @@ def _public(row: sqlite3.Row) -> dict:
         "job_type": job_type,
         "source_name": row["source_name"] or "",
         "created_at": row["created_at"] or "",
-        "onsite": bool((row["owner_subject"] or "").strip()),
+        "onsite": onsite,
+        # On-site applications only; external ads are applied to on the source site.
+        "applications": int((applications or {}).get(int(row["id"]), 0)) if onsite else None,
         "has_original": bool(int(row["has_original"] or 0)),
         "form": parse_stored(row["apply_form"]) if (row["owner_subject"] or "").strip() else None,
     }
@@ -243,9 +249,10 @@ def list_jobs() -> list[dict]:
     conn = _connect()
     try:
         rows = conn.execute(_LIST_SQL).fetchall()
+        counts = application_counts(conn)
     finally:
         conn.close()
-    return [_public(row) for row in rows]
+    return [_public(row, counts) for row in rows]
 
 
 def get_job(job_id: int) -> dict | None:
@@ -255,11 +262,12 @@ def get_job(job_id: int) -> dict | None:
             f"SELECT * FROM ({_LIST_SQL}) AS published WHERE id = ?",
             (job_id,),
         ).fetchone()
+        counts = {job_id: application_count(conn, job_id)} if row is not None else {}
     finally:
         conn.close()
     if row is None:
         return None
-    job = _public(row)
+    job = _public(row, counts)
     # Only the detail page links the source site (attribution some feeds
     # require). The list stays free of addresses for guests.
     job["source_homepage"] = _homepage(row["source_homepage"])

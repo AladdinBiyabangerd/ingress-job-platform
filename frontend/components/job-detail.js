@@ -1,4 +1,5 @@
 import { AccountActions } from "./account-actions";
+import { applicationsLabel } from "./job-card";
 import { JsonLd } from "./json-ld";
 import { Shell } from "./shell";
 import { categoryLabel, hrefFor, text } from "../lib/copy";
@@ -59,6 +60,15 @@ export function JobDetail({ locale, job }) {
   const jobType = jobTypeLabel(t, job.job_type);
   const posted = calendarDate(job.created_at, locale);
   const stack = Array.isArray(job.tech_stack) ? job.tech_stack : [];
+  const companyName = job.company || t.noCompany;
+  const company = job.company_slug ? (
+    <a className="company-link" href={hrefFor(locale, { companySlug: job.company_slug })}>
+      {companyName}
+    </a>
+  ) : (
+    companyName
+  );
+  const applications = applicationsLabel(t, job);
   return (
     <>
       <JsonLd data={jobPostingJsonLd(job, locale)} />
@@ -88,7 +98,7 @@ export function JobDetail({ locale, job }) {
             ) : null}
             <h1>{job.title}</h1>
             <p className="meta line">
-              <span className="detail-company">{job.company || t.noCompany}</span>
+              <span className="detail-company">{company}</span>
               <span>{place}</span>
               {jobType ? <span>{jobType}</span> : null}
               {job.salary ? <span>{job.salary}</span> : null}
@@ -105,7 +115,7 @@ export function JobDetail({ locale, job }) {
                 <dl className="facts">
                   <div>
                     <dt>{t.companies}</dt>
-                    <dd>{job.company || t.noCompany}</dd>
+                    <dd>{company}</dd>
                   </div>
                   <div>
                     <dt>{t.factLocation}</dt>
@@ -167,6 +177,11 @@ export function JobDetail({ locale, job }) {
                       ))}
                     </ul>
                   </div>
+                ) : null}
+                {applications ? (
+                  <p className={job.applications > 0 ? "applications-line" : "applications-line first"} title={t.applicationsNote}>
+                    {applications}
+                  </p>
                 ) : null}
                 <AccountActions
                   locale={locale}

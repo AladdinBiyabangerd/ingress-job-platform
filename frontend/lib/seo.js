@@ -116,16 +116,18 @@ export function absoluteUrl(path = "/") {
   return `${origin}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-export function localePath(locale, { jobId } = {}) {
-  return hrefFor(locale, jobId ? { jobId } : {});
+export function localePath(locale, { jobId, mode, companySlug } = {}) {
+  if (jobId) return hrefFor(locale, { jobId });
+  if (companySlug) return hrefFor(locale, { companySlug });
+  return hrefFor(locale, mode ? { mode } : {});
 }
 
-export function hreflangMap({ jobId } = {}) {
+export function hreflangMap(route = {}) {
   const map = {};
   for (const locale of LOCALES) {
-    map[HTML_LANG[locale]] = absoluteUrl(localePath(locale, { jobId }));
+    map[HTML_LANG[locale]] = absoluteUrl(localePath(locale, route));
   }
-  map["x-default"] = absoluteUrl(localePath("az", { jobId }));
+  map["x-default"] = absoluteUrl(localePath("az", route));
   return map;
 }
 
@@ -150,9 +152,9 @@ function ogImages(locale) {
   ];
 }
 
-function sharedMeta({ locale, title, description, path, jobId, type = "website", keywords }) {
+function sharedMeta({ locale, title, description, path, jobId, route, type = "website", keywords }) {
   const url = absoluteUrl(path);
-  const languages = hreflangMap(jobId ? { jobId } : {});
+  const languages = hreflangMap(route || (jobId ? { jobId } : {}));
   const images = ogImages(locale);
   return {
     title,
@@ -223,6 +225,55 @@ export function jobMetadata(locale, job) {
     jobId: job.id,
     type: "article",
     keywords: [job.title, company, place, SITE.name].filter(Boolean),
+  });
+}
+
+const COMPANIES_COPY = {
+  az: {
+    title: "Şirkətlər — açıq vakansiyalar və müraciətlər",
+    description: "Ingress Job-da açıq elanı olan şirkətlər: elan sayı, texnologiyalar, uzaqdan iş və müraciət statistikası.",
+    company: (name, jobs) => `${name} — ${jobs} açıq elan`,
+  },
+  en: {
+    title: "Companies — open jobs and applications",
+    description: "Companies hiring on Ingress Job: open roles, tech stack, remote work and application stats.",
+    company: (name, jobs) => `${name} — ${jobs} open ${jobs === 1 ? "job" : "jobs"}`,
+  },
+  ru: {
+    title: "Компании — открытые вакансии и отклики",
+    description: "Компании с вакансиями на Ingress Job: количество вакансий, технологии, удалёнка и статистика откликов.",
+    company: (name, jobs) => `${name} — открытые вакансии: ${jobs}`,
+  },
+};
+
+export function companiesMetadata(locale = "az") {
+  const copy = COMPANIES_COPY[locale] || COMPANIES_COPY.az;
+  return sharedMeta({
+    locale,
+    title: `${copy.title} | ${SITE.name}`,
+    description: copy.description,
+    path: localePath(locale, { mode: "companies" }),
+    route: { mode: "companies" },
+  });
+}
+
+export function companyMetadata(locale, company) {
+  if (!company) {
+    return { title: SITE.name, robots: { index: false, follow: false, googleBot: { index: false, follow: false } } };
+  }
+  const copy = COMPANIES_COPY[locale] || COMPANIES_COPY.az;
+  const bits = [
+    copy.company(company.name, company.open_jobs),
+    (company.locations || []).slice(0, 3).join(", "),
+    (company.top_tech || []).slice(0, 5).map((item) => item.name).join(", "),
+  ].filter(Boolean);
+  return sharedMeta({
+    locale,
+    title: `${copy.company(company.name, company.open_jobs)} | ${SITE.name}`,
+    description: truncateText(bits.join(". ")),
+    path: localePath(locale, { companySlug: company.slug }),
+    route: { companySlug: company.slug },
+    keywords: [company.name, SITE.name],
   });
 }
 

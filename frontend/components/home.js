@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CATEGORY_ORDER, categoryLabel, hrefFor, languageLabel, text } from "../lib/copy";
+import { CATEGORY_ORDER, categoryLabel, languageLabel, text } from "../lib/copy";
+import { JobCard } from "./job-card";
 import { Shell } from "./shell";
 
 const PAGE_SIZE = 20;
@@ -65,23 +66,6 @@ function isNegotiableSalary(value) {
     /(?:^|[^\p{L}])договорная(?:$|[^\p{L}])/u,
     /(?:^|[^\p{L}])по\s+договоренности(?:$|[^\p{L}])/u,
   ].some((pattern) => pattern.test(normalized));
-}
-
-const MONTHS = {
-  az: ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avq", "sen", "okt", "noy", "dek"],
-  en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-  ru: ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"],
-};
-
-function postedOn(value, locale) {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
-  const time = Date.parse(normalized);
-  if (Number.isNaN(time)) return "";
-  const date = new Date(time);
-  const months = MONTHS[locale] || MONTHS.az;
-  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
 function FilterIcon({ name }) {
@@ -371,50 +355,9 @@ export function Home({ locale, jobs, error }) {
           <p className="count">{t.count(visible.length)}</p>
           {visible.length === 0 && !error ? <p className="job-empty">{t.empty}</p> : null}
           <div className="job-list">
-            {pageItems.map((job) => {
-              const when = postedOn(job.created_at, locale);
-              const place = job.remote ? t.placeRemote : (job.city || t.noCity);
-              const stack = stackOf(job);
-              return (
-                <a key={job.id} className="job-card" href={hrefFor(locale, { jobId: job.id })}>
-                  <span className="job-card-body">
-                    <span className="job-kicker">
-                      <span className="job-company">{job.company || t.noCompany}</span>
-                      {job.source_name ? <span className="source-pill">{job.source_name}</span> : null}
-                    </span>
-                    <h2>{job.title}</h2>
-                    {job.category ? <span className="category-tag">{categoryLabel(locale, job.category)}</span> : null}
-                    {stack.length ? (
-                      <span className="tech-chips" aria-label={t.techStack}>
-                        {stack.slice(0, 6).map((name) => (
-                          <span key={name} className="tech-chip">{name}</span>
-                        ))}
-                        {stack.length > 6 ? <span className="tech-chip more">+{stack.length - 6}</span> : null}
-                      </span>
-                    ) : null}
-                    <span className="job-facts">
-                      <span className="job-fact">
-                        <FilterIcon name="city" />
-                        {place}
-                      </span>
-                      {job.relocation ? (
-                        <span className="job-fact">
-                          <FilterIcon name="relocation" />
-                          {t.relocationBadge}
-                        </span>
-                      ) : null}
-                      {when ? (
-                        <span className="job-fact">
-                          <FilterIcon name="date" />
-                          <time dateTime={job.created_at}>{when}</time>
-                        </span>
-                      ) : null}
-                    </span>
-                  </span>
-                  <span className="job-open">{t.openRole}</span>
-                </a>
-              );
-            })}
+            {pageItems.map((job) => (
+              <JobCard key={job.id} locale={locale} job={job} />
+            ))}
           </div>
           {visible.length > PAGE_SIZE ? (
             <nav className="pager" aria-label={t.pageOf(currentPage, totalPages)}>

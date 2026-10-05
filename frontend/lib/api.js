@@ -16,6 +16,27 @@ export async function fetchJobs() {
   return Array.isArray(data.items) ? data.items : [];
 }
 
+export async function fetchCompanies({ q = "", sort = "jobs", page = 1, perPage = 24 } = {}) {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  params.set("sort", sort);
+  params.set("page", String(page));
+  params.set("per_page", String(perPage));
+  const res = await fetch(`${apiBase()}/api/v1/companies?${params.toString()}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`companies ${res.status}`);
+  return res.json();
+}
+
+export async function fetchCompany(slug, { page = 1, perPage = 20 } = {}) {
+  const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+  const res = await fetch(`${apiBase()}/api/v1/companies/${encodeURIComponent(slug)}?${params.toString()}`, {
+    cache: "no-store",
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`company ${res.status}`);
+  return res.json();
+}
+
 export async function fetchJob(id) {
   const res = await fetch(`${apiBase()}/api/v1/jobs/${id}`, { cache: "no-store" });
   if (res.status === 404) return null;
