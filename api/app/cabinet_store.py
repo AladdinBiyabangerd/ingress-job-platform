@@ -299,6 +299,11 @@ def _apply_schema(conn) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS role_skill_weight_skill ON role_skill_weight(skill_id)"
     )
+    # Same parse_cv_queue / candidate_profile tables the worker drains
+    # (worker/worker/cv_queue.py). API ensures they exist when it opens first.
+    from app.cv_queue import ensure_cv_queue_tables
+
+    ensure_cv_queue_tables(conn)
     hide_retired_local(conn)
     conn.commit()
 

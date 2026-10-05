@@ -170,11 +170,13 @@ class Store:
         with self.conn:
             self.hidden_retired = hide_retired_local(self.conn)
             self.conn.execute(_API_USAGE)
+            from worker.cv_queue import ensure_cv_queue
             from worker.skills import ensure_skills
             from worker.roles import ensure_roles
 
             self.skills_seeded, self.skills_backfilled = ensure_skills(self.conn)
             self.roles_seeded, self.role_weights_seeded = ensure_roles(self.conn)
+            self.cv_queue_enqueued = ensure_cv_queue(self.conn)
 
     def close(self) -> None:
         self.conn.close()

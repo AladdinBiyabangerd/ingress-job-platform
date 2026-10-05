@@ -116,6 +116,18 @@ class ApplicationTests(unittest.TestCase):
             self.assertNotIn("reason", body)
             self.assertNotIn("decision_reason", created.text)
             self.assertNotIn("candidate_subject", body)
+            with sqlite3.connect(self.db) as conn:
+                queued = conn.execute(
+                    """
+                    SELECT user_id, status, application_id, cv_file_key
+                    FROM parse_cv_queue WHERE application_id = ?
+                    """,
+                    (body["id"],),
+                ).fetchone()
+                self.assertIsNotNone(queued)
+                self.assertEqual(queued[0], "apply-candidate")
+                self.assertEqual(queued[1], "pending")
+                self.assertTrue(str(queued[3]).endswith(".pdf"))
             again = self.client.post(
                 f"/api/v1/jobs/{ad_id}/apply",
                 headers={"Authorization": "Bearer test"},

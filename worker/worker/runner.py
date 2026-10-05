@@ -46,6 +46,7 @@ from worker.connectors.rssboards import (
 )
 from worker.connectors.wellfound import WellfoundConnector
 from worker.connectors.weworkremotely import WeWorkRemotelyConnector
+from worker.cv_queue import drain_parse_cv_queue
 from worker.db import Store
 from worker.techstack import enrich, is_tech_job
 from worker.tidy import tidy_pending
@@ -211,6 +212,19 @@ def _run_pass(store: Store) -> int:
     saved, queued = tidy_pending(store.conn)
     if saved or queued:
         print(f"tidy: saved={saved} queued={queued}", flush=True)
+    try:
+        with store.conn:
+            cv_stats = drain_parse_cv_queue(store.conn)
+        if cv_stats.get("claimed"):
+            print(
+                "parse_cv: "
+                f"claimed={cv_stats['claimed']} "
+                f"done={cv_stats.get('done', 0)} "
+                f"failed={cv_stats.get('failed', 0)}",
+                flush=True,
+            )
+    except Exception:
+        capture_exception()
     return 0
 
 

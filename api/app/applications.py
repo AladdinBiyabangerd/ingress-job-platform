@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.apply_form import parse_stored
 from app.cabinet_store import CabinetError, _LOCK, _connect, _now
+from app.cv_queue import enqueue_parse
 from app.object_storage import bucket_config, delete_object, get_object, put_object
 
 CV_ROOT = Path(__file__).resolve().parents[1] / "data" / "cvs"
@@ -304,6 +305,14 @@ def create_application(subject: str, job_id: int, fields: dict, cv: tuple[str, b
                     (job_id, subject, message, original, stored_name, _now(), phone, email, answers),
                 )
                 app_id = int(cur.lastrowid)
+                if stored_name:
+                    enqueue_parse(
+                        conn,
+                        user_id=subject,
+                        cv_file_key=stored_name,
+                        cv_name=original,
+                        application_id=app_id,
+                    )
                 meta = conn.execute(
                     "SELECT title, language, owner_subject FROM jobs WHERE id = ?",
                     (job_id,),
