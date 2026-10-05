@@ -1,16 +1,18 @@
-"""GET/PUT /api/v1/email-prefs and public unsubscribe (plan §13.1)."""
+"""GET/PUT /api/v1/email-prefs, public unsubscribe, click redirect (plan §13.1)."""
 
 from __future__ import annotations
 
 import os
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 from app.account import current_user
 from app.auth_oidc import VerifiedAccess
 from app.cabinet_store import _LOCK, _connect, ensure_schema
 from app.digests import run_email_jobs
+from app.email_clicks import resolve_click
 from app.email_prefs import (
     apply_unsubscribe,
     ensure_email_tables,
@@ -116,6 +118,25 @@ def unsubscribe_apply(token: str) -> dict:
         "frequency": prefs.get("frequency"),
         "unsubscribed": True,
     }
+
+
+@router.get("/r/{token}")
+def email_click_redirect(token: str) -> RedirectResponse:
+    """Log email job click and 302 to the on-site job page."""
+    ensure_schema(create=True)
+    resolved = None
+    with _LOCK:
+        conn = _connect()
+        try:
+            ensure_email_tables(conn)
+            resolved = resolve_click(conn, token)
+            if resolved:
+                conn.commit()
+        finally:
+            conn.close()
+    if not resolved:
+        raise HTTPException(status_code=404, detail="invalid_token")
+    return RedirectResponse(url=resolved["redirect"], status_code=302)
 
 
 @router.post("/internal/email-jobs")

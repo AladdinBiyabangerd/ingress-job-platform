@@ -47,6 +47,9 @@ compose.yaml
 - Skill trends: worker `skill_trends.refresh_skill_trends` → `skill_trend_daily`; public `GET /api/v1/trends`; UI `/trends`
 - UI: `/me/recommendations` (roles + matches + gap + 👍/👎 + Academy course links); BFF under `/api/auth/me/*`
 - Email program: `email_prefs` / `email_log`; `GET/PUT /api/v1/email-prefs`; public unsubscribe; digests + high-match via `POST /api/v1/internal/email-jobs` (`INTERNAL_JOB_TOKEN`); UI `/settings/emails`
+- Email click tracking: HMAC `/r/<token>` (frontend proxy → `GET /api/v1/r/{token}` → 302 job page); logs `email_click`; digests/high-match use tracked URLs only
+- AI #4 digest intro: API `ai_gateway` + `digest_intro` (optional 2–3 sentences; `DIGEST_AI_INTRO_ENABLED`; soft-fail to static copy; shares jobs-DB `ai_cache`/`ai_usage_daily` with worker CV AI #1)
+- AI #2 re-rank still off (needs pgvector + embeddings; not implemented)
 - Data rights: `GET /api/v1/me/export` (zip: export.json + CVs); `DELETE /api/v1/me` (hard-delete; audit → pseudonym). Account identity remains `GET /api/v1/me`
 
 ## Integrations

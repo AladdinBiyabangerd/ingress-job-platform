@@ -228,6 +228,10 @@ def delete_my_data(*, user_id: str) -> dict:
             except Exception:
                 pass
             try:
+                conn.execute("DELETE FROM email_click WHERE user_id = ?", (subject,))
+            except Exception:
+                pass
+            try:
                 conn.execute("DELETE FROM match_feedback WHERE user_id = ?", (subject,))
             except Exception:
                 pass

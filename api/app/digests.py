@@ -1,7 +1,7 @@
 """Weekly digests and high-match alerts (plan §8.1 / §8.4).
 
-AI #4 personal intro is deferred. Empty digests are not sent.
-At most one non-transactional email per user per UTC day.
+AI #4 optional personal intro via digest_intro (soft-fails to static copy).
+Empty digests are not sent. At most one non-transactional email per user per UTC day.
 """
 
 from __future__ import annotations
@@ -74,14 +74,6 @@ COPY = {
 def _lang(value: str) -> str:
     text = (value or "").strip().lower()[:2]
     return text if text in COPY else "az"
-
-
-def _site_job_url(job_id: int, lang: str) -> str:
-    from app.email_prefs import app_base_url
-
-    base = app_base_url()
-    prefix = "" if lang == "az" else f"/{lang}"
-    return f"{base}{prefix}/jobs/{int(job_id)}"
 
 
 def _since_for_frequency(frequency: str, *, when: datetime) -> datetime:
@@ -173,20 +165,30 @@ def _gap_tip(conn, *, user_id: str, lang: str) -> str:
 
 def _build_digest_body(
     *,
+    user_id: str,
     lang: str,
     matches: list[dict],
     trends: list[str],
     gap: str,
     unsub: str,
+    ai_intro: str | None = None,
 ) -> str:
+    from app.email_clicks import tracked_job_url
+
     pack = COPY[_lang(lang)]
-    lines = [pack["digest_intro"], ""]
+    intro = (ai_intro or "").strip() or pack["digest_intro"]
+    lines = [intro, ""]
     for item in matches:
         title = item.get("title") or ""
         company = item.get("company") or ""
         score = item.get("score")
         score_pct = f"{round(float(score) * 100)}%" if isinstance(score, (int, float)) else ""
-        url = _site_job_url(int(item["job_id"]), lang)
+        url = tracked_job_url(
+            user_id,
+            job_id=int(item["job_id"]),
+            kind="digest",
+            lang=lang,
+        )
         lines.append(f"- {title} ({company}) {score_pct}".rstrip())
         if item.get("explanation"):
             lines.append(f"  {item['explanation']}")
@@ -301,7 +303,25 @@ def send_digest_for_user(conn, *, user_id: str, when: datetime | None = None) ->
     gap = _gap_tip(conn, user_id=user_id, lang=lang)
     unsub = unsubscribe_url(user_id, lang=lang)
     pack = COPY[_lang(lang)]
-    body = _build_digest_body(lang=lang, matches=matches, trends=trends, gap=gap, unsub=unsub)
+    from app.digest_intro import maybe_digest_intro
+
+    ai_intro, ai_status = maybe_digest_intro(
+        conn,
+        user_id=user_id,
+        lang=lang,
+        matches=matches,
+        trends=trends,
+        gap=gap,
+    )
+    body = _build_digest_body(
+        user_id=user_id,
+        lang=lang,
+        matches=matches,
+        trends=trends,
+        gap=gap,
+        unsub=unsub,
+        ai_intro=ai_intro,
+    )
     if not log_email(
         conn,
         user_id=user_id,
@@ -309,7 +329,10 @@ def send_digest_for_user(conn, *, user_id: str, when: datetime | None = None) ->
         period_key=period,
         to_email=to,
         status="sent",
-        meta=json.dumps({"match_count": len(matches)}, ensure_ascii=False),
+        meta=json.dumps(
+            {"match_count": len(matches), "ai_intro": ai_status},
+            ensure_ascii=False,
+        ),
     ):
         result["reason"] = "already_sent"
         return result
@@ -322,6 +345,7 @@ def send_digest_for_user(conn, *, user_id: str, when: datetime | None = None) ->
     result["status"] = "sent"
     result["period_key"] = period
     result["match_count"] = len(matches)
+    result["ai_intro"] = ai_status
     return result
 
 
@@ -374,10 +398,12 @@ def send_high_match_for_user(conn, *, user_id: str, when: datetime | None = None
     if row is not None:
         result["reason"] = "daily_alert_limit"
         return result
+    from app.email_clicks import tracked_job_url
+
     pack = COPY[_lang(lang)]
     unsub = unsubscribe_url(user_id, lang=lang)
     score_pct = round(float(best["score"]) * 100)
-    url = _site_job_url(job_id, lang)
+    url = tracked_job_url(user_id, job_id=job_id, kind="high_match", lang=lang)
     subject = pack["high_subject"].format(title=best.get("title") or "")
     body = pack["high_body"].format(
         title=best.get("title") or "",

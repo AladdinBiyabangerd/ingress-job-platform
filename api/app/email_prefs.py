@@ -50,6 +50,9 @@ def _now() -> str:
 
 def ensure_email_tables(conn) -> None:
     conn.executescript(SCHEMA)
+    from app.email_clicks import ensure_email_click_tables
+
+    ensure_email_click_tables(conn)
 
 
 def _secret() -> bytes:

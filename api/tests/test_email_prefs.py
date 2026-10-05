@@ -205,11 +205,44 @@ class EmailPrefsTests(unittest.TestCase):
                 conn.commit()
                 self.assertEqual(first.get("status"), "sent", first)
                 self.assertEqual(send_mock.call_count, 1)
+                body = send_mock.call_args.kwargs["body"]
+                self.assertIn("/r/", body)
                 second = send_digest_for_user(conn, user_id=subject, when=monday)
                 self.assertEqual(second.get("reason"), "already_sent")
                 self.assertEqual(send_mock.call_count, 1)
             finally:
                 conn.close()
+
+    def test_email_click_redirect_logs(self):
+        from app.cabinet_store import _connect
+        from app.email_clicks import click_token, tracked_job_url
+
+        subject = "mail-click-1"
+        token = click_token(subject, job_id=99, kind="digest", lang="en")
+        self.assertTrue(token)
+        tracked = tracked_job_url(subject, job_id=99, kind="digest", lang="en")
+        self.assertTrue(tracked.endswith(f"/r/{token}") or "/r/" in tracked)
+
+        res = self.client.get(f"/api/v1/r/{token}", follow_redirects=False)
+        self.assertEqual(res.status_code, 302, res.text)
+        self.assertEqual(res.headers.get("location"), "http://localhost:3010/en/jobs/99")
+
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT user_id, job_id, kind, lang FROM email_click WHERE user_id = ?",
+                (subject,),
+            ).fetchone()
+        finally:
+            conn.close()
+        self.assertIsNotNone(row)
+        self.assertEqual(row[0], subject)
+        self.assertEqual(int(row[1]), 99)
+        self.assertEqual(row[2], "digest")
+        self.assertEqual(row[3], "en")
+
+        bad = self.client.get("/api/v1/r/not-a-token", follow_redirects=False)
+        self.assertEqual(bad.status_code, 404)
 
 
 if __name__ == "__main__":
