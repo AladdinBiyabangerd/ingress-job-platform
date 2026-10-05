@@ -199,6 +199,25 @@ def stack_from_tags(tags: object) -> list[str]:
     return found
 
 
+def find_stack(text: str, *, limit: int | None = None) -> list[str]:
+    """All curated tech names found in free text, first-occurrence order.
+
+    Used by the CV rules parser (no ad-tag short-circuit, optional higher cap).
+    ``limit=None`` keeps every match; job ads still use ``extract_stack``.
+    """
+    sample = (text or "")[:50000]
+    scored: list[tuple[int, str]] = []
+    for name, pattern, _extra in _TECH:
+        hit = pattern.search(sample)
+        if hit:
+            scored.append((hit.start(), name))
+    scored.sort()
+    names = [name for _pos, name in scored]
+    if limit is not None:
+        return names[:limit]
+    return names
+
+
 def extract_stack(text: str, tags: object = None, title: str = "") -> list[str]:
     """Curated tech names. The source's tags/stack fields come first; keyword
     matching on the title and text only fills in when the source gave fewer

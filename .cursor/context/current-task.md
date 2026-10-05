@@ -2,49 +2,34 @@
 
 ## Completed
 - CV/AI plan accepted as source of truth: `docs/ingress-job-cv-ai-plan.pdf`
-- Phase 0.1: skill dictionary seed from curated `techstack.py` + local job frequencies
-  - `scripts/export_skill_dictionary.py`
-  - `docs/cv-ai/skill-dictionary-v1.json` (98 skills)
-  - `docs/cv-ai/skill-frequency-snapshot.json`
-- Phase 0.2: `skill_dictionary` + `job_skill` tables, seed, tech_stack backfill
-  - `worker/worker/skills.py` (+ packaged `skill_dictionary_v1.json`)
-  - Wired in `worker/worker/db.py` (init / upsert / backfill_derived)
-  - Tables also created from `api/app/cabinet_store.py` when API opens DB first
-  - Tests: `worker/tests/test_skills.py`
-- Phase 0.3: role taxonomy v1 (40 roles under CATEGORIES + signature skill weights)
-  - `docs/cv-ai/role-taxonomy-v1.json` (+ packaged `worker/worker/role_taxonomy_v1.json`)
-  - `worker/worker/roles.py` → `role_taxonomy` + `role_skill_weight`
-  - Wired in `worker/worker/db.py` + table create in `api/app/cabinet_store.py`
-  - Tests: `worker/tests/test_roles.py`
-- Phase 0.4: consent/privacy copy stubs (AZ/EN/RU)
-  - `docs/cv-ai/consent-copy-v1.json`
-  - kinds: matching / emails / recruiter_visibility (all default off)
-  - visibility levels + export/delete/who-viewed stubs
-  - status: `stub_pending_legal_review` (not wired to UI/API yet)
+- Phase 0.1–0.4: skill dictionary, job_skill, role taxonomy, consent copy stubs
+- Phase 1.1: rules-only CV parser prototype (no AI #1)
+  - `worker/worker/cv_parse/` — text extract (PDF/DOCX/txt), contact regex + phonenumbers,
+    multilingual sections, date ranges + merged years, skills via `techstack.find_stack`,
+    confidence, profile JSON (§5.2)
+  - Deps: `pypdf`, `python-docx`, `phonenumbers` in `worker/pyproject.toml`
+  - Tests: `worker/tests/test_cv_parse.py` + synthetic fixture `tests/fixtures/cv/sample_backend.txt`
+  - OCR / legacy `.doc` explicitly unsupported for now
 
 ## Decisions
 - Principle: deterministic first; AI only at the 4 named points in the plan
-- Reuse existing `worker/worker/techstack.py` vocabulary as skill_dictionary v1 (no new synonym invention yet)
 - One small commit per step; do not mix unrelated frontend WIP
-- `job_skill` links only known dictionary names; unknown `tech_stack` values are skipped
-- Seed JSON is packaged under `worker/worker/` so the Railway worker image can load it
-- One-time backfill via `maintenance_steps`; ongoing sync when worker writes `tech_stack`
-- Role signature skills must match `skill_dictionary.canonical_name`; unknown names skipped at seed
-- Hand weights for v1 (plan §6.1); later refresh from ad frequencies (TF-style, no AI)
-- Product/Design/Manual QA roles intentionally sparse on tech weights until non-tech signals exist
-- Consent copy is versioned stub JSON only; lawyer review before product use; wire into `/api/consents` + UI in Phase 1
+- Parser skills reuse curated `techstack` patterns (same canonical names as skill_dictionary)
+- No queue/DB/API/UI in 1.1 — pure library + unit tests first
+- Consent copy remains stub until lawyer review; wire `/api/consents` + UI later in Phase 1
 
 ## Remaining
-- Optional Phase 0 leftover (manual): test CV set (plan §17.2) — needs real anonymized CVs with consent; not inventable in-repo
-- Phase 1: CV parse queue (rules-only prototype first, AI #1 later) + consent UI/API using `consent-copy-v1.json`
+- Phase 1.2: `parse_cv_queue` table + worker drain (enqueue on CV upload / existing application CV)
+- Phase 1.3: consent API/UI using `consent-copy-v1.json`
+- Later in Phase 1: profile confirm screen, role suggestions, OCR, AI #1 fallback
+- Optional: real anonymized test CV set (plan §17.2) — not inventable in-repo
 
 ## Relevant files
+- `worker/worker/cv_parse/`
+- `worker/tests/test_cv_parse.py`
+- `worker/worker/techstack.py` (`find_stack`)
 - `docs/cv-ai/consent-copy-v1.json`
-- `docs/cv-ai/role-taxonomy-v1.json`
-- `docs/cv-ai/skill-dictionary-v1.json`
-- `worker/worker/roles.py`
-- `worker/worker/skills.py`
 - `docs/ingress-job-cv-ai-plan.pdf`
 
 ## Continue prompt (new chat)
-Phase 1 start: CV parse queue rules-only prototype (text extract + regex + skill dictionary). No AI #1 yet. Read `.cursor/context/current-task.md` and plan §5.1 first.
+Phase 1.2: `parse_cv_queue` (+ candidate profile storage stub) and worker drain calling `worker.cv_parse`. No AI #1. Read `.cursor/context/current-task.md` and plan §4 / §12 / §13.3.

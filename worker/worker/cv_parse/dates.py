@@ -1,0 +1,212 @@
+"""Date-range parsing and overlapping experience merge (years)."""
+
+from __future__ import annotations
+
+import re
+from calendar import monthrange
+from datetime import date
+
+_MONTHS = {
+    "jan": 1,
+    "january": 1,
+    "feb": 2,
+    "february": 2,
+    "mar": 3,
+    "march": 3,
+    "apr": 4,
+    "april": 4,
+    "may": 5,
+    "jun": 6,
+    "june": 6,
+    "jul": 7,
+    "july": 7,
+    "aug": 8,
+    "august": 8,
+    "sep": 9,
+    "sept": 9,
+    "september": 9,
+    "oct": 10,
+    "october": 10,
+    "nov": 11,
+    "november": 11,
+    "dec": 12,
+    "december": 12,
+    "yan": 1,
+    "yanvar": 1,
+    "fev": 2,
+    "fevral": 2,
+    "mart": 3,
+    "aprel": 4,
+    "iyn": 6,
+    "iyun": 6,
+    "iyl": 7,
+    "iyul": 7,
+    "avq": 8,
+    "avqust": 8,
+    "sen": 9,
+    "sentyabr": 9,
+    "okt": 10,
+    "oktyabr": 10,
+    "noy": 11,
+    "noyabr": 11,
+    "dek": 12,
+    "dekabr": 12,
+    "янв": 1,
+    "январь": 1,
+    "января": 1,
+    "фев": 2,
+    "февраль": 2,
+    "февраля": 2,
+    "мар": 3,
+    "март": 3,
+    "марта": 3,
+    "апр": 4,
+    "апрель": 4,
+    "апреля": 4,
+    "май": 5,
+    "мая": 5,
+    "июн": 6,
+    "июнь": 6,
+    "июня": 6,
+    "июл": 7,
+    "июль": 7,
+    "июля": 7,
+    "авг": 8,
+    "август": 8,
+    "августа": 8,
+    "сен": 9,
+    "сентябрь": 9,
+    "сентября": 9,
+    "окт": 10,
+    "октябрь": 10,
+    "октября": 10,
+    "ноя": 11,
+    "ноябрь": 11,
+    "ноября": 11,
+    "дек": 12,
+    "декабрь": 12,
+    "декабря": 12,
+}
+
+_PRESENT = re.compile(
+    r"(?i)^(present|current|now|today|hal-hazırda|halhazirda|indi|настоящее|"
+    r"настоящее\s+время|по\s+настоящее|n\/a|tbd)$"
+)
+
+_RANGE = re.compile(
+    r"(?ix)"
+    r"(?P<start>"
+    r"(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec|"
+    r"january|february|march|april|june|july|august|september|october|november|december|"
+    r"yan|yanvar|fev|fevral|mart|aprel|iyn|iyun|iyl|iyul|avq|avqust|sen|sentyabr|"
+    r"okt|oktyabr|noy|noyabr|dek|dekabr|"
+    r"янв(?:арь|аря)?|фев(?:раль|раля)?|мар(?:та?)?|апр(?:ель|еля)?|мая?|"
+    r"июн(?:ь|я)?|июл(?:ь|я)?|авг(?:уста?)?|сен(?:тябрь|тября)?|"
+    r"окт(?:ябрь|ября)?|ноя(?:брь|бря)?|дек(?:абрь|абря)?)"
+    r"[\s\./\-]+)?"
+    r"(?:19|20)\d{2}"
+    r"|"
+    r"(?:0?[1-9]|1[0-2])[\./\-](?:19|20)\d{2}"
+    r")"
+    r"\s*(?:–|—|-|to|until|через|dək|:)\s*"
+    r"(?P<end>"
+    r"present|current|now|today|hal-hazırda|halhazirda|indi|"
+    r"настоящее(?:\s+время)?|по\s+настоящее|"
+    r"(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec|"
+    r"january|february|march|april|june|july|august|september|october|november|december|"
+    r"yan|yanvar|fev|fevral|mart|aprel|iyn|iyun|iyl|iyul|avq|avqust|sen|sentyabr|"
+    r"okt|oktyabr|noy|noyabr|dek|dekabr|"
+    r"янв(?:арь|аря)?|фев(?:раль|раля)?|мар(?:та?)?|апр(?:ель|еля)?|мая?|"
+    r"июн(?:ь|я)?|июл(?:ь|я)?|авг(?:уста?)?|сен(?:тябрь|тября)?|"
+    r"окт(?:ябрь|ября)?|ноя(?:брь|бря)?|дек(?:абрь|абря)?)"
+    r"[\s\./\-]+)?"
+    r"(?:19|20)\d{2}"
+    r"|"
+    r"(?:0?[1-9]|1[0-2])[\./\-](?:19|20)\d{2}"
+    r")"
+)
+
+
+def parse_month(token: str, *, end: bool = False) -> date | None:
+    """Parse a month/year token into a date (day = 1, or month-end when end=True)."""
+    raw = (token or "").strip()
+    if not raw:
+        return None
+    if _PRESENT.match(raw):
+        today = date.today()
+        if end:
+            return today
+        return date(today.year, today.month, 1)
+    raw = raw.replace(".", "/").replace("-", " ")
+    parts = [p for p in re.split(r"[\s/]+", raw.lower()) if p]
+    if not parts:
+        return None
+    year = None
+    month = 1
+    if len(parts) == 1 and re.fullmatch(r"(?:19|20)\d{2}", parts[0]):
+        year = int(parts[0])
+        month = 12 if end else 1
+    elif len(parts) >= 2:
+        if (
+            parts[0].isdigit()
+            and len(parts[0]) <= 2
+            and parts[-1].isdigit()
+            and len(parts[-1]) == 4
+        ):
+            month = int(parts[0])
+            year = int(parts[-1])
+        elif parts[-1].isdigit() and len(parts[-1]) == 4:
+            year = int(parts[-1])
+            month = _MONTHS.get(parts[0], 0)
+        else:
+            return None
+    else:
+        return None
+    if year is None or not (1 <= month <= 12):
+        return None
+    day = monthrange(year, month)[1] if end else 1
+    try:
+        return date(year, month, day)
+    except ValueError:
+        return None
+
+
+def find_ranges(text: str) -> list[tuple[date, date, str, str]]:
+    """Return (start, end, start_token, end_token) for each range in text."""
+    out: list[tuple[date, date, str, str]] = []
+    for m in _RANGE.finditer(text or ""):
+        start = parse_month(m.group("start"), end=False)
+        end = parse_month(m.group("end"), end=True)
+        if start and end and end >= start:
+            out.append((start, end, m.group("start"), m.group("end")))
+    return out
+
+
+def years_between(start: date, end: date) -> float:
+    days = (end - start).days
+    if days < 0:
+        return 0.0
+    return round(days / 365.25, 2)
+
+
+def merge_years(ranges: list[tuple[date, date]]) -> float:
+    """Union length of date ranges in years (overlapping periods merged)."""
+    if not ranges:
+        return 0.0
+    ordered = sorted(ranges, key=lambda r: r[0])
+    merged: list[list[date]] = [[ordered[0][0], ordered[0][1]]]
+    for start, end in ordered[1:]:
+        last = merged[-1]
+        if start <= last[1]:
+            if end > last[1]:
+                last[1] = end
+        else:
+            merged.append([start, end])
+    total = sum(years_between(a, b) for a, b in merged)
+    return round(total, 2)
+
+
+def iso_month(value: date | None) -> str | None:
+    if value is None:
+        return None
+    return f"{value.year:04d}-{value.month:02d}"

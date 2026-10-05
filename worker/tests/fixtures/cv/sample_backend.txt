@@ -1,0 +1,32 @@
+Aysel Məmmədli
+Backend Developer
+aysel.mammadli@example.com
++994 50 123 45 67
+https://github.com/ayselm
+https://linkedin.com/in/aysel-mammadli
+https://aysel.dev
+
+Summary
+Middle Backend Developer with Java and Spring experience. Comfortable with PostgreSQL and Docker.
+
+Experience
+Backend Developer at Acme Soft
+Mar 2021 – Present
+Built APIs with Java, Spring Boot and Kafka. Deployed services with Docker and Kubernetes on AWS.
+
+Junior Java Developer | Startup Labs
+01/2019 - 02/2021
+Wrote Java services, SQL queries against PostgreSQL, basic CI/CD pipelines.
+
+Education
+BSc Computer Science
+ADA University
+2018
+
+Skills
+Java, Spring, Kafka, PostgreSQL, Docker, Kubernetes, AWS, CI/CD, Git
+
+Languages
+Azerbaijani — native
+English — B2
+Russian — B1
