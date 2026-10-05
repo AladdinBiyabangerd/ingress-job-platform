@@ -2,7 +2,14 @@ import { NextResponse } from "next/server";
 import { apiBase } from "../api";
 
 const SAFE_RETURN = /^\/(?:(?:en|ru)(?:\/jobs\/\d+|\/post|\/company|\/admin|\/applications|\/profile|\/notifications)?|jobs\/\d+|post|company|admin|applications|profile|notifications)?$/;
-const AUTH_COOKIE_NAMES = [
+
+/** Current auth cookies. Legacy names are expired on every auth response but never trusted. */
+export const ACCESS_COOKIE = "job_at";
+export const REFRESH_COOKIE = "job_rt";
+export const STATE_COOKIE = "job_st";
+const GUEST_COOKIE = "job_guest";
+
+const LEGACY_AUTH_COOKIES = [
   "job_access_token",
   "job_refresh_token",
   "job_oidc_state",
@@ -60,86 +67,89 @@ function cookieSecure() {
   return process.env.NODE_ENV === "production";
 }
 
-const CLEAR_PATHS = ["/", "/api", "/api/auth", "/api/auth/callback", "/api/auth/login", "/api/auth/logout", "/api/auth/me"];
-const GUEST_COOKIE = "job_guest";
-
 export function cookie(name, value, maxAgeSeconds) {
   const secure = cookieSecure() ? "; Secure" : "";
   const expires = maxAgeSeconds <= 0 ? "; Expires=Thu, 01 Jan 1970 00:00:00 GMT" : "";
   return `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}${expires}${secure}`;
 }
 
-function authCookieNames(request) {
-  const names = new Set(AUTH_COOKIE_NAMES);
-  const header = request?.headers?.get("cookie") || "";
-  for (const item of header.split(";")) {
-    const name = item.trim().split("=", 1)[0];
-    if (/^job_(?:access|refresh|token|session|state|nonce|oidc_|pkce_)/.test(name)) names.add(name);
-  }
-  return [...names];
-}
-
-function clearPaths(request) {
-  const paths = new Set(CLEAR_PATHS);
+function requestHosts(request) {
+  const hosts = new Set();
+  const add = (value) => {
+    const host = String(value || "").trim().toLowerCase().split(":")[0];
+    if (host && /^[a-z0-9.-]+$/.test(host)) hosts.add(host);
+  };
   try {
-    const pathname = new URL(request?.url || "http://localhost/").pathname || "/";
-    let acc = "";
-    for (const bit of pathname.split("/").filter(Boolean)) {
-      if (!/^[A-Za-z0-9._~-]+$/.test(bit)) break;
-      acc += `/${bit}`;
-      if (acc.length > 200) break;
-      paths.add(acc);
-    }
+    add(new URL(request?.url || "http://localhost/").hostname);
   } catch {
-    // The fixed paths still cover the auth routes.
+    // ignore
   }
-  return [...paths];
+  try {
+    add(new URL(publicOrigin(request)).hostname);
+  } catch {
+    // ignore
+  }
+  add(request?.headers?.get("host"));
+  add(request?.headers?.get("x-forwarded-host")?.split(",")[0]);
+  return [...hosts];
 }
 
 function clearDomains(request) {
   const domains = [""];
-  try {
-    const host = new URL(publicOrigin(request)).hostname.toLowerCase();
-    const named = /^[a-z0-9.-]+$/.test(host) && host.includes(".") && !host.endsWith(".localhost") && !/^\d+\.\d+\.\d+\.\d+$/.test(host);
-    if (named) domains.push(host);
-  } catch {
-    // Host-only clears still apply to whatever host the browser used.
+  for (const host of requestHosts(request)) {
+    if (host.includes(".") && !host.endsWith(".localhost") && !/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+      domains.push(host);
+    }
   }
   return domains;
 }
 
-function expireVariants(name, request, spareHostRoot) {
+function expireVariants(name, request, spareLive) {
   const liveSecure = cookieSecure();
   const headers = [];
-  for (const path of clearPaths(request)) {
-    for (const domain of clearDomains(request)) {
-      if (domain && path !== "/") continue;
-      for (const secure of [false, true]) {
-        if (spareHostRoot && path === "/" && domain === "" && secure === liveSecure) continue;
-        const parts = [
-          `${name}=`,
-          `Path=${path}`,
-          "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
-          "Max-Age=0",
-          "HttpOnly",
-          "SameSite=Lax",
-        ];
-        if (domain) parts.push(`Domain=${domain}`);
-        if (secure) parts.push("Secure");
-        headers.push(parts.join("; "));
-      }
+  for (const domain of clearDomains(request)) {
+    for (const secure of [false, true]) {
+      if (spareLive && domain === "" && secure === liveSecure) continue;
+      const parts = [
+        `${name}=`,
+        "Path=/",
+        "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+        "Max-Age=0",
+        "HttpOnly",
+        "SameSite=Lax",
+      ];
+      if (domain) parts.push(`Domain=${domain}`);
+      if (secure) parts.push("Secure");
+      headers.push(parts.join("; "));
     }
   }
   return headers;
 }
 
 function guestSetHeaders() {
-  const base = `${GUEST_COOKIE}=1; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`;
-  return [base, `${base}; Secure`];
+  const secure = cookieSecure() ? "; Secure" : "";
+  return [`${GUEST_COOKIE}=1; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400${secure}`];
+}
+
+function allAuthCookieNames(request) {
+  const names = new Set([
+    ACCESS_COOKIE,
+    REFRESH_COOKIE,
+    STATE_COOKIE,
+    ...LEGACY_AUTH_COOKIES,
+  ]);
+  const header = request?.headers?.get("cookie") || "";
+  for (const item of header.split(";")) {
+    const name = item.trim().split("=", 1)[0];
+    if (/^job_(?:access|refresh|token|session|state|nonce|oidc_|pkce_|at|rt|st)/.test(name)) {
+      names.add(name);
+    }
+  }
+  return [...names];
 }
 
 export function clearAuthCookies(request) {
-  return authCookieNames(request).flatMap((name) => expireVariants(name, request, false));
+  return allAuthCookieNames(request).flatMap((name) => expireVariants(name, request, false));
 }
 
 export function clampAge(value, fallback, max) {
@@ -170,31 +180,51 @@ export function appendCookies(response, values) {
   return next;
 }
 
-export function clearAuthCookiesOn(response, request) {
+function applyCookieHeaders(response, headers) {
   const next = asNextResponse(response);
-  for (const value of [...clearAuthCookies(request), ...guestSetHeaders()]) {
-    next.headers.append("Set-Cookie", value);
-  }
+  for (const value of headers) next.headers.append("Set-Cookie", value);
   return next;
 }
 
+export function clearAuthCookiesOn(response, request) {
+  return applyCookieHeaders(response, [...clearAuthCookies(request), ...guestSetHeaders()]);
+}
+
 export function setAuthCookies(response, entries, request) {
-  const next = asNextResponse(response);
   const setting = new Set(entries.map(([name]) => name));
   const headers = [];
-  for (const name of authCookieNames(request)) {
+  for (const name of allAuthCookieNames(request)) {
     headers.push(...expireVariants(name, request, setting.has(name)));
   }
   headers.push(...expireVariants(GUEST_COOKIE, request, false));
   for (const [name, value, maxAgeSeconds] of entries) {
     headers.push(cookie(name, value, maxAgeSeconds));
   }
-  for (const value of headers) next.headers.append("Set-Cookie", value);
-  return next;
+  return applyCookieHeaders(response, headers);
+}
+
+/** Start OAuth after logout without dropping the guest lock. */
+export function beginLoginCookies(response, state, request) {
+  const headers = [];
+  for (const name of allAuthCookieNames(request)) {
+    headers.push(...expireVariants(name, request, name === STATE_COOKIE));
+  }
+  headers.push(...guestSetHeaders());
+  headers.push(cookie(STATE_COOKIE, state, 600));
+  return applyCookieHeaders(response, headers);
 }
 
 export function signedOut(request) {
   return Boolean(readCookie(request, GUEST_COOKIE));
+}
+
+export function hasSessionCookies(request) {
+  return Boolean(readCookie(request, ACCESS_COOKIE) || readCookie(request, REFRESH_COOKIE));
+}
+
+function clearSessionCookies(request) {
+  return [ACCESS_COOKIE, REFRESH_COOKIE, ...LEGACY_AUTH_COOKIES]
+    .flatMap((name) => expireVariants(name, request, false));
 }
 
 export async function authorizedApi(request, path, init = {}) {
@@ -209,18 +239,18 @@ export async function authorizedApi(request, path, init = {}) {
     cache: "no-store",
   });
 
-  // A refresh cookie must not rebuild the session after logout. The guest
-  // cookie stays until the visitor starts a new sign-in.
+  // Guest lock stays until a matching login callback finishes. Never rebuild
+  // the session from leftover tokens, and do not wipe OIDC state mid-login.
   if (signedOut(request)) {
-    const header = request.headers.get("cookie") || "";
-    const leftover = /(?:^|;\s*)job_(?:access|refresh|token|session|state|nonce|oidc_|pkce_)/.test(header);
+    const leftover = hasSessionCookies(request)
+      || Boolean(readCookie(request, "job_access_token") || readCookie(request, "job_refresh_token"));
     return {
       upstream: new Response(null, { status: 401 }),
-      setCookies: leftover ? clearAuthCookies(request) : [],
+      setCookies: leftover ? clearSessionCookies(request) : [],
     };
   }
 
-  const access = readCookie(request, "job_access_token");
+  const access = readCookie(request, ACCESS_COOKIE);
   if (access) {
     try {
       const upstream = await call(access);
@@ -230,9 +260,12 @@ export async function authorizedApi(request, path, init = {}) {
     }
   }
 
-  const refresh = readCookie(request, "job_refresh_token");
+  const refresh = readCookie(request, REFRESH_COOKIE);
   if (!refresh) {
-    return { upstream: new Response(null, { status: 401 }), setCookies: access ? clearAuthCookies(request) : [] };
+    return {
+      upstream: new Response(null, { status: 401 }),
+      setCookies: access ? clearAuthCookies(request) : [],
+    };
   }
 
   let refreshed;
@@ -255,10 +288,10 @@ export async function authorizedApi(request, path, init = {}) {
     return { upstream: new Response(null, { status: 503 }), setCookies: [] };
   }
   const data = await refreshed.json();
-  const setCookies = [cookie("job_access_token", data.access_token, clampAge(data.expires_in, 900, 3600))];
+  const setCookies = [cookie(ACCESS_COOKIE, data.access_token, clampAge(data.expires_in, 900, 3600))];
   if (data.refresh_token) {
     setCookies.push(cookie(
-      "job_refresh_token",
+      REFRESH_COOKIE,
       data.refresh_token,
       clampAge(data.refresh_expires_in, 3600, 365 * 24 * 60 * 60),
     ));

@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import {
+  ACCESS_COOKIE,
   clampAge,
   clearAuthCookiesOn,
   companyPath,
   noStore,
   oidcConfig,
   readCookie,
+  REFRESH_COOKIE,
   safeReturnTo,
   setAuthCookies,
   signedOut,
+  STATE_COOKIE,
 } from "../../../../lib/server/oidc";
 
 export const runtime = "nodejs";
@@ -20,16 +23,16 @@ function fail(request, origin, code) {
 
 export async function GET(request) {
   const config = oidcConfig(request);
-  // Logout leaves a guest cookie. Ignore a silent authorize that still
-  // returns a code for the Academy session; do not start another login.
-  if (signedOut(request)) {
-    return noStore(clearAuthCookiesOn(NextResponse.redirect(new URL("/", config.origin), 303), request));
-  }
   const url = new URL(request.url);
   const code = url.searchParams.get("code") || "";
   const state = url.searchParams.get("state") || "";
   const oauthError = url.searchParams.get("error");
-  const expected = readCookie(request, "job_oidc_state");
+  const expected = readCookie(request, STATE_COOKIE);
+  // Logout keeps job_guest through login start. Accept only a callback whose
+  // state matches the login we began; reject silent/stray Academy codes.
+  if (signedOut(request) && (!code || !state || state !== expected)) {
+    return noStore(clearAuthCookiesOn(NextResponse.redirect(new URL("/", config.origin), 303), request));
+  }
   if (oauthError || !code || code.length > 4096 || !state || state !== expected) {
     return fail(request, config.origin, oauthError ? "provider_error" : "invalid_callback");
   }
@@ -57,11 +60,11 @@ export async function GET(request) {
   if (data.me && data.me.needs_company_profile) dest = companyPath(dest);
 
   const entries = [
-    ["job_access_token", data.access_token, clampAge(data.expires_in, 900, 3600)],
+    [ACCESS_COOKIE, data.access_token, clampAge(data.expires_in, 900, 3600)],
   ];
   if (data.refresh_token) {
     entries.push([
-      "job_refresh_token",
+      REFRESH_COOKIE,
       data.refresh_token,
       clampAge(data.refresh_expires_in, 3600, 365 * 24 * 60 * 60),
     ]);

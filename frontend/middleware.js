@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiBase } from "./lib/api";
-import { publicOrigin } from "./lib/server/oidc";
+import { ACCESS_COOKIE, publicOrigin } from "./lib/server/oidc";
 
 const COMPANY = new Set(["/company", "/en/company", "/ru/company"]);
 
@@ -23,7 +23,7 @@ export async function middleware(request) {
     return pass(request, locale);
   }
   if (request.cookies.get("job_guest")?.value) return pass(request, locale);
-  const access = request.cookies.get("job_access_token")?.value;
+  const access = request.cookies.get(ACCESS_COOKIE)?.value;
   if (!access) return pass(request, locale);
   try {
     const me = await fetch(`${apiBase()}/api/v1/me`, {

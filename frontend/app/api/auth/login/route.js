@@ -1,12 +1,14 @@
 import { createHash, randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import {
+  beginLoginCookies,
+  hasSessionCookies,
   noStore,
   oidcConfig,
-  readCookie,
   safeReturnTo,
   setAuthCookies,
   signedOut,
+  STATE_COOKIE,
 } from "../../../../lib/server/oidc";
 
 export const runtime = "nodejs";
@@ -47,10 +49,8 @@ export async function GET(request) {
   }
   if (!saved.ok) return noStore(Response.json({ error: "auth_unavailable" }, { status: 503 }));
 
-  // A leftover refresh cookie after logout must not skip prompt=login.
-  const alreadySignedIn = !signedOut(request) && Boolean(
-    readCookie(request, "job_access_token") || readCookie(request, "job_refresh_token"),
-  );
+  // Only a live post-login session (no guest lock) counts as already signed in.
+  const alreadySignedIn = !signedOut(request) && hasSessionCookies(request);
   const params = new URLSearchParams({
     response_type: "code",
     client_id: config.clientId,
@@ -61,18 +61,18 @@ export async function GET(request) {
     code_challenge: challenge,
     code_challenge_method: "S256",
   });
-  // A job session already belongs to an Academy account. Keep that session
-  // and pass the role intent; do not force a second registration.
-  // New visitors send prompt=login. Academy offers sign-in or a new account.
-  // Do not call Academy logout from here.
-  if (!(intent && alreadySignedIn)) params.set("prompt", "login");
+  // Always force Academy to pick an account. Skipping prompt=login after logout
+  // left the previous job cookies in place and reopened Tofig while Portal was
+  // already on a different user.
+  params.set("prompt", "login");
   if (intent) params.set("registration_intent", intent);
   if (intent && alreadySignedIn) params.set("existing_account", "1");
   params.set("return_to", new URL(returnTo, `${config.origin}/`).toString());
 
-  return noStore(setAuthCookies(
-    NextResponse.redirect(`${config.authorizeUrl}?${params.toString()}`, 302),
-    [["job_oidc_state", state, 600]],
-    request,
-  ));
+  const redirect = NextResponse.redirect(`${config.authorizeUrl}?${params.toString()}`, 302);
+  // After logout, keep job_guest until callback succeeds.
+  if (signedOut(request)) {
+    return noStore(beginLoginCookies(redirect, state, request));
+  }
+  return noStore(setAuthCookies(redirect, [[STATE_COOKIE, state, 600]], request));
 }

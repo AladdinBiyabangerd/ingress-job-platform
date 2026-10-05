@@ -1,0 +1,36 @@
+# Dependencies & build
+**/node_modules/
+**/.next/
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.pyc
+dist/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Local data / uploads
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+api/data/
+worker/data/
+cvs/
+tmp/
+api/**/*.pdf
+worker/**/*.pdf
+*.docx
+*.doc
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+*.log
+
+# Large lockfiles
+**/package-lock.json
