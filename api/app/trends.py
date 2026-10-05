@@ -19,7 +19,8 @@ MIN_SALARY_SAMPLES = 5
 MIN_PAIR_BASE_ADS = 10
 DEFAULT_PAIR_LIMIT = 3
 MAX_PAIR_LIMIT = 10
-GROWTH_EPS = 1e-6
+# Prior week must have a real baseline; near-zero prior turns WoW into millions %.
+MIN_PRIOR_SHARE_FOR_GROWTH = 0.001
 
 _SALARY_COLUMNS = (
     ("salary_currency", "TEXT NOT NULL DEFAULT ''"),
@@ -271,8 +272,10 @@ def _skill_meta(conn, skill_ids: list[int]) -> dict[int, dict]:
 def growth_wow(current_share: float, prior_share: float, *, ad_count: int) -> float | None:
     if ad_count < MIN_ADS_FOR_GROWTH:
         return None
-    prior = max(float(prior_share), GROWTH_EPS)
-    return round((float(current_share) - float(prior_share)) / prior, 4)
+    prior = float(prior_share)
+    if prior < MIN_PRIOR_SHARE_FOR_GROWTH:
+        return None
+    return round((float(current_share) - prior) / prior, 4)
 
 
 def _pair_co_counts(

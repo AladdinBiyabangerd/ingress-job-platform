@@ -148,6 +148,10 @@ class TrendsTests(unittest.TestCase):
         self.assertIsNotNone(value)
         self.assertAlmostEqual(value, (0.5 - 0.4) / 0.4, places=3)
 
+    def test_growth_wow_suppressed_without_prior_baseline(self):
+        self.assertIsNone(growth_wow(0.31, 0.0, ad_count=MIN_ADS_FOR_GROWTH))
+        self.assertIsNone(growth_wow(0.31, 1e-6, ad_count=MIN_ADS_FOR_GROWTH))
+
     def test_combine_salary_days_requires_min_samples(self):
         few = [
             {"median": 50000, "currency": "GBP", "n": MIN_SALARY_SAMPLES - 1, "low": 40_000, "high": 60_000}
