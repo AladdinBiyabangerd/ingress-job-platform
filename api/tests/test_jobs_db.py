@@ -36,3 +36,17 @@ class JobsDbSqlTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WantsReturningTest(unittest.TestCase):
+    def test_tables_without_id_skip_returning(self):
+        from app.jobs_db import _wants_returning
+
+        self.assertTrue(_wants_returning("INSERT INTO jobs (title) VALUES (?)"))
+        self.assertFalse(
+            _wants_returning(
+                "INSERT INTO maintenance_steps (name, done_at) VALUES (?, ?) ON CONFLICT (name) DO NOTHING"
+            )
+        )
+        self.assertFalse(_wants_returning("INSERT INTO tidy_batch_jobs (batch_id, job_id) VALUES (?, ?)"))
+

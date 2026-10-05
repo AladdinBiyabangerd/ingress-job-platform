@@ -133,13 +133,17 @@ def _split_script(script: str) -> list[str]:
     return parts
 
 
+_NO_ID_TABLES = {"tidy_batch_jobs", "maintenance_steps"}
+
+
 def _wants_returning(sql: str) -> bool:
     match = _INSERT.match(sql)
     if match is None:
         return False
     if _RETURNING.search(sql):
         return False
-    return match.group(1).lower() != "tidy_batch_jobs"
+    # Tables without an integer "id" column must not get RETURNING id.
+    return match.group(1).lower() not in _NO_ID_TABLES
 
 
 def _params(params: Any) -> Any:
