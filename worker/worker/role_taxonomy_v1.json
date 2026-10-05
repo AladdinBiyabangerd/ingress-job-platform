@@ -1,0 +1,495 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-10-05T08:00:00Z",
+  "source": {
+    "plan": "docs/ingress-job-cv-ai-plan.pdf §6.1",
+    "categories": "worker/worker/techstack.py CATEGORIES",
+    "skill_dictionary": "docs/cv-ai/skill-dictionary-v1.json",
+    "note": "Hand-weighted signature skills for v1; later refresh from ad frequencies (TF style, no AI)."
+  },
+  "roles": [
+    {
+      "canonical_name": "Java Developer",
+      "category": "Backend",
+      "synonyms": ["Java Engineer", "Java Backend Developer", "Backend Java Developer"],
+      "signature_skills": [
+        {"skill": "Java", "weight": 1.0},
+        {"skill": "Spring", "weight": 0.8},
+        {"skill": "SQL", "weight": 0.4},
+        {"skill": "Kafka", "weight": 0.4},
+        {"skill": "PostgreSQL", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "Python Developer",
+      "category": "Backend",
+      "synonyms": ["Python Engineer", "Python Backend Developer", "Backend Python Developer"],
+      "signature_skills": [
+        {"skill": "Python", "weight": 1.0},
+        {"skill": "Django", "weight": 0.6},
+        {"skill": "FastAPI", "weight": 0.6},
+        {"skill": "Flask", "weight": 0.4},
+        {"skill": "SQL", "weight": 0.4},
+        {"skill": "PostgreSQL", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "Go Developer",
+      "category": "Backend",
+      "synonyms": ["Golang Developer", "Go Engineer", "Golang Engineer"],
+      "signature_skills": [
+        {"skill": "Go", "weight": 1.0},
+        {"skill": "Kubernetes", "weight": 0.5},
+        {"skill": "PostgreSQL", "weight": 0.4},
+        {"skill": "gRPC", "weight": 0.4},
+        {"skill": "Docker", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": ".NET Developer",
+      "category": "Backend",
+      "synonyms": ["C# Developer", "ASP.NET Developer", ".NET Engineer", "C# Engineer"],
+      "signature_skills": [
+        {"skill": ".NET", "weight": 1.0},
+        {"skill": "C#", "weight": 0.9},
+        {"skill": "SQL", "weight": 0.5},
+        {"skill": "Azure", "weight": 0.4}
+      ]
+    },
+    {
+      "canonical_name": "Node.js Developer",
+      "category": "Backend",
+      "synonyms": ["Node Developer", "Node Engineer", "NestJS Developer"],
+      "signature_skills": [
+        {"skill": "Node.js", "weight": 1.0},
+        {"skill": "TypeScript", "weight": 0.8},
+        {"skill": "NestJS", "weight": 0.5},
+        {"skill": "Express", "weight": 0.4},
+        {"skill": "PostgreSQL", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "Backend Engineer",
+      "category": "Backend",
+      "synonyms": ["Backend Developer", "Server-side Engineer", "API Engineer"],
+      "signature_skills": [
+        {"skill": "Python", "weight": 0.7},
+        {"skill": "Java", "weight": 0.6},
+        {"skill": "Go", "weight": 0.5},
+        {"skill": "SQL", "weight": 0.5},
+        {"skill": "PostgreSQL", "weight": 0.4},
+        {"skill": "AWS", "weight": 0.4},
+        {"skill": "Docker", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "React Developer",
+      "category": "Frontend",
+      "synonyms": ["React Engineer", "React.js Developer", "React Frontend Developer"],
+      "signature_skills": [
+        {"skill": "React", "weight": 1.0},
+        {"skill": "TypeScript", "weight": 0.8},
+        {"skill": "JavaScript", "weight": 0.6},
+        {"skill": "CSS", "weight": 0.4},
+        {"skill": "Next.js", "weight": 0.4},
+        {"skill": "HTML", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "Angular Developer",
+      "category": "Frontend",
+      "synonyms": ["Angular Engineer", "Angular Frontend Developer"],
+      "signature_skills": [
+        {"skill": "Angular", "weight": 1.0},
+        {"skill": "TypeScript", "weight": 0.9},
+        {"skill": "JavaScript", "weight": 0.5},
+        {"skill": "CSS", "weight": 0.4},
+        {"skill": "HTML", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "Vue.js Developer",
+      "category": "Frontend",
+      "synonyms": ["Vue Developer", "Vue Engineer", "Nuxt Developer"],
+      "signature_skills": [
+        {"skill": "Vue.js", "weight": 1.0},
+        {"skill": "TypeScript", "weight": 0.7},
+        {"skill": "JavaScript", "weight": 0.6},
+        {"skill": "Nuxt", "weight": 0.5},
+        {"skill": "CSS", "weight": 0.4}
+      ]
+    },
+    {
+      "canonical_name": "Frontend Engineer",
+      "category": "Frontend",
+      "synonyms": ["Frontend Developer", "Front-end Engineer", "UI Engineer", "Web Developer"],
+      "signature_skills": [
+        {"skill": "TypeScript", "weight": 0.9},
+        {"skill": "React", "weight": 0.8},
+        {"skill": "JavaScript", "weight": 0.7},
+        {"skill": "CSS", "weight": 0.5},
+        {"skill": "HTML", "weight": 0.4}
+      ]
+    },
+    {
+      "canonical_name": "Full-stack JS Developer",
+      "category": "Full-stack",
+      "synonyms": ["Full Stack JavaScript Developer", "MERN Developer", "React Node Developer"],
+      "signature_skills": [
+        {"skill": "React", "weight": 1.0},
+        {"skill": "Node.js", "weight": 0.9},
+        {"skill": "TypeScript", "weight": 0.8},
+        {"skill": "SQL", "weight": 0.4},
+        {"skill": "PostgreSQL", "weight": 0.4}
+      ]
+    },
+    {
+      "canonical_name": "Full-stack Python Developer",
+      "category": "Full-stack",
+      "synonyms": ["Python Full Stack Developer", "Django Full Stack Developer"],
+      "signature_skills": [
+        {"skill": "Python", "weight": 1.0},
+        {"skill": "React", "weight": 0.7},
+        {"skill": "Django", "weight": 0.6},
+        {"skill": "SQL", "weight": 0.5},
+        {"skill": "PostgreSQL", "weight": 0.4}
+      ]
+    },
+    {
+      "canonical_name": "Full-stack Engineer",
+      "category": "Full-stack",
+      "synonyms": ["Full Stack Developer", "Fullstack Engineer", "Full-stack Developer"],
+      "signature_skills": [
+        {"skill": "React", "weight": 0.8},
+        {"skill": "TypeScript", "weight": 0.7},
+        {"skill": "Node.js", "weight": 0.6},
+        {"skill": "Python", "weight": 0.5},
+        {"skill": "SQL", "weight": 0.5},
+        {"skill": "PostgreSQL", "weight": 0.4},
+        {"skill": "AWS", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "Android Developer",
+      "category": "Mobile",
+      "synonyms": ["Android Engineer", "Kotlin Android Developer"],
+      "signature_skills": [
+        {"skill": "Android", "weight": 1.0},
+        {"skill": "Kotlin", "weight": 0.9},
+        {"skill": "Java", "weight": 0.4},
+        {"skill": "SQL", "weight": 0.2}
+      ]
+    },
+    {
+      "canonical_name": "iOS Developer",
+      "category": "Mobile",
+      "synonyms": ["iOS Engineer", "Swift Developer", "Swift iOS Developer"],
+      "signature_skills": [
+        {"skill": "iOS", "weight": 1.0},
+        {"skill": "Swift", "weight": 0.9},
+        {"skill": "Objective-C", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "Flutter Developer",
+      "category": "Mobile",
+      "synonyms": ["Flutter Engineer", "Dart Flutter Developer"],
+      "signature_skills": [
+        {"skill": "Flutter", "weight": 1.0},
+        {"skill": "Dart", "weight": 0.9},
+        {"skill": "Android", "weight": 0.3},
+        {"skill": "iOS", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "React Native Developer",
+      "category": "Mobile",
+      "synonyms": ["React Native Engineer", "RN Developer"],
+      "signature_skills": [
+        {"skill": "React Native", "weight": 1.0},
+        {"skill": "TypeScript", "weight": 0.7},
+        {"skill": "React", "weight": 0.6},
+        {"skill": "JavaScript", "weight": 0.5}
+      ]
+    },
+    {
+      "canonical_name": "DevOps Engineer",
+      "category": "DevOps/Cloud",
+      "synonyms": ["DevOps Developer", "DevOps Specialist"],
+      "signature_skills": [
+        {"skill": "Kubernetes", "weight": 1.0},
+        {"skill": "CI/CD", "weight": 0.8},
+        {"skill": "Terraform", "weight": 0.8},
+        {"skill": "AWS", "weight": 0.7},
+        {"skill": "Docker", "weight": 0.6},
+        {"skill": "Python", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "SRE",
+      "category": "DevOps/Cloud",
+      "synonyms": ["Site Reliability Engineer", "Reliability Engineer"],
+      "signature_skills": [
+        {"skill": "Kubernetes", "weight": 1.0},
+        {"skill": "Prometheus", "weight": 0.7},
+        {"skill": "Grafana", "weight": 0.6},
+        {"skill": "Go", "weight": 0.5},
+        {"skill": "AWS", "weight": 0.5},
+        {"skill": "Terraform", "weight": 0.4},
+        {"skill": "Python", "weight": 0.4}
+      ]
+    },
+    {
+      "canonical_name": "Cloud Engineer",
+      "category": "DevOps/Cloud",
+      "synonyms": ["Cloud Developer", "AWS Engineer", "Cloud Infrastructure Engineer"],
+      "signature_skills": [
+        {"skill": "AWS", "weight": 1.0},
+        {"skill": "Terraform", "weight": 0.8},
+        {"skill": "Kubernetes", "weight": 0.6},
+        {"skill": "GCP", "weight": 0.5},
+        {"skill": "Azure", "weight": 0.5},
+        {"skill": "CI/CD", "weight": 0.4}
+      ]
+    },
+    {
+      "canonical_name": "Platform Engineer",
+      "category": "DevOps/Cloud",
+      "synonyms": ["Platform Developer", "Internal Platform Engineer", "Developer Platform Engineer"],
+      "signature_skills": [
+        {"skill": "Kubernetes", "weight": 1.0},
+        {"skill": "Terraform", "weight": 0.7},
+        {"skill": "CI/CD", "weight": 0.7},
+        {"skill": "Go", "weight": 0.5},
+        {"skill": "AWS", "weight": 0.5},
+        {"skill": "Helm", "weight": 0.4}
+      ]
+    },
+    {
+      "canonical_name": "Data Engineer",
+      "category": "Data/ML",
+      "synonyms": ["ETL Engineer", "Data Platform Engineer"],
+      "signature_skills": [
+        {"skill": "Python", "weight": 1.0},
+        {"skill": "SQL", "weight": 0.9},
+        {"skill": "Spark", "weight": 0.7},
+        {"skill": "Airflow", "weight": 0.6},
+        {"skill": "Kafka", "weight": 0.5},
+        {"skill": "dbt", "weight": 0.4}
+      ]
+    },
+    {
+      "canonical_name": "Data Analyst",
+      "category": "Data/ML",
+      "synonyms": ["Business Analyst Data", "Analytics Engineer", "BI Analyst"],
+      "signature_skills": [
+        {"skill": "SQL", "weight": 1.0},
+        {"skill": "Python", "weight": 0.7},
+        {"skill": "Pandas", "weight": 0.5},
+        {"skill": "dbt", "weight": 0.4},
+        {"skill": "BigQuery", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "Data Scientist",
+      "category": "Data/ML",
+      "synonyms": ["Applied Scientist", "Research Data Scientist"],
+      "signature_skills": [
+        {"skill": "Python", "weight": 1.0},
+        {"skill": "SQL", "weight": 0.7},
+        {"skill": "scikit-learn", "weight": 0.6},
+        {"skill": "Pandas", "weight": 0.5},
+        {"skill": "PyTorch", "weight": 0.4}
+      ]
+    },
+    {
+      "canonical_name": "ML Engineer",
+      "category": "Data/ML",
+      "synonyms": ["Machine Learning Engineer", "AI Engineer", "Deep Learning Engineer"],
+      "signature_skills": [
+        {"skill": "Python", "weight": 1.0},
+        {"skill": "PyTorch", "weight": 0.8},
+        {"skill": "TensorFlow", "weight": 0.5},
+        {"skill": "LLM", "weight": 0.5},
+        {"skill": "SQL", "weight": 0.3},
+        {"skill": "Kubernetes", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "MLOps Engineer",
+      "category": "Data/ML",
+      "synonyms": ["ML Platform Engineer", "ML Infrastructure Engineer"],
+      "signature_skills": [
+        {"skill": "Python", "weight": 0.9},
+        {"skill": "Kubernetes", "weight": 0.8},
+        {"skill": "AWS", "weight": 0.6},
+        {"skill": "Docker", "weight": 0.5},
+        {"skill": "CI/CD", "weight": 0.5},
+        {"skill": "PyTorch", "weight": 0.4},
+        {"skill": "Terraform", "weight": 0.4}
+      ]
+    },
+    {
+      "canonical_name": "QA Automation Engineer",
+      "category": "QA",
+      "synonyms": ["Automation QA", "Test Automation Engineer", "QA Automation"],
+      "signature_skills": [
+        {"skill": "Playwright", "weight": 0.9},
+        {"skill": "Selenium", "weight": 0.8},
+        {"skill": "Cypress", "weight": 0.7},
+        {"skill": "JavaScript", "weight": 0.5},
+        {"skill": "TypeScript", "weight": 0.5},
+        {"skill": "CI/CD", "weight": 0.4},
+        {"skill": "Python", "weight": 0.4}
+      ]
+    },
+    {
+      "canonical_name": "Manual QA",
+      "category": "QA",
+      "synonyms": ["QA Tester", "Quality Assurance Tester", "Manual Tester"],
+      "signature_skills": [
+        {"skill": "SQL", "weight": 0.4},
+        {"skill": "JavaScript", "weight": 0.2},
+        {"skill": "Playwright", "weight": 0.2}
+      ]
+    },
+    {
+      "canonical_name": "SDET",
+      "category": "QA",
+      "synonyms": ["Software Development Engineer in Test", "Quality Engineer", "Test Engineer"],
+      "signature_skills": [
+        {"skill": "Playwright", "weight": 0.8},
+        {"skill": "Selenium", "weight": 0.7},
+        {"skill": "Java", "weight": 0.5},
+        {"skill": "Python", "weight": 0.5},
+        {"skill": "CI/CD", "weight": 0.5},
+        {"skill": "Jenkins", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "AppSec Engineer",
+      "category": "Security",
+      "synonyms": ["Application Security Engineer", "Product Security Engineer"],
+      "signature_skills": [
+        {"skill": "Python", "weight": 0.7},
+        {"skill": "Java", "weight": 0.5},
+        {"skill": "AWS", "weight": 0.5},
+        {"skill": "Kubernetes", "weight": 0.4},
+        {"skill": "Go", "weight": 0.3},
+        {"skill": "Docker", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "Security Engineer",
+      "category": "Security",
+      "synonyms": ["Information Security Engineer", "Cybersecurity Engineer", "IT Security Engineer"],
+      "signature_skills": [
+        {"skill": "AWS", "weight": 0.7},
+        {"skill": "Python", "weight": 0.6},
+        {"skill": "Azure", "weight": 0.5},
+        {"skill": "GCP", "weight": 0.4},
+        {"skill": "Terraform", "weight": 0.4},
+        {"skill": "Linux", "weight": 0.4}
+      ]
+    },
+    {
+      "canonical_name": "SOC Analyst",
+      "category": "Security",
+      "synonyms": ["Security Operations Analyst", "Security Analyst", "SOC Engineer"],
+      "signature_skills": [
+        {"skill": "Python", "weight": 0.5},
+        {"skill": "Linux", "weight": 0.5},
+        {"skill": "AWS", "weight": 0.4},
+        {"skill": "Elasticsearch", "weight": 0.3},
+        {"skill": "Bash", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "UI/UX Designer",
+      "category": "Design/UX",
+      "synonyms": ["UX Designer", "UI Designer", "User Experience Designer"],
+      "signature_skills": [
+        {"skill": "Figma", "weight": 1.0},
+        {"skill": "HTML", "weight": 0.2},
+        {"skill": "CSS", "weight": 0.2}
+      ]
+    },
+    {
+      "canonical_name": "Product Designer",
+      "category": "Design/UX",
+      "synonyms": ["Senior Product Designer", "Digital Product Designer"],
+      "signature_skills": [
+        {"skill": "Figma", "weight": 1.0},
+        {"skill": "React", "weight": 0.2}
+      ]
+    },
+    {
+      "canonical_name": "Product Manager",
+      "category": "Product",
+      "synonyms": ["PM", "Digital Product Manager", "Technical Product Manager"],
+      "signature_skills": [
+        {"skill": "SQL", "weight": 0.5},
+        {"skill": "LLM", "weight": 0.2},
+        {"skill": "Python", "weight": 0.2}
+      ]
+    },
+    {
+      "canonical_name": "Product Owner",
+      "category": "Product",
+      "synonyms": ["PO", "Technical Product Owner"],
+      "signature_skills": [
+        {"skill": "SQL", "weight": 0.4},
+        {"skill": "Python", "weight": 0.2}
+      ]
+    },
+    {
+      "canonical_name": "Project Manager",
+      "category": "Product",
+      "synonyms": ["Technical Project Manager", "Delivery Manager", "Scrum Master", "Program Manager"],
+      "signature_skills": [
+        {"skill": "SQL", "weight": 0.2},
+        {"skill": "CI/CD", "weight": 0.2}
+      ]
+    },
+    {
+      "canonical_name": "IT Support",
+      "category": "IT Support",
+      "synonyms": ["Helpdesk", "Help Desk", "Desktop Support", "Service Desk", "IT Support Specialist"],
+      "signature_skills": [
+        {"skill": "Linux", "weight": 0.6},
+        {"skill": "Bash", "weight": 0.3},
+        {"skill": "AWS", "weight": 0.2},
+        {"skill": "SQL", "weight": 0.2}
+      ]
+    },
+    {
+      "canonical_name": "Support Engineer",
+      "category": "IT Support",
+      "synonyms": ["Technical Support Engineer", "Customer Support Engineer", "Product Support Engineer"],
+      "signature_skills": [
+        {"skill": "Linux", "weight": 0.6},
+        {"skill": "SQL", "weight": 0.5},
+        {"skill": "Python", "weight": 0.4},
+        {"skill": "AWS", "weight": 0.4},
+        {"skill": "Bash", "weight": 0.3}
+      ]
+    },
+    {
+      "canonical_name": "Solutions Architect",
+      "category": "Other tech",
+      "synonyms": ["Solution Architect", "Cloud Solutions Architect", "Systems Architect"],
+      "signature_skills": [
+        {"skill": "AWS", "weight": 0.9},
+        {"skill": "Azure", "weight": 0.5},
+        {"skill": "GCP", "weight": 0.5},
+        {"skill": "Kubernetes", "weight": 0.5},
+        {"skill": "Terraform", "weight": 0.4}
+      ]
+    }
+  ],
+  "notes": [
+    "Seed for role_taxonomy + role_skill_weight (Phase 0.3).",
+    "Signature skill names must match skill_dictionary.canonical_name; unknown skills are skipped at seed.",
+    "Soft-skill roles (Product, Design, Manual QA) have sparse tech weights by design until non-tech signals exist."
+  ]
+}
