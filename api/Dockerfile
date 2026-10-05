@@ -1,5 +1,5 @@
-# Build context is the repository root (see .railway/railway.ts).
-# Installs the API plus the worker package so CV parse can run in-process.
+# Build context is api/ (Railway rootDirectory = api).
+# CV parse needs the worker package; install it from this repo at the same commit.
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
@@ -12,14 +12,17 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends tesseract-ocr \
+    && apt-get install -y --no-install-recommends tesseract-ocr git \
     && rm -rf /var/lib/apt/lists/*
 
-COPY api/pyproject.toml ./api/
-COPY api/app ./api/app
-COPY worker/pyproject.toml ./worker/
-COPY worker/worker ./worker/worker
-RUN pip install ./api ./worker
+COPY pyproject.toml .
+COPY app ./app
+RUN pip install .
+
+# Same commit as this deploy so API and worker.cv_parse stay in sync.
+ARG RAILWAY_GIT_COMMIT_SHA=main
+RUN pip install \
+    "git+https://github.com/AladdinBiyabangerd/ingress-job-platform.git@${RAILWAY_GIT_COMMIT_SHA}#subdirectory=worker"
 
 EXPOSE 8010
 

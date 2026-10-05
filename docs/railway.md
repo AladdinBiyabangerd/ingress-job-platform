@@ -11,13 +11,15 @@ the files. Nothing here has been applied.
 
 | Service | Directory | What a push builds | Process |
 |---|---|---|---|
-| api | repo root (`.`) | `api/Dockerfile` via `RAILWAY_DOCKERFILE_PATH` | `uvicorn` on `$PORT` (no healthcheck); installs `api` + `worker` for in-process CV parse |
+| api | `api/` | `api/Dockerfile` | `uvicorn` on `$PORT`; installs `worker` from the same git commit for in-process CV parse + tesseract |
 | web | `frontend/` | `frontend/Dockerfile` (or `frontend/nixpacks.toml`) | `next start` on `$PORT` (no healthcheck) |
-| worker | `worker/` | `worker/Dockerfile` (or `worker/nixpacks.toml`) | `python -m worker` once per hour, then exit (job crawl; CV drain only as backup) |
+| worker | `worker/` | `worker/Dockerfile` | `python -m worker` once per hour, then exit (job crawl; CV drain only as backup) |
 
-CV parse runs in the API after upload (background thread drains `parse_cv_queue`). The
-worker cron is for crawling ads (`0 * * * *` UTC) and must exit. Local Mac
-scheduling is still `python -m worker schedule` and is unchanged.
+CV parse runs in the API after upload (background thread drains `parse_cv_queue`).
+The API image pulls the `worker` package from this GitHub repo at
+`$RAILWAY_GIT_COMMIT_SHA` (subdirectory `worker/`) because the Docker build
+context is only `api/`. The worker cron is for crawling ads (`0 * * * *` UTC)
+and must exit. Local Mac scheduling is still `python -m worker schedule`.
 
 `.railway/railway.ts` also creates:
 
