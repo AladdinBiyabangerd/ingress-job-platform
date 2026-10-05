@@ -60,6 +60,7 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
         "xulase",
         "haqqında",
         "о себе",
+        "обо мне",
         "резюме",
     ),
     "projects": (

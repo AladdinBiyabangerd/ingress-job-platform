@@ -1,0 +1,33 @@
+Аладдин Биябангерд
+Java Backend Engineer
+Баку, Азербайджан
+Email: aladdinbiyabangerd@gmail.com
+Телефон: +994 77 738 18 03
+Сайт: https://aladdinbiyabangerd.site
+LinkedIn: https://www.linkedin.com/in/aladdin-biyabangerd
+GitHub: https://github.com/AladdinBiyabangerd
+О СЕБЕ
+Создаю надёжные production-бэкенды. Работаю с Java, Spring Boot, микросервисами.
+ОПЫТ
+Software Engineer / Backend Developer
+Банк ВТБ (Азербайджан) | Полная занятость | Февраль 2026 – н.в.
+Разрабатывал backend для внутренних и клиентских банковских процессов.
+Java Software Developer
+Ingress Academy | Частичная занятость | Декабрь 2025 – н.в.
+Разрабатывал backend операционной платформы Ingress Academy.
+Java Mentor
+Ingress Academy | Контракт | Июль 2025 – н.в.
+Менторил по Java и основам backend.
+ОБРАЗОВАНИЕ
+Бакалавр, управление бизнесом
+Университет Ататюрка | Февраль 2025 – н.в.
+Бакалавр, геоинформационная картография
+Высшее военное училище имени Гейдара Алиева | Незаконченное
+НАВЫКИ
+Backend: Java, Spring Boot, Spring Security, JPA, Hibernate, REST
+Данные: Oracle, PostgreSQL, MySQL, SQL
+Инфраструктура: Docker, AWS S3, CI/CD, Git
+ЯЗЫКИ
+Азербайджанский — Родной
+Русский — Выше среднего (B2)
+Английский — Технический уровень

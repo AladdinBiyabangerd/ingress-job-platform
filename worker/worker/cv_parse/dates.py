@@ -90,42 +90,44 @@ _MONTHS = {
     "декабря": 12,
 }
 
-_PRESENT = re.compile(
-    r"(?i)^(present|current|now|today|hal-hazırda|halhazirda|hazırda|hazirda|"
-    r"indi|настоящее|настоящее\s+время|по\s+настоящее|n\/a|tbd)$"
+# "н.в." / "нв" = настоящее время (common RU CV abbreviation)
+_PRESENT_TOKEN = (
+    r"present|current|now|today|hal-hazırda|halhazirda|hazırda|hazirda|indi|"
+    r"н\.?\s*в\.?|н/в|"
+    r"настоящее(?:\s+время)?|по\s+настоящее(?:\s+время)?|"
+    r"по\s+н\.?\s*в\.?|n\/a|tbd"
+)
+
+_PRESENT = re.compile(rf"(?i)^(?:{_PRESENT_TOKEN})$")
+
+_MONTH_TOKEN = (
+    r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec|"
+    r"january|february|march|april|june|july|august|september|october|november|december|"
+    r"yan|yanvar|fev|fevral|mart|aprel|may|iyn|iyun|iyl|iyul|avq|avqust|sen|sentyabr|"
+    r"okt|oktyabr|noy|noyabr|dek|dekabr|"
+    r"янв(?:арь|аря)?|фев(?:раль|раля)?|мар(?:та?)?|апр(?:ель|еля)?|мая?|"
+    r"июн(?:ь|я)?|июл(?:ь|я)?|авг(?:уста?)?|сен(?:тябрь|тября)?|"
+    r"окт(?:ябрь|ября)?|ноя(?:брь|бря)?|дек(?:абрь|абря)?)"
 )
 
 _RANGE = re.compile(
-    r"(?ix)"
-    r"(?P<start>"
-    r"(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec|"
-    r"january|february|march|april|june|july|august|september|october|november|december|"
-    r"yan|yanvar|fev|fevral|mart|aprel|may|iyn|iyun|iyl|iyul|avq|avqust|sen|sentyabr|"
-    r"okt|oktyabr|noy|noyabr|dek|dekabr|"
-    r"янв(?:арь|аря)?|фев(?:раль|раля)?|мар(?:та?)?|апр(?:ель|еля)?|мая?|"
-    r"июн(?:ь|я)?|июл(?:ь|я)?|авг(?:уста?)?|сен(?:тябрь|тября)?|"
-    r"окт(?:ябрь|ября)?|ноя(?:брь|бря)?|дек(?:абрь|абря)?)"
-    r"[\s\./\-]+)?"
-    r"(?:19|20)\d{2}"
-    r"|"
-    r"(?:0?[1-9]|1[0-2])[\./\-](?:19|20)\d{2}"
-    r")"
-    r"\s*(?:–|—|-|to|until|через|dək|:)\s*"
-    r"(?P<end>"
-    r"present|current|now|today|hal-hazırda|halhazirda|hazırda|hazirda|indi|"
-    r"настоящее(?:\s+время)?|по\s+настоящее|"
-    r"(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec|"
-    r"january|february|march|april|june|july|august|september|october|november|december|"
-    r"yan|yanvar|fev|fevral|mart|aprel|may|iyn|iyun|iyl|iyul|avq|avqust|sen|sentyabr|"
-    r"okt|oktyabr|noy|noyabr|dek|dekabr|"
-    r"янв(?:арь|аря)?|фев(?:раль|раля)?|мар(?:та?)?|апр(?:ель|еля)?|мая?|"
-    r"июн(?:ь|я)?|июл(?:ь|я)?|авг(?:уста?)?|сен(?:тябрь|тября)?|"
-    r"окт(?:ябрь|ября)?|ноя(?:брь|бря)?|дек(?:абрь|абря)?)"
-    r"[\s\./\-]+)?"
-    r"(?:19|20)\d{2}"
-    r"|"
-    r"(?:0?[1-9]|1[0-2])[\./\-](?:19|20)\d{2}"
-    r")"
+    rf"(?ix)"
+    rf"(?P<start>"
+    rf"(?:{_MONTH_TOKEN}"
+    rf"[\s\./\-]+)?"
+    rf"(?:19|20)\d{{2}}"
+    rf"|"
+    rf"(?:0?[1-9]|1[0-2])[\./\-](?:19|20)\d{{2}}"
+    rf")"
+    rf"\s*(?:–|—|-|to|until|через|dək|:)\s*"
+    rf"(?P<end>"
+    rf"{_PRESENT_TOKEN}|"
+    rf"(?:{_MONTH_TOKEN}"
+    rf"[\s\./\-]+)?"
+    rf"(?:19|20)\d{{2}}"
+    rf"|"
+    rf"(?:0?[1-9]|1[0-2])[\./\-](?:19|20)\d{{2}}"
+    rf")"
 )
 
 

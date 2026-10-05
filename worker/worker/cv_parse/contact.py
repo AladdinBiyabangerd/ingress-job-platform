@@ -30,6 +30,12 @@ _SKIP_HOST = re.compile(
 )
 
 
+_LOCATION_LINE = re.compile(
+    r"(?i)^\s*([A-Za-zА-Яа-яƏəÖöÜüĞğÇçŞşİı'’\-\s]{2,40})\s*,\s*"
+    r"([A-Za-zА-Яа-яƏəÖöÜüĞğÇçŞşİı'’\-\s]{2,40})\s*$"
+)
+
+
 def extract_contact(text: str, *, default_region: str = "AZ") -> dict:
     email = _first(_EMAIL.findall(text))
     phone = _best_phone(text, default_region)
@@ -37,6 +43,7 @@ def extract_contact(text: str, *, default_region: str = "AZ") -> dict:
     github = _normalize_github(_first(_GITHUB.findall(text)))
     portfolio = _portfolio(text, linkedin, github)
     full_name = _guess_name(text, email)
+    city, country = _guess_location(text)
     return {
         "full_name": full_name,
         "email": email,
@@ -46,9 +53,28 @@ def extract_contact(text: str, *, default_region: str = "AZ") -> dict:
             "github": github,
             "portfolio": portfolio,
         },
-        "city": "",
-        "country": "",
+        "city": city,
+        "country": country,
     }
+
+
+def _guess_location(text: str) -> tuple[str, str]:
+    """Best-effort city/country from early 'City, Country' lines."""
+    for raw in (text or "").splitlines()[:14]:
+        line = raw.strip()
+        if not line or "@" in line or "http" in line.lower():
+            continue
+        low = line.lower()
+        if any(k in low for k in ("email", "tel", "phone", "telefon", "linkedin", "github", "veb", "сайт")):
+            continue
+        m = _LOCATION_LINE.match(line)
+        if not m:
+            continue
+        city = re.sub(r"\s+", " ", m.group(1)).strip()[:80]
+        country = re.sub(r"\s+", " ", m.group(2)).strip()[:80]
+        if city and country and city.lower() != country.lower():
+            return city, country
+    return "", ""
 
 
 def _first(items: list[str]) -> str:

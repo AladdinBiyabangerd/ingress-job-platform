@@ -93,6 +93,38 @@ Baku State
         self.assertEqual(got.year, today.year)
         self.assertEqual(got.month, today.month)
 
+    def test_parse_month_ru_abbreviation(self):
+        from worker.cv_parse.dates import find_ranges
+
+        ranges = find_ranges("Февраль 2026 – н.в.")
+        self.assertEqual(len(ranges), 1)
+        self.assertEqual(ranges[0][0], date(2026, 2, 1))
+
+    def test_sample_ru_ats_jobs_and_languages(self):
+        text = (FIXTURES / "sample_ru_ats.txt").read_text(encoding="utf-8")
+        profile = parse_text(text)
+        self.assertEqual(profile["headline"], "Java Backend Engineer")
+        self.assertEqual(profile["contact"]["city"], "Баку")
+        self.assertEqual(profile["contact"]["country"], "Азербайджан")
+        titles = [job["title"] for job in profile["work_history"]]
+        self.assertIn("Software Engineer / Backend Developer", titles)
+        self.assertIn("Java Software Developer", titles)
+        self.assertIn("Java Mentor", titles)
+        self.assertTrue(any(job.get("company", "").startswith("Банк ВТБ") for job in profile["work_history"]))
+        self.assertTrue(any(job.get("end") is None for job in profile["work_history"]))
+        self.assertGreater(profile["total_years"], 0)
+        lang_codes = {item["code"] for item in profile["languages"]}
+        self.assertEqual(lang_codes, {"az", "en", "ru"})
+        self.assertIn("experience", profile["parse_meta"]["sections_found"])
+        self.assertIn("skills", profile["parse_meta"]["sections_found"])
+
+    def test_sample_az_hazirda_dates(self):
+        from worker.cv_parse.dates import find_ranges
+
+        ranges = find_ranges("Fevral 2026 – Hazırda")
+        self.assertEqual(len(ranges), 1)
+        self.assertEqual(ranges[0][0], date(2026, 2, 1))
+
 
 class CvParseFilesTest(unittest.TestCase):
     def setUp(self):

@@ -13,7 +13,7 @@ from worker.cv_parse.sections import split_sections
 from worker.cv_parse.text import extract
 from worker.techstack import find_stack
 
-PARSER_VERSION = "1.3"
+PARSER_VERSION = "1.4"
 
 _SENIORITY_PAT = re.compile(
     r"(?i)\b(intern|junior|jr\.?|middle|mid-level|mid\b|senior|sr\.?|lead|principal|staff)\b"
@@ -23,6 +23,19 @@ _JOB_LINE = re.compile(
 )
 _TITLE_COMPANY = re.compile(
     r"(?ix)^\s*(?P<title>[^|,\-–—]{2,80})\s*[,|]\s*(?P<company>.+)$"
+)
+# Company | employment-type | dates  (EN / AZ / RU ATS layouts vary)
+_EMPLOYMENT_HINT = re.compile(
+    r"(?i)\b("
+    r"full[\s-]?time|part[\s-]?time|contract|internship|intern|freelance|remote|"
+    r"tam\s*ştat|yarım\s*ştat|müqavilə|"
+    r"полная\s*занятость|частичная\s*занятость|контракт|стажировка|"
+    r"занятость"
+    r")\b"
+)
+_DEGREE_START = re.compile(
+    r"(?i)^(bsc|ba|b\.?s\.?|msc|ma|m\.?s\.?|phd|bachelor|master|bakalavr|бакалавр|"
+    r"magistr|магистр|associate|diploma|diplom)\b"
 )
 
 
@@ -54,10 +67,38 @@ def parse_bytes(
     return profile
 
 
+def _join_wrapped_dates(text: str) -> str:
+    """Join soft line-breaks that split a date range (common in PDF extraction).
+
+    Example::
+
+        Февраль 2025 –
+        н.в.
+    """
+    lines = (text or "").splitlines()
+    if not lines:
+        return ""
+    out: list[str] = [lines[0]]
+    present_cont = re.compile(
+        r"(?i)^(н\.?\s*в\.?|н/в|present|current|now|hazırda|hazirda|indi|"
+        r"настоящее(?:\s+время)?)\s*$"
+    )
+    for line in lines[1:]:
+        prev = out[-1].rstrip()
+        cur = line.strip()
+        if prev and re.search(r"[–—-]\s*$", prev) and present_cont.match(cur):
+            out[-1] = prev + " " + cur
+            continue
+        out.append(line)
+    return "\n".join(out)
+
+
 def parse_text(text: str) -> dict:
     """Rules-only parse of already-extracted CV text → profile JSON."""
-    body = (text or "").strip()
+    body = _join_wrapped_dates((text or "").strip())
     sections = split_sections(body) if body else {}
+    # Re-join inside sections too (PDF wraps often land inside a section body).
+    sections = {key: _join_wrapped_dates(val) for key, val in sections.items()}
     contact = extract_contact(body) if body else extract_contact("")
     work_history, dated_jobs = _work_history(sections.get("experience", "") or body)
     total_years = merge_years([(w["start_date"], w["end_date"]) for w in dated_jobs])
@@ -111,10 +152,26 @@ def _headline(text: str, sections: dict[str, str], work: list[dict]) -> str:
         if not line or len(line) > 80:
             continue
         low = line.lower()
-        if any(k in low for k in ("@", "http", "linkedin", "github", "tel", "+994", "email", "telefon", "veb:")):
+        if any(
+            k in low
+            for k in (
+                "@",
+                "http",
+                "linkedin",
+                "github",
+                "tel",
+                "+994",
+                "email",
+                "telefon",
+                "телефон",
+                "veb:",
+                "сайт:",
+            )
+        ):
             continue
         if re.search(
-            r"(?i)\b(developer|engineer|devops|analyst|designer|manager|qa|sre|mentor)\b",
+            r"(?i)\b(developer|engineer|devops|analyst|designer|manager|qa|sre|mentor|"
+            r"разработчик|инженер)\b",
             line,
         ):
             return line[:120]
@@ -171,7 +228,8 @@ def _work_history(experience_text: str) -> tuple[list[dict], list[dict]]:
         present = bool(
             end_s
             and re.match(
-                r"(?i)present|current|now|hal-hazırda|hazırda|hazirda|indi|настоящее",
+                r"(?i)present|current|now|hal-hazırda|hazırda|hazirda|indi|"
+                r"н\.?\s*в\.?|н/в|настоящее",
                 end_s,
             )
         )
@@ -203,37 +261,48 @@ def _looks_like_bullet(line: str) -> bool:
     return len(s) > 90
 
 
+def _is_job_meta_line(line: str) -> bool:
+    """True for company/meta lines that usually follow a job title."""
+    s = line.strip()
+    if not s or _looks_like_bullet(s):
+        return False
+    if find_ranges(s):
+        return True
+    if "|" in s and _EMPLOYMENT_HINT.search(s):
+        return True
+    return False
+
+
 def _split_jobs(text: str) -> list[str]:
-    """Split experience into job blocks.
+    """Split experience into job blocks across common ATS layouts.
 
-    Supports AZ ATS layout::
-
-        Software Engineer
-        VTB Bank | Full-time | Feb 2026 – Present
-        Built APIs...
+    Handles title-then-meta lines (EN/AZ/RU), date-on-same-line jobs, and
+    blank-line separated blocks when dates are missing.
     """
     lines = text.splitlines()
-    date_idxs = [i for i, line in enumerate(lines) if find_ranges(line)]
-    if not date_idxs:
+    header_idxs: list[int] = []
+    for i, line in enumerate(lines):
+        if not _is_job_meta_line(line):
+            continue
+        j = i - 1
+        while j >= 0 and not lines[j].strip():
+            j -= 1
+        if j >= 0 and not _is_job_meta_line(lines[j]) and not _looks_like_bullet(lines[j]):
+            start = j
+        else:
+            start = i
+        if not header_idxs or start > header_idxs[-1]:
+            header_idxs.append(start)
+        elif start == header_idxs[-1]:
+            continue
+
+    if not header_idxs:
         parts = re.split(r"\n\s*\n", text.strip())
         return [p.strip() for p in parts if p.strip()]
 
-    starts: list[int] = []
-    for di in date_idxs:
-        j = di - 1
-        while j >= 0 and not lines[j].strip():
-            j -= 1
-        if j >= 0 and not find_ranges(lines[j]) and not _looks_like_bullet(lines[j]):
-            start = j
-        else:
-            start = di
-        if not starts or start >= starts[-1]:
-            if starts and start == starts[-1]:
-                continue
-            starts.append(start)
     chunks: list[str] = []
-    for i, start in enumerate(starts):
-        end = starts[i + 1] if i + 1 < len(starts) else len(lines)
+    for i, start in enumerate(header_idxs):
+        end = header_idxs[i + 1] if i + 1 < len(header_idxs) else len(lines)
         block = "\n".join(lines[start:end]).strip()
         if block:
             chunks.append(block)
@@ -245,7 +314,7 @@ def _title_company(block: str) -> tuple[str, str]:
     if not lines:
         return "", ""
     # Title on line 1, "Company | type | dates" (or Company — dates) on line 2.
-    if len(lines) >= 2 and find_ranges(lines[1]):
+    if len(lines) >= 2 and _is_job_meta_line(lines[1]):
         title = lines[0][:120]
         company_line = lines[1]
         company = company_line.split("|")[0].strip()
@@ -258,7 +327,7 @@ def _title_company(block: str) -> tuple[str, str]:
         m = _JOB_LINE.match(line)
         if m:
             return m.group("title").strip()[:120], m.group("company").strip()[:120]
-        if "|" in line and not find_ranges(line):
+        if "|" in line and not find_ranges(line) and not _EMPLOYMENT_HINT.search(line):
             m = _TITLE_COMPANY.match(line)
             if m:
                 return m.group("title").strip()[:120], m.group("company").strip()[:120]
@@ -336,24 +405,48 @@ def _level_for_years(years: float | None) -> str:
 def _education(text: str) -> list[dict]:
     if not text.strip():
         return []
+    body = _join_wrapped_dates(text.strip())
+    lines = [ln.strip() for ln in body.splitlines() if ln.strip()]
+    blocks: list[list[str]] = []
+    current: list[str] = []
+    for line in lines:
+        if current and _DEGREE_START.match(line):
+            blocks.append(current)
+            current = [line]
+        else:
+            current.append(line)
+    if current:
+        blocks.append(current)
+    if not blocks:
+        blocks = [lines]
+
     items: list[dict] = []
-    for block in re.split(r"\n\s*\n", text.strip()):
-        lines = [ln.strip() for ln in block.splitlines() if ln.strip()]
-        if not lines:
+    for block_lines in blocks:
+        if not block_lines:
             continue
         year = None
-        for line in lines:
+        school = ""
+        field = ""
+        degree = block_lines[0][:120]
+        if "," in degree:
+            left, right = degree.split(",", 1)
+            if _DEGREE_START.match(left.strip()):
+                degree = left.strip()[:120]
+                field = right.strip()[:120]
+        for line in block_lines[1:]:
+            clean = re.split(r"\s*\|\s*", line)[0].strip()
+            if not school and not find_ranges(clean):
+                school = clean[:120]
             m = re.search(r"((?:19|20)\d{2})", line)
-            if m:
+            if m and year is None:
                 year = int(m.group(1))
-                break
+        if not school and len(block_lines) > 1:
+            school = block_lines[1].split("|")[0].strip()[:120]
         items.append(
             {
-                "degree": lines[0][:120],
-                "field": lines[1][:120] if len(lines) > 1 else "",
-                "school": lines[2][:120]
-                if len(lines) > 2
-                else (lines[1][:120] if len(lines) > 1 else ""),
+                "degree": degree,
+                "field": field,
+                "school": school,
                 "year": year,
             }
         )
@@ -363,54 +456,70 @@ def _education(text: str) -> list[dict]:
 def _languages(text: str) -> list[dict]:
     if not text.strip():
         return []
-    code_map = {
-        "english": "en",
-        "en": "en",
-        "azərbaycan": "az",
-        "azerbaijani": "az",
-        "azerbaijan": "az",
-        "az": "az",
-        "russian": "ru",
-        "ru": "ru",
-        "русский": "ru",
-        "german": "de",
-        "de": "de",
-        "deutsch": "de",
-        "turkish": "tr",
-        "tr": "tr",
-        "french": "fr",
-        "fr": "fr",
-    }
-    level_map = {
-        "native": "native",
-        "ana dili": "native",
-        "родной": "native",
-        "fluent": "C1",
-        "advanced": "C1",
-        "c2": "C2",
-        "c1": "C1",
-        "b2": "B2",
-        "b1": "B1",
-        "a2": "A2",
-        "a1": "A1",
-        "intermediate": "B1",
-        "basic": "A2",
-    }
+    # Longer keys first so "азербайджанский" wins over shorter stems.
+    code_map = [
+        ("azərbaycan dili", "az"),
+        ("азербайджанский", "az"),
+        ("azerbaijani", "az"),
+        ("azerbaijan", "az"),
+        ("azərbaycan", "az"),
+        ("английский", "en"),
+        ("ingilis", "en"),
+        ("english", "en"),
+        ("русский", "ru"),
+        ("russian", "ru"),
+        ("немецкий", "de"),
+        ("german", "de"),
+        ("deutsch", "de"),
+        ("türkçe", "tr"),
+        ("turkish", "tr"),
+        ("турецкий", "tr"),
+        ("français", "fr"),
+        ("french", "fr"),
+        ("французский", "fr"),
+        ("az", "az"),
+        ("en", "en"),
+        ("ru", "ru"),
+        ("de", "de"),
+        ("tr", "tr"),
+        ("fr", "fr"),
+    ]
+    level_map = [
+        ("ana dili", "native"),
+        ("ana dil", "native"),
+        ("родной", "native"),
+        ("native", "native"),
+        ("выше среднего", "B2"),
+        ("yuxarı-orta", "B2"),
+        ("yuxari-orta", "B2"),
+        ("технический", "B2"),
+        ("texniki", "B2"),
+        ("fluent", "C1"),
+        ("advanced", "C1"),
+        ("intermediate", "B1"),
+        ("basic", "A2"),
+        ("c2", "C2"),
+        ("c1", "C1"),
+        ("b2", "B2"),
+        ("b1", "B1"),
+        ("a2", "A2"),
+        ("a1", "A1"),
+    ]
     out: list[dict] = []
-    for raw in re.split(r"[,;\n|/]+", text):
+    for raw in re.split(r"[\n;/]+", text):
         piece = raw.strip()
         if not piece:
             continue
         low = piece.lower()
         code = ""
-        for key, val in code_map.items():
-            if re.search(rf"\b{re.escape(key)}\b", low):
+        for key, val in code_map:
+            if re.search(rf"(?<!\w){re.escape(key)}(?!\w)", low):
                 code = val
                 break
         if not code:
             continue
         level = ""
-        for key, val in level_map.items():
+        for key, val in level_map:
             if key in low:
                 level = val
                 break
