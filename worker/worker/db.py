@@ -170,6 +170,9 @@ class Store:
         with self.conn:
             self.hidden_retired = hide_retired_local(self.conn)
             self.conn.execute(_API_USAGE)
+            from worker.skills import ensure_skills
+
+            self.skills_seeded, self.skills_backfilled = ensure_skills(self.conn)
 
     def close(self) -> None:
         self.conn.close()
@@ -395,6 +398,9 @@ class Store:
                             "UPDATE jobs SET salary = ? WHERE id = ?", (salary, existing["job_id"])
                         )
                     self._set_norm_key(int(existing["job_id"]), key)
+                    from worker.skills import sync_job_skills
+
+                    sync_job_skills(self.conn, int(existing["job_id"]), stack)
                 return "updated"
             job = self.conn.execute("SELECT id FROM jobs WHERE norm_key = ?", (key,)).fetchone()
             if job:
@@ -415,6 +421,9 @@ class Store:
                 kind = "created"
                 if salary:
                     self.conn.execute("UPDATE jobs SET salary = ? WHERE id = ?", (salary, job_id))
+                from worker.skills import sync_job_skills
+
+                sync_job_skills(self.conn, job_id, stack)
             self.conn.execute(
                 """
                 INSERT INTO job_sources (
@@ -474,10 +483,14 @@ class Store:
                 category = classify_category("", title, stack) if is_tech_job(title) else "-"
                 remote = 1 if int(row["remote"] or 0) or remote_flag(title, city, body) else 0
                 relocation = 1 if int(row["relocation"] or 0) or relocation_flag(title, city, body) else 0
+                stack_json = json.dumps(stack, ensure_ascii=False)
                 self.conn.execute(
                     "UPDATE jobs SET tech_stack = ?, category = ?, remote = ?, relocation = ? WHERE id = ?",
-                    (json.dumps(stack, ensure_ascii=False), category, remote, relocation, row["id"]),
+                    (stack_json, category, remote, relocation, row["id"]),
                 )
+                from worker.skills import sync_job_skills
+
+                sync_job_skills(self.conn, int(row["id"]), stack)
                 done += 1
         return done
 

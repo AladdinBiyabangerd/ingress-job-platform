@@ -22,6 +22,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WORKER_DIR = ROOT / "worker"
 OUT_DIR = ROOT / "docs" / "cv-ai"
+# Packaged copy used by the worker image (Docker context is worker/).
+PACKAGED_SEED = WORKER_DIR / "worker" / "skill_dictionary_v1.json"
 
 # Mirrors comment groups in worker/worker/techstack.py (_TECH).
 _CATEGORY_BY_CANONICAL: dict[str, str] = {
@@ -217,10 +219,11 @@ def main() -> int:
         },
         "skills": skills,
         "notes": [
-            "Seed for skill_dictionary table (Phase 0). Schema/migration is a later step.",
+            "Seed for skill_dictionary table (Phase 0).",
             "canonical_name + synonyms come from the existing curated extractor.",
             "ad_count is a local snapshot from jobs.tech_stack; re-run this script to refresh.",
             "Unknown tech_stack values (not in the curated list) are listed under unknown_in_ads.",
+            "Worker loads the packaged copy at worker/worker/skill_dictionary_v1.json.",
         ],
         "unknown_in_ads": [
             {"name": name, "ad_count": int(freq[name])} for name in unknown_in_ads
@@ -241,10 +244,14 @@ def main() -> int:
     args.out_dir.mkdir(parents=True, exist_ok=True)
     dict_path = args.out_dir / "skill-dictionary-v1.json"
     freq_path = args.out_dir / "skill-frequency-snapshot.json"
-    dict_path.write_text(json.dumps(dictionary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    payload = json.dumps(dictionary, ensure_ascii=False, indent=2) + "\n"
+    dict_path.write_text(payload, encoding="utf-8")
+    PACKAGED_SEED.parent.mkdir(parents=True, exist_ok=True)
+    PACKAGED_SEED.write_text(payload, encoding="utf-8")
     freq_path.write_text(json.dumps(frequency, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     print(f"wrote {dict_path.relative_to(ROOT)} ({len(skills)} skills)")
+    print(f"wrote {PACKAGED_SEED.relative_to(ROOT)}")
     print(f"wrote {freq_path.relative_to(ROOT)} ({len(freq)} observed)")
     if unknown_in_ads:
         print(f"warning: {len(unknown_in_ads)} tech_stack values not in curated list")

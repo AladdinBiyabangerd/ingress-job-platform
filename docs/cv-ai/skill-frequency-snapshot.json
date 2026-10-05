@@ -1,135 +1,147 @@
 {
   "version": "1.0",
-  "generated_at": "2026-10-05T07:52:45Z",
-  "total_jobs": 896,
-  "jobs_with_tech_stack": 415,
+  "generated_at": "2026-10-05T07:54:50Z",
+  "total_jobs": 970,
+  "jobs_with_tech_stack": 478,
   "skills": [
     {
       "name": "Python",
-      "ad_count": 179
+      "ad_count": 208
     },
     {
       "name": "AWS",
-      "ad_count": 145
+      "ad_count": 170
     },
     {
       "name": "Kubernetes",
-      "ad_count": 107
-    },
-    {
-      "name": "CI/CD",
-      "ad_count": 97
-    },
-    {
-      "name": "TypeScript",
-      "ad_count": 95
-    },
-    {
-      "name": "SQL",
-      "ad_count": 88
+      "ad_count": 121
     },
     {
       "name": "Go",
-      "ad_count": 87
+      "ad_count": 109
+    },
+    {
+      "name": "CI/CD",
+      "ad_count": 107
+    },
+    {
+      "name": "SQL",
+      "ad_count": 102
+    },
+    {
+      "name": "TypeScript",
+      "ad_count": 102
     },
     {
       "name": "LLM",
-      "ad_count": 83
+      "ad_count": 100
     },
     {
       "name": "React",
-      "ad_count": 82
-    },
-    {
-      "name": "Docker",
-      "ad_count": 75
+      "ad_count": 89
     },
     {
       "name": "Java",
-      "ad_count": 73
+      "ad_count": 87
     },
     {
-      "name": "PostgreSQL",
-      "ad_count": 71
+      "name": "Docker",
+      "ad_count": 85
     },
     {
       "name": "Azure",
-      "ad_count": 68
-    },
-    {
-      "name": "Terraform",
-      "ad_count": 65
+      "ad_count": 78
     },
     {
       "name": "GCP",
-      "ad_count": 64
+      "ad_count": 76
+    },
+    {
+      "name": "PostgreSQL",
+      "ad_count": 76
+    },
+    {
+      "name": "Terraform",
+      "ad_count": 72
     },
     {
       "name": "JavaScript",
-      "ad_count": 49
+      "ad_count": 58
     },
     {
       "name": "Node.js",
-      "ad_count": 43
-    },
-    {
-      "name": "Linux",
-      "ad_count": 42
+      "ad_count": 47
     },
     {
       "name": "Kafka",
-      "ad_count": 38
+      "ad_count": 47
+    },
+    {
+      "name": "Linux",
+      "ad_count": 43
     },
     {
       "name": "MySQL",
-      "ad_count": 30
+      "ad_count": 36
     },
     {
       "name": "Ruby",
-      "ad_count": 29
-    },
-    {
-      "name": "GitHub Actions",
-      "ad_count": 25
-    },
-    {
-      "name": "Redis",
-      "ad_count": 25
-    },
-    {
-      "name": "Rust",
-      "ad_count": 24
+      "ad_count": 33
     },
     {
       "name": "iOS",
-      "ad_count": 24
+      "ad_count": 30
     },
     {
       "name": "Elasticsearch",
-      "ad_count": 23
+      "ad_count": 29
     },
     {
       "name": "C++",
-      "ad_count": 23
-    },
-    {
-      "name": "Kotlin",
-      "ad_count": 23
-    },
-    {
-      "name": "C#",
-      "ad_count": 22
+      "ad_count": 28
     },
     {
       "name": "Android",
-      "ad_count": 22
+      "ad_count": 28
+    },
+    {
+      "name": "Kotlin",
+      "ad_count": 28
+    },
+    {
+      "name": "Redis",
+      "ad_count": 27
+    },
+    {
+      "name": "C#",
+      "ad_count": 26
+    },
+    {
+      "name": "GitHub Actions",
+      "ad_count": 26
+    },
+    {
+      "name": "Rust",
+      "ad_count": 25
+    },
+    {
+      "name": "Spark",
+      "ad_count": 24
+    },
+    {
+      "name": "Grafana",
+      "ad_count": 21
     },
     {
       "name": "Angular",
       "ad_count": 21
     },
     {
-      "name": "Spark",
+      "name": "Bash",
+      "ad_count": 19
+    },
+    {
+      "name": "Snowflake",
       "ad_count": 19
     },
     {
@@ -137,27 +149,35 @@
       "ad_count": 18
     },
     {
-      "name": "Bash",
+      "name": "Datadog",
       "ad_count": 18
-    },
-    {
-      "name": "Grafana",
-      "ad_count": 18
-    },
-    {
-      "name": "Snowflake",
-      "ad_count": 17
     },
     {
       "name": "MongoDB",
-      "ad_count": 16
+      "ad_count": 18
     },
     {
-      "name": "BigQuery",
-      "ad_count": 16
+      "name": "PyTorch",
+      "ad_count": 18
     },
     {
       "name": "DynamoDB",
+      "ad_count": 18
+    },
+    {
+      "name": "GraphQL",
+      "ad_count": 17
+    },
+    {
+      "name": "BigQuery",
+      "ad_count": 17
+    },
+    {
+      "name": "Ruby on Rails",
+      "ad_count": 17
+    },
+    {
+      "name": "Airflow",
       "ad_count": 16
     },
     {
@@ -165,15 +185,31 @@
       "ad_count": 16
     },
     {
+      "name": "Swift",
+      "ad_count": 16
+    },
+    {
       "name": "HTML",
       "ad_count": 15
     },
     {
-      "name": "GraphQL",
+      "name": "FastAPI",
       "ad_count": 15
     },
     {
+      "name": "Jenkins",
+      "ad_count": 15
+    },
+    {
+      "name": "Prometheus",
+      "ad_count": 14
+    },
+    {
       "name": "CSS",
+      "ad_count": 14
+    },
+    {
+      "name": "PHP",
       "ad_count": 14
     },
     {
@@ -181,31 +217,23 @@
       "ad_count": 14
     },
     {
-      "name": "Ruby on Rails",
-      "ad_count": 14
-    },
-    {
-      "name": "Prometheus",
+      "name": "React Native",
       "ad_count": 13
     },
     {
-      "name": "Jenkins",
+      "name": "Vue.js",
       "ad_count": 13
     },
     {
-      "name": "PHP",
+      "name": "C",
       "ad_count": 13
     },
     {
-      "name": "Swift",
+      "name": "Elixir",
       "ad_count": 13
     },
     {
-      "name": "Datadog",
-      "ad_count": 12
-    },
-    {
-      "name": "Airflow",
+      "name": "Ansible",
       "ad_count": 12
     },
     {
@@ -213,7 +241,11 @@
       "ad_count": 12
     },
     {
-      "name": "PyTorch",
+      "name": "Next.js",
+      "ad_count": 12
+    },
+    {
+      "name": "Django",
       "ad_count": 12
     },
     {
@@ -221,35 +253,11 @@
       "ad_count": 12
     },
     {
-      "name": "Elixir",
-      "ad_count": 12
-    },
-    {
-      "name": "React Native",
+      "name": "Databricks",
       "ad_count": 11
     },
     {
-      "name": "Ansible",
-      "ad_count": 11
-    },
-    {
-      "name": "FastAPI",
-      "ad_count": 11
-    },
-    {
-      "name": "Vue.js",
-      "ad_count": 11
-    },
-    {
-      "name": "Next.js",
-      "ad_count": 11
-    },
-    {
-      "name": "C",
-      "ad_count": 11
-    },
-    {
-      "name": "Django",
+      "name": "Pandas",
       "ad_count": 11
     },
     {
@@ -261,31 +269,27 @@
       "ad_count": 11
     },
     {
-      "name": "Pandas",
-      "ad_count": 10
-    },
-    {
       "name": "RabbitMQ",
-      "ad_count": 8
+      "ad_count": 9
     },
     {
-      "name": "Databricks",
-      "ad_count": 7
+      "name": "scikit-learn",
+      "ad_count": 8
     },
     {
       "name": "Tailwind",
       "ad_count": 7
     },
     {
-      "name": "scikit-learn",
+      "name": "gRPC",
       "ad_count": 7
     },
     {
-      "name": "gRPC",
-      "ad_count": 6
+      "name": "Ethereum",
+      "ad_count": 7
     },
     {
-      "name": "Ethereum",
+      "name": "TensorFlow",
       "ad_count": 6
     },
     {
@@ -301,6 +305,10 @@
       "ad_count": 4
     },
     {
+      "name": "Unity",
+      "ad_count": 4
+    },
+    {
       "name": "ClickHouse",
       "ad_count": 4
     },
@@ -310,10 +318,6 @@
     },
     {
       "name": "Symfony",
-      "ad_count": 4
-    },
-    {
-      "name": "TensorFlow",
       "ad_count": 4
     },
     {
@@ -349,10 +353,6 @@
       "ad_count": 2
     },
     {
-      "name": "Unity",
-      "ad_count": 2
-    },
-    {
       "name": "Laravel",
       "ad_count": 2
     },
@@ -374,6 +374,10 @@
     },
     {
       "name": "Objective-C",
+      "ad_count": 1
+    },
+    {
+      "name": "Haskell",
       "ad_count": 1
     }
   ]

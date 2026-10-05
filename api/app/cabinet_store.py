@@ -258,6 +258,28 @@ def _apply_schema(conn) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS notifications_recipient ON notifications(recipient_subject, id)"
     )
+    # Same skill tables the worker seeds/backfills (worker/worker/skills.py).
+    # API only ensures they exist when it opens the shared database first.
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS skill_dictionary (
+            id INTEGER PRIMARY KEY,
+            canonical_name TEXT NOT NULL UNIQUE,
+            synonyms TEXT NOT NULL DEFAULT '[]',
+            category_hint TEXT NOT NULL DEFAULT '',
+            academy_course_ids TEXT NOT NULL DEFAULT '[]',
+            updated_at TEXT NOT NULL DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS job_skill (
+            job_id INTEGER NOT NULL REFERENCES jobs(id),
+            skill_id INTEGER NOT NULL REFERENCES skill_dictionary(id),
+            source TEXT NOT NULL DEFAULT 'tech_stack',
+            PRIMARY KEY (job_id, skill_id)
+        );
+        """
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS job_skill_skill ON job_skill(skill_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS job_skill_job ON job_skill(job_id)")
     hide_retired_local(conn)
     conn.commit()
 
