@@ -50,18 +50,20 @@ export function MyApplications({ locale }) {
   return (
     <Shell locale={locale} mode="applications">
       {me === undefined ? null : allowed ? (
-        <div className="cabinet">
-          <div>
+        <div className="applications-page">
+          <header className="applications-head">
             <h1>{t.myApplications}</h1>
             <p className="lede">{t.myApplicationsLede}</p>
-          </div>
+          </header>
           {error ? <p className="note">{error}</p> : null}
           <ApplicationList locale={locale} items={items} mode="candidate" onChanged={load} />
         </div>
       ) : (
-        <section className="empty">
-          <h1>{t.myApplications}</h1>
-          <p className="lede">{t.applicationsGate}</p>
+        <section className="applications-page applications-gate">
+          <header className="applications-head">
+            <h1>{t.myApplications}</h1>
+            <p className="lede">{t.applicationsGate}</p>
+          </header>
           <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "applications" })} />
         </section>
       )}

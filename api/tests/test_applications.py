@@ -371,6 +371,12 @@ class ApplicationTests(unittest.TestCase):
         with self._auth("job:candidate", "apply-candidate"):
             mine = self.client.get("/api/v1/applications", headers={"Authorization": "Bearer test"})
             self.assertEqual(mine.json()["items"][0]["reason"], "Uyğun deyil")
+            timeline = mine.json()["items"][0]["timeline"]
+            self.assertEqual(timeline[0]["status"], "submitted")
+            self.assertTrue(timeline[0].get("at"))
+            rejected_steps = [step for step in timeline if step["status"] == "rejected"]
+            self.assertTrue(rejected_steps)
+            self.assertEqual(rejected_steps[-1]["note"], "Uyğun deyil")
             blocked = self.client.patch(
                 f"/api/v1/cabinet/applications/{body['id']}",
                 headers={"Authorization": "Bearer test"},

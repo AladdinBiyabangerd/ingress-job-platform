@@ -3467,3 +3467,274 @@ span.pager-btn {
   gap: 10px;
   margin-top: 16px;
 }
+
+/* /applications — compact status timeline */
+.wrap:has(.applications-page) {
+  max-width: 720px;
+  padding-top: 20px;
+  padding-bottom: 28px;
+}
+
+.applications-page {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+}
+
+.applications-head {
+  display: grid;
+  gap: 4px;
+}
+
+.applications-head h1 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.applications-head .lede {
+  margin: 0;
+  font-size: 0.92rem;
+  max-width: 52ch;
+  color: #656b75;
+}
+
+.applications-gate {
+  gap: 16px;
+}
+
+.app-list,
+.app-list-items {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.app-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid #dfe1e5;
+  border-radius: 14px;
+}
+
+.app-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.app-card-title {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 12rem;
+}
+
+.app-card-title h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.app-card-title h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-card-title h2 a:hover {
+  color: #001FFF;
+}
+
+.app-card-meta {
+  margin: 0;
+  color: #656b75;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.app-status {
+  display: inline-flex;
+  margin: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #eaefff;
+  color: #092F84;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.app-status.live {
+  background: #e8f7ef;
+  color: #0b6b3a;
+}
+
+.app-status.rejected {
+  background: #fdecef;
+  color: #b0003a;
+}
+
+.app-timeline-wrap {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.app-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.app-step {
+  display: grid;
+  grid-template-rows: 14px auto auto;
+  justify-items: center;
+  gap: 6px;
+  position: relative;
+  flex: 1 1 0;
+  min-width: 4.5rem;
+  text-align: center;
+  padding: 0 4px;
+}
+
+.app-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: calc(50% + 9px);
+  right: calc(-50% + 9px);
+  height: 2px;
+  background: #e4e7ec;
+}
+
+.app-step-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #c5cad3;
+  background: #ffffff;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+}
+
+.app-step-dot.submitted {
+  border-color: #092F84;
+  background: #eaefff;
+}
+
+.app-step-dot.seen {
+  border-color: #0b6b3a;
+  background: #e8f7ef;
+}
+
+.app-step-dot.rejected {
+  border-color: #b0003a;
+  background: #fdecef;
+}
+
+.app-step.current .app-step-dot {
+  box-shadow: 0 0 0 3px rgba(0, 31, 255, 0.08);
+}
+
+.app-step-label {
+  color: #20242b;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.25;
+  text-transform: capitalize;
+}
+
+.app-step.current .app-step-label {
+  color: #092F84;
+}
+
+.app-step time,
+.app-step-when-empty {
+  color: #656b75;
+  font-size: 11px;
+  line-height: 1.25;
+  min-height: 1.25em;
+}
+
+.app-step-note {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f7f8fa;
+  color: #20242b;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.app-step-note-label {
+  color: #656b75;
+  font-weight: 650;
+}
+
+.app-card-details {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.app-card-details .admin-body {
+  margin: 0;
+  font-size: 13px;
+}
+
+.app-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.app-card-actions .btn {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.card .app-timeline-wrap {
+  margin-top: 4px;
+}
+
+@media (max-width: 640px) {
+  .wrap:has(.applications-page) {
+    padding-top: 16px;
+    padding-bottom: 20px;
+  }
+
+  .app-card {
+    padding: 12px 12px;
+    border-radius: 12px;
+  }
+
+  .app-card-title h2 {
+    font-size: 1rem;
+  }
+
+  .app-step {
+    min-width: 4rem;
+  }
+
+  .app-card-actions .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}
+

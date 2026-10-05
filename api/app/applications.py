@@ -77,7 +77,65 @@ def _answers(raw: str) -> list[dict]:
     return items
 
 
-def _view(row: sqlite3.Row, *, reviewer: bool) -> dict:
+def _status_events(conn: sqlite3.Connection, app_ids: list[int]) -> dict[int, list[dict]]:
+    if not app_ids:
+        return {}
+    placeholders = ",".join("?" for _ in app_ids)
+    rows = conn.execute(
+        f"""
+        SELECT application_id, kind, reason, created_at
+        FROM notifications
+        WHERE application_id IN ({placeholders})
+          AND kind IN ('application_seen', 'application_rejected')
+        ORDER BY id ASC
+        """,
+        app_ids,
+    ).fetchall()
+    by_id: dict[int, list[dict]] = {app_id: [] for app_id in app_ids}
+    for row in rows:
+        app_id = int(row["application_id"])
+        kind = row["kind"] or ""
+        status = "seen" if kind == "application_seen" else "rejected"
+        step = {"status": status, "at": row["created_at"] or ""}
+        note = " ".join((row["reason"] or "").split())
+        if note:
+            step["note"] = note
+        by_id.setdefault(app_id, []).append(step)
+    return by_id
+
+
+def _timeline(row: sqlite3.Row, events: list[dict] | None = None) -> list[dict]:
+    status = (row["status"] or "submitted").strip().lower()
+    if status not in _STATUSES:
+        status = "submitted"
+    steps: list[dict] = [{"status": "submitted", "at": row["created_at"] or ""}]
+    history = list(events or [])
+    if history:
+        steps.extend(history)
+    elif status in {"seen", "rejected"}:
+        step: dict = {"status": status, "at": ""}
+        if status == "rejected":
+            reason = " ".join((row["decision_reason"] or "").split())
+            if reason:
+                step["note"] = reason
+        steps.append(step)
+    if status == "rejected":
+        reason = " ".join((row["decision_reason"] or "").split())
+        if reason:
+            for step in reversed(steps):
+                if step["status"] == "rejected":
+                    step["note"] = reason
+                    break
+            else:
+                steps.append({"status": "rejected", "at": "", "note": reason})
+    elif status == "seen" and steps[-1]["status"] != "seen":
+        # Current status may have cleared a prior rejection; keep history, mark seen.
+        if not any(step["status"] == "seen" for step in steps):
+            steps.append({"status": "seen", "at": ""})
+    return steps
+
+
+def _view(row: sqlite3.Row, *, reviewer: bool, events: list[dict] | None = None) -> dict:
     status = (row["status"] or "submitted").strip().lower()
     if status not in _STATUSES:
         status = "submitted"
@@ -93,6 +151,7 @@ def _view(row: sqlite3.Row, *, reviewer: bool) -> dict:
         "has_cv": bool(row["cv_stored"] or ""),
         "cv_name": row["cv_name"] or "",
         "created_at": row["created_at"] or "",
+        "timeline": _timeline(row, events),
     }
     reason = " ".join((row["decision_reason"] or "").split())
     if status == "rejected" and reason:
@@ -398,9 +457,10 @@ def _rows(where: str, params: tuple, *, reviewer: bool) -> list[dict]:
             f"{_SELECT} WHERE {where} ORDER BY a.id DESC",
             params,
         ).fetchall()
+        events = _status_events(conn, [int(row["id"]) for row in rows])
     finally:
         conn.close()
-    return [_view(row, reviewer=reviewer) for row in rows]
+    return [_view(row, reviewer=reviewer, events=events.get(int(row["id"]), [])) for row in rows]
 
 
 def list_for_candidate(subject: str) -> list[dict]:
@@ -430,6 +490,7 @@ def set_status(application_id: int, *, subject: str, staff: bool, status: str, r
         raise CabinetError(422, _REASON)
     note = None
     fallback_email = ""
+    events: list[dict] = []
     with _LOCK:
         conn = _connect()
         try:
@@ -465,13 +526,14 @@ def set_status(application_id: int, *, subject: str, staff: bool, status: str, r
                 fallback_email = row["email"] or ""
             conn.commit()
             saved = _one(conn, application_id)
+            events = _status_events(conn, [application_id]).get(application_id, [])
         finally:
             conn.close()
     if note:
         from app.notifications import deliver_email
 
         deliver_email(note, fallback_email=fallback_email)
-    return _view(saved, reviewer=True)
+    return _view(saved, reviewer=True, events=events)
 
 
 def withdraw(application_id: int, subject: str) -> None:
