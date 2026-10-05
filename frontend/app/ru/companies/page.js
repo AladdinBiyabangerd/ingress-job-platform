@@ -2,7 +2,7 @@ import { COMPANY_SORTS, CompaniesPage } from "../../../components/companies";
 import { getCompanies } from "../../../lib/server/jobs";
 import { companiesMetadata } from "../../../lib/seo";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export function generateMetadata() {
   return companiesMetadata("ru");

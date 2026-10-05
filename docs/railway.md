@@ -96,6 +96,13 @@ that file is applied; set them yourself only if you use another bucket):
 | `OIDC_AUTHORIZE_URL` | Same name the API already uses. |
 | `OIDC_TOKEN_URL` | Same name the API already uses. |
 | `OIDC_REDIRECT_URIS` | Include the deployed web callback. |
+| `OPENAI_API_KEY` | Optional. Enables `ai_gateway` (CV AI #1, digest intro, embeddings, match why). |
+| `AI_GATEWAY_ENABLED` | Optional. `0` forces AI off even when a key is set. |
+| `AI_EMBEDDING_MODEL` | Optional. Default `text-embedding-3-small` (AI #2). |
+| `AI_RERANK_ENABLED` | Optional. Default follows gateway; `0` keeps structured-only matches. |
+| `AI_MATCH_WHY_ENABLED` | Optional. Default follows gateway; `0` skips LLM why sentences. |
+
+Postgres for AI #2 must support `CREATE EXTENSION vector` (pgvector). Local compose uses `pgvector/pgvector:pg16`. Stock Railway Postgres may need a pgvector-capable image/plugin; without it matches stay structured-only.
 
 Set on the web service if the private-host wiring is not applied:
 

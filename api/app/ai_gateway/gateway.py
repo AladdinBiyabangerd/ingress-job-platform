@@ -45,9 +45,11 @@ CREATE TABLE IF NOT EXISTS ai_usage_daily (
 """
 
 DEFAULT_MODEL = "gpt-4.1-nano"
+DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 # Rough small-model list prices (USD / 1M tokens); used only for budget logs.
 _DEFAULT_INPUT_PER_M = 0.10
 _DEFAULT_OUTPUT_PER_M = 0.40
+_DEFAULT_EMBED_PER_M = 0.02
 
 
 @contextmanager
@@ -70,6 +72,17 @@ class GatewayResult:
     meta: dict = field(default_factory=dict)
 
 
+@dataclass
+class EmbedResult:
+    ok: bool
+    vectors: list[list[float]] = field(default_factory=list)
+    error: str = ""
+    prompt_tokens: int = 0
+    cost_usd: float = 0.0
+    model: str = ""
+    meta: dict = field(default_factory=dict)
+
+
 def enabled() -> bool:
     raw = os.environ.get("AI_GATEWAY_ENABLED", "").strip().lower()
     if raw in {"0", "false", "no", "off"}:
@@ -82,6 +95,12 @@ def enabled() -> bool:
 
 def model_name() -> str:
     return (os.environ.get("AI_GATEWAY_MODEL") or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+
+
+def embedding_model_name() -> str:
+    return (
+        os.environ.get("AI_EMBEDDING_MODEL") or DEFAULT_EMBEDDING_MODEL
+    ).strip() or DEFAULT_EMBEDDING_MODEL
 
 
 def daily_call_limit() -> int:
@@ -278,6 +297,103 @@ def _estimate_cost(prompt_tokens: int, completion_tokens: int) -> float:
     except ValueError:
         inp, out = _DEFAULT_INPUT_PER_M, _DEFAULT_OUTPUT_PER_M
     return round((prompt_tokens * inp + completion_tokens * out) / 1_000_000.0, 8)
+
+
+def _estimate_embed_cost(prompt_tokens: int) -> float:
+    try:
+        rate = float(os.environ.get("AI_EMBEDDING_USD_PER_M", _DEFAULT_EMBED_PER_M))
+    except ValueError:
+        rate = _DEFAULT_EMBED_PER_M
+    return round((prompt_tokens * rate) / 1_000_000.0, 8)
+
+
+def embed(
+    *,
+    texts: list[str],
+    purpose: str = "embed",
+    conn: sqlite3.Connection | None = None,
+    timeout: float = 60.0,
+) -> EmbedResult:
+    """Budget → OpenAI embeddings → cost log. Soft-fails. No PII redact (caller strips)."""
+    purpose = (purpose or "embed")[:80]
+    model = embedding_model_name()
+    result = EmbedResult(ok=False, model=model)
+    cleaned = [str(t or "").strip() for t in texts]
+    cleaned = [t for t in cleaned if t]
+    if not cleaned:
+        result.error = "ai_empty_input"
+        return result
+    if not enabled():
+        result.error = "ai_disabled"
+        return result
+    key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not key:
+        result.error = "ai_no_key"
+        return result
+
+    with _span(f"ai_gateway.{purpose}"):
+        ensure_ai_tables(conn)
+        if _over_budget(conn, purpose):
+            result.error = "ai_budget_exceeded"
+            return result
+        started = time.monotonic()
+        try:
+            raw = _openai_embed(key=key, model=model, texts=cleaned, timeout=timeout)
+        except Exception as exc:
+            result.error = f"ai_provider_error:{type(exc).__name__}"
+            log.warning("ai_gateway embed %s failed: %s", purpose, exc)
+            return result
+        vectors = raw.get("vectors") if isinstance(raw.get("vectors"), list) else []
+        if len(vectors) != len(cleaned):
+            result.error = "ai_bad_embed"
+            return result
+        usage = raw.get("usage") if isinstance(raw.get("usage"), dict) else {}
+        prompt_tokens = int(usage.get("prompt_tokens") or usage.get("total_tokens") or 0)
+        cost = _estimate_embed_cost(prompt_tokens)
+        _usage_add(conn, purpose, prompt_tokens, 0, cost)
+        result.ok = True
+        result.vectors = vectors
+        result.prompt_tokens = prompt_tokens
+        result.cost_usd = cost
+        result.meta["latency_ms"] = int((time.monotonic() - started) * 1000)
+        return result
+
+
+def _openai_embed(
+    *,
+    key: str,
+    model: str,
+    texts: list[str],
+    timeout: float,
+) -> dict[str, Any]:
+    body = {"model": model, "input": texts}
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/embeddings",
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "Authorization": "Bearer " + key,
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as res:
+            payload = json.loads(res.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:300]
+        raise RuntimeError(f"HTTP {exc.code}: {detail}") from exc
+
+    data = payload.get("data") or []
+    if not isinstance(data, list) or not data:
+        raise RuntimeError("empty_embeddings")
+    ordered = sorted(data, key=lambda row: int((row or {}).get("index") or 0))
+    vectors: list[list[float]] = []
+    for row in ordered:
+        emb = (row or {}).get("embedding")
+        if not isinstance(emb, list) or not emb:
+            raise RuntimeError("bad_embedding_row")
+        vectors.append([float(x) for x in emb])
+    return {"vectors": vectors, "usage": payload.get("usage") or {}}
 
 
 def _openai_json(

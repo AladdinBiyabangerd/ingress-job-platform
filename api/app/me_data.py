@@ -235,6 +235,14 @@ def delete_my_data(*, user_id: str) -> dict:
                 conn.execute("DELETE FROM match_feedback WHERE user_id = ?", (subject,))
             except Exception:
                 pass
+            try:
+                from app.embeddings import ENTITY_PROFILE, delete_entity_embeddings
+
+                delete_entity_embeddings(
+                    conn, entity_type=ENTITY_PROFILE, entity_id=subject
+                )
+            except Exception:
+                pass
             conn.execute("DELETE FROM candidate_profile WHERE user_id = ?", (subject,))
             conn.execute("DELETE FROM parse_cv_queue WHERE user_id = ?", (subject,))
             conn.execute(

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
+import { clearMeCache, fetchMe } from "../lib/me-client";
 import { NotificationsBell } from "./notifications-bell";
 import { RegisterChoice } from "./register-choice";
 
@@ -19,8 +20,7 @@ export function AccountBar({ locale, returnTo, onMe }) {
     const params = new URLSearchParams(window.location.search);
     setSsoError(params.has("sso_error"));
     let cancelled = false;
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((res) => res.json())
+    fetchMe()
       .then((data) => {
         if (cancelled) return;
         setMe(data);
@@ -140,6 +140,7 @@ export function AccountBar({ locale, returnTo, onMe }) {
                   className="account-signout"
                   method="post"
                   action={`/api/auth/logout?returnTo=${encodeURIComponent(returnTo || "/")}`}
+                  onSubmit={clearMeCache}
                 >
                   <button type="submit" className="account-signout-btn" role="menuitem">
                     {t.signOut}

@@ -285,6 +285,22 @@ def _run_pass(store: Store) -> int:
     except Exception:
         capture_exception()
     try:
+        from worker.embeddings import embed_stale_jobs
+
+        embed_stats = embed_stale_jobs(store.conn, limit=40)
+        if embed_stats.get("ready") and (
+            embed_stats.get("attempted") or embed_stats.get("embedded")
+        ):
+            print(
+                "embeddings: "
+                f"attempted={embed_stats.get('attempted', 0)} "
+                f"embedded={embed_stats.get('embedded', 0)} "
+                f"skipped={embed_stats.get('skipped', 0)}",
+                flush=True,
+            )
+    except Exception:
+        capture_exception()
+    try:
         from worker.digests import trigger_email_jobs
 
         mail_stats = trigger_email_jobs()

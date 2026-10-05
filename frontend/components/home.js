@@ -18,7 +18,7 @@ function stackOf(job) {
 
 function languageOf(job) {
   if (job.language) return job.language;
-  const sample = `${job.title}\n${job.text}`;
+  const sample = String(job.title || "");
   if (AZ.test(sample)) return "az";
   if (RU.test(sample)) return "ru";
   return "en";
@@ -203,7 +203,6 @@ export function Home({ locale, jobs, error }) {
   const [query, setQuery] = useState("");
   const [company, setCompany] = useState("");
   const [languages, setLanguages] = useState([]);
-  const [inDescription, setInDescription] = useState(true);
   const [remote, setRemote] = useState(false);
   const [relocation, setRelocation] = useState(false);
   const [stacks, setStacks] = useState([]);
@@ -290,9 +289,7 @@ export function Home({ locale, jobs, error }) {
       }
       if (companyQuery && !(job.company || "").toLowerCase().includes(companyQuery)) return false;
       if (!q) return true;
-      const haystack = inDescription
-        ? `${job.title} ${job.company} ${job.text}`
-        : `${job.title} ${job.company}`;
+      const haystack = `${job.title} ${job.company}`;
       return haystack.toLowerCase().includes(q);
     });
     const sorted = [...filtered];
@@ -303,7 +300,7 @@ export function Home({ locale, jobs, error }) {
       return sort === "oldest" ? at - bt : bt - at;
     });
     return sorted;
-  }, [jobs, query, company, languages, inDescription, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax, t.lang]);
+  }, [jobs, query, company, languages, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax, t.lang]);
 
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -314,13 +311,12 @@ export function Home({ locale, jobs, error }) {
 
   useEffect(() => {
     setPage(1);
-  }, [query, company, languages, inDescription, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax]);
+  }, [query, company, languages, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax]);
 
   function clear() {
     setQuery("");
     setCompany("");
     setLanguages([]);
-    setInDescription(true);
     setRemote(false);
     setRelocation(false);
     setStacks([]);
@@ -497,13 +493,6 @@ export function Home({ locale, jobs, error }) {
               <option value="week">{t.week}</option>
             </select>
           </label>
-          <div className="filter-group">
-            <GroupLabel icon="search">{t.search}</GroupLabel>
-            <label className="check">
-              <input type="checkbox" checked={inDescription} onChange={(event) => setInDescription(event.target.checked)} />
-              <span>{t.inDescription}</span>
-            </label>
-          </div>
           <fieldset className="filter-group">
             <legend className="filter-label">
               <FilterIcon name="language" />

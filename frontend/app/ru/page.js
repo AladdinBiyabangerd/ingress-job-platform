@@ -3,7 +3,7 @@ import { JsonLd } from "../../components/json-ld";
 import { getJobs } from "../../lib/server/jobs";
 import { homeJsonLd, homeMetadata } from "../../lib/seo";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export function generateMetadata() {
   return homeMetadata("ru");

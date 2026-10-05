@@ -1,11 +1,13 @@
-"""Deterministic job ↔ candidate matching (plan §6.2 / §6.3).
+"""Job ↔ candidate matching (plan §6.2 / §6.3).
 
-Structured score only (SQLite / no AI #2). Weights are pilot-tunable.
-final = 0.45·skills + 0.20·seniority + 0.20·location + 0.10·language + 0.05·freshness
+Structured score is always computed. On Postgres + pgvector + embeddings,
+AI #2 re-ranks the top pool: final = 0.7·struct + 0.3·cosine.
+SQLite / missing vectors → structured only (ai_rerank false).
 """
 
 from __future__ import annotations
 
+import os
 import re
 from datetime import datetime, timezone
 from typing import Any
@@ -20,12 +22,16 @@ from app.role_suggestions import (
 
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 50
+RERANK_POOL = 50
 
 W_SKILLS = 0.45
 W_SENIORITY = 0.20
 W_LOCATION = 0.20
 W_LANGUAGE = 0.10
 W_FRESHNESS = 0.05
+
+W_STRUCT = 0.7
+W_SEMANTIC = 0.3
 
 FEEDBACK_VOTES = ("up", "down")
 FEEDBACK_REASONS = ("", "location", "seniority", "technology", "salary")
@@ -101,6 +107,21 @@ def _now() -> str:
 
 def ensure_match_tables(conn) -> None:
     conn.executescript(FEEDBACK_SCHEMA)
+
+
+def rerank_enabled() -> bool:
+    """AI #2 flag. Default on when gateway can run; force off with AI_RERANK_ENABLED=0."""
+    raw = os.environ.get("AI_RERANK_ENABLED", "").strip().lower()
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    try:
+        from app.ai_gateway import enabled
+
+        return bool(enabled())
+    except Exception:
+        return False
 
 
 def clamp_limit(value: int | None) -> int:
@@ -498,8 +519,100 @@ def matches_payload(
         scored.append(item)
 
     scored.sort(key=lambda row: (-row["score"], -row["job_id"]))
-    base["matches"] = scored[:chosen_limit]
+    pool = scored[: max(chosen_limit, RERANK_POOL)]
+    used_rerank = _apply_semantic_rerank(
+        conn,
+        user_id=user_id,
+        pool=pool,
+    )
+    if used_rerank:
+        pool.sort(key=lambda row: (-row["score"], -row["job_id"]))
+        base["ai_rerank"] = True
+    matches = pool[:chosen_limit]
+    if used_rerank:
+        try:
+            from app.match_why import append_why_sentences
+
+            profile_version = str(profile_payload.get("updated_at") or "")[:80]
+            append_why_sentences(
+                conn,
+                matches=matches,
+                lang=locale,
+                profile_version=profile_version or "v0",
+            )
+        except Exception:
+            pass
+    base["matches"] = matches
     return base
+
+
+def _apply_semantic_rerank(
+    conn,
+    *,
+    user_id: str,
+    pool: list[dict],
+) -> bool:
+    """Blend cosine similarity into scores for pool items with job embeddings.
+
+    Returns True when at least one item was re-ranked.
+    """
+    if not pool or not rerank_enabled():
+        return False
+    try:
+        from app.embeddings import (
+            ENTITY_JOB,
+            ENTITY_PROFILE,
+            cosine_similarity,
+            embedding_model,
+            get_embedding,
+            load_embeddings,
+            pgvector_available,
+        )
+        from app.jobs_db import postgres_enabled
+    except Exception:
+        return False
+    if not postgres_enabled() or not pgvector_available(conn):
+        return False
+
+    model = embedding_model()
+    profile_row = get_embedding(
+        conn,
+        entity_type=ENTITY_PROFILE,
+        entity_id=user_id,
+        model=model,
+    )
+    if profile_row is None:
+        return False
+    profile_vec = profile_row[0]
+    job_ids = [str(item["job_id"]) for item in pool]
+    job_vecs = load_embeddings(
+        conn,
+        entity_type=ENTITY_JOB,
+        entity_ids=job_ids,
+        model=model,
+    )
+    if not job_vecs:
+        return False
+
+    applied = False
+    for item in pool:
+        jid = str(item["job_id"])
+        job_vec = job_vecs.get(jid)
+        if not job_vec:
+            item["ai_rerank"] = False
+            continue
+        semantic = cosine_similarity(profile_vec, job_vec)
+        struct = float(item.get("score") or 0.0)
+        blended = round(W_STRUCT * struct + W_SEMANTIC * semantic, 4)
+        comps = item.get("components") if isinstance(item.get("components"), dict) else {}
+        comps = dict(comps)
+        comps["semantic"] = round(semantic, 4)
+        comps["struct"] = round(struct, 4)
+        item["components"] = comps
+        item["score"] = blended
+        item["ai_rerank"] = True
+        applied = True
+    return applied
 
 
 def list_matches(*, user_id: str, limit: int | None = None, lang: str | None = None) -> dict:

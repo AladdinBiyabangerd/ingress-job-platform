@@ -138,6 +138,7 @@ _NO_ID_TABLES = {
     "ai_cache",
     "ai_usage_daily",
     "api_usage",
+    "embeddings",
     "job_skill",
     "maintenance_steps",
     "role_skill_weight",

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
+import { fetchMe } from "../lib/me-client";
 import { ApplicationList } from "./application-list";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
@@ -23,8 +24,7 @@ export function MyApplications({ locale }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((res) => res.json())
+    fetchMe()
       .then((data) => {
         if (!cancelled) setMe(data);
       })

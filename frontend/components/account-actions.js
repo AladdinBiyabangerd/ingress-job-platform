@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { loginHref } from "../lib/auth-link";
 import { applyFormFromJob } from "../lib/apply-form";
 import { text } from "../lib/copy";
+import { fetchMe } from "../lib/me-client";
 import { ApplicationList, appStatusLabel } from "./application-list";
 import { ConsentFields, grantsFromPayload } from "./consent-fields";
 
@@ -45,8 +46,7 @@ export function AccountActions({ locale, jobId, returnTo, onsite, hasOriginal, f
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
+    fetchMe()
       .then((data) => {
         if (!cancelled) setProfile(data?.candidate_profile || null);
       })

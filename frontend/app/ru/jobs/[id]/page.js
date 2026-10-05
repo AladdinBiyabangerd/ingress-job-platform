@@ -3,7 +3,7 @@ import { JobDetail } from "../../../../components/job-detail";
 import { getJob } from "../../../../lib/server/jobs";
 import { jobMetadata } from "../../../../lib/seo";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export async function generateMetadata({ params }) {
   const { id } = await params;

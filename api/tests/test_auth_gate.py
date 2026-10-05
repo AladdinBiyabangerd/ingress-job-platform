@@ -79,9 +79,12 @@ class AuthGateTests(unittest.TestCase):
         self.assertNotIn("https://", text)
         self.assertNotIn("www.", text)
         self.assertNotIn("source.example", text)
-        self.assertIn("backend role in baku.", text)
+        self.assertNotIn("backend role in baku.", text)
+        self.assertNotIn("text", items[0])
+        self.assertNotIn("form", items[0])
         detail = self.client.get(f"/api/v1/jobs/{items[0]['id']}")
         self.assertEqual(detail.status_code, 200)
+        self.assertIn("backend role in baku.", detail.text.lower())
         self.assertNotIn("http", detail.text.lower())
         self.assertNotIn("www.", detail.text.lower())
 

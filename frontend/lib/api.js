@@ -1,5 +1,8 @@
 const API_FETCH_TIMEOUT_MS = 5_000;
 
+/** Public catalog pages share this ISR window (seconds). */
+export const PUBLIC_REVALIDATE = 60;
+
 export function apiBase() {
   const direct = process.env.JOB_API_BASE_URL;
   if (direct) return direct.replace(/\/$/, "");
@@ -13,7 +16,7 @@ export function apiBase() {
 
 function apiFetch(path, init = {}) {
   return fetch(`${apiBase()}${path}`, {
-    cache: "no-store",
+    next: { revalidate: PUBLIC_REVALIDATE },
     ...init,
     signal: init.signal ?? AbortSignal.timeout(API_FETCH_TIMEOUT_MS),
   });

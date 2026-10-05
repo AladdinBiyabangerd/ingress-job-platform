@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
+import { fetchMe } from "../lib/me-client";
 import { canPostJobs, isCandidateOnly } from "../lib/roles";
 import { Cabinet } from "./cabinet";
 import { RegisterChoice } from "./register-choice";
@@ -14,8 +15,7 @@ export function PostPage({ locale }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((res) => res.json())
+    fetchMe()
       .then((data) => {
         if (cancelled) return;
         if (data?.needs_company_profile) {

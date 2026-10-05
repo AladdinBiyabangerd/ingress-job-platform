@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
+import { fetchMe } from "../lib/me-client";
 import { RegisterChoice } from "./register-choice";
 import { RoleSkillParts } from "./role-skill-parts";
 import { Shell } from "./shell";
@@ -165,8 +166,7 @@ export function ProfileReview({ locale }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((res) => res.json())
+    fetchMe()
       .then((data) => {
         if (!cancelled) setMe(data);
       })

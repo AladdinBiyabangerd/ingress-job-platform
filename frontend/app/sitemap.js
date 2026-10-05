@@ -1,7 +1,7 @@
 import { fetchJobs } from "../lib/api";
 import { LOCALES, absoluteUrl, hreflangMap, localePath } from "../lib/seo";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 function entry(path, { jobId, lastModified, priority = 0.7 } = {}) {
   return {

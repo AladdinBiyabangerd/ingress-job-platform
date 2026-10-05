@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
+import { clearMeCache, fetchMe } from "../lib/me-client";
 import { Shell } from "./shell";
 
 export function CompanyForm({ locale }) {
@@ -14,8 +15,7 @@ export function CompanyForm({ locale }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((res) => res.json())
+    fetchMe()
       .then((me) => {
         if (cancelled) return;
         if (!me.authenticated) {
@@ -48,6 +48,7 @@ export function CompanyForm({ locale }) {
       setError(t.companyRequired);
       return;
     }
+    clearMeCache();
     window.location.href = hrefFor(locale, { mode: "post" });
   }
 

@@ -3,7 +3,7 @@ import { CompanyPage } from "../../../components/company-page";
 import { getCompany } from "../../../lib/server/jobs";
 import { companyMetadata } from "../../../lib/seo";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 function pageOf(params) {
   const raw = Array.isArray(params?.page) ? params.page[0] : params?.page;

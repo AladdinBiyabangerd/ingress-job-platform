@@ -366,6 +366,12 @@ def _apply_schema(conn) -> None:
     from app.matching import ensure_match_tables
 
     ensure_match_tables(conn)
+    try:
+        from app.embeddings import ensure_embedding_tables
+
+        ensure_embedding_tables(conn)
+    except Exception:
+        pass
     hide_retired_local(conn)
     conn.commit()
 

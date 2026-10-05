@@ -636,9 +636,21 @@ def save_profile(
                 after=after,
             )
             conn.commit()
-            return after
+            result = after
         finally:
             conn.close()
+    _maybe_embed_profile(subject)
+    return result
+
+
+def _maybe_embed_profile(user_id: str) -> None:
+    """Best-effort profile embedding after save (AI #2). Soft-fails."""
+    try:
+        from app.embeddings import embed_profile_for_user
+
+        embed_profile_for_user(user_id=user_id)
+    except Exception:
+        pass
 
 
 def upload_profile_cv(*, user_id: str, filename: str, data: bytes) -> dict:

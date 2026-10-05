@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
+import { clearMeCache, fetchMe } from "../lib/me-client";
 import { ConsentFields, grantsFromPayload } from "./consent-fields";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
@@ -30,8 +31,7 @@ export function ProfileForm({ locale }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((res) => res.json())
+    fetchMe()
       .then((data) => {
         if (cancelled) return;
         setMe(data);
@@ -182,6 +182,7 @@ export function ProfileForm({ locale }) {
         setPrivacyError(t.privacyDeleteError);
         return;
       }
+      clearMeCache();
       setConsentPayload(null);
       setDisplayName("");
       setPhone("");

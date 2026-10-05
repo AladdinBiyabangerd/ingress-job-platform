@@ -300,6 +300,12 @@ def _process_one(conn, row: sqlite3.Row, *, root: Path | None) -> str:
         _finish(conn, int(row["id"]), status="failed", error=err[:1000])
         return "failed"
     _finish(conn, int(row["id"]), status="done", error=err[:1000] if err else "")
+    try:
+        from worker.embeddings import embed_profile
+
+        embed_profile(conn, user_id=str(row["user_id"] or ""), profile=profile)
+    except Exception:
+        pass
     return "done"
 
 

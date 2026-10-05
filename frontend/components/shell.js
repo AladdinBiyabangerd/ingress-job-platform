@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { ingressUrl } from "../lib/ingress";
+import { clearMeCache } from "../lib/me-client";
 import { navTabs } from "../lib/roles";
 import { useMediaQuery } from "../lib/use-media-query";
 import { AccountBar } from "./account-bar";
@@ -152,7 +153,11 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
             </a>
           </li>
           <li>
-            <form method="post" action={`/api/auth/logout?returnTo=${encodeURIComponent(back)}`}>
+            <form
+              method="post"
+              action={`/api/auth/logout?returnTo=${encodeURIComponent(back)}`}
+              onSubmit={clearMeCache}
+            >
               <button type="submit" className="mobile-nav-signout">{t.signOut}</button>
             </form>
           </li>
