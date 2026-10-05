@@ -29,3 +29,11 @@ export async function PUT(request) {
   const payload = await upstream.json().catch(() => ({}));
   return noStore(appendCookies(Response.json(payload, { status: upstream.status || 502 }), setCookies));
 }
+
+export async function DELETE(request) {
+  const { upstream, setCookies } = await authorizedApi(request, "/api/v1/profile", {
+    method: "DELETE",
+  });
+  const payload = await upstream.json().catch(() => ({}));
+  return noStore(appendCookies(Response.json(payload, { status: upstream.status || 502 }), setCookies));
+}

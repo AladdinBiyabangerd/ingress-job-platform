@@ -352,6 +352,48 @@ export function ProfileReview({ locale }) {
     setLowFields([]);
   }
 
+  function clearLocalForm() {
+    setHeadline("");
+    setSeniority("");
+    setTotalYears("");
+    setFullName("");
+    setEmail("");
+    setPhone("");
+    setSkills([]);
+    setWork([]);
+    setSkillDraft("");
+    setSkillYearsDraft("");
+    setLowFields([]);
+    setCvName("");
+    setRolesPayload(null);
+  }
+
+  async function resetProfile() {
+    if (!window.confirm(t.profileReviewResetConfirm)) return;
+    setError("");
+    setNote("");
+    setBusy(true);
+    setPolling(false);
+    pollLeft.current = 0;
+    try {
+      const res = await fetch("/api/auth/cv-profile", { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(t.profileReviewResetError);
+        return;
+      }
+      setPayload(data);
+      clearLocalForm();
+      setEntry(null);
+      setNote(t.profileReviewResetDone);
+      await loadRoles();
+    } catch {
+      setError(t.profileReviewResetError);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function addSkill(event) {
     event.preventDefault();
     const name = skillDraft.trim();
@@ -745,6 +787,14 @@ export function ProfileReview({ locale }) {
               </div>
 
               <div className="profile-review-actions">
+                <button
+                  type="button"
+                  className="btn red"
+                  disabled={busy || uploading || isParsing}
+                  onClick={resetProfile}
+                >
+                  {t.profileReviewReset}
+                </button>
                 <button type="submit" className="btn" disabled={busy || uploading}>
                   {t.profileReviewSave}
                 </button>

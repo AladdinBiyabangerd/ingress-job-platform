@@ -468,6 +468,50 @@ def _log_edit(
     )
 
 
+def clear_profile(*, user_id: str) -> dict:
+    """Wipe candidate_profile and cancel open parse jobs so the user can start over."""
+    from app.cabinet_store import _LOCK, _connect
+
+    subject = (user_id or "").strip()
+    if not subject:
+        raise ValueError("user_id")
+
+    with _LOCK:
+        conn = _connect()
+        try:
+            ensure_profile_tables(conn)
+            before = _profile_payload(conn, user_id=subject)
+            row = conn.execute(
+                "SELECT id FROM candidate_profile WHERE user_id = ?",
+                (subject,),
+            ).fetchone()
+            profile_id = int(_row_get(row, "id", 0)) if row is not None else None
+            if row is not None:
+                conn.execute("DELETE FROM candidate_profile WHERE user_id = ?", (subject,))
+            conn.execute(
+                """
+                UPDATE parse_cv_queue
+                SET status = 'failed', error = 'cleared by user', finished_at = ?
+                WHERE user_id = ? AND status IN ('pending', 'processing')
+                """,
+                (_now(), subject),
+            )
+            after = _profile_payload(conn, user_id=subject)
+            if before.get("exists") or before.get("parse_status") in PARSE_QUEUE_OPEN:
+                _log_edit(
+                    conn,
+                    user_id=subject,
+                    profile_id=profile_id,
+                    action="clear",
+                    before=before,
+                    after=after,
+                )
+            conn.commit()
+            return after
+        finally:
+            conn.close()
+
+
 def save_profile(
     *,
     user_id: str,

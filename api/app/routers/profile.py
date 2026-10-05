@@ -1,4 +1,4 @@
-"""GET/PUT /api/v1/profile — structured CV profile review (plan §13.1).
+"""GET/PUT/DELETE /api/v1/profile — structured CV profile review (plan §13.1).
 
 POST /api/v1/profile/cv — upload CV for parse without a job application.
 """
@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.account import current_user
 from app.auth_oidc import VerifiedAccess
 from app.cabinet_store import CabinetError
-from app.cv_profile import SENIORITY_VALUES, read_profile, save_profile, upload_profile_cv
+from app.cv_profile import SENIORITY_VALUES, clear_profile, read_profile, save_profile, upload_profile_cv
 
 router = APIRouter(prefix="/api/v1", tags=["profile"])
 
@@ -67,6 +67,15 @@ def put_profile(body: ProfileIn, user: VerifiedAccess = Depends(current_user)) -
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail="Profil məlumatı yanlışdır") from exc
+
+
+@router.delete("/profile")
+def delete_profile(user: VerifiedAccess = Depends(current_user)) -> dict:
+    _require_candidate(user)
+    try:
+        return clear_profile(user_id=user.subject)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Profili sıfırlamaq olmadı") from exc
 
 
 @router.post("/profile/cv")

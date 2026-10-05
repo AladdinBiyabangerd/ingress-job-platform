@@ -187,6 +187,25 @@ class CvProfileTests(unittest.TestCase):
         self.assertEqual(log["action"], "confirm")
         self.assertEqual(log["after_status"], "confirmed")
 
+    def test_delete_clears_profile(self):
+        self._seed_draft("person-clear")
+        with self._auth("job:candidate", "person-clear"):
+            cleared = self.client.delete("/api/v1/profile", headers=self.headers)
+        self.assertEqual(cleared.status_code, 200, cleared.text)
+        body = cleared.json()
+        self.assertFalse(body["exists"])
+        self.assertEqual(body["status"], "empty")
+        with self._auth("job:candidate", "person-clear"):
+            again = self.client.get("/api/v1/profile", headers=self.headers)
+        self.assertFalse(again.json()["exists"])
+        with sqlite3.connect(self.db) as conn:
+            conn.row_factory = sqlite3.Row
+            log = conn.execute(
+                "SELECT action FROM profile_edit_log WHERE user_id = ? ORDER BY id DESC",
+                ("person-clear",),
+            ).fetchone()
+        self.assertEqual(log["action"], "clear")
+
     def test_employer_forbidden_and_guest_unauthorized(self):
         with self._auth("job:employer", "hr-1"):
             denied = self.client.get("/api/v1/profile", headers=self.headers)
