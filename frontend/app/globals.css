@@ -2062,61 +2062,323 @@ textarea { min-height: 120px; resize: vertical; }
   background: #f3f7fb;
 }
 
+/* /me/recommendations — master/detail like /me/skills */
 .wrap:has(.recommendations-page) {
   padding-top: 20px;
-  padding-bottom: 32px;
+  padding-bottom: 40px;
 }
 
 .recommendations-page {
-  gap: 12px;
-}
-
-.recommendations-page .cabinet-form-head h1 {
-  font-size: 1.35rem;
-  margin: 0;
-}
-
-.recommendations-page .cabinet-form-head .lede {
-  margin: 0;
-  font-size: 0.92rem;
-  max-width: 56ch;
-}
-
-.recommendations-page .recommendations-section {
-  margin-top: 0;
   display: grid;
-  gap: 8px;
+  gap: 18px;
 }
 
-.recommendations-page .recommendations-section h2 {
+.recommendations-head h1 {
   margin: 0;
-  font-size: 1.05rem;
-  line-height: 1.25;
+  font-size: 1.45rem;
+  letter-spacing: -0.02em;
 }
 
-.recommendations-page .role-suggest-list,
-.recommendations-page .match-list {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+.recommendations-head .lede {
+  margin: 6px 0 0;
+  font-size: 0.95rem;
+  max-width: 48ch;
+  color: #3a404a;
 }
 
-.recommendations-page .role-suggest-item,
-.recommendations-page .match-item {
-  padding: 8px 10px;
+.recommendations-disclaimer {
+  margin: 6px 0 0;
+  max-width: 52ch;
 }
 
-.recommendations-page .match-item {
+.recommendations-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.recommendations-roles,
+.recommendations-detail {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.recommendations-roles h2,
+.recommendations-detail h2,
+.recommendations-jobs h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.recommendations-role-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
   gap: 6px;
 }
 
-.recommendations-page .role-suggest-head {
-  margin-bottom: 2px;
+.recommendations-role-pick {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e0e3e8;
+  border-radius: 12px;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
-@media (max-width: 720px) {
-  .recommendations-page .role-suggest-list,
-  .recommendations-page .match-list {
+.recommendations-role-pick:hover {
+  border-color: #b8c4d8;
+  background: #f8faff;
+}
+
+.recommendations-role-pick.on {
+  border-color: #001FFF;
+  background: #f0f3ff;
+  box-shadow: inset 3px 0 0 #001FFF;
+}
+
+.recommendations-role-score {
+  display: grid;
+  place-items: center;
+  min-height: 40px;
+  border-radius: 10px;
+  background: #eef0f4;
+  color: #20242b;
+  font-size: 0.88rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.recommendations-role-pick.on .recommendations-role-score {
+  background: #001FFF;
+  color: #ffffff;
+}
+
+.recommendations-role-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.recommendations-role-body strong {
+  font-size: 0.92rem;
+  line-height: 1.25;
+}
+
+.recommendations-role-body .hint {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.recommendations-detail {
+  padding: 16px;
+  border: 1px solid #e0e3e8;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.recommendations-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.recommendations-detail-kicker {
+  margin: 0 0 2px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #656b75;
+}
+
+.recommendations-detail-head h2 {
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+}
+
+.recommendations-detail-head .hint {
+  margin: 4px 0 0;
+}
+
+.recommendations-gap-link {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #001FFF;
+  text-decoration: none;
+}
+
+.recommendations-gap-link:hover {
+  text-decoration: underline;
+}
+
+.recommendations-role-skills .role-skill-parts {
+  margin: 0;
+}
+
+.recommendations-jobs {
+  display: grid;
+  gap: 10px;
+}
+
+.recommendations-jobs h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: #20242b;
+}
+
+.recommendations-panel-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  background: #eef0f4;
+  color: #3a404a;
+}
+
+.reco-jobs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.reco-job {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid #e8eaee;
+  border-radius: 12px;
+  background: #fafbfc;
+}
+
+.reco-job-top {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.reco-job-score {
+  display: grid;
+  place-items: center;
+  min-height: 40px;
+  border-radius: 10px;
+  background: #eef0f4;
+  color: #20242b;
+  font-size: 0.88rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.reco-job-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.reco-job-title {
+  color: inherit;
+  text-decoration: none;
+}
+
+.reco-job-title:hover strong {
+  color: #001FFF;
+}
+
+.reco-job-title strong {
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.reco-job-body .hint {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.reco-job-explain {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.reco-job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.reco-job-reason {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reco-job-reason select {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  border: 1px solid #d5d9e0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: inherit;
+}
+
+.recommendations-footer {
+  margin: 0;
+}
+
+@media (max-width: 860px) {
+  .recommendations-layout {
     grid-template-columns: 1fr;
+  }
+
+  .recommendations-role-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .recommendations-role-list {
+    grid-template-columns: 1fr;
+  }
+
+  .recommendations-detail {
+    padding: 12px;
+  }
+
+  .reco-job-top {
+    grid-template-columns: 44px minmax(0, 1fr);
   }
 }
 
