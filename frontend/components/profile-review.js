@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { RegisterChoice } from "./register-choice";
+import { RoleSkillParts } from "./role-skill-parts";
 import { Shell } from "./shell";
 
 const SENIORITY = ["", "intern", "junior", "middle", "senior", "lead", "principal", "staff"];
@@ -787,7 +788,7 @@ export function ProfileReview({ locale }) {
                                     : ""}
                                 </span>
                               </div>
-                              {role.explanation ? <p className="hint">{role.explanation}</p> : null}
+                              <RoleSkillParts t={t} have={role.have} missing={role.missing} />
                             </li>
                           ))}
                         </ul>

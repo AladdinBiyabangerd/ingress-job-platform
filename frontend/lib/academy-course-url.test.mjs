@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { academyCareerPathUrl, academyCourseUrl } from "./academy-urls.js";
+import {
+  academyCareerPathUrl,
+  academyCourseLabel,
+  academyCourseUrl,
+} from "./academy-urls.js";
 
 test("builds Academy training URL with UTM", () => {
   const href = academyCourseUrl("cloud-computing-with-aws-and-terraform-az");
@@ -15,6 +19,19 @@ test("builds Academy training URL with UTM", () => {
 test("returns empty for blank course id", () => {
   assert.equal(academyCourseUrl(""), "");
   assert.equal(academyCourseUrl("   "), "");
+});
+
+test("humanizes Academy course slugs", () => {
+  assert.equal(academyCourseLabel("java-se-oca-az"), "Java SE OCA");
+  assert.equal(
+    academyCourseLabel("junior-java-and-ai-engineer-az"),
+    "Junior Java and AI Engineer",
+  );
+  assert.equal(
+    academyCourseLabel("cloud-computing-with-aws-and-terraform-az"),
+    "Cloud Computing with AWS and Terraform",
+  );
+  assert.equal(academyCourseLabel(""), "");
 });
 
 test("builds Academy career-path URL with UTM", () => {

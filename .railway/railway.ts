@@ -20,8 +20,6 @@ export default defineRailway(() => {
   const api = service("api", {
     root: "api",
     start: "sh -c 'exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8010}'",
-    healthcheck: "/health",
-    healthcheckTimeout: 30,
     env: {
       ...storageEnv,
       DEBUG: "False",
@@ -33,8 +31,6 @@ export default defineRailway(() => {
     root: "frontend",
     build: "npm ci && npm run build",
     start: "sh -c 'exec npx next start --hostname 0.0.0.0 --port ${PORT:-3010}'",
-    healthcheck: "/api/health",
-    healthcheckTimeout: 60,
     env: {
       NODE_ENV: "production",
       API_PRIVATE_HOST: api.env.RAILWAY_PRIVATE_DOMAIN,

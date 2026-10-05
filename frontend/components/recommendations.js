@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { RegisterChoice } from "./register-choice";
+import { RoleSkillParts } from "./role-skill-parts";
 import { Shell } from "./shell";
 
 const REASONS = ["location", "seniority", "technology", "salary"];
@@ -144,7 +145,7 @@ export function Recommendations({ locale }) {
                           : ""}
                       </span>
                     </div>
-                    {role.explanation ? <p className="hint">{role.explanation}</p> : null}
+                    <RoleSkillParts t={t} have={role.have} missing={role.missing} />
                   </li>
                 ))}
               </ul>
