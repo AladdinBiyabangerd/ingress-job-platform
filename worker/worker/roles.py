@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS role_skill_weight (
     role_id INTEGER NOT NULL REFERENCES role_taxonomy(id),
     skill_id INTEGER NOT NULL REFERENCES skill_dictionary(id),
     weight REAL NOT NULL,
+    group_key TEXT NOT NULL DEFAULT '',
     PRIMARY KEY (role_id, skill_id)
 );
 """
@@ -91,12 +92,22 @@ def ensure_role_tables(conn) -> None:
     for sql in INDEXES:
         conn.execute(sql)
     try:
-        cols = {row[1] for row in conn.execute("PRAGMA table_info(role_taxonomy)")}
+        role_cols = {row[1] for row in conn.execute("PRAGMA table_info(role_taxonomy)")}
     except Exception:
         return
-    if "academy_career_path_id" not in cols:
+    if "academy_career_path_id" not in role_cols:
         conn.execute(
             "ALTER TABLE role_taxonomy ADD COLUMN academy_career_path_id TEXT NOT NULL DEFAULT ''"
+        )
+    try:
+        weight_cols = {
+            row[1] for row in conn.execute("PRAGMA table_info(role_skill_weight)")
+        }
+    except Exception:
+        return
+    if "group_key" not in weight_cols:
+        conn.execute(
+            "ALTER TABLE role_skill_weight ADD COLUMN group_key TEXT NOT NULL DEFAULT ''"
         )
 
 
@@ -197,13 +208,14 @@ def seed_role_taxonomy(conn, path: Path | None = None) -> tuple[int, int]:
                 continue
             if weight <= 0:
                 continue
+            group_key = str(sig.get("group") or "").strip().lower()
             seen.add(skill_id)
             conn.execute(
                 """
-                INSERT INTO role_skill_weight (role_id, skill_id, weight)
-                VALUES (?, ?, ?)
+                INSERT INTO role_skill_weight (role_id, skill_id, weight, group_key)
+                VALUES (?, ?, ?, ?)
                 """,
-                (role_id, skill_id, weight),
+                (role_id, skill_id, weight, group_key),
             )
             weights_written += 1
 

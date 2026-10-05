@@ -156,7 +156,12 @@ def _role_target_skills(conn, role_id: int, top: int) -> list[dict[str, Any]]:
     try:
         rows = conn.execute(
             """
-            SELECT w.skill_id, w.weight, s.canonical_name, s.academy_course_ids
+            SELECT
+                w.skill_id,
+                w.weight,
+                s.canonical_name,
+                s.academy_course_ids,
+                COALESCE(w.group_key, '') AS group_key
             FROM role_skill_weight w
             JOIN skill_dictionary s ON s.id = w.skill_id
             WHERE w.role_id = ?
@@ -166,7 +171,38 @@ def _role_target_skills(conn, role_id: int, top: int) -> list[dict[str, Any]]:
             (role_id, top),
         ).fetchall()
     except Exception:
-        return []
+        try:
+            rows = conn.execute(
+                """
+                SELECT w.skill_id, w.weight, s.canonical_name, s.academy_course_ids
+                FROM role_skill_weight w
+                JOIN skill_dictionary s ON s.id = w.skill_id
+                WHERE w.role_id = ?
+                ORDER BY w.weight DESC, s.canonical_name
+                LIMIT ?
+                """,
+                (role_id, top),
+            ).fetchall()
+        except Exception:
+            return []
+        return [
+            {
+                "skill_id": int(_row_get(row, "skill_id", 0)),
+                "name": str(_row_get(row, "canonical_name", 2) or "").strip(),
+                "weight": round(float(_row_get(row, "weight", 1) or 0), 4),
+                "share": None,
+                "growth": None,
+                "academy_courses": [
+                    str(x).strip()
+                    for x in _parse_json_list(_row_get(row, "academy_course_ids", 3))
+                    if str(x).strip()
+                ],
+                "group_key": "",
+            }
+            for row in rows
+            if float(_row_get(row, "weight", 1) or 0) > 0
+            and str(_row_get(row, "canonical_name", 2) or "").strip()
+        ]
     out: list[dict[str, Any]] = []
     for row in rows:
         weight = float(_row_get(row, "weight", 1) or 0)
@@ -186,6 +222,7 @@ def _role_target_skills(conn, role_id: int, top: int) -> list[dict[str, Any]]:
                 "share": None,
                 "growth": None,
                 "academy_courses": courses,
+                "group_key": str(_row_get(row, "group_key", 4) or "").strip().lower(),
             }
         )
     return out
@@ -275,6 +312,13 @@ def skill_gap_payload(
     lookup = _build_skill_lookup(conn)
     candidate = _candidate_skills(profile, lookup) if profile_payload.get("exists") else {}
 
+    # OR-groups: if any member is on the profile, siblings are not "learn next".
+    satisfied_groups: set[str] = set()
+    for item in targets:
+        group_key = str(item.get("group_key") or "").strip().lower()
+        if group_key and int(item["skill_id"]) in candidate:
+            satisfied_groups.add(group_key)
+
     have: list[dict[str, Any]] = []
     missing: list[dict[str, Any]] = []
     have_ids: list[int] = []
@@ -287,11 +331,14 @@ def skill_gap_payload(
             "growth": item["growth"],
             "academy_courses": item["academy_courses"],
         }
+        group_key = str(item.get("group_key") or "").strip().lower()
         if item["skill_id"] in candidate:
             hit = candidate[item["skill_id"]]
             entry["years"] = hit.get("years")
             have.append(entry)
             have_ids.append(int(item["skill_id"]))
+        elif group_key and group_key in satisfied_groups:
+            continue
         else:
             missing.append(entry)
             missing_ids.append(int(item["skill_id"]))

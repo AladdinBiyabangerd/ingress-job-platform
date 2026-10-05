@@ -106,6 +106,26 @@ class RolesTest(unittest.TestCase):
         self.assertIsNotNone(empty)
         self.assertEqual(empty["academy_career_path_id"], "")
 
+    def test_seed_writes_or_group_keys(self):
+        rows = self.store.conn.execute(
+            """
+            SELECT s.canonical_name, w.group_key, w.weight
+            FROM role_skill_weight w
+            JOIN role_taxonomy r ON r.id = w.role_id
+            JOIN skill_dictionary s ON s.id = w.skill_id
+            WHERE r.canonical_name = ?
+            ORDER BY s.canonical_name
+            """,
+            ("Backend Engineer",),
+        ).fetchall()
+        by_name = {row["canonical_name"]: row for row in rows}
+        self.assertEqual(by_name["Java"]["group_key"], "lang")
+        self.assertEqual(by_name["Python"]["group_key"], "lang")
+        self.assertEqual(by_name["Go"]["group_key"], "lang")
+        self.assertEqual(by_name["SQL"]["group_key"], "")
+        self.assertIn("Kafka", by_name)
+        self.assertIn("Redis", by_name)
+
 
 if __name__ == "__main__":
     unittest.main()

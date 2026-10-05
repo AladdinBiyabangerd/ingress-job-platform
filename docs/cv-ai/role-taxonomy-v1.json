@@ -1,11 +1,11 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "generated_at": "2026-10-05T08:00:00Z",
   "source": {
     "plan": "docs/ingress-job-cv-ai-plan.pdf §6.1",
     "categories": "worker/worker/techstack.py CATEGORIES",
     "skill_dictionary": "docs/cv-ai/skill-dictionary-v1.json",
-    "note": "Hand-weighted signature skills for v1; later refresh from ad frequencies (TF style, no AI)."
+    "note": "v1.1: optional signature group (OR languages/frameworks). Hand-weighted; later refresh from ad frequencies (TF style, no AI)."
   },
   "roles": [
     {
@@ -73,13 +73,17 @@
       "category": "Backend",
       "synonyms": ["Backend Developer", "Server-side Engineer", "API Engineer"],
       "signature_skills": [
-        {"skill": "Python", "weight": 0.7},
-        {"skill": "Java", "weight": 0.6},
-        {"skill": "Go", "weight": 0.5},
+        {"skill": "Java", "weight": 0.7, "group": "lang"},
+        {"skill": "Python", "weight": 0.7, "group": "lang"},
+        {"skill": "Go", "weight": 0.6, "group": "lang"},
+        {"skill": "Node.js", "weight": 0.6, "group": "lang"},
+        {"skill": ".NET", "weight": 0.6, "group": "lang"},
         {"skill": "SQL", "weight": 0.5},
         {"skill": "PostgreSQL", "weight": 0.4},
+        {"skill": "Docker", "weight": 0.4},
         {"skill": "AWS", "weight": 0.4},
-        {"skill": "Docker", "weight": 0.3}
+        {"skill": "Kafka", "weight": 0.35},
+        {"skill": "Redis", "weight": 0.3}
       ]
     },
     {
@@ -124,9 +128,11 @@
       "category": "Frontend",
       "synonyms": ["Frontend Developer", "Front-end Engineer", "UI Engineer", "Web Developer"],
       "signature_skills": [
-        {"skill": "TypeScript", "weight": 0.9},
-        {"skill": "React", "weight": 0.8},
-        {"skill": "JavaScript", "weight": 0.7},
+        {"skill": "React", "weight": 0.9, "group": "framework"},
+        {"skill": "Angular", "weight": 0.9, "group": "framework"},
+        {"skill": "Vue.js", "weight": 0.9, "group": "framework"},
+        {"skill": "TypeScript", "weight": 0.8},
+        {"skill": "JavaScript", "weight": 0.6},
         {"skill": "CSS", "weight": 0.5},
         {"skill": "HTML", "weight": 0.4}
       ]
@@ -160,10 +166,13 @@
       "category": "Full-stack",
       "synonyms": ["Full Stack Developer", "Fullstack Engineer", "Full-stack Developer"],
       "signature_skills": [
-        {"skill": "React", "weight": 0.8},
-        {"skill": "TypeScript", "weight": 0.7},
-        {"skill": "Node.js", "weight": 0.6},
-        {"skill": "Python", "weight": 0.5},
+        {"skill": "React", "weight": 0.8, "group": "fe"},
+        {"skill": "Angular", "weight": 0.7, "group": "fe"},
+        {"skill": "Vue.js", "weight": 0.7, "group": "fe"},
+        {"skill": "Node.js", "weight": 0.7, "group": "be_lang"},
+        {"skill": "Python", "weight": 0.7, "group": "be_lang"},
+        {"skill": "Java", "weight": 0.6, "group": "be_lang"},
+        {"skill": "TypeScript", "weight": 0.5},
         {"skill": "SQL", "weight": 0.5},
         {"skill": "PostgreSQL", "weight": 0.4},
         {"skill": "AWS", "weight": 0.3}
@@ -490,6 +499,7 @@
   "notes": [
     "Seed for role_taxonomy + role_skill_weight (Phase 0.3).",
     "Signature skill names must match skill_dictionary.canonical_name; unknown skills are skipped at seed.",
-    "Soft-skill roles (Product, Design, Manual QA) have sparse tech weights by design until non-tech signals exist."
+    "Optional signature field group: same group_key = OR (max weight); empty group = required AND.",
+    "Soft-skill roles (Product, Design, Manual QA) have sparse tech weights by design until non-tech signals exist; scorers dampen thin roles."
   ]
 }
