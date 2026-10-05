@@ -29,7 +29,8 @@ def _db_path() -> Path:
 
 DB_PATH = _db_path()
 
-_URL = re.compile(r"(?i)\b(?:https?://|www\.)\S+")
+# No leading \b: a link glued to a word ("gärnahttps://…") must go too.
+_URL = re.compile(r"(?i)(?:https?://|www\.)\S+")
 
 _LIST_SQL = """
 SELECT

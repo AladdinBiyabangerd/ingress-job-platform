@@ -1,13 +1,30 @@
-"""Guest browse stays open. Employer profile gate and candidate links are closed."""
+"""Guest browse stays open. Employer profile gate and candidate links are closed.
 
+Hermetic: jobs and accounts live in temporary SQLite files seeded here, so the
+result never depends on what the crawler has stored locally.
+"""
+
+import sqlite3
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from app.auth_oidc import VerifiedAccess
+from app.cabinet_store import ensure_schema
 from app.main import app
 from app.sqlite_jobs import list_jobs
+
+SOURCE_URL = "https://source.example/jobs/77"
+# Links a guest must never see, including one glued to a word ("gärnahttps://").
+LEAKY_TEXT = (
+    "Backend role in Baku.\n"
+    "Besök gärnahttps://www.careers.example.se/benefits för förmåner.\n"
+    "Apply: https://apply.example.com/job?id=1 or www.example.az/jobs\n"
+    "HTTP://SHOUT.EXAMPLE.COM/x and (https://paren.example.org/y)."
+)
 
 
 def user(scopes: str, subject: str = "42") -> VerifiedAccess:
@@ -16,7 +33,39 @@ def user(scopes: str, subject: str = "42") -> VerifiedAccess:
 
 class AuthGateTests(unittest.TestCase):
     def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.db = root / "jobs.sqlite"
+        self.patches = [
+            patch("app.sqlite_jobs.DB_PATH", self.db),
+            patch("app.profiles.DATA_PATH", root / "accounts.sqlite"),
+        ]
+        for item in self.patches:
+            item.start()
+        ensure_schema(create=True)
+        conn = sqlite3.connect(self.db)
+        cur = conn.execute(
+            """
+            INSERT INTO jobs (title, company, city, text, status, created_at, norm_key)
+            VALUES (?, ?, ?, ?, 'published', '2026-10-01T10:00:00+04:00', 'k-77')
+            """,
+            ("Backend developer https://t.example/x", "Acme www.acme.example", "Baku", LEAKY_TEXT),
+        )
+        conn.execute(
+            """
+            INSERT INTO job_sources (job_id, source_name, source_url, last_seen)
+            VALUES (?, 'example', ?, '2026-10-01T10:00:00+04:00')
+            """,
+            (cur.lastrowid, SOURCE_URL),
+        )
+        conn.commit()
+        conn.close()
         self.client = TestClient(app)
+
+    def tearDown(self):
+        for item in reversed(self.patches):
+            item.stop()
+        self.tmp.cleanup()
 
     def test_guest_can_browse_without_source_url(self):
         response = self.client.get("/api/v1/jobs")
@@ -28,6 +77,13 @@ class AuthGateTests(unittest.TestCase):
         text = response.text.lower()
         self.assertNotIn("http://", text)
         self.assertNotIn("https://", text)
+        self.assertNotIn("www.", text)
+        self.assertNotIn("source.example", text)
+        self.assertIn("backend role in baku.", text)
+        detail = self.client.get(f"/api/v1/jobs/{items[0]['id']}")
+        self.assertEqual(detail.status_code, 200)
+        self.assertNotIn("http", detail.text.lower())
+        self.assertNotIn("www.", detail.text.lower())
 
     def test_guest_apply_and_original_hide_the_address(self):
         job_id = list_jobs()[0]["id"]
@@ -37,14 +93,6 @@ class AuthGateTests(unittest.TestCase):
             self.assertNotIn("http", response.text.lower())
 
     def test_employer_without_profile_is_gated_until_name_city_about(self):
-        import sqlite3
-
-        from app.profiles import DATA_PATH
-
-        conn = sqlite3.connect(DATA_PATH)
-        conn.execute("DELETE FROM company_profiles WHERE subject = ?", ("employer-1",))
-        conn.commit()
-        conn.close()
         employer = user("job:employer profile:read", subject="employer-1")
         with patch("app.account.verify_access_token", return_value=employer):
             me = self.client.get("/api/v1/me", headers={"Authorization": "Bearer test"})
@@ -108,7 +156,7 @@ class AuthGateTests(unittest.TestCase):
                 headers={"Authorization": "Bearer test"},
             )
         self.assertEqual(allowed.status_code, 200)
-        self.assertTrue(allowed.json()["url"].startswith("http"))
+        self.assertEqual(allowed.json()["url"], SOURCE_URL)
         self.assertEqual(applied.status_code, 200)
         self.assertEqual(applied.json()["url"], allowed.json()["url"])
 
