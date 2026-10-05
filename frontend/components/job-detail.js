@@ -2,87 +2,63 @@ import { AccountActions } from "./account-actions";
 import { JsonLd } from "./json-ld";
 import { Shell } from "./shell";
 import { categoryLabel, hrefFor, text } from "../lib/copy";
+import { calendarDate } from "../lib/dates";
+import { descriptionBlocks, linkParts } from "../lib/description";
 import { jobPostingJsonLd } from "../lib/seo";
 
-function tidyLines(raw, title) {
-  const lines = String(raw || "")
-    .replace(/\u00a0/g, " ")
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .filter((line) => line && !/^[,.;:]+$/.test(line));
-  const merged = [];
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i];
-    const next = lines[i + 1];
-    const after = lines[i + 2];
-    if (next && after && /\ba$/i.test(line) && next.length < 80 && /^,/.test(after)) {
-      merged.push(`${line} ${next}${after}`.replace(/\s+,/g, ","));
-      i += 2;
-      continue;
-    }
-    if (title && line.toLowerCase() === title.toLowerCase() && merged.length === 0) continue;
-    merged.push(line);
-  }
-  return merged;
+function Linked({ value }) {
+  return linkParts(value).map((part, index) =>
+    part.type === "link" ? (
+      <a key={index} href={part.href} target="_blank" rel="nofollow noopener noreferrer ugc">
+        {part.text}
+      </a>
+    ) : (
+      part.text
+    ),
+  );
 }
 
-function bulletOf(line) {
-  const marked = line.match(/^(?:[•●▪‣\-–—]\s+|\d+[.)]\s+)(.+)$/);
-  if (marked) return marked[1].trim();
-  if (/;$/.test(line) && line.length < 280) return line.replace(/;$/, "").trim();
-  return null;
+function Description({ blocks }) {
+  return (
+    <div className="posting">
+      {blocks.map((block, index) => {
+        if (block.type === "heading") return <h3 key={index}>{block.text}</h3>;
+        if (block.type === "list") {
+          const List = block.ordered ? "ol" : "ul";
+          return (
+            <List key={index}>
+              {block.items.map((item, itemIndex) => (
+                <li key={itemIndex}>
+                  <Linked value={item} />
+                </li>
+              ))}
+            </List>
+          );
+        }
+        return (
+          <p key={index}>
+            <Linked value={block.text} />
+          </p>
+        );
+      })}
+    </div>
+  );
 }
 
-function looksLikeHeading(line) {
-  if (!line || line.length > 64) return false;
-  const words = line.split(/\s+/);
-  if (words.length > 7) return false;
-  if (/[.!?;]$/.test(line)) return false;
-  if (/,/.test(line)) return false;
-  if (/:$/.test(line)) return true;
-  return words.length <= 5;
-}
-
-function blocks(raw, title) {
-  const lines = tidyLines(raw, title);
-  const out = [];
-  let list = null;
-  const flush = () => {
-    if (list) {
-      out.push({ type: "list", items: list });
-      list = null;
-    }
-  };
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i];
-    const bullet = bulletOf(line);
-    if (bullet) {
-      list = list || [];
-      list.push(bullet);
-      continue;
-    }
-    const next = lines[i + 1];
-    const nextBullet = next ? bulletOf(next) : null;
-    const nextSentence = next && /^.{12,220}[.]$/.test(next);
-    if (looksLikeHeading(line) && (nextBullet || nextSentence || (next && looksLikeHeading(next) === false && next.length > line.length))) {
-      flush();
-      out.push({ type: "heading", text: line.replace(/:$/, "") });
-      continue;
-    }
-    if (list && /^.{12,180}[.]$/.test(line)) {
-      list.push(line.replace(/\.$/, ""));
-      continue;
-    }
-    flush();
-    out.push({ type: "text", text: line });
-  }
-  flush();
-  return out;
+function jobTypeLabel(t, jobType) {
+  if (jobType === "ofis") return t.jobOffice;
+  if (jobType === "hibrid") return t.jobHybrid;
+  if (jobType === "uzaqdan") return t.jobRemoteType;
+  return "";
 }
 
 export function JobDetail({ locale, job }) {
   const t = text(locale);
-  const parts = blocks(job.text, job.title);
+  const blocks = descriptionBlocks(job.text, job.title);
+  const place = job.remote ? t.placeRemote : job.city || t.noCity;
+  const jobType = jobTypeLabel(t, job.job_type);
+  const posted = calendarDate(job.created_at, locale);
+  const stack = Array.isArray(job.tech_stack) ? job.tech_stack : [];
   return (
     <>
       <JsonLd data={jobPostingJsonLd(job, locale)} />
@@ -98,67 +74,111 @@ export function JobDetail({ locale, job }) {
           </ol>
         </nav>
         <article className="detail">
-          {job.source_name ? (
-            job.source_homepage ? (
-              <p className="source-line">
-                <a className="source-pill" href={job.source_homepage} target="_blank" rel="noopener" title={t.sourceSite}>
-                  {job.source_name}
-                </a>
-              </p>
-            ) : (
-              <p className="source-pill">{job.source_name}</p>
-            )
-          ) : null}
-          <h1>{job.title}</h1>
-          <p className="meta line">
-            <span>{job.company || t.noCompany}</span>
-            <span>{job.remote ? t.placeRemote : (job.city || t.noCity)}</span>
-            {job.job_type === "ofis" ? <span>{t.jobOffice}</span> : null}
-            {job.job_type === "hibrid" ? <span>{t.jobHybrid}</span> : null}
-            {job.job_type === "uzaqdan" ? <span>{t.jobRemoteType}</span> : null}
-            {job.salary ? <span>{job.salary}</span> : null}
-            {job.relocation ? <span>{t.relocationBadge}</span> : null}
-          </p>
-          {job.category ? (
-            <p className="category-line">
-              <span className="category-tag" title={t.categoryFilter}>{categoryLabel(locale, job.category)}</span>
+          <header className="detail-head">
+            {job.source_name ? (
+              job.source_homepage ? (
+                <p className="source-line">
+                  <a className="source-pill" href={job.source_homepage} target="_blank" rel="noopener" title={t.sourceSite}>
+                    {job.source_name}
+                  </a>
+                </p>
+              ) : (
+                <p className="source-pill">{job.source_name}</p>
+              )
+            ) : null}
+            <h1>{job.title}</h1>
+            <p className="meta line">
+              <span className="detail-company">{job.company || t.noCompany}</span>
+              <span>{place}</span>
+              {jobType ? <span>{jobType}</span> : null}
+              {job.salary ? <span>{job.salary}</span> : null}
+              {job.relocation ? <span className="relocation-badge">{t.relocationBadge}</span> : null}
             </p>
-          ) : null}
-          {Array.isArray(job.tech_stack) && job.tech_stack.length ? (
-            <div className="tech-block">
-              <h2 className="tech-title">{t.techStack}</h2>
-              <ul className="tech-chips">
-                {job.tech_stack.map((name) => (
-                  <li key={name} className="tech-chip">{name}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          {parts.length ? (
-            <div className="posting">
-              {parts.map((part, index) => {
-                if (part.type === "heading") return <h2 key={index}>{part.text.replace(/:$/, "")}</h2>;
-                if (part.type === "list") {
-                  return (
-                    <ul key={index}>
-                      {part.items.map((item) => (
-                        <li key={item}>{item}</li>
+          </header>
+          <div className="detail-layout">
+            <section className="detail-main" aria-label={t.description}>
+              {blocks.length ? <Description blocks={blocks} /> : null}
+            </section>
+            <aside className="detail-aside" aria-label={t.keyFacts}>
+              <div className="facts-card">
+                <h2 className="facts-title">{t.keyFacts}</h2>
+                <dl className="facts">
+                  <div>
+                    <dt>{t.companies}</dt>
+                    <dd>{job.company || t.noCompany}</dd>
+                  </div>
+                  <div>
+                    <dt>{t.factLocation}</dt>
+                    <dd>
+                      {place}
+                      {job.remote && job.city ? <span className="fact-sub"> · {job.city}</span> : null}
+                    </dd>
+                  </div>
+                  {jobType ? (
+                    <div>
+                      <dt>{t.adJobType}</dt>
+                      <dd>{jobType}</dd>
+                    </div>
+                  ) : null}
+                  {job.salary ? (
+                    <div>
+                      <dt>{t.adSalary}</dt>
+                      <dd>{job.salary}</dd>
+                    </div>
+                  ) : null}
+                  {job.category ? (
+                    <div>
+                      <dt>{t.categoryFilter}</dt>
+                      <dd>
+                        <span className="category-tag">{categoryLabel(locale, job.category)}</span>
+                      </dd>
+                    </div>
+                  ) : null}
+                  {job.source_name ? (
+                    <div>
+                      <dt>{t.sources}</dt>
+                      <dd>
+                        {job.source_homepage ? (
+                          <a href={job.source_homepage} target="_blank" rel="noopener">
+                            {job.source_name}
+                          </a>
+                        ) : (
+                          job.source_name
+                        )}
+                      </dd>
+                    </div>
+                  ) : null}
+                  {posted ? (
+                    <div>
+                      <dt>{t.factPosted}</dt>
+                      <dd>
+                        <time dateTime={job.created_at}>{posted}</time>
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+                {job.relocation ? <p className="facts-badge">{t.relocationBadge}</p> : null}
+                {stack.length ? (
+                  <div className="tech-block">
+                    <h2 className="tech-title">{t.techStack}</h2>
+                    <ul className="tech-chips">
+                      {stack.map((name) => (
+                        <li key={name} className="tech-chip">{name}</li>
                       ))}
                     </ul>
-                  );
-                }
-                return <p key={index}>{part.text}</p>;
-              })}
-            </div>
-          ) : null}
-          <AccountActions
-            locale={locale}
-            jobId={job.id}
-            returnTo={hrefFor(locale, { jobId: job.id })}
-            onsite={Boolean(job.onsite)}
-            hasOriginal={Boolean(job.has_original)}
-            form={job.form}
-          />
+                  </div>
+                ) : null}
+                <AccountActions
+                  locale={locale}
+                  jobId={job.id}
+                  returnTo={hrefFor(locale, { jobId: job.id })}
+                  onsite={Boolean(job.onsite)}
+                  hasOriginal={Boolean(job.has_original)}
+                  form={job.form}
+                />
+              </div>
+            </aside>
+          </div>
         </article>
       </Shell>
     </>
