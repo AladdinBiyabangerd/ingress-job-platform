@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { hrefFor, languageLabel, text } from "../lib/copy";
+import { CATEGORY_ORDER, categoryLabel, hrefFor, languageLabel, text } from "../lib/copy";
 import { Shell } from "./shell";
 
 const PAGE_SIZE = 20;
@@ -177,6 +177,16 @@ function FilterIcon({ name }) {
       </svg>
     );
   }
+  if (name === "category") {
+    return (
+      <svg {...props}>
+        <rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1" />
+        <rect x="9" y="2.5" width="4.5" height="4.5" rx="1" />
+        <rect x="2.5" y="9" width="4.5" height="4.5" rx="1" />
+        <rect x="9" y="9" width="4.5" height="4.5" rx="1" />
+      </svg>
+    );
+  }
   if (name === "stack") {
     return (
       <svg {...props}>
@@ -222,6 +232,7 @@ export function Home({ locale, jobs, error }) {
   const [remote, setRemote] = useState(false);
   const [relocation, setRelocation] = useState(false);
   const [stacks, setStacks] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [techQuery, setTechQuery] = useState("");
   const [when, setWhen] = useState("any");
   const [sort, setSort] = useState("newest");
@@ -251,6 +262,19 @@ export function Home({ locale, jobs, error }) {
       .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
       .map(([name, total]) => ({ name, total }));
   }, [jobs, techQuery]);
+  const categoryOptions = useMemo(() => {
+    const counts = new Map();
+    for (const job of jobs) {
+      if (job.category) counts.set(job.category, (counts.get(job.category) || 0) + 1);
+    }
+    const rank = (name) => {
+      const index = CATEGORY_ORDER.indexOf(name);
+      return index < 0 ? 99 : index;
+    };
+    return Array.from(counts.entries())
+      .sort((a, b) => rank(a[0]) - rank(b[0]))
+      .map(([name, total]) => ({ name, total }));
+  }, [jobs]);
   const companyOptions = useMemo(() => {
     const q = company.trim().toLowerCase();
     return unique(jobs, "company").filter((name) => !q || name.toLowerCase().includes(q));
@@ -274,6 +298,7 @@ export function Home({ locale, jobs, error }) {
         if (!looksRemote) return false;
       }
       if (relocation && !job.relocation) return false;
+      if (categories.length && !categories.includes(job.category)) return false;
       if (stacks.length) {
         const own = stackOf(job);
         if (!stacks.some((name) => own.includes(name))) return false;
@@ -310,7 +335,7 @@ export function Home({ locale, jobs, error }) {
       return sort === "oldest" ? at - bt : bt - at;
     });
     return sorted;
-  }, [jobs, query, company, cities, sources, companies, languages, inDescription, withCity, remote, relocation, stacks, when, sort, salaryMin, salaryMax, t.lang]);
+  }, [jobs, query, company, cities, sources, companies, languages, inDescription, withCity, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax, t.lang]);
 
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -321,7 +346,7 @@ export function Home({ locale, jobs, error }) {
 
   useEffect(() => {
     setPage(1);
-  }, [query, company, cities, sources, companies, languages, inDescription, withCity, remote, relocation, stacks, when, sort, salaryMin, salaryMax]);
+  }, [query, company, cities, sources, companies, languages, inDescription, withCity, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax]);
 
   function clear() {
     setQuery("");
@@ -335,6 +360,7 @@ export function Home({ locale, jobs, error }) {
     setRemote(false);
     setRelocation(false);
     setStacks([]);
+    setCategories([]);
     setTechQuery("");
     setWhen("any");
     setSort("newest");
@@ -396,6 +422,7 @@ export function Home({ locale, jobs, error }) {
                       {job.source_name ? <span className="source-pill">{job.source_name}</span> : null}
                     </span>
                     <h2>{job.title}</h2>
+                    {job.category ? <span className="category-tag">{categoryLabel(locale, job.category)}</span> : null}
                     {stack.length ? (
                       <span className="tech-chips" aria-label={t.techStack}>
                         {stack.slice(0, 6).map((name) => (
@@ -520,6 +547,22 @@ export function Home({ locale, jobs, error }) {
             <input type="checkbox" checked={relocation} onChange={(event) => setRelocation(event.target.checked)} />
             <GroupLabel icon="relocation">{t.relocationFilter}</GroupLabel>
           </label>
+          {categoryOptions.length ? (
+            <fieldset className="filter-group">
+              <legend className="filter-label">
+                <FilterIcon name="category" />
+                {t.categoryFilter}
+              </legend>
+              <div className="checks scroll-set">
+                {categoryOptions.map(({ name, total }) => (
+                  <label key={name} className="check">
+                    <input type="checkbox" checked={categories.includes(name)} onChange={() => toggle(categories, setCategories, name)} />
+                    <span>{categoryLabel(locale, name)} <span className="check-count">{total}</span></span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
           <div className="filter-group">
             <label className="stack">
               <GroupLabel icon="stack">{t.techStack}</GroupLabel>

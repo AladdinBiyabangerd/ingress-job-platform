@@ -84,6 +84,7 @@ export const copy = {
     relocationBadge: "Relokasiya / viza",
     techStack: "Texnologiyalar",
     techPlaceholder: "Texnologiya axtarın",
+    categoryFilter: "Kateqoriya",
     sourceSite: "Mənbə saytı",
     salaryFilter: "Əməkhaqqı",
     salaryMin: "Minimum",
@@ -342,6 +343,7 @@ export const copy = {
     relocationBadge: "Relocation / visa",
     techStack: "Tech stack",
     techPlaceholder: "Find a technology",
+    categoryFilter: "Category",
     sourceSite: "Source site",
     salaryFilter: "Salary",
     salaryMin: "Minimum",
@@ -600,6 +602,7 @@ export const copy = {
     relocationBadge: "Релокация / виза",
     techStack: "Технологии",
     techPlaceholder: "Найти технологию",
+    categoryFilter: "Категория",
     sourceSite: "Сайт источника",
     salaryFilter: "Зарплата",
     salaryMin: "Минимум",
@@ -777,6 +780,35 @@ export const copy = {
 
 export function text(locale) {
   return copy[locale] || copy.az;
+}
+
+// Worker categories (worker/worker/techstack.py CATEGORIES), in this order.
+export const CATEGORY_ORDER = [
+  "Backend", "Frontend", "Full-stack", "Mobile", "DevOps/Cloud", "Data/ML",
+  "QA", "Security", "Design/UX", "Product", "IT Support", "Other tech",
+];
+
+export const categoryNames = {
+  az: {
+    Backend: "Backend", Frontend: "Frontend", "Full-stack": "Full-stack", Mobile: "Mobil",
+    "DevOps/Cloud": "DevOps / Bulud", "Data/ML": "Data / ML", QA: "QA / Test", Security: "Təhlükəsizlik",
+    "Design/UX": "Dizayn / UX", Product: "Məhsul / Layihə", "IT Support": "IT dəstək", "Other tech": "Digər IT",
+  },
+  en: {
+    Backend: "Backend", Frontend: "Frontend", "Full-stack": "Full-stack", Mobile: "Mobile",
+    "DevOps/Cloud": "DevOps / Cloud", "Data/ML": "Data / ML", QA: "QA / Testing", Security: "Security",
+    "Design/UX": "Design / UX", Product: "Product / Project", "IT Support": "IT support", "Other tech": "Other tech",
+  },
+  ru: {
+    Backend: "Backend", Frontend: "Frontend", "Full-stack": "Full-stack", Mobile: "Мобильная разработка",
+    "DevOps/Cloud": "DevOps / Облако", "Data/ML": "Data / ML", QA: "QA / Тестирование", Security: "Безопасность",
+    "Design/UX": "Дизайн / UX", Product: "Продукт / Проект", "IT Support": "IT-поддержка", "Other tech": "Другое IT",
+  },
+};
+
+export function categoryLabel(locale, name) {
+  const names = categoryNames[locale] || categoryNames.az;
+  return names[name] || name;
 }
 
 export const languageNames = {

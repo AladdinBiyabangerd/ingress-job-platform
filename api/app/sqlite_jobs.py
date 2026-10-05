@@ -42,6 +42,7 @@ SELECT
     COALESCE(j.remote, 0) AS remote,
     COALESCE(j.relocation, 0) AS relocation,
     COALESCE(j.tech_stack, '') AS tech_stack,
+    COALESCE(j.category, '') AS category,
     COALESCE(j.salary, '') AS salary,
     COALESCE(j.job_type, '') AS job_type,
     COALESCE(j.owner_subject, '') AS owner_subject,
@@ -191,6 +192,19 @@ def tech_stack(value: object) -> list[str]:
     return out[:12]
 
 
+# Same list as worker/worker/techstack.py CATEGORIES. Anything else
+# (including the worker's "-" for non-tech rows) is returned as "".
+CATEGORIES = (
+    "Backend", "Frontend", "Full-stack", "Mobile", "DevOps/Cloud", "Data/ML",
+    "QA", "Security", "Design/UX", "Product", "IT Support", "Other tech",
+)
+
+
+def job_category(value: object) -> str:
+    name = str(value or "").strip()
+    return name if name in CATEGORIES else ""
+
+
 def _homepage(value: object) -> str:
     url = str(value or "").strip()
     return url if re.match(r"(?i)^https?://[^\s\"<>]+$", url) else ""
@@ -212,6 +226,7 @@ def _public(row: sqlite3.Row) -> dict:
         "remote": bool(int(row["remote"] or 0)),
         "relocation": bool(int(row["relocation"] or 0)),
         "tech_stack": tech_stack(row["tech_stack"]),
+        "category": job_category(row["category"]),
         "text": body,
         "language": language,
         "salary": _plain(row["salary"] or ""),

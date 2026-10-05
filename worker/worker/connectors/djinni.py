@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from worker.connectors.sitemap import CANDIDATES
 from worker.db import Store
 from worker.http import PoliteClient, SourceBlocked, SourceFailed
-from worker.parsing import clean, html_to_text, meta_content
+from worker.parsing import clean, html_to_text, job_postings, meta_content
 
 _JOB = re.compile(r"/jobs/(\d+)-[^/]+/?$")
 
@@ -83,7 +83,12 @@ class DjinniConnector:
         found = _JOB.search(url)
         if not title:
             return None
+        postings = job_postings(html)
+        category = clean(postings[0].get("category")) if postings else ""
         return {
+            # Djinni's own category, e.g. "Python", "QA Manual" or "Sales".
+            "category": category,
+            "tags": [category] if category else [],
             "title": title,
             "company": company,
             "city": city,

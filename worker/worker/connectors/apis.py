@@ -88,7 +88,8 @@ class HimalayasConnector(FeedConnector):
                     "source_url": job.get("applicationLink") or job.get("guid"),
                     "external_id": job.get("guid"),
                     "tags": cats,
-                    "category": job.get("parentCategories") or [],
+                    # Specific categories ("QA-Engineer") before broad ones ("Developer").
+                    "category": list(job.get("categories") or []) + list(job.get("parentCategories") or []),
                     "remote": True,
                 })
         return out
@@ -187,7 +188,7 @@ class FourDayWeekConnector(FeedConnector):
             company = job.get("company") or {}
             tags = [
                 x.get("name")
-                for key in ("stack", "tools")
+                for key in ("stack", "skills", "tools")
                 for x in (job.get(key) or [])
                 if isinstance(x, dict)
             ]
@@ -199,7 +200,8 @@ class FourDayWeekConnector(FeedConnector):
                 "source_url": job.get("url"),
                 "external_id": job.get("id"),
                 "tags": tags,
-                "category": job.get("category") or "",
+                # Every row is category=engineering (the query); the role is specific.
+                "category": [x for x in (job.get("role"), job.get("category")) if x],
                 "remote": job.get("work_arrangement") == "remote",
             })
         return out

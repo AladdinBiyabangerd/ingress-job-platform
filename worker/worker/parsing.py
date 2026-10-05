@@ -155,10 +155,15 @@ def posting_item(html: str) -> dict | None:
     external_id = ""
     if isinstance(ident, dict) and ident.get("value") is not None:
         external_id = clean(ident.get("value"))
+    category = job.get("occupationalCategory") or job.get("category") or ""
+    skills = job.get("skills") or job.get("keywords") or []
     return {
         "title": title,
         "company": company,
         "city": address_locality(job.get("jobLocation")),
         "text": html_to_text(str(job.get("description") or "")),
         "external_id": external_id,
+        # The source's own labels; the runner maps them to a normalized category.
+        "category": category if isinstance(category, (str, list)) else "",
+        "tags": skills if isinstance(skills, (str, list)) else [],
     }

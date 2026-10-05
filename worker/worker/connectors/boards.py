@@ -79,6 +79,7 @@ class RelocateMeConnector(OpenListConnector):
             "text": text,
             "external_id": (re.findall(r"-(\d+)$", url) or [""])[0],
             "tags": [t for t in tags if t],
+            "category": [t for t in tags if t],
             # On-site jobs abroad. Never marked remote from loose text mentions.
             "remote": False,
             "relocation": True,
@@ -105,7 +106,6 @@ class JapanDevConnector(OpenListConnector):
         overseas = len(reqs) > 1 or any(r.upper() not in {"JP", "JAPAN"} for r in reqs)
         item["remote"] = True if _telecommute(job) else None
         item["relocation"] = True if overseas else None
-        item["category"] = job.get("occupationalCategory") or ""
         item["credit_note"] = self.credit_note
         if not item.get("city"):
             item["city"] = "Japan"
@@ -137,6 +137,5 @@ class RemoteFirstJobsConnector(OpenListConnector):
         reqs = _requirements(job)
         item["city"] = "Remote" + (f" ({', '.join(reqs[:3])})" if reqs else "")
         item["remote"] = True
-        item["category"] = job.get("occupationalCategory") or ""
         item["credit_note"] = self.credit_note
         return item

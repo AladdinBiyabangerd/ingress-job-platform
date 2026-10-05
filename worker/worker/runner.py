@@ -205,7 +205,8 @@ def _too_soon(store: Store, connector, source_id: int) -> bool:
 
 
 def finish_item(connector, item: dict | None) -> dict | None:
-    """Tech roles only. Adds tech_stack, remote and relocation."""
+    """Tech roles only (the source category decides first). Adds tech_stack,
+    job_category, remote and relocation."""
     if not item:
         return None
     if not is_tech_job(str(item.get("title") or ""), item.get("category"), item.get("tags")):
@@ -311,6 +312,8 @@ def _probe(names: list[str]) -> int:
                                     "city": item.get("city"),
                                     "remote": item.get("remote"),
                                     "relocation": item.get("relocation"),
+                                    "category": item.get("job_category"),
+                                    "source_category": item.get("category"),
                                     "tech_stack": item.get("tech_stack"),
                                     "text_chars": len(item.get("text") or ""),
                                     "url": url,

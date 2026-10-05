@@ -84,6 +84,8 @@ _COLUMNS = {
     # 1 when the ad offers visa sponsorship or relocation support.
     "tech_stack": "TEXT NOT NULL DEFAULT ''",
     "relocation": "INTEGER NOT NULL DEFAULT 0",
+    # Normalized tech category from the worker ("Backend", "QA", ...).
+    "category": "TEXT NOT NULL DEFAULT ''",
 }
 
 _APP_COLUMNS = {

@@ -1,4 +1,4 @@
-"""Collected ads expose their tech stack, remote and relocation flags."""
+"""Collected ads expose their tech stack, category, remote and relocation flags."""
 
 import sqlite3
 import tempfile
@@ -25,7 +25,7 @@ class TechStackTests(unittest.TestCase):
         self.path_patch.stop()
         self.tmp.cleanup()
 
-    def _crawled(self, tech_stack: str) -> int:
+    def _crawled(self, tech_stack: str, category: str = "Backend") -> int:
         conn = sqlite3.connect(self.db)
         conn.execute(
             """
@@ -36,11 +36,11 @@ class TechStackTests(unittest.TestCase):
         cur = conn.execute(
             """
             INSERT INTO jobs (title, company, city, text, status, created_at, norm_key,
-                              owner_subject, remote, relocation, tech_stack)
+                              owner_subject, remote, relocation, tech_stack, category)
             VALUES ('Backend Engineer', 'Acme', '', 'Python and AWS', 'published',
-                    '2026-10-05T09:00:00+04:00', 'tech-1', '', 1, 1, ?)
+                    '2026-10-05T09:00:00+04:00', 'tech-1', '', 1, 1, ?, ?)
             """,
-            (tech_stack,),
+            (tech_stack, category),
         )
         job_id = int(cur.lastrowid)
         conn.execute(
@@ -61,6 +61,7 @@ class TechStackTests(unittest.TestCase):
         self.assertEqual(items[0]["tech_stack"], ["Python", "AWS", "PostgreSQL"])
         self.assertTrue(items[0]["remote"])
         self.assertTrue(items[0]["relocation"])
+        self.assertEqual(items[0]["category"], "Backend")
         detail = self.client.get(f"/api/v1/jobs/{job_id}").json()
         self.assertEqual(detail["tech_stack"], ["Python", "AWS", "PostgreSQL"])
         self.assertEqual(detail["source_homepage"], "https://himalayas.app")
@@ -70,6 +71,11 @@ class TechStackTests(unittest.TestCase):
         job_id = self._crawled("not json")
         detail = self.client.get(f"/api/v1/jobs/{job_id}").json()
         self.assertEqual(detail["tech_stack"], [])
+
+    def test_unknown_or_non_tech_category_is_empty(self):
+        job_id = self._crawled("[]", category="-")
+        detail = self.client.get(f"/api/v1/jobs/{job_id}").json()
+        self.assertEqual(detail["category"], "")
 
 
 if __name__ == "__main__":

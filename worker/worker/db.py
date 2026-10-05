@@ -120,6 +120,9 @@ class Store:
             "tech_stack": "TEXT NOT NULL DEFAULT ''",
             # 1 when the ad offers visa sponsorship or relocation support.
             "relocation": "INTEGER NOT NULL DEFAULT 0",
+            # Normalized tech category (techstack.CATEGORIES), "-" = not a tech
+            # role, '' = not classified yet.
+            "category": "TEXT NOT NULL DEFAULT ''",
         }
         for name, decl in alters.items():
             if name not in cols:
@@ -246,6 +249,7 @@ class Store:
         stack_json = json.dumps([str(x) for x in stack][:12], ensure_ascii=False)
         remote = 1 if item.get("remote") else 0
         relocation = 1 if item.get("relocation") else 0
+        category = str(item.get("job_category") or "")[:40]
         key = norm_key(title, company, city)
         seen = now_iso()
         with self.conn:
@@ -282,12 +286,12 @@ class Store:
                         UPDATE jobs
                         SET title = ?, company = ?, city = ?, text = ?, status = 'published',
                             cleaned_text = CASE WHEN text = ? THEN cleaned_text ELSE NULL END,
-                            tech_stack = ?, remote = ?, relocation = ?
+                            tech_stack = ?, remote = ?, relocation = ?, category = ?
                         WHERE id = ?
                         """,
                         (
                             title, company, city, text, text,
-                            stack_json, remote, relocation, existing["job_id"],
+                            stack_json, remote, relocation, category, existing["job_id"],
                         ),
                     )
                     self._set_norm_key(int(existing["job_id"]), key)
@@ -301,11 +305,11 @@ class Store:
                     """
                     INSERT INTO jobs (
                         title, company, city, text, status, created_at, norm_key,
-                        tech_stack, remote, relocation
+                        tech_stack, remote, relocation, category
                     )
-                    VALUES (?, ?, ?, ?, 'published', ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?)
                     """,
-                    (title, company, city, text, seen, key, stack_json, remote, relocation),
+                    (title, company, city, text, seen, key, stack_json, remote, relocation, category),
                 )
                 job_id = int(cur.lastrowid)
                 kind = "created"
@@ -320,19 +324,31 @@ class Store:
             return kind
 
     def backfill_derived(self, limit: int = 500) -> int:
-        """Tech stack and relocation for collected rows saved before those columns.
+        """Tech stack, category and relocation for collected rows saved before
+        those columns existed.
 
-        Only scraped rows (empty owner_subject) whose tech_stack is still '' are
-        read. Nothing is deleted; remote and relocation are only ever switched on.
+        Only scraped rows (empty owner_subject) with an empty tech_stack or
+        category are read. A stack already stored (it may come from source
+        tags) is kept. The source's category was not stored for old rows, so
+        their category comes from the title and stack. Nothing is deleted;
+        remote and relocation are only ever switched on.
         """
-        from worker.techstack import extract_stack, relocation_flag, remote_flag
+        from worker.techstack import (
+            classify_category,
+            extract_stack,
+            is_tech_job,
+            relocation_flag,
+            remote_flag,
+        )
 
         rows = self.conn.execute(
             """
             SELECT id, title, city, COALESCE(NULLIF(cleaned_text, ''), text) AS body,
+                   COALESCE(tech_stack, '') AS tech_stack,
                    COALESCE(remote, 0) AS remote, COALESCE(relocation, 0) AS relocation
             FROM jobs
-            WHERE COALESCE(owner_subject, '') = '' AND COALESCE(tech_stack, '') = ''
+            WHERE COALESCE(owner_subject, '') = ''
+              AND (COALESCE(tech_stack, '') = '' OR COALESCE(category, '') = '')
             ORDER BY id DESC
             LIMIT ?
             """,
@@ -344,12 +360,21 @@ class Store:
                 title = str(row["title"] or "")
                 city = str(row["city"] or "")
                 body = str(row["body"] or "")
-                stack = extract_stack(body, None, title)
+                stack: list[str] | None = None
+                if row["tech_stack"]:
+                    try:
+                        loaded = json.loads(row["tech_stack"])
+                        stack = [str(x) for x in loaded] if isinstance(loaded, list) else None
+                    except (TypeError, ValueError):
+                        stack = None
+                if stack is None:
+                    stack = extract_stack(body, None, title)
+                category = classify_category("", title, stack) if is_tech_job(title) else "-"
                 remote = 1 if int(row["remote"] or 0) or remote_flag(title, city, body) else 0
                 relocation = 1 if int(row["relocation"] or 0) or relocation_flag(title, city, body) else 0
                 self.conn.execute(
-                    "UPDATE jobs SET tech_stack = ?, remote = ?, relocation = ? WHERE id = ?",
-                    (json.dumps(stack, ensure_ascii=False), remote, relocation, row["id"]),
+                    "UPDATE jobs SET tech_stack = ?, category = ?, remote = ?, relocation = ? WHERE id = ?",
+                    (json.dumps(stack, ensure_ascii=False), category, remote, relocation, row["id"]),
                 )
                 done += 1
         return done

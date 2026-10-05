@@ -43,6 +43,12 @@ class PythonOrgJobsConnector(FeedConnector):
         return out
 
 
+_ROLE_NOISE = re.compile(
+    r"(?i)\b(?:blockchain|cryptocurrency|crypto|web3|defi|nft|remote|full[\s-]time|part[\s-]time|"
+    r"senior|junior|entry level|jobs?)\b"
+)
+
+
 class CryptoJobsListConnector(FeedConnector):
     name = "Crypto Jobs List"
     entry_url = "https://api.cryptojobslist.com/jobs.rss"
@@ -64,6 +70,9 @@ class CryptoJobsListConnector(FeedConnector):
                 "source_url": link,
                 "external_id": link.rstrip("/").rsplit("/", 1)[-1],
                 "tags": [t for t in tags if t.lower() != "web3 jobs"],
+                # Tags read like "Web3 Ios Jobs" or "Blockchain Full Time Jobs";
+                # only the role part ("Ios") is a category.
+                "category": [r for r in (_ROLE_NOISE.sub(" ", t).strip() for t in tags) if r],
             })
         return out
 

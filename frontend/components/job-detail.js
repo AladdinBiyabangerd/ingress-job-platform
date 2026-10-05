@@ -1,7 +1,7 @@
 import { AccountActions } from "./account-actions";
 import { JsonLd } from "./json-ld";
 import { Shell } from "./shell";
-import { hrefFor, text } from "../lib/copy";
+import { categoryLabel, hrefFor, text } from "../lib/copy";
 import { jobPostingJsonLd } from "../lib/seo";
 
 function tidyLines(raw, title) {
@@ -119,6 +119,11 @@ export function JobDetail({ locale, job }) {
             {job.salary ? <span>{job.salary}</span> : null}
             {job.relocation ? <span>{t.relocationBadge}</span> : null}
           </p>
+          {job.category ? (
+            <p className="category-line">
+              <span className="category-tag" title={t.categoryFilter}>{categoryLabel(locale, job.category)}</span>
+            </p>
+          ) : null}
           {Array.isArray(job.tech_stack) && job.tech_stack.length ? (
             <div className="tech-block">
               <h2 className="tech-title">{t.techStack}</h2>
