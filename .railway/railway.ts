@@ -33,7 +33,7 @@ export default defineRailway(() => {
     root: "frontend",
     build: "npm ci && npm run build",
     start: "sh -c 'exec npx next start --hostname 0.0.0.0 --port ${PORT:-3010}'",
-    healthcheck: "/",
+    healthcheck: "/api/health",
     healthcheckTimeout: 60,
     env: {
       NODE_ENV: "production",

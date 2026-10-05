@@ -12,7 +12,7 @@ the files. Nothing here has been applied.
 | Service | Directory | What a push builds | Process |
 |---|---|---|---|
 | api | `api/` | `api/Dockerfile` (or `api/nixpacks.toml`) | `uvicorn` on `$PORT`, health `/health` |
-| web | `frontend/` | `frontend/Dockerfile` (or `frontend/nixpacks.toml`) | `next start` on `$PORT` |
+| web | `frontend/` | `frontend/Dockerfile` (or `frontend/nixpacks.toml`) | `next start` on `$PORT`, health `/api/health` |
 | worker | `worker/` | `worker/Dockerfile` (or `worker/nixpacks.toml`) | `python -m worker` once per hour, then exit |
 
 The worker cron is `0 * * * *` UTC. It must exit. Local Mac scheduling is still
