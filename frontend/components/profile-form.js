@@ -187,6 +187,9 @@ export function ProfileForm({ locale }) {
                 <div className="cabinet-form-head">
                   <h2>{t.profileApplicantTitle}</h2>
                   <p className="hint">{t.profileApplicantLede}</p>
+                  <p className="hint">
+                    <a href={hrefFor(locale, { mode: "profileReview" })}>{t.profileReviewOpen}</a>
+                  </p>
                 </div>
                 {applicantError ? <p className="note">{applicantError}</p> : null}
                 {applicantNote ? <p className="note">{applicantNote}</p> : null}

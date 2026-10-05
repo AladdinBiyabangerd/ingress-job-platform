@@ -25,7 +25,7 @@ Ingress Job is a multilingual job listings product in the Ingress ecosystem: pub
 
 - Public home pages in az / en / ru
 - Public job detail pages with JobPosting structured data
-- Do not treat /api/, /admin, /applications, /profile, /notifications, /company, /post (and locale-prefixed twins) as content pages
+- Do not treat /api/, /admin, /applications, /profile, /profile/review, /notifications, /company, /post (and locale-prefixed twins) as content pages
 
 ## Product notes
 

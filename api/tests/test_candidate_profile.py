@@ -131,7 +131,9 @@ class CandidateProfileTests(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
 
     def test_profile_pages_are_safe_return_paths(self):
-        for index, path in enumerate(("/profile", "/en/profile", "/ru/profile")):
+        for index, path in enumerate(
+            ("/profile", "/en/profile", "/ru/profile", "/profile/review", "/en/profile/review", "/ru/profile/review")
+        ):
             state = f"{'p' * 20}{index:02d}"
             response = self.client.post(
                 "/api/v1/auth/transactions",

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiBase } from "../api";
 
-const SAFE_RETURN = /^\/(?:(?:en|ru)(?:\/jobs\/\d+|\/post|\/company|\/admin|\/applications|\/profile|\/notifications)?|jobs\/\d+|post|company|admin|applications|profile|notifications)?$/;
+const SAFE_RETURN = /^\/(?:(?:en|ru)(?:\/jobs\/\d+|\/post|\/company|\/admin|\/applications|\/profile(?:\/review)?|\/notifications)?|jobs\/\d+|post|company|admin|applications|profile(?:\/review)?|notifications)?$/;
 
 /** Current auth cookies. Legacy names are expired on every auth response but never trusted. */
 export const ACCESS_COOKIE = "job_at";

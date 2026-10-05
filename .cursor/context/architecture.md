@@ -39,6 +39,7 @@ compose.yaml
 - Aggregation: remote/relocation IT sources (API/RSS/ATS); Jooble/Reed gated by API keys + monthly budgets
 - CV parse queue (`parse_cv_queue` → rules `worker.cv_parse` → jobs-DB `candidate_profile` stub); accounts.sqlite `candidate_profiles` remains contact-only
 - Consents (`consent` in jobs DB; `GET/PUT /api/v1/consents`); copy from `docs/cv-ai/consent-copy-v1.json`; visibility on `candidate_profile`
+- CV profile review: `GET/PUT /api/v1/profile` + `/profile/review`; `profile_edit_log`; status draft→confirmed
 
 ## Integrations
 

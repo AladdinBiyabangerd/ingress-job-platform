@@ -1,29 +1,37 @@
 # Current task
 
 ## Completed
-- Root cause found on **ingress-academy**, not leftover job cookies
-- Academy fix: `prompt=login` now forces logout unless `existing_account=1`
-
-## Current state
-User confirmed job cookies clear on logout. Portal = Test Aladdin, Job still
-reopened Tofig after login because Academy intentionally skipped `prompt=login`
-whenever `registration_intent` was set (Job always sends employer/candidate
-intent from the register menu). Portal session was reused silently.
+- CV/AI plan accepted: `docs/ingress-job-cv-ai-plan.pdf`
+- Phase 0.1–0.4: skill dictionary, job_skill, role taxonomy, consent copy stubs
+- Phase 1.1: rules-only CV parser (`worker/worker/cv_parse/`)
+- Phase 1.2: `parse_cv_queue` + worker drain → jobs-DB `candidate_profile` draft
+- Phase 1.3: consent API/UI (`GET/PUT /api/v1/consents`, privacy on `/profile`)
+- Phase 1.4: profile confirm screen (`/profile/review`)
+  - API: `GET/PUT /api/v1/profile` over jobs-DB `candidate_profile`
+  - `profile_edit_log` on save/confirm; confirmed status for HR readiness
+  - BFF `/api/auth/cv-profile`; UI az/en/ru with editable fields + skill chips
+  - Low-confidence fields highlighted; link from `/profile`
+  - Tests: `api/tests/test_cv_profile.py`
 
 ## Decisions
-- Academy: logout on `prompt=login` unless job intent + `existing_account=1`
-- Job: keep always sending `prompt=login`; send `existing_account=1` only when
-  job itself still has a live session and is adding a role
-- Prior job-side cookie hardening (guest lock, `job_at`/`job_rt`) still useful
+- Deterministic first; AI only at the 4 named plan points
+- `candidate_profile` (jobs DB) ≠ `candidate_profiles` (accounts.sqlite contact)
+- Confirmed profiles are never overwritten by automatic parse
+- Contact BFF stays `/api/auth/profile`; structured CV profile is `/api/auth/cv-profile`
+- Low-confidence threshold: 0.55 (pilot-tunable)
 
 ## Remaining
-- Restart Academy (`runserver`) so the OIDC authorize change is live
-- Verify: Job logout → register again → Academy asks for account → Test Aladdin
-  (or whoever you sign in) appears on Job, not Tofig
-- CV/AI Phase 1 next: profile confirm screen (`/profile/review`)
+- Later Phase 1: role suggestions, OCR, AI #1 fallback, export/delete
+- Optional: `/profile/cv` upload page (plan §13.2); parse still enqueue on apply
+- Optional: dedicated `/settings/privacy`; privacy lives on `/profile` for now
+- Optional: anonymized test CV set (plan §17.2)
 
 ## Relevant files
-- `ingress-academy/portal/oidc/views.py`
-- `ingress-academy/portal/tests/test_job_oidc.py`
-- `ingress-job/frontend/app/api/auth/login/route.js`
-- `ingress-job/frontend/lib/server/oidc.js`
+- `api/app/cv_profile.py`, `api/app/routers/profile.py`, `api/tests/test_cv_profile.py`
+- `frontend/components/profile-review.js`, `frontend/app/**/profile/review/page.js`
+- `frontend/app/api/auth/cv-profile/route.js`
+- `frontend/components/profile-form.js`, `frontend/lib/copy.js`
+- `docs/ingress-job-cv-ai-plan.pdf` (§5.3 / §13.1–13.2)
+
+## Continue prompt (new chat)
+Phase 1 next: role suggestions (`GET /api/me/roles`) using `role-taxonomy-v1.json` + confirmed/draft skills. Read `.cursor/context/current-task.md` and plan §6.

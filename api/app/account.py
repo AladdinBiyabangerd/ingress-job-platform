@@ -27,7 +27,7 @@ from app.profiles import (
 router = APIRouter(prefix="/api/v1", tags=["account"])
 
 _SAFE_RETURN = re.compile(
-    r"^/(?:(?:en|ru)(?:/jobs/\d+|/post|/company|/admin|/applications|/profile|/notifications)?|jobs/\d+|post|company|admin|applications|profile|notifications)?$"
+    r"^/(?:(?:en|ru)(?:/jobs/\d+|/post|/company|/admin|/applications|/profile(?:/review)?|/notifications)?|jobs/\d+|post|company|admin|applications|profile(?:/review)?|notifications)?$"
 )
 _INTENTS = {"", "job_employer", "job_candidate"}
 _STATE = re.compile(r"^[A-Za-z0-9_-]{16,128}$")

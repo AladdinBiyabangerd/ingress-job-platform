@@ -1397,6 +1397,108 @@ textarea { min-height: 120px; resize: vertical; }
   border-top: 1px solid #e8eaee;
 }
 
+.profile-review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.profile-review-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #eef1f5;
+  color: #334155;
+}
+
+.profile-review-status.status-confirmed {
+  background: #e7f6ec;
+  color: #166534;
+}
+
+.profile-review-warn {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.field-warn input,
+.field-warn select,
+.profile-review-skills.field-warn .skill-chip,
+.profile-review-work.field-warn .work-row {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.profile-review-skills,
+.profile-review-work {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.skill-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid #d7dde5;
+  border-radius: 999px;
+  background: #f8fafc;
+}
+
+.skill-chip-name {
+  width: 110px;
+  border: 0;
+  background: transparent;
+  padding: 0 4px;
+}
+
+.skill-chip-years {
+  width: 64px;
+  border: 0;
+  background: #fff;
+  border-radius: 8px;
+  padding: 4px 6px;
+}
+
+.skill-chip-remove {
+  min-width: 28px;
+  padding: 2px 8px;
+  line-height: 1;
+}
+
+.skill-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px auto;
+  gap: 8px;
+}
+
+.work-row {
+  padding-top: 8px;
+  border-top: 1px solid #e8edf3;
+}
+
+@media (max-width: 720px) {
+  .skill-add-row { grid-template-columns: 1fr; }
+}
+
 .form-card.profile-privacy {
   margin-top: 16px;
   height: auto;
@@ -2740,4 +2842,12 @@ span.pager-btn {
     font-weight: 500;
     opacity: 0.85;
   }
+}
+
+/* /post for a signed-in candidate-only account */
+.post-denied-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
 }
