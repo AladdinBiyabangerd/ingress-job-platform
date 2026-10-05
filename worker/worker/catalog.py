@@ -44,7 +44,8 @@ def _row(
 # Domestic Azerbaijani boards (Busy.az, Boss.az, HelloJob, Glorri, JobSearch.az,
 # HRX, Work.az, eJob.az, hh1.az) and hh.ru were removed on 2026-10-05. Their
 # rows stay in crawl_sources switched off (go_decision 'retired') and their
-# stored ads are kept; nothing collects them any more.
+# stored ads are kept but hidden once (db.hide_retired_local); nothing collects
+# them any more.
 # LinkedIn, Indeed, Tap.az, gloria.az and job.az are intentionally absent.
 # Every enabled row: robots.txt allows the exact URLs read, the source terms do
 # not forbid it, there is no login wall or bot challenge, and at most 30 new

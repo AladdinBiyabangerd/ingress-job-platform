@@ -76,6 +76,64 @@ CREATE TABLE IF NOT EXISTS job_sources (
 """
 
 
+# One-time maintenance: hide the ads collected from the retired domestic
+# sources. Uses the same jobs.hidden flag as the staff "hide" button, so staff
+# still see these rows in the collected-ads admin and can unhide them. Rows are
+# never deleted. Only collected rows (empty owner_subject) whose every source
+# is a retired one are touched; cabinet/company ads and ads also seen on a
+# current source are left alone. The marker row in maintenance_steps makes it
+# run once per database, so a later unhide by staff is not undone.
+# The same step lives in api/app/cabinet_store.py (API schema setup); whichever process opens the database first
+# does it.
+RETIRED_LOCAL_SOURCES = (
+    "Busy.az", "Boss.az", "HelloJob", "Glorri", "JobSearch.az",
+    "HRX", "Work.az", "eJob.az", "hh1.az", "hh.ru",
+)
+HIDE_RETIRED_STEP = "hide-retired-local-sources-2026-10-05"
+
+_MAINTENANCE = """
+CREATE TABLE IF NOT EXISTS maintenance_steps (
+    name TEXT PRIMARY KEY,
+    done_at TEXT NOT NULL
+)
+"""
+
+
+def hide_retired_local(conn) -> int:
+    """Hide collected ads from RETIRED_LOCAL_SOURCES once. Returns rows hidden
+    (0 when the step already ran). The caller commits."""
+    conn.execute(_MAINTENANCE)
+    done = conn.execute(
+        "SELECT 1 FROM maintenance_steps WHERE name = ?", (HIDE_RETIRED_STEP,)
+    ).fetchone()
+    if done:
+        return 0
+    names = [name.lower() for name in RETIRED_LOCAL_SOURCES]
+    marks = ", ".join("?" for _ in names)
+    where = f"""
+        WHERE COALESCE(j.owner_subject, '') = ''
+          AND COALESCE(j.hidden, 0) = 0
+          AND j.id IN (
+              SELECT js.job_id FROM job_sources js WHERE LOWER(js.source_name) IN ({marks})
+          )
+          AND j.id NOT IN (
+              SELECT js.job_id FROM job_sources js WHERE LOWER(js.source_name) NOT IN ({marks})
+          )
+    """
+    ids = [int(row[0]) for row in conn.execute(f"SELECT j.id FROM jobs j {where}", names + names).fetchall()]
+    for start in range(0, len(ids), 200):
+        chunk = ids[start:start + 200]
+        conn.execute(
+            f"UPDATE jobs SET hidden = 1 WHERE id IN ({', '.join('?' for _ in chunk)})",
+            chunk,
+        )
+    conn.execute(
+        "INSERT INTO maintenance_steps (name, done_at) VALUES (?, ?) ON CONFLICT (name) DO NOTHING",
+        (HIDE_RETIRED_STEP, datetime.now().astimezone().isoformat(timespec="seconds")),
+    )
+    return len(ids)
+
+
 def now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
@@ -97,6 +155,8 @@ class Store:
         self._ensure_cleaned_column()
         self._ensure_staff_columns()
         self._seed()
+        with self.conn:
+            self.hidden_retired = hide_retired_local(self.conn)
 
     def close(self) -> None:
         self.conn.close()
