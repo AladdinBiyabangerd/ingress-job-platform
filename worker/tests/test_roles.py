@@ -25,8 +25,8 @@ class RolesTest(unittest.TestCase):
         path = seed_path()
         self.assertTrue(path.is_file(), path)
         roles = load_seed(path)
-        self.assertGreaterEqual(len(roles), 30)
-        self.assertLessEqual(len(roles), 45)
+        self.assertGreaterEqual(len(roles), 50)
+        self.assertLessEqual(len(roles), 80)
 
         count = self.store.conn.execute("SELECT COUNT(*) FROM role_taxonomy").fetchone()[0]
         self.assertEqual(int(count), len(roles))
