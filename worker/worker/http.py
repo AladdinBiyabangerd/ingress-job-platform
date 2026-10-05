@@ -171,6 +171,36 @@ class PoliteClient:
         self._reject_challenge(response.text[:2000], url)
         return response
 
+    def post_json(self, url: str, payload: dict, *, shown: str | None = None):
+        """POST a JSON body to an official API and return the decoded JSON.
+
+        ``shown`` replaces the URL in every error message, for APIs that put
+        the key in the path (the key must never reach logs or crawl_runs).
+        """
+        label = shown or url
+        self._check_url(url)
+        if not self.allowed(url):
+            raise Disallowed(label)
+        self._pause(_host(url))
+        try:
+            response = self._http.post(url, json=payload, headers={"Accept": "application/json"})
+        except httpx.TimeoutException:
+            raise SourceFailed(f"timeout for {label}") from None
+        except httpx.HTTPError as exc:
+            raise SourceFailed(f"request failed for {label}: {exc.__class__.__name__}") from None
+        if _host(str(response.url)) != _host(url):
+            raise SourceFailed(f"unexpected redirect for {label}")
+        if response.status_code in BLOCK_STATUSES:
+            raise SourceBlocked(f"HTTP {response.status_code} for {label}")
+        if response.status_code == 404:
+            raise NotFound(label)
+        if response.status_code >= 400:
+            raise SourceFailed(f"HTTP {response.status_code} for {label}")
+        try:
+            return response.json()
+        except ValueError:
+            raise SourceFailed(f"non-JSON answer from {label}") from None
+
     def _check_url(self, url: str) -> None:
         parsed = urlparse(url)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:

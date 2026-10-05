@@ -133,7 +133,7 @@ def _split_script(script: str) -> list[str]:
     return parts
 
 
-_NO_ID_TABLES = {"tidy_batch_jobs", "maintenance_steps"}
+_NO_ID_TABLES = {"tidy_batch_jobs", "maintenance_steps", "api_usage"}
 
 
 def _wants_returning(sql: str) -> bool:

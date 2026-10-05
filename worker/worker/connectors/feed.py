@@ -33,6 +33,7 @@ class FeedConnector:
     detail = False
     detail_min_text = 600
     credit_note = ""
+    candidates = CANDIDATES
 
     def __init__(self, client: PoliteClient, store: Store) -> None:
         self.client = client
@@ -77,7 +78,7 @@ class FeedConnector:
             item["source_url"] = url
             self._items[url] = item
             urls.append(url)
-            if len(urls) >= CANDIDATES:
+            if len(urls) >= self.candidates:
                 break
         return urls
 

@@ -113,7 +113,11 @@ Postgres service URL onto both services; do not point them at different
 databases, and do not set `JOBS_DB_PATH` on Railway. Set the same `SENTRY_*`
 and `OTEL_*` names on the worker if that process should report. `JOOBLE_API_KEY`,
 `REED_API_KEY` and `HH_API_KEY` stay optional; those sources stay switched off
-when the key is missing (hh.ru answers 403 to anonymous API calls).
+when the key is missing (hh.ru answers 403 to anonymous API calls). With
+`JOOBLE_API_KEY` set, Jooble runs at most every 6 hours with 3 requests and
+stops for the month at 450 counted requests (`JOOBLE_MONTHLY_BUDGET`, table
+`api_usage`). The key's 500-request limit is shared by every environment that
+uses it, so set it on one worker only.
 
 CV upload uses the bucket only when `BUCKET_NAME`, `BUCKET_ACCESS_KEY`, and
 `BUCKET_SECRET_KEY` are all set. Otherwise files stay in `api/data/cvs/`.

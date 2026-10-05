@@ -18,18 +18,14 @@ from worker.connectors.apis import (
     WorkingNomadsConnector,
 )
 from worker.connectors.ats import (
-    GreenhouseAmericasConnector,
-    GreenhouseAsiaConnector,
-    GreenhouseEuropeConnector,
-    LeverAsiaConnector,
-    LeverGlobalConnector,
+    ATS_GROUP_CONNECTORS,
     PersonioConnector,
     RecruiteeConnector,
-    TeamtailorConnector,
     WorkableConnector,
 )
 from worker.connectors.boards import JapanDevConnector, RelocateMeConnector, RemoteFirstJobsConnector
 from worker.connectors.djinni import DjinniConnector
+from worker.connectors.jooble import JoobleConnector
 from worker.connectors.regional import (
     GetOnBoardConnector,
     HasjobConnector,
@@ -80,13 +76,9 @@ BUILDERS = {
     "Relocate.me": RelocateMeConnector,
     "Japan Dev": JapanDevConnector,
     "Remote First Jobs": RemoteFirstJobsConnector,
-    "Greenhouse boards (Europe)": GreenhouseEuropeConnector,
-    "Greenhouse boards (North America)": GreenhouseAmericasConnector,
-    "Greenhouse boards (Asia-Pacific & Middle East)": GreenhouseAsiaConnector,
-    "Lever boards (Americas & Europe)": LeverGlobalConnector,
-    "Lever boards (Asia-Pacific)": LeverAsiaConnector,
+    **ATS_GROUP_CONNECTORS,
+    "Jooble": JoobleConnector,
     "Workable boards (Europe)": WorkableConnector,
-    "Teamtailor boards (Nordics)": TeamtailorConnector,
     "Recruitee boards (Netherlands)": RecruiteeConnector,
     "Personio boards (Germany)": PersonioConnector,
     "JobTech Platsbanken (Sweden)": JobTechSwedenConnector,
@@ -196,6 +188,10 @@ def _run_pass(store: Store) -> int:
             row = store.source_by_name(name)
             if not row["enabled"] or row["go_decision"] != "go":
                 print(f"{name}: skipped, not enabled", flush=True)
+                continue
+            key_env = str(row["api_key_env"] or "")
+            if key_env and not os.environ.get(key_env, "").strip():
+                print(f"{name}: skipped, {key_env} not set", flush=True)
                 continue
             connector = builder(client, store)
             if _too_soon(store, connector, int(row["id"])):

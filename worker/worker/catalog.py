@@ -12,6 +12,9 @@ REMOTE_OK_CREDIT = (
 )
 
 
+from worker.ats_boards import ATS_MAX_BOARDS, GROUPS as ATS_GROUPS  # noqa: E402
+
+
 def _row(
     name: str,
     homepage: str,
@@ -239,56 +242,6 @@ SOURCES: list[dict] = [
         note="Açıq kateqoriya siyahısı, sonra elan səhifəsi (JobPosting). /api/ çağırılmır.",
     ),
     _row(
-        'Greenhouse boards (Europe)',
-        'https://www.greenhouse.com/',
-        'official_api',
-        'https://boards-api.greenhouse.io/v1/boards',
-        enabled=True,
-        go="go",
-        note='Greenhouse açıq Job Board API: Avropa texnoloji şirkətləri (N26, Adyen, Wolt, Monzo, Celonis, Wise və s.). Siyahı yüngül, mətn yalnız yeni texniki elan üçün ayrıca çağırılır. Şöbə (department) mənbə kateqoriyasıdır.',
-        credit_note="Employer's public Greenhouse job board (Job Board API). The link opens the employer's original posting.",
-    ),
-    _row(
-        'Greenhouse boards (North America)',
-        'https://www.greenhouse.com/',
-        'official_api',
-        'https://boards-api.greenhouse.io/v1/boards',
-        enabled=True,
-        go="go",
-        note='Greenhouse açıq Job Board API: Şimali Amerika şirkətləri (GitLab, Stripe, Datadog, Cloudflare, Databricks və s.), çoxunda remote rollar. Remote elanlar əvvəl gəlir.',
-        credit_note="Employer's public Greenhouse job board (Job Board API). The link opens the employer's original posting.",
-    ),
-    _row(
-        'Greenhouse boards (Asia-Pacific & Middle East)',
-        'https://www.greenhouse.com/',
-        'official_api',
-        'https://boards-api.greenhouse.io/v1/boards',
-        enabled=True,
-        go="go",
-        note='Greenhouse açıq Job Board API: Asiya-Sakit okean və Yaxın Şərq (Culture Amp AU, Careem UAE, Thunes SG, Xendit, PayPay JP, Coupang KR, Groww IN və s.).',
-        credit_note="Employer's public Greenhouse job board (Job Board API). The link opens the employer's original posting.",
-    ),
-    _row(
-        'Lever boards (Americas & Europe)',
-        'https://www.lever.co/',
-        'official_api',
-        'https://api.lever.co/v0/postings',
-        enabled=True,
-        go="go",
-        note='Lever açıq Postings API (tam mətn bir çağırışda): Palantir, Spotify, Toptal, dLocal və Kavak (LatAm), Binance və s. Team/department mənbə kateqoriyasıdır.',
-        credit_note="Employer's public Lever job board (Postings API). The link opens the employer's original posting on jobs.lever.co.",
-    ),
-    _row(
-        'Lever boards (Asia-Pacific)',
-        'https://www.lever.co/',
-        'official_api',
-        'https://api.lever.co/v0/postings',
-        enabled=True,
-        go="go",
-        note='Lever açıq Postings API: Woven by Toyota (JP), Ninja Van (SG), Zeta, CRED, Meesho, Paytm (IN), Deputy (AU).',
-        credit_note="Employer's public Lever job board (Postings API). The link opens the employer's original posting on jobs.lever.co.",
-    ),
-    _row(
         'Workable boards (Europe)',
         'https://www.workable.com/',
         'official_api',
@@ -297,16 +250,6 @@ SOURCES: list[dict] = [
         go="go",
         note='Workable açıq karyera widget API (?details=true): Skroutz, Blueground, Persado, Epignosis (Yunanıstan/Avropa). Az elan.',
         credit_note="Employer's public Workable careers widget. The link opens the employer's posting on apply.workable.com.",
-    ),
-    _row(
-        'Teamtailor boards (Nordics)',
-        'https://www.teamtailor.com/',
-        'rss',
-        'https://tibber.teamtailor.com/jobs.rss',
-        enabled=True,
-        go="go",
-        note='Teamtailor karyera saytlarının açıq jobs.rss lenti (department, role, remotestatus): Tibber, Polestar, Lunar, Anyfin, Detectify, Quinyx, Storytel, Hedvig.',
-        credit_note="Employer's public Teamtailor career-site RSS feed. The link opens the employer's posting.",
     ),
     _row(
         'Recruitee boards (Netherlands)',
@@ -392,9 +335,17 @@ SOURCES: list[dict] = [
         "https://jooble.org/",
         "official_api",
         "https://jooble.org/api/",
-        enabled=False,
-        go="pending",
-        note="Açar olmadan sönülüdür. HTML toplanmır.",
+        enabled=True,
+        go="go",
+        note=(
+            "Rəsmi Jooble API (POST jooble.org/api/<açar>), yalnız JOOBLE_API_KEY olduqda işləyir; "
+            "açar yoxdursa keçid atlanır. Açarın limiti cəmi 500 sorğudur: ən çox 6 saatda bir, "
+            "hər keçiddə 3 IT sorğusu (remote software developer, relocation software engineer, "
+            "remote devops engineer), yalnız 1-ci səhifə. Sorğular api_usage cədvəlində ay üzrə "
+            "sayılır və ayda 450 sorğuya (JOOBLE_MONTHLY_BUDGET) çatanda Jooble çağırılmır. "
+            "Açar loglara yazılmır. Elanın Jooble linki saxlanılır, açılmır; HTML toplanmır."
+        ),
+        credit_note="Jobs from the Jooble API (jooble.org). The link opens the offer through Jooble.",
         api_key_env="JOOBLE_API_KEY",
     ),
     _row(
@@ -418,3 +369,46 @@ SOURCES: list[dict] = [
         api_key_env="HH_API_KEY",
     ),
 ]
+
+
+_ATS_INFO = {
+    "greenhouse": (
+        "https://www.greenhouse.com/", "official_api", "https://boards-api.greenhouse.io/v1/boards",
+        "Greenhouse açıq Job Board API. Siyahı yüngül çağırışdır; mətn, şöbə və ofis yalnız yeni "
+        "texniki elan üçün ayrıca çağırılır.",
+        "Employer's public Greenhouse job board (Job Board API). The link opens the employer's original posting.",
+    ),
+    "lever": (
+        "https://www.lever.co/", "official_api", "https://api.lever.co/v0/postings",
+        "Lever açıq Postings API (tam mətn bir çağırışda). Team/department mənbə kateqoriyasıdır.",
+        "Employer's public Lever job board (Postings API). The link opens the employer's original posting on jobs.lever.co.",
+    ),
+    "teamtailor": (
+        "https://www.teamtailor.com/", "rss", "",
+        "Teamtailor karyera saytlarının açıq jobs.rss lenti (department, role, remotestatus).",
+        "Employer's public Teamtailor career-site RSS feed. The link opens the employer's posting.",
+    ),
+}
+
+
+def _ats_rows() -> list[dict]:
+    rows = []
+    for name, ats, region, boards in ATS_GROUPS:
+        home, kind, entry, about, credit = _ATS_INFO[ats]
+        if ats == "teamtailor":
+            entry = f"https://{boards[0]}.teamtailor.com/jobs.rss"
+        rotate = (
+            f" Hər keçiddə ən çox {ATS_MAX_BOARDS} lövhə oxunur, qalanları növbəti keçidlərdə növbə ilə."
+            if len(boards) > ATS_MAX_BOARDS else ""
+        )
+        note = (
+            f"{region}: işəgötürən lövhələri ({', '.join(boards)}). {about} Ən çox 3 saatda bir "
+            f"oxunur, remote elanlar əvvəl, şirkətlər növbə ilə qarışdırılır.{rotate}"
+        )
+        rows.append(_row(name, home, kind, entry, enabled=True, go="go", note=note, credit_note=credit))
+    return rows
+
+
+# Regional ATS groups sit right before the other employer-board sources.
+_at = next(i for i, row in enumerate(SOURCES) if row["name"] == "Workable boards (Europe)")
+SOURCES[_at:_at] = _ats_rows()

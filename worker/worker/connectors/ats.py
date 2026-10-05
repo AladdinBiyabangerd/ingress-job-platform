@@ -12,9 +12,11 @@ category. robots.txt is checked for the API host and for every posting URL.
 from __future__ import annotations
 
 import re
+import time
 from urllib.parse import urlparse
 from xml.etree import ElementTree as ET
 
+from worker.ats_boards import ATS_MAX_BOARDS, GROUPS
 from worker.connectors.feed import RSS_ACCEPT, FeedConnector, text_from_html
 from worker.http import NotFound, SourceBlocked, SourceFailed
 from worker.parsing import clean
@@ -34,6 +36,12 @@ def round_robin(groups: list[list[dict]]) -> list[dict]:
     return out
 
 
+def _board_company(value: object) -> str:
+    """Board titles like "Careers at Eucalyptus" or "Wolt - English" as the company name."""
+    name = re.sub(r"^(?:careers|jobs) at\s+", "", clean(value), flags=re.IGNORECASE)
+    return re.sub(r"\s+-\s+English$", "", name).strip()
+
+
 def _remote_hint(*places: object) -> bool | None:
     """True when the board itself says remote; None lets text detection decide."""
     joined = " ".join(str(p or "") for p in places)
@@ -50,14 +58,30 @@ def _rank(rows: list[dict], stamp_key: str = "_stamp") -> list[dict]:
 
 class AtsConnector(FeedConnector):
     boards: tuple[str, ...] = ()
+    # Employer boards change slowly: read each group at most every 3 hours,
+    # look at no more than 40 new candidates, and rotate large groups so one
+    # pass reads at most ATS_MAX_BOARDS boards.
+    min_interval_hours = 3
+    candidates = 40
+    max_boards = ATS_MAX_BOARDS
 
     def board_items(self, slug: str) -> list[dict]:
         raise NotImplementedError
 
+    def boards_this_pass(self, now: float | None = None) -> tuple[str, ...]:
+        boards = tuple(self.boards)
+        if len(boards) <= self.max_boards:
+            return boards
+        slot = int((now if now is not None else time.time()) // (3600 * max(1, self.min_interval_hours)))
+        start = (slot * self.max_boards) % len(boards)
+        rotated = boards[start:] + boards[:start]
+        return rotated[: self.max_boards]
+
     def feed_items(self) -> list[dict]:
         groups: list[list[dict]] = []
         failed = 0
-        for slug in self.boards:
+        picked = self.boards_this_pass()
+        for slug in picked:
             try:
                 rows = self.board_items(slug)
             except (NotFound, SourceFailed, ValueError, ET.ParseError):
@@ -65,7 +89,7 @@ class AtsConnector(FeedConnector):
                 failed += 1
                 continue
             groups.append(_rank([r for r in rows if r.get("title") and r.get("source_url")]))
-        if self.boards and failed == len(self.boards):
+        if picked and failed == len(picked):
             raise SourceFailed(f"no {self.name} board could be read")
         return round_robin(groups)
 
@@ -101,7 +125,7 @@ class GreenhouseConnector(AtsConnector):
             place = clean((job.get("location") or {}).get("name"))
             rows.append({
                 "title": title,
-                "company": clean(job.get("company_name")) or slug,
+                "company": _board_company(job.get("company_name")) or slug,
                 "city": place,
                 "text": "",
                 "source_url": job.get("absolute_url") or f"https://job-boards.greenhouse.io/{slug}/jobs/{job['id']}",
@@ -131,30 +155,6 @@ class GreenhouseConnector(AtsConnector):
         return super().fetch(url)
 
 
-class GreenhouseEuropeConnector(GreenhouseConnector):
-    name = "Greenhouse boards (Europe)"
-    boards = (
-        "n26", "hellofresh", "getyourguide", "contentful", "celonis", "adyen", "wolt", "monzo",
-        "dataiku", "sumup", "helsing", "canonical", "elastic", "grafanalabs", "veriff", "cabify",
-        "deliveroo", "trivago", "trustpilot", "typeform", "wise",
-    )
-
-
-class GreenhouseAmericasConnector(GreenhouseConnector):
-    name = "Greenhouse boards (North America)"
-    boards = (
-        "gitlab", "stripe", "datadog", "cloudflare", "mongodb", "twilio", "okta", "gusto",
-        "airbnb", "dropbox", "discord", "figma", "reddit", "databricks", "vercel", "pagerduty",
-        "duolingo", "asana", "mozilla", "algolia",
-    )
-
-
-class GreenhouseAsiaConnector(GreenhouseConnector):
-    name = "Greenhouse boards (Asia-Pacific & Middle East)"
-    boards = (
-        "cultureamp", "careem", "thunes", "xendit", "paypay", "sendbird", "moloco", "coupang",
-        "groww", "druva",
-    )
 
 
 # --------------------------------------------------------------------- Lever
@@ -165,6 +165,14 @@ LEVER_NAMES = {
     "jumpcloud": "JumpCloud", "cred": "CRED", "zeta": "Zeta", "meesho": "Meesho",
     "paytm": "Paytm", "binance": "Binance", "toptal": "Toptal", "kavak": "Kavak",
     "deputy": "Deputy", "palantir": "Palantir", "spotify": "Spotify", "outreach": "Outreach",
+    "qonto": "Qonto", "swile": "Swile", "aircall": "Aircall", "zopa": "Zopa", "farfetch": "Farfetch",
+    "malt": "Malt", "blablacar": "BlaBlaCar", "contentsquare": "Contentsquare",
+    "pipedrive": "Pipedrive", "lodgify": "Lodgify", "jobandtalent": "Jobandtalent",
+    "dreamgames": "Dream Games", "peakgames": "Peak Games", "trendyol": "Trendyol",
+    "anchorage": "Anchorage Digital", "olo": "Olo", "fullscript": "Fullscript", "ro": "Ro",
+    "zoox": "Zoox", "wattpad": "Wattpad", "relay": "Relay", "mindtickle": "Mindtickle",
+    "fampay": "FamPay", "crypto": "Crypto.com", "lalamove": "Lalamove", "nium": "Nium",
+    "immutable": "Immutable",
 }
 
 
@@ -214,14 +222,6 @@ class LeverConnector(AtsConnector):
         return rows
 
 
-class LeverGlobalConnector(LeverConnector):
-    name = "Lever boards (Americas & Europe)"
-    boards = ("palantir", "spotify", "outreach", "jumpcloud", "toptal", "dlocal", "kavak", "binance")
-
-
-class LeverAsiaConnector(LeverConnector):
-    name = "Lever boards (Asia-Pacific)"
-    boards = ("woven-by-toyota", "ninjavan", "zeta", "cred", "meesho", "paytm", "deputy")
 
 
 # ------------------------------------------------------------------ Workable
@@ -277,9 +277,6 @@ def _local(tag: object) -> str:
 class TeamtailorConnector(AtsConnector):
     """Teamtailor career sites publish /jobs.rss (department, role, remote status, locations)."""
 
-    name = "Teamtailor boards (Nordics)"
-    entry_url = "https://tibber.teamtailor.com/jobs.rss"
-    boards = ("tibber", "polestar", "lunar", "anyfin", "detectify", "quinyx", "storytel", "hedvig")
     credit_note = "Employer's public Teamtailor career-site RSS feed. The link opens the employer's posting."
 
     def board_items(self, slug: str) -> list[dict]:
@@ -426,3 +423,23 @@ class PersonioConnector(AtsConnector):
                 "_stamp": get("createdAt"),
             })
         return rows
+
+
+# ------------------------------------------------------------ regional groups
+
+_BASES = {"greenhouse": GreenhouseConnector, "lever": LeverConnector, "teamtailor": TeamtailorConnector}
+
+
+def _group_class(name: str, ats: str, boards: tuple[str, ...]) -> type:
+    base = _BASES[ats]
+    attrs = {"name": name, "boards": boards, "__doc__": f"{name}: {', '.join(boards)}."}
+    if ats == "teamtailor":
+        attrs["entry_url"] = f"https://{boards[0]}.teamtailor.com/jobs.rss"
+    cls_name = re.sub(r"[^A-Za-z]", "", name.title()) + "Connector"
+    return type(cls_name, (base,), attrs)
+
+
+# Source name -> connector class, one per region group in ats_boards.GROUPS.
+ATS_GROUP_CONNECTORS: dict[str, type] = {
+    name: _group_class(name, ats, boards) for name, ats, _region, boards in GROUPS
+}

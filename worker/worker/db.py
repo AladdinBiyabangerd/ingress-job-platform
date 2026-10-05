@@ -134,6 +134,18 @@ def hide_retired_local(conn) -> int:
     return len(ids)
 
 
+# Requests spent on metered APIs (Jooble's key allows 500 in total), counted
+# per source and calendar month so a connector can stop before the limit.
+_API_USAGE = """
+CREATE TABLE IF NOT EXISTS api_usage (
+    name TEXT NOT NULL,
+    period TEXT NOT NULL,
+    requests INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (name, period)
+)
+"""
+
+
 def now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
@@ -157,6 +169,7 @@ class Store:
         self._seed()
         with self.conn:
             self.hidden_retired = hide_retired_local(self.conn)
+            self.conn.execute(_API_USAGE)
 
     def close(self) -> None:
         self.conn.close()
@@ -226,10 +239,28 @@ class Store:
                 f"""
                 UPDATE crawl_sources
                 SET enabled = 0, go_decision = 'retired',
-                    note = 'Kataloqdan çıxarılıb: daxili mənbə, artıq toplanmır. Köhnə elanlar saxlanılır.'
+                    note = 'Kataloqdan çıxarılıb, artıq toplanmır. Köhnə elanlar saxlanılır.'
                 WHERE name NOT IN ({marks}) AND (enabled != 0 OR go_decision != 'retired')
                 """,
                 names,
+            )
+
+    def api_requests_used(self, name: str, period: str) -> int:
+        row = self.conn.execute(
+            "SELECT requests FROM api_usage WHERE name = ? AND period = ?", (name, period)
+        ).fetchone()
+        return int(row[0]) if row else 0
+
+    def add_api_requests(self, name: str, period: str, count: int = 1) -> None:
+        """Counted and committed before the request is sent, so a crash
+        mid-request still uses up budget instead of hiding it."""
+        with self.conn:
+            self.conn.execute(
+                """
+                INSERT INTO api_usage (name, period, requests) VALUES (?, ?, ?)
+                ON CONFLICT (name, period) DO UPDATE SET requests = api_usage.requests + excluded.requests
+                """,
+                (name, period, int(count)),
             )
 
     def source_by_name(self, name: str) -> sqlite3.Row:
