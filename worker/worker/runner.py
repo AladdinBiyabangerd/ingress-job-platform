@@ -17,8 +17,26 @@ from worker.connectors.apis import (
     JobicyConnector,
     WorkingNomadsConnector,
 )
+from worker.connectors.ats import (
+    GreenhouseAmericasConnector,
+    GreenhouseAsiaConnector,
+    GreenhouseEuropeConnector,
+    LeverAsiaConnector,
+    LeverGlobalConnector,
+    PersonioConnector,
+    RecruiteeConnector,
+    TeamtailorConnector,
+    WorkableConnector,
+)
 from worker.connectors.boards import JapanDevConnector, RelocateMeConnector, RemoteFirstJobsConnector
 from worker.connectors.djinni import DjinniConnector
+from worker.connectors.regional import (
+    GetOnBoardConnector,
+    HasjobConnector,
+    JobTechSwedenConnector,
+    RemotePythonConnector,
+    WordPressJobsConnector,
+)
 from worker.connectors.remoteok import RemoteOkConnector
 from worker.connectors.rssboards import (
     BerlinStartupJobsConnector,
@@ -62,6 +80,20 @@ BUILDERS = {
     "Relocate.me": RelocateMeConnector,
     "Japan Dev": JapanDevConnector,
     "Remote First Jobs": RemoteFirstJobsConnector,
+    "Greenhouse boards (Europe)": GreenhouseEuropeConnector,
+    "Greenhouse boards (North America)": GreenhouseAmericasConnector,
+    "Greenhouse boards (Asia-Pacific & Middle East)": GreenhouseAsiaConnector,
+    "Lever boards (Americas & Europe)": LeverGlobalConnector,
+    "Lever boards (Asia-Pacific)": LeverAsiaConnector,
+    "Workable boards (Europe)": WorkableConnector,
+    "Teamtailor boards (Nordics)": TeamtailorConnector,
+    "Recruitee boards (Netherlands)": RecruiteeConnector,
+    "Personio boards (Germany)": PersonioConnector,
+    "JobTech Platsbanken (Sweden)": JobTechSwedenConnector,
+    "Get on Board (Latin America)": GetOnBoardConnector,
+    "Hasjob (India)": HasjobConnector,
+    "WordPress Jobs": WordPressJobsConnector,
+    "Remote Python": RemotePythonConnector,
 }
 
 

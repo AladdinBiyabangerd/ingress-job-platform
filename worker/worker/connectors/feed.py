@@ -65,7 +65,13 @@ class FeedConnector:
                 continue
             if self.store.has_source_url(url):
                 continue
-            if not self.client.allowed(url):
+            try:
+                if not self.client.allowed(url):
+                    continue
+            except (SourceBlocked, SourceFailed):
+                # The posting's own host refused robots.txt; skip that item only.
+                if url.split("/")[2:3] == self.entry_url.split("/")[2:3]:
+                    raise
                 continue
             item["title"] = title
             item["source_url"] = url

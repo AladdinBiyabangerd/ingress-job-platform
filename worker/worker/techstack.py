@@ -260,7 +260,7 @@ _STRONG_TITLE = re.compile(
 )
 
 _NON_TECH_TITLE = re.compile(
-    r"\bsales\b|account executive|account manager|business development|\bsdr\b|\bbdr\b|"
+    r"\bsales\b|account executive|account manager|business development|partnerships?\b|\bsdr\b|\bbdr\b|"
     r"recruit|talent acquisition|sourcer|\bhr\b|human resources|people partner|people ops|"
     r"marketing|\bseo\b|content (?:writer|creator|producer|strateg|manager)|copywriter|writer|"
     r"editor|journalist|customer (?:support|success|service|care|experience)|"
@@ -334,7 +334,8 @@ _SRC_FORCE_NON = re.compile(
 _PHYSICAL_TITLE = re.compile(
     r"mechanical|civil engineer|chemical|structural|process engineer|maintenance|"
     r"field service|biomedical|manufacturing|hvac|construction|petroleum|supplier|"
-    r"avionics|electrical engineer|sales engineer|architectural|estimator|landscape",
+    r"avionics|electrical engineer|sales engineer|architectural|estimator|landscape|"
+    r"equipment technician",
     re.IGNORECASE,
 )
 
@@ -488,6 +489,9 @@ def classify_category(category: object, title: str = "", stack: list[str] | None
         label = _match_category(raw)
         if not label:
             continue
+        if label in {"Design/UX", "Product"} and from_title in {"Design/UX", "Product"}:
+            # A shared "Product & Design" board: the title says which one.
+            return from_title
         if (
             label in {"Design/UX", "Product"}
             and from_title not in {"Design/UX", "Product"}
