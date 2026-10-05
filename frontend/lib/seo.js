@@ -1,5 +1,6 @@
 import { hrefFor, text } from "./copy";
 import { INGRESS, ingressUrl } from "./ingress";
+import { salaryJsonLd } from "./salary";
 
 export const LOCALES = ["az", "en", "ru"];
 export const HTML_LANG = { az: "az", en: "en", ru: "ru" };
@@ -332,28 +333,6 @@ function validThroughFromPosted(datePosted) {
   const through = new Date(posted);
   through.setUTCDate(through.getUTCDate() + JOB_VALID_DAYS);
   return through.toISOString();
-}
-
-function salaryJsonLd(salary) {
-  const raw = String(salary || "").trim();
-  if (!raw) return undefined;
-  const match = raw.match(/(\d{2,7}(?:[.,\s]\d{3})*(?:[.,]\d+)?)/);
-  if (!match) return undefined;
-  const digits = match[1].replace(/[^\d.,]/g, "").replace(/\s/g, "");
-  const normalized = digits.includes(",") && digits.includes(".")
-    ? digits.replace(/,/g, "")
-    : digits.replace(/,(?=\d{3}\b)/g, "").replace(",", ".");
-  const value = Number(normalized.replace(/\.(?=\d{3}\b)/g, ""));
-  if (!Number.isFinite(value) || value <= 0) return undefined;
-  return {
-    "@type": "MonetaryAmount",
-    currency: "AZN",
-    value: {
-      "@type": "QuantitativeValue",
-      value,
-      unitText: "MONTH",
-    },
-  };
 }
 
 function organizationNode(locale) {

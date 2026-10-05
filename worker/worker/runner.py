@@ -79,8 +79,7 @@ BUILDERS = {
     "Remote First Jobs": RemoteFirstJobsConnector,
     **ATS_GROUP_CONNECTORS,
     "Jooble": JoobleConnector,
-    # Built and tested, but its catalog row stays off: robots.txt has
-    # "Disallow: /api/" (see connectors/reed.py and the catalog note).
+    # Official keyed API; narrow robots.txt exception, see http.ROBOTS_EXCEPTIONS.
     "Reed.co.uk": ReedConnector,
     "Workable boards (Europe)": WorkableConnector,
     "Recruitee boards (Netherlands)": RecruiteeConnector,
@@ -348,6 +347,7 @@ def _probe(names: list[str]) -> int:
                                     "source_category": item.get("category"),
                                     "tech_stack": item.get("tech_stack"),
                                     "text_chars": len(item.get("text") or ""),
+                                    "salary": item.get("salary") or None,
                                     "url": url,
                                 },
                                 ensure_ascii=False,

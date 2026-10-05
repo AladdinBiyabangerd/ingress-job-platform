@@ -119,8 +119,9 @@ stops for the month at 450 counted requests (`JOOBLE_MONTHLY_BUDGET`, table
 `api_usage`). The key's 500-request limit is shared by every environment that
 uses it, so set it on one worker only. `REED_API_KEY` feeds the Reed.co.uk
 connector (every 6 hours, soft monthly cap `REED_MONTHLY_BUDGET`, default
-3000), but the Reed row stays switched off while www.reed.co.uk/robots.txt
-disallows `/api/`; setting the key alone does not start it.
+3000). www.reed.co.uk/robots.txt disallows `/api/`; the owner approved a
+narrow exception for the official keyed API path `https://www.reed.co.uk/api/1.0/`
+only (`ROBOTS_EXCEPTIONS` in `worker/worker/http.py`).
 
 CV upload uses the bucket only when `BUCKET_NAME`, `BUCKET_ACCESS_KEY`, and
 `BUCKET_SECRET_KEY` are all set. Otherwise files stay in `api/data/cvs/`.

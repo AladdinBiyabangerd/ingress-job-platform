@@ -117,6 +117,35 @@ def _host(url: str) -> str:
     return urlparse(url).netloc.lower()
 
 
+# Exact (scheme, host, path prefix) entries where robots.txt is not applied.
+# Keep this list tiny; every entry needs the owner's written approval.
+#
+# Reed.co.uk: www.reed.co.uk/robots.txt says "Disallow: /api/" for every user
+# agent, but /api/1.0/ is Reed's official, keyed Jobseeker API
+# (https://www.reed.co.uk/developers/jobseeker): Reed issues a developer key
+# for exactly these calls and every request carries it (HTTP Basic). The
+# project owner (Aladdin) approved this exception on 2026-10-05. It covers
+# only https://www.reed.co.uk/api/1.0/...; the rest of reed.co.uk (and any
+# other /api/ path) still follows robots.txt.
+ROBOTS_EXCEPTIONS: tuple[tuple[str, str, str], ...] = (
+    ("https", "www.reed.co.uk", "/api/1.0/"),
+)
+
+
+def robots_exception(url: str) -> bool:
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if parsed.port is not None or parsed.username or parsed.password:
+        return False
+    path = parsed.path or "/"
+    if "/../" in path or path.endswith("/..") or "%2e" in path.lower():
+        return False
+    return any(
+        parsed.scheme == scheme and host == want_host and path.startswith(prefix)
+        for scheme, want_host, prefix in ROBOTS_EXCEPTIONS
+    )
+
+
 class PoliteClient:
     def __init__(self) -> None:
         self._http = httpx.Client(
@@ -134,6 +163,8 @@ class PoliteClient:
 
     def allowed(self, url: str) -> bool:
         self._check_url(url)
+        if robots_exception(url):
+            return True
         self._ensure_robots(url)
         host = _host(url)
         return self._robots[host].can_fetch(USER_AGENT, url) and self._wild[host].allowed(url)

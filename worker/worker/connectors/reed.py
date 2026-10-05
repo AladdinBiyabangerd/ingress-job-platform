@@ -13,10 +13,11 @@ Kept small and polite:
   once REED_MONTHLY_BUDGET (default 3000, a soft cap: Reed publishes none)
   requests were used in the current calendar month (UTC).
 
-robots.txt still applies: PoliteClient checks the exact API URL first, and
-www.reed.co.uk/robots.txt currently has "Disallow: /api/" for every user
-agent. While that stays, the connector refuses before any API request and
-before any budget is spent (see catalog note).
+robots.txt: www.reed.co.uk/robots.txt has "Disallow: /api/" for every user
+agent. The owner approved a narrow exception for this official keyed API
+(http.ROBOTS_EXCEPTIONS: https://www.reed.co.uk/api/1.0/ only). Everything
+else on reed.co.uk still follows robots.txt; if the exception is removed the
+connector refuses before any API request and before any budget is spent.
 
 Reed's own "applications" count is not stored: it is not our on-site
 applications and there is no column for it.
@@ -112,7 +113,7 @@ class ReedConnector(FeedConnector):
         probe_url = f"{self.entry_url}?keywords=software"
         if not self.client.allowed(probe_url):
             # Checked before any request or budget is spent.
-            raise SourceBlocked("robots.txt disallows www.reed.co.uk/api/ (Disallow: /api/)")
+            raise SourceBlocked("robots.txt disallows www.reed.co.uk/api/1.0/ and no exception is set")
         out: list[dict] = []
         for keywords in self.queries[: self.max_queries]:
             query = urlencode({"keywords": keywords, "resultsToTake": self.take, "resultsToSkip": 0})
@@ -171,12 +172,13 @@ class ReedConnector(FeedConnector):
                 text = text_from_html(detail.get("jobDescription"))
                 if len(text) > len(item.get("text") or ""):
                     item["text"] = text
+                # The ad's own figures and period, in the currency Reed gives
+                # (no conversion; Reed's annualised "yearly*" fields are not used).
                 pay = salary_text(
-                    detail.get("yearlyMinimumSalary") or detail.get("minimumSalary"),
-                    detail.get("yearlyMaximumSalary") or detail.get("maximumSalary"),
+                    detail.get("minimumSalary"),
+                    detail.get("maximumSalary"),
                     detail.get("currency") or "GBP",
-                    "per annum" if detail.get("yearlyMinimumSalary") or detail.get("yearlyMaximumSalary")
-                    else detail.get("salaryType"),
+                    detail.get("salaryType"),
                 )
                 if pay:
                     item["salary"] = pay
