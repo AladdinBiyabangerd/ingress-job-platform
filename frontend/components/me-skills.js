@@ -46,6 +46,20 @@ function AcademyLinks({ t, item }) {
   );
 }
 
+function OftenWith({ t, item }) {
+  const hit = item?.often_with;
+  if (!hit || typeof hit !== "object") return null;
+  const base = String(hit.base_name || "").trim();
+  const sharePct = typeof hit.share === "number" ? Math.round(hit.share * 100) : null;
+  if (!base || sharePct === null) return null;
+  return (
+    <span className="hint">
+      {" · "}
+      {t.recommendationsGapOftenWith(base, sharePct)}
+    </span>
+  );
+}
+
 export function MeSkills({ locale }) {
   const t = text(locale);
   const lang = locale === "en" || locale === "ru" ? locale : "az";
@@ -187,6 +201,7 @@ export function MeSkills({ locale }) {
                         <li key={`missing-${item.name}`}>
                           <strong>{item.name}</strong>
                           <SkillMeta t={t} item={item} />
+                          <OftenWith t={t} item={item} />
                           <AcademyLinks t={t} item={item} />
                         </li>
                       ))}

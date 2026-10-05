@@ -237,6 +237,8 @@ def skill_gap_payload(
 
     have: list[dict[str, Any]] = []
     missing: list[dict[str, Any]] = []
+    have_ids: list[int] = []
+    missing_ids: list[int] = []
     for item in targets:
         entry = {
             "name": item["name"],
@@ -249,8 +251,32 @@ def skill_gap_payload(
             hit = candidate[item["skill_id"]]
             entry["years"] = hit.get("years")
             have.append(entry)
+            have_ids.append(int(item["skill_id"]))
         else:
             missing.append(entry)
+            missing_ids.append(int(item["skill_id"]))
+
+    if have_ids and missing_ids:
+        from app.trends import best_pair_share_for_missing
+
+        pair_hits = best_pair_share_for_missing(
+            conn,
+            have_skill_ids=have_ids,
+            missing_skill_ids=missing_ids,
+            category=resolved["category"],
+        )
+        for entry, skill_id in zip(missing, missing_ids):
+            hit = pair_hits.get(skill_id)
+            if not hit:
+                continue
+            entry["often_with"] = {
+                "base_name": hit["base_name"],
+                "share": hit["share"],
+                "co_ad_count": hit["co_ad_count"],
+            }
+            if enriched is False:
+                enriched = True
+                base["source"] = "role_skill_weight+skill_trend_daily"
 
     # Priority: share × growth when trends exist, else role weight.
     missing.sort(key=_priority_key)

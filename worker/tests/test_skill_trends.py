@@ -193,6 +193,32 @@ class SkillTrendsTest(unittest.TestCase):
         self.assertEqual(float(row["salary_low"]), 40000.0)
         self.assertEqual(float(row["salary_high"]), 60000.0)
 
+    def test_aggregate_skill_pairs(self):
+        # 3 Java ads; 2 of them also ask for Kafka → Java→Kafka co=2
+        self._insert_job(title="J1", day="2026-10-07", skills=["Java", "Kafka"])
+        self._insert_job(title="J2", day="2026-10-07", skills=["Java", "Kafka", "Spring"])
+        self._insert_job(title="J3", day="2026-10-07", skills=["Java"])
+        self._insert_job(title="K1", day="2026-10-07", skills=["Kafka"])
+        aggregate_skill_trends(self.store.conn, "2026-10-07")
+        self.store.conn.commit()
+        java = self._skill_id("Java")
+        kafka = self._skill_id("Kafka")
+        spring = self._skill_id("Spring")
+        pairs = {
+            (int(r["base_skill_id"]), int(r["pair_skill_id"])): int(r["co_ad_count"])
+            for r in self.store.conn.execute(
+                """
+                SELECT base_skill_id, pair_skill_id, co_ad_count
+                FROM skill_pair_daily
+                WHERE day = '2026-10-07' AND category = 'Backend'
+                """
+            )
+        }
+        self.assertEqual(pairs[(java, kafka)], 2)
+        self.assertEqual(pairs[(kafka, java)], 2)
+        self.assertEqual(pairs[(java, spring)], 1)
+        self.assertNotIn((java, java), pairs)
+
 
 if __name__ == "__main__":
     unittest.main()

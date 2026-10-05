@@ -15,6 +15,10 @@ MAX_WINDOW_DAYS = 56
 MIN_ADS_FOR_GROWTH = 20
 # Salary is scarcer than skill mentions — show only with enough parseable samples.
 MIN_SALARY_SAMPLES = 5
+# Pair share needs enough base-skill ads (e.g. Java) to avoid noisy companions.
+MIN_PAIR_BASE_ADS = 10
+DEFAULT_PAIR_LIMIT = 3
+MAX_PAIR_LIMIT = 10
 GROWTH_EPS = 1e-6
 
 _SALARY_COLUMNS = (
@@ -101,6 +105,14 @@ def ensure_trend_tables(conn) -> None:
             salary_high REAL,
             PRIMARY KEY (day, skill_id, category, region, remote, relocation)
         );
+        CREATE TABLE IF NOT EXISTS skill_pair_daily (
+            day TEXT NOT NULL,
+            base_skill_id INTEGER NOT NULL REFERENCES skill_dictionary(id),
+            pair_skill_id INTEGER NOT NULL REFERENCES skill_dictionary(id),
+            category TEXT NOT NULL DEFAULT '',
+            co_ad_count INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (day, base_skill_id, pair_skill_id, category)
+        );
         """
     )
     try:
@@ -123,6 +135,20 @@ def ensure_trend_tables(conn) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS skill_trend_daily_category_day ON skill_trend_daily(category, day)"
     )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS skill_pair_daily_base_day ON skill_pair_daily(base_skill_id, day)"
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS skill_pair_daily_day ON skill_pair_daily(day)")
+
+
+def clamp_pair_limit(value: int | None) -> int:
+    if value is None:
+        return DEFAULT_PAIR_LIMIT
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_PAIR_LIMIT
+    return max(1, min(MAX_PAIR_LIMIT, n))
 
 
 def _utc_today() -> date:
@@ -247,6 +273,145 @@ def growth_wow(current_share: float, prior_share: float, *, ad_count: int) -> fl
         return None
     prior = max(float(prior_share), GROWTH_EPS)
     return round((float(current_share) - float(prior_share)) / prior, 4)
+
+
+def _pair_co_counts(
+    conn,
+    *,
+    start: str,
+    end: str,
+    category: str,
+    base_skill_ids: list[int],
+) -> dict[tuple[int, int], int]:
+    """Sum co_ad_count for (base, pair) over the window."""
+    if not base_skill_ids:
+        return {}
+    clauses = [
+        "day >= ?",
+        "day <= ?",
+        f"base_skill_id IN ({','.join('?' for _ in base_skill_ids)})",
+    ]
+    params: list[Any] = [start, end, *base_skill_ids]
+    if category:
+        clauses.append("category = ?")
+        params.append(category)
+    sql = f"""
+        SELECT base_skill_id, pair_skill_id, SUM(co_ad_count) AS co_ad_count
+        FROM skill_pair_daily
+        WHERE {' AND '.join(clauses)}
+        GROUP BY base_skill_id, pair_skill_id
+    """
+    try:
+        rows = conn.execute(sql, params).fetchall()
+    except Exception:
+        return {}
+    out: dict[tuple[int, int], int] = {}
+    for row in rows:
+        base_id = int(_row_get(row, "base_skill_id", 0) or 0)
+        pair_id = int(_row_get(row, "pair_skill_id", 1) or 0)
+        co_count = int(_row_get(row, "co_ad_count", 2) or 0)
+        if base_id > 0 and pair_id > 0 and co_count > 0:
+            out[(base_id, pair_id)] = co_count
+    return out
+
+
+def companions_for_skills(
+    conn,
+    *,
+    base_skill_ids: list[int],
+    skill_counts: dict[int, int],
+    start: str,
+    end: str,
+    category: str,
+    pair_limit: int = DEFAULT_PAIR_LIMIT,
+) -> dict[int, list[dict]]:
+    """Top companions: share of base-skill ads that also require the pair skill."""
+    ensure_trend_tables(conn)
+    chosen_limit = clamp_pair_limit(pair_limit)
+    eligible = [
+        sid
+        for sid in base_skill_ids
+        if int(skill_counts.get(sid) or 0) >= MIN_PAIR_BASE_ADS
+    ]
+    if not eligible:
+        return {}
+    co = _pair_co_counts(
+        conn, start=start, end=end, category=category, base_skill_ids=eligible
+    )
+    pair_ids = sorted({pair_id for (_base, pair_id) in co})
+    meta = _skill_meta(conn, pair_ids)
+    by_base: dict[int, list[tuple[float, int, int]]] = defaultdict(list)
+    for (base_id, pair_id), co_count in co.items():
+        base_ads = int(skill_counts.get(base_id) or 0)
+        if base_ads < MIN_PAIR_BASE_ADS or co_count <= 0:
+            continue
+        if not str((meta.get(pair_id) or {}).get("name") or "").strip():
+            continue
+        share = round(co_count / base_ads, 4)
+        by_base[base_id].append((share, co_count, pair_id))
+
+    out: dict[int, list[dict]] = {}
+    for base_id, ranked in by_base.items():
+        ranked.sort(key=lambda row: (-row[0], -row[1], row[2]))
+        companions: list[dict] = []
+        for share, co_count, pair_id in ranked[:chosen_limit]:
+            info = meta.get(pair_id) or {}
+            companions.append(
+                {
+                    "skill_id": pair_id,
+                    "name": str(info.get("name") or ""),
+                    "share": share,
+                    "co_ad_count": co_count,
+                }
+            )
+        if companions:
+            out[base_id] = companions
+    return out
+
+
+def best_pair_share_for_missing(
+    conn,
+    *,
+    have_skill_ids: list[int],
+    missing_skill_ids: list[int],
+    category: str | None = None,
+    window_days: int = DEFAULT_WINDOW_DAYS,
+) -> dict[int, dict]:
+    """For each missing skill, best pair_share among ads of skills the candidate has."""
+    ensure_trend_tables(conn)
+    have = [int(x) for x in have_skill_ids if int(x) > 0]
+    missing = [int(x) for x in missing_skill_ids if int(x) > 0]
+    if not have or not missing:
+        return {}
+    chosen_window = clamp_window(window_days)
+    cat = (category or "").strip()
+    as_of = _as_of_day(conn)
+    start, end = _window_bounds(as_of, chosen_window)
+    base_counts = _skill_counts(conn, start=start, end=end, category=cat, region="")
+    co = _pair_co_counts(conn, start=start, end=end, category=cat, base_skill_ids=have)
+    have_meta = _skill_meta(conn, have)
+    out: dict[int, dict] = {}
+    for missing_id in missing:
+        best: dict | None = None
+        for base_id in have:
+            base_ads = int(base_counts.get(base_id) or 0)
+            if base_ads < MIN_PAIR_BASE_ADS:
+                continue
+            co_count = int(co.get((base_id, missing_id)) or 0)
+            if co_count <= 0:
+                continue
+            share = round(co_count / base_ads, 4)
+            candidate = {
+                "share": share,
+                "co_ad_count": co_count,
+                "base_skill_id": base_id,
+                "base_name": str((have_meta.get(base_id) or {}).get("name") or ""),
+            }
+            if best is None or share > float(best["share"]):
+                best = candidate
+        if best is not None and str(best.get("base_name") or "").strip():
+            out[missing_id] = best
+    return out
 
 
 def combine_salary_days(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -380,6 +545,14 @@ def trends_payload(
         region=reg,
         skill_ids=skill_ids,
     )
+    companions = companions_for_skills(
+        conn,
+        base_skill_ids=skill_ids,
+        skill_counts=current,
+        start=cur_start,
+        end=cur_end,
+        category=cat,
+    )
     items: list[dict] = []
     for skill_id, ad_count in ranked:
         info = meta.get(skill_id) or {}
@@ -399,6 +572,7 @@ def trends_payload(
                 "category_hint": str(info.get("category_hint") or ""),
                 "academy_courses": list(info.get("academy_courses") or []),
                 "salary": salaries.get(skill_id),
+                "often_with": companions.get(skill_id) or [],
             }
         )
 

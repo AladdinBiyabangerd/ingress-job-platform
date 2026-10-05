@@ -17,8 +17,10 @@ from app.cv_queue import ensure_cv_queue_tables
 from app.main import app
 from app.trends import (
     MIN_ADS_FOR_GROWTH,
+    MIN_PAIR_BASE_ADS,
     MIN_SALARY_SAMPLES,
     combine_salary_days,
+    ensure_trend_tables,
     growth_wow,
     trends_payload,
 )
@@ -219,6 +221,42 @@ class TrendsTests(unittest.TestCase):
         self.assertEqual(java["salary"]["median"], 55000.0)
         self.assertEqual(java["salary"]["period"], "year")
 
+    def test_trends_often_with_companions(self):
+        ids = self._skill_ids()
+        # Seed enough Java ads in the window for MIN_PAIR_BASE_ADS.
+        for i in range(MIN_PAIR_BASE_ADS):
+            self._insert_job(title=f"PairJob{i}", day="2026-10-05", category="Backend")
+        with sqlite3.connect(self.db) as conn:
+            ensure_trend_tables(conn)
+            conn.execute(
+                """
+                INSERT INTO skill_trend_daily (
+                    day, skill_id, category, region, remote, relocation, ad_count
+                ) VALUES ('2026-10-05', ?, 'Backend', '', 1, 0, ?)
+                """,
+                (ids["Java"], MIN_PAIR_BASE_ADS),
+            )
+            # 6 of those Java ads also want Kafka → share 0.6
+            conn.execute(
+                """
+                INSERT INTO skill_pair_daily (
+                    day, base_skill_id, pair_skill_id, category, co_ad_count
+                ) VALUES ('2026-10-05', ?, ?, 'Backend', 6)
+                """,
+                (ids["Java"], ids["Kafka"]),
+            )
+            conn.commit()
+            conn.row_factory = sqlite3.Row
+            payload = trends_payload(
+                conn, category="Backend", window_days=7, lang="en"
+            )
+        java = next(item for item in payload["items"] if item["name"] == "Java")
+        self.assertTrue(java["often_with"])
+        top = java["often_with"][0]
+        self.assertEqual(top["name"], "Kafka")
+        self.assertAlmostEqual(top["share"], 0.6, places=3)
+        self.assertEqual(top["co_ad_count"], 6)
+
     def test_skill_gap_gets_share_when_trends_present(self):
         ids = self._skill_ids()
         subject = "gap-trends"
@@ -285,6 +323,77 @@ class TrendsTests(unittest.TestCase):
         self.assertIn("Kafka", missing)
         self.assertIsNotNone(missing["Kafka"]["share"])
         self.assertGreater(missing["Kafka"]["share"], 0)
+
+    def test_skill_gap_often_with_from_pairs(self):
+        ids = self._skill_ids()
+        subject = "gap-pairs"
+        for i in range(MIN_PAIR_BASE_ADS):
+            self._insert_job(title=f"GapPair{i}", day="2026-10-05", category="Backend")
+        with sqlite3.connect(self.db) as conn:
+            ensure_cv_queue_tables(conn)
+            ensure_trend_tables(conn)
+            conn.execute(
+                """
+                INSERT INTO candidate_profile (
+                    user_id, cv_file_key, data, headline, seniority, total_years,
+                    status, parse_method, confidence, visibility, updated_at
+                ) VALUES (?, ?, ?, 'Backend', 'middle', 5, 'confirmed', 'rules', 0.9, 'anonymous', ?)
+                """,
+                (
+                    subject,
+                    "cvs/gap-pairs.pdf",
+                    json.dumps(PROFILE, ensure_ascii=False),
+                    "2026-10-05T12:00:00+00:00",
+                ),
+            )
+            conn.execute(
+                """
+                INSERT INTO role_taxonomy (canonical_name, category, synonyms, updated_at)
+                VALUES ('Java Developer', 'Backend', '[]', '2026-10-05T12:00:00+00:00')
+                """
+            )
+            role_id = conn.execute(
+                "SELECT id FROM role_taxonomy WHERE canonical_name = 'Java Developer'"
+            ).fetchone()[0]
+            for name, weight in (("Java", 1.0), ("Kafka", 0.5)):
+                conn.execute(
+                    "INSERT INTO role_skill_weight (role_id, skill_id, weight) VALUES (?, ?, ?)",
+                    (role_id, ids[name], weight),
+                )
+            conn.execute(
+                """
+                INSERT INTO skill_trend_daily (
+                    day, skill_id, category, region, remote, relocation, ad_count
+                ) VALUES
+                    ('2026-10-05', ?, 'Backend', '', 1, 0, ?),
+                    ('2026-10-05', ?, 'Backend', '', 1, 0, 4)
+                """,
+                (ids["Java"], MIN_PAIR_BASE_ADS, ids["Kafka"]),
+            )
+            conn.execute(
+                """
+                INSERT INTO skill_pair_daily (
+                    day, base_skill_id, pair_skill_id, category, co_ad_count
+                ) VALUES ('2026-10-05', ?, ?, 'Backend', 4)
+                """,
+                (ids["Java"], ids["Kafka"]),
+            )
+            conn.commit()
+
+        self._grant_matching(subject)
+        with self._auth("job:candidate", subject):
+            res = self.client.get(
+                "/api/v1/me/skill-gap?role=Java%20Developer&lang=en",
+                headers=self.headers,
+            )
+        self.assertEqual(res.status_code, 200, res.text)
+        body = res.json()
+        missing = {item["name"]: item for item in body["missing"]}
+        self.assertIn("Kafka", missing)
+        often = missing["Kafka"].get("often_with")
+        self.assertIsNotNone(often)
+        self.assertEqual(often["base_name"], "Java")
+        self.assertAlmostEqual(often["share"], 4 / MIN_PAIR_BASE_ADS, places=3)
 
 
 if __name__ == "__main__":

@@ -36,6 +36,20 @@ function salaryLabel(t, salary) {
     .join(" · ");
 }
 
+function oftenWithLabel(t, companions) {
+  if (!Array.isArray(companions) || !companions.length) return null;
+  const parts = companions
+    .map((item) => {
+      const name = String(item?.name || "").trim();
+      const share = pct(item?.share);
+      if (!name || share === null) return null;
+      return t.trendsOftenWithItem(name, share);
+    })
+    .filter(Boolean);
+  if (!parts.length) return null;
+  return `${t.trendsOftenWith}: ${parts.join(", ")}`;
+}
+
 export function TrendsPage({ locale, data, error }) {
   const t = text(locale);
   const items = Array.isArray(data?.items) ? data.items : [];
@@ -71,6 +85,7 @@ export function TrendsPage({ locale, data, error }) {
               const share = pct(item.share);
               const growth = growthLabel(t, item.growth_wow);
               const salary = salaryLabel(t, item.salary);
+              const oftenWith = oftenWithLabel(t, item.often_with);
               return (
                 <li key={item.skill_id || item.name} className="trends-item">
                   <span className="trends-rank">{index + 1}</span>
@@ -88,6 +103,7 @@ export function TrendsPage({ locale, data, error }) {
                         .filter(Boolean)
                         .join(" · ")}
                     </p>
+                    {oftenWith ? <p className="hint trends-often-with">{oftenWith}</p> : null}
                   </div>
                 </li>
               );

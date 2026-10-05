@@ -1543,6 +1543,10 @@ textarea { min-height: 120px; resize: vertical; }
   gap: 4px;
 }
 
+.trends-often-with {
+  margin: 0;
+}
+
 .match-list {
   list-style: none;
   margin: 0;

@@ -2,11 +2,13 @@
 
 Counts published jobs per skill per UTC calendar day from job_skill × jobs.
 Salary median/range from free-text job.salary when currency+period are clear.
+Skill pairs: co-occurrence counts for “Kafka share among Java ads”.
 No AI — pure SQL aggregation + parse.
 """
 
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
@@ -28,13 +30,27 @@ CREATE TABLE IF NOT EXISTS skill_trend_daily (
     salary_high REAL,
     PRIMARY KEY (day, skill_id, category, region, remote, relocation)
 );
+
+CREATE TABLE IF NOT EXISTS skill_pair_daily (
+    day TEXT NOT NULL,
+    base_skill_id INTEGER NOT NULL REFERENCES skill_dictionary(id),
+    pair_skill_id INTEGER NOT NULL REFERENCES skill_dictionary(id),
+    category TEXT NOT NULL DEFAULT '',
+    co_ad_count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (day, base_skill_id, pair_skill_id, category)
+);
 """
 
 INDEXES = (
     "CREATE INDEX IF NOT EXISTS skill_trend_daily_skill_day ON skill_trend_daily(skill_id, day)",
     "CREATE INDEX IF NOT EXISTS skill_trend_daily_day ON skill_trend_daily(day)",
     "CREATE INDEX IF NOT EXISTS skill_trend_daily_category_day ON skill_trend_daily(category, day)",
+    "CREATE INDEX IF NOT EXISTS skill_pair_daily_base_day ON skill_pair_daily(base_skill_id, day)",
+    "CREATE INDEX IF NOT EXISTS skill_pair_daily_day ON skill_pair_daily(day)",
 )
+
+# Cap skills per job when building ordered pairs (avoids N² blow-ups on noisy stacks).
+MAX_SKILLS_PER_JOB_FOR_PAIRS = 20
 
 _SALARY_COLUMNS = (
     ("salary_currency", "TEXT NOT NULL DEFAULT ''"),
@@ -83,8 +99,49 @@ def _row_get(row, key: str, index: int):
         return row[index]
 
 
+def _aggregate_skill_pairs(conn, day_key: str, rows) -> int:
+    """Ordered co-occurrence: among jobs with base skill, count those also having pair."""
+    conn.execute("DELETE FROM skill_pair_daily WHERE day = ?", (day_key,))
+
+    job_skills: dict[tuple[int, str], set[int]] = defaultdict(set)
+    for row in rows:
+        try:
+            skill_id = int(_row_get(row, "skill_id", 0) or 0)
+            category = str(_row_get(row, "category", 1) or "")
+            job_id = int(_row_get(row, "job_id", 4) or 0)
+        except (TypeError, ValueError):
+            continue
+        if skill_id <= 0 or job_id <= 0:
+            continue
+        job_skills[(job_id, category)].add(skill_id)
+
+    pair_counts: dict[tuple[int, int, str], int] = defaultdict(int)
+    for (_job_id, category), skills in job_skills.items():
+        ordered = sorted(skills)[:MAX_SKILLS_PER_JOB_FOR_PAIRS]
+        if len(ordered) < 2:
+            continue
+        for i, base_id in enumerate(ordered):
+            for j, pair_id in enumerate(ordered):
+                if i == j:
+                    continue
+                pair_counts[(base_id, pair_id, category)] += 1
+
+    sql = """
+        INSERT INTO skill_pair_daily (
+            day, base_skill_id, pair_skill_id, category, co_ad_count
+        ) VALUES (?, ?, ?, ?, ?)
+    """
+    written = 0
+    for (base_id, pair_id, category), co_count in pair_counts.items():
+        if co_count <= 0:
+            continue
+        conn.execute(sql, (day_key, base_id, pair_id, category, co_count))
+        written += 1
+    return written
+
+
 def aggregate_skill_trends(conn, day: str | date | None = None) -> int:
-    """Upsert ad_count (+ salary signals) for one UTC calendar day."""
+    """Upsert ad_count (+ salary + skill pairs) for one UTC calendar day."""
     ensure_skill_trend_tables(conn)
     chosen = _parse_day(day)
     day_key = chosen.isoformat()
@@ -165,6 +222,8 @@ def aggregate_skill_trends(conn, day: str | date | None = None) -> int:
             ),
         )
         written += 1
+
+    _aggregate_skill_pairs(conn, day_key, rows)
     return written
 
 

@@ -304,6 +304,14 @@ def _apply_schema(conn) -> None:
             salary_high REAL,
             PRIMARY KEY (day, skill_id, category, region, remote, relocation)
         );
+        CREATE TABLE IF NOT EXISTS skill_pair_daily (
+            day TEXT NOT NULL,
+            base_skill_id INTEGER NOT NULL REFERENCES skill_dictionary(id),
+            pair_skill_id INTEGER NOT NULL REFERENCES skill_dictionary(id),
+            category TEXT NOT NULL DEFAULT '',
+            co_ad_count INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (day, base_skill_id, pair_skill_id, category)
+        );
         """
     )
     trend_cols = {row[1] for row in conn.execute("PRAGMA table_info(skill_trend_daily)")}
@@ -330,6 +338,10 @@ def _apply_schema(conn) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS skill_trend_daily_category_day ON skill_trend_daily(category, day)"
     )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS skill_pair_daily_base_day ON skill_pair_daily(base_skill_id, day)"
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS skill_pair_daily_day ON skill_pair_daily(day)")
     # Same parse_cv_queue / candidate_profile tables the worker drains
     # (worker/worker/cv_queue.py). API ensures they exist when it opens first.
     from app.cv_queue import ensure_cv_queue_tables

@@ -44,8 +44,9 @@ compose.yaml
 - Role suggestions: `GET /api/v1/me/roles` (signature skill weights × years_factor; matching consent; BFF `/api/auth/me/roles`)
 - Job matches: `GET /api/v1/me/matches` structured score (skills/seniority/location/language/freshness); AI #2 off on SQLite; feedback `POST .../matches/{id}/feedback` → `match_feedback`
 - Skill gap: `GET /api/v1/me/skill-gap?role=` from `role_skill_weight`; share/growth from `skill_trend_daily` when present
-- Skill trends: worker `skill_trends.refresh_skill_trends` → `skill_trend_daily`; public `GET /api/v1/trends`; UI `/trends`
+- Skill trends: worker `skill_trends.refresh_skill_trends` → `skill_trend_daily` + `skill_pair_daily`; public `GET /api/v1/trends`; UI `/trends`
 - Trend salary signals: worker `salary_parse` annualizes free-text `jobs.salary` (currency+period required, no FX) into `salary_median/currency/n/low/high`; API shows `salary` on trends when `n >= 5`
+- Skill pairs: ordered co-occurrence in `skill_pair_daily`; trends items expose top `often_with` (share among base-skill ads, min 10 base ads); skill-gap missing skills get best pair vs candidate’s have skills
 - UI: `/me/recommendations` (roles + matches + 👍/👎); `/me/skills` (gap + Academy course links); BFF under `/api/auth/me/*`
 - Email program: `email_prefs` / `email_log`; `GET/PUT /api/v1/email-prefs`; public unsubscribe; digests + high-match via `POST /api/v1/internal/email-jobs` (`INTERNAL_JOB_TOKEN`); UI `/settings/emails`
 - Email click tracking: HMAC `/r/<token>` (frontend proxy → `GET /api/v1/r/{token}` → 302 job page); logs `email_click`; digests/high-match use tracked URLs only
