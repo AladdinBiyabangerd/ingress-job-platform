@@ -12,7 +12,16 @@ const POLL_MS = 2000;
 const POLL_MAX = 45;
 
 function emptyWork() {
-  return { title: "", company: "", start: "", end: "", location: "", summary: "", skills: [] };
+  return {
+    title: "",
+    company: "",
+    start: "",
+    end: "",
+    location: "",
+    summary: "",
+    skills: [],
+    employment_type: "",
+  };
 }
 
 function applyPayload(data, setters) {
@@ -50,6 +59,7 @@ function applyPayload(data, setters) {
           location: item?.location || "",
           summary: item?.summary || "",
           skills: Array.isArray(item?.skills) ? item.skills : [],
+          employment_type: item?.employment_type || "",
         }))
       : [],
   );
@@ -277,6 +287,7 @@ export function ProfileReview({ locale }) {
             location: item.location || "",
             summary: item.summary || "",
             skills: item.skills || [],
+            employment_type: item.employment_type || "",
           })),
       },
     };

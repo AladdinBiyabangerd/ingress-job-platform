@@ -194,17 +194,25 @@ export function ProfileForm({ locale }) {
     }
   }
 
+  const layoutClass = [
+    "profile-layout",
+    showCompany && showApplicant ? "profile-layout-dual" : "",
+    !showCompany && showApplicant && consentPayload ? "profile-layout-split" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <Shell locale={locale} mode="profile">
       {me === undefined ? null : showCompany || showApplicant ? (
-        <div className="cabinet">
+        <div className="cabinet profile-page">
           <div className="cabinet-head">
             <div>
               <h1>{t.profileTitle}</h1>
               <p className="lede">{t.profileLede}</p>
             </div>
           </div>
-          <div className={`profile-layout${showCompany && showApplicant ? " profile-layout-dual" : ""}`}>
+          <div className={layoutClass}>
             {showCompany ? (
               <form className="form-card profile-card" onSubmit={saveCompany}>
                 <div className="cabinet-form-head">
@@ -224,7 +232,7 @@ export function ProfileForm({ locale }) {
                   </label>
                   <label className="profile-span">
                     {t.companyAbout}
-                    <textarea value={about} maxLength={400} required rows={5} onChange={(event) => setAbout(event.target.value)} />
+                    <textarea value={about} maxLength={400} required rows={3} onChange={(event) => setAbout(event.target.value)} />
                   </label>
                 </div>
                 <div className="ad-actions">
@@ -264,69 +272,69 @@ export function ProfileForm({ locale }) {
                 </div>
               </form>
             ) : null}
-          </div>
-          {showApplicant && consentPayload ? (
-            <form className="form-card profile-card profile-privacy" onSubmit={savePrivacy}>
-              <div className="cabinet-form-head">
-                <h2>{t.privacyTitle}</h2>
-                <p className="hint">{t.privacyLede}</p>
-                <p className="hint">
-                  <a href={hrefFor(locale, { mode: "emailSettings" })}>{t.emailSettingsOpen}</a>
-                </p>
-              </div>
-              {privacyError ? <p className="note">{privacyError}</p> : null}
-              {privacyNote ? <p className="note">{privacyNote}</p> : null}
-              <ConsentFields
-                payload={consentPayload}
-                grants={grants}
-                visibility={visibility}
-                onGrantChange={(kind, value) => setGrants((current) => ({ ...current, [kind]: value }))}
-                onVisibilityChange={setVisibility}
-                idPrefix="profile-consent"
-              />
-              <div className="ad-actions">
-                <button type="submit" className="btn primary">{t.companySave}</button>
-              </div>
-              {Array.isArray(consentPayload.privacy_rights) && consentPayload.privacy_rights.length ? (
-                <div className="privacy-rights">
-                  {consentPayload.retention_stub ? (
-                    <p className="hint">{consentPayload.retention_stub}</p>
-                  ) : null}
-                  {consentPayload.privacy_rights.map((right) => (
-                    <div key={right.id} className="privacy-right-item">
-                      <div>
-                        <strong>{right.label}</strong>
-                        {right.description ? <p className="hint">{right.description}</p> : null}
-                      </div>
-                      {right.id === "export" ? (
-                        <button
-                          type="button"
-                          className="btn"
-                          disabled={Boolean(privacyBusy)}
-                          onClick={exportMyData}
-                        >
-                          {right.label}
-                        </button>
-                      ) : null}
-                      {right.id === "delete" ? (
-                        <button
-                          type="button"
-                          className="btn"
-                          disabled={Boolean(privacyBusy)}
-                          onClick={deleteMyData}
-                        >
-                          {right.label}
-                        </button>
-                      ) : null}
-                      {right.id === "who_viewed" ? (
-                        <p className="hint">{t.privacyWhoViewedSoon}</p>
-                      ) : null}
-                    </div>
-                  ))}
+            {showApplicant && consentPayload ? (
+              <form className="form-card profile-card profile-privacy" onSubmit={savePrivacy}>
+                <div className="cabinet-form-head">
+                  <h2>{t.privacyTitle}</h2>
+                  <p className="hint">{t.privacyLede}</p>
+                  <p className="hint">
+                    <a href={hrefFor(locale, { mode: "emailSettings" })}>{t.emailSettingsOpen}</a>
+                  </p>
                 </div>
-              ) : null}
-            </form>
-          ) : null}
+                {privacyError ? <p className="note">{privacyError}</p> : null}
+                {privacyNote ? <p className="note">{privacyNote}</p> : null}
+                <ConsentFields
+                  payload={consentPayload}
+                  grants={grants}
+                  visibility={visibility}
+                  onGrantChange={(kind, value) => setGrants((current) => ({ ...current, [kind]: value }))}
+                  onVisibilityChange={setVisibility}
+                  idPrefix="profile-consent"
+                />
+                <div className="ad-actions">
+                  <button type="submit" className="btn primary">{t.companySave}</button>
+                </div>
+                {Array.isArray(consentPayload.privacy_rights) && consentPayload.privacy_rights.length ? (
+                  <div className="privacy-rights">
+                    {consentPayload.retention_stub ? (
+                      <p className="hint">{consentPayload.retention_stub}</p>
+                    ) : null}
+                    {consentPayload.privacy_rights.map((right) => (
+                      <div key={right.id} className="privacy-right-item">
+                        <div>
+                          <strong>{right.label}</strong>
+                          {right.description ? <p className="hint">{right.description}</p> : null}
+                        </div>
+                        {right.id === "export" ? (
+                          <button
+                            type="button"
+                            className="btn"
+                            disabled={Boolean(privacyBusy)}
+                            onClick={exportMyData}
+                          >
+                            {right.label}
+                          </button>
+                        ) : null}
+                        {right.id === "delete" ? (
+                          <button
+                            type="button"
+                            className="btn"
+                            disabled={Boolean(privacyBusy)}
+                            onClick={deleteMyData}
+                          >
+                            {right.label}
+                          </button>
+                        ) : null}
+                        {right.id === "who_viewed" ? (
+                          <p className="hint">{t.privacyWhoViewedSoon}</p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </form>
+            ) : null}
+          </div>
         </div>
       ) : (
         <section className="empty profile-gate">

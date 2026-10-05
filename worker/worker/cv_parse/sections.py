@@ -39,6 +39,8 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
         "bacarıqlar",
         "bacariqlar",
         "texniki bacarıqlar",
+        "proqramlar",
+        "proqram təminatı",
         "навыки",
         "ключевые навыки",
         "технологии",
@@ -59,6 +61,8 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
         "xülasə",
         "xulase",
         "haqqında",
+        "haqqımda",
+        "haqqimda",
         "о себе",
         "обо мне",
         "резюме",
@@ -68,6 +72,8 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
         "personal projects",
         "layihələr",
         "layiheler",
+        "fəaliyyətlər",
+        "fealiyyetler",
         "проекты",
     ),
     "certifications": (
@@ -120,4 +126,19 @@ def _heading_name(line: str) -> str | None:
     if title in _ALIAS_TO_CANON:
         return _ALIAS_TO_CANON[title]
     title = re.sub(r"^(?:[0-9ivx]+\.|[0-9]+)\)?\s*", "", title).strip()
-    return _ALIAS_TO_CANON.get(title)
+    if title in _ALIAS_TO_CANON:
+        return _ALIAS_TO_CANON[title]
+    # Two-column PDFs often emit combined headers: "FƏALİYYƏTLƏR TƏHSİL".
+    words = title.split()
+    if 1 < len(words) <= 5:
+        for word in reversed(words):
+            canon = _ALIAS_TO_CANON.get(word)
+            if canon:
+                return canon
+        # Also try adjacent bigrams ("iş təcrübəsi", "texniki bacarıqlar").
+        for i in range(len(words) - 1, 0, -1):
+            bigram = f"{words[i - 1]} {words[i]}"
+            canon = _ALIAS_TO_CANON.get(bigram)
+            if canon:
+                return canon
+    return None

@@ -1,0 +1,41 @@
+S Ə MA S Ə F Ə ROVA
+JAVA BACKEND DEVELOPER
+HAQQIMDA
+TƏCRÜBƏ
+ƏLAQƏ
+Java Backend Developer olaraq Java və Spring Boot ilə backend
+tətbiqlərinin hazırlanması üzrə praktiki təcrübəyə sahibəm. RESTful
+API, PostgreSQL, JPA/Hibernate və JWT üzrə biliklərə malikəm.
+Telefon: 077 532 12 02
+E-mail: sema.seferova05@mail.ru
+Ünvan: Bakı şəhəri,Sabunçu rayonu
+LinkedIn: http://linkedin.com/in/sama-safarova-86831a289
+GitHub:https://github.com/seferovasema
+Java Backend Developer İntern
+“AFB Bank” ASC | 16 Fev 2026-03 İyul 2026
+Java və Spring Boot ilə backend tətbiqlərinin hazırlanmasında iştirak;
+REST API-lərin hazırlanması və test edilməsi;
+PostgreSQL və JPA/Hibernate ilə işləmə.
+Java Backend Developer Intern
+DevJoint | Iyul 2026-Avqust 2026
+FƏALİYYƏTLƏR TƏHSİL
+Komputer sistemləri və şəbəkələri | Magistr
+İnformasiya texnologiyaları | Bakalavr
+Azərbaycan Dövlət Neft və Sənaye Universiteti
+2022-2026
+Azərbaycan Dövlət Neft və Sənaye Universiteti
+2026-2028
+DİLLƏR
+Azərbaycan dili — Ana dili
+Türk dili — Yüksək səviyyə
+İngilis dili — B2 (Upper-Intermediate)
+PROQRAMLAR
+Java
+Spring Boot
+Spring Data JPA
+Hibernate
+REST API
+SQL
+Git
+Postman
+Maven

@@ -125,6 +125,102 @@ Baku State
         self.assertEqual(len(ranges), 1)
         self.assertEqual(ranges[0][0], date(2026, 2, 1))
 
+    def test_az_day_prefixed_and_ascii_i_month_ranges(self):
+        from worker.cv_parse.dates import find_ranges
+
+        afb = find_ranges('"AFB Bank" ASC | 16 Fev 2026-03 İyul 2026')
+        self.assertEqual(len(afb), 1)
+        self.assertEqual(afb[0][0], date(2026, 2, 1))
+        self.assertEqual(afb[0][1], date(2026, 7, 31))
+
+        # PDF often uses ASCII "I" (→ ı) instead of Turkish "İ" in "Iyul".
+        intern = find_ranges("DevJoint | Iyul 2026-Avqust 2026")
+        self.assertEqual(len(intern), 1)
+        self.assertEqual(intern[0][0], date(2026, 7, 1))
+        self.assertEqual(intern[0][1], date(2026, 8, 31))
+
+    def test_sample_az_twocolumn_keeps_education_out_of_jobs(self):
+        text = (FIXTURES / "sample_az_twocolumn.txt").read_text(encoding="utf-8")
+        sections = split_sections(text)
+        self.assertIn("education", sections)
+        self.assertIn("skills", sections)
+
+        profile = parse_text(text)
+        titles = [job.get("title", "") for job in profile["work_history"]]
+        companies = " ".join(job.get("company", "") for job in profile["work_history"])
+        blob = " ".join(titles) + " " + companies
+        self.assertNotIn("Universiteti", blob)
+        self.assertTrue(
+            any("Intern" in t or "İntern" in t for t in titles),
+            titles,
+        )
+        self.assertTrue(
+            any("AFB" in (job.get("company") or "") for job in profile["work_history"]),
+            profile["work_history"],
+        )
+        self.assertTrue(
+            any("DevJoint" in (job.get("company") or "") for job in profile["work_history"]),
+            profile["work_history"],
+        )
+        # Intern calendar time is half-weighted; ~6 months intern ≪ 6 months senior.
+        self.assertLess(profile["total_years"], 0.4)
+        self.assertEqual(profile["seniority"], "intern")
+        self.assertTrue(
+            all(job.get("employment_type") == "internship" for job in profile["work_history"]),
+            profile["work_history"],
+        )
+        self.assertEqual(profile["contact"]["full_name"], "SƏMA SƏFƏROVA")
+        self.assertTrue(profile["education"], profile["education"])
+        self.assertTrue(
+            any("Universiteti" in (edu.get("school") or "") for edu in profile["education"]),
+            profile["education"],
+        )
+        degrees = {edu.get("degree", "").lower() for edu in profile["education"]}
+        self.assertTrue(degrees & {"magistr", "bakalavr"}, degrees)
+        lang_codes = {item["code"] for item in profile["languages"]}
+        self.assertEqual(lang_codes, {"az", "en", "tr"})
+
+    def test_intern_years_do_not_inflate_seniority(self):
+        text = """
+Ada Example
+ada@example.com
+Experience
+Java Backend Developer Intern
+Trainee Soft | Jan 2018 – Dec 2023
+Java Spring
+Education
+BSc CS
+Skills
+Java, Spring
+"""
+        profile = parse_text(text)
+        self.assertEqual(profile["seniority"], "intern")
+        # 6 calendar years of internship → 3 weighted years, still not "senior".
+        self.assertGreaterEqual(profile["total_years"], 2.5)
+        self.assertLess(profile["total_years"], 4.0)
+        self.assertNotEqual(profile["seniority"], "senior")
+
+    def test_professional_years_drive_seniority_with_intern_side(self):
+        text = """
+Ada Example
+ada@example.com
+Experience
+Senior Java Developer
+Acme Soft | Jan 2019 – Dec 2024
+Java Spring Kafka
+Java Intern
+Campus Labs | Jun 2018 – Aug 2018
+Java
+Skills
+Java, Spring, Kafka
+"""
+        profile = parse_text(text)
+        self.assertEqual(profile["seniority"], "senior")
+        self.assertGreaterEqual(profile["total_years"], 6.0)
+        types = {job.get("employment_type") for job in profile["work_history"]}
+        self.assertIn("internship", types)
+        self.assertIn("", types)
+
 
 class CvParseFilesTest(unittest.TestCase):
     def setUp(self):

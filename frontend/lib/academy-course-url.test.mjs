@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { academyCareerPathUrl, academyCourseUrl } from "./copy.js";
+import { academyCareerPathUrl, academyCourseUrl } from "./academy-urls.js";
 
 test("builds Academy training URL with UTM", () => {
   const href = academyCourseUrl("cloud-computing-with-aws-and-terraform-az");

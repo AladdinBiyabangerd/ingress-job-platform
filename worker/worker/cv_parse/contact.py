@@ -163,6 +163,7 @@ def _guess_name(text: str, email: str) -> str:
             continue
         if _URL.search(line) and " " not in line:
             continue
+        line = _collapse_spaced_name(line)
         if len(line) > 60 or len(line) < 3:
             continue
         if _NAME_LINE.match(line) or (
@@ -187,8 +188,35 @@ def _guess_name(text: str, email: str) -> str:
                     "curriculum",
                     "resume",
                     "cv",
+                    "developer",
+                    "engineer",
+                    "разработчик",
+                    "инженер",
                 )
             ):
                 continue
             return line[:120]
     return ""
+
+
+def _collapse_spaced_name(line: str) -> str:
+    """Join PDF letter-spaced names: 'S Ə MA S Ə F Ə ROVA' → 'SƏMA SƏFƏROVA'."""
+    parts = line.split()
+    if len(parts) < 3:
+        return line
+    singles = sum(1 for p in parts if len(p) == 1)
+    if singles < max(2, len(parts) * 0.4):
+        return line
+    words: list[str] = []
+    buf: list[str] = []
+    for part in parts:
+        buf.append(part)
+        if len(part) > 1:
+            words.append("".join(buf))
+            buf = []
+    if buf:
+        if words:
+            words[-1] = words[-1] + "".join(buf)
+        else:
+            words.append("".join(buf))
+    return " ".join(words)

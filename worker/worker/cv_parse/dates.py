@@ -103,32 +103,44 @@ _PRESENT = re.compile(rf"(?i)^(?:{_PRESENT_TOKEN})$")
 _MONTH_TOKEN = (
     r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec|"
     r"january|february|march|april|june|july|august|september|october|november|december|"
-    r"yan|yanvar|fev|fevral|mart|aprel|may|iyn|iyun|iyl|iyul|avq|avqust|sen|sentyabr|"
+    # ASCII capital I folds to ı; accept both iyul and ıyul forms in the token.
+    r"yan|yanvar|fev|fevral|mart|aprel|may|iyn|ıyn|iyun|ıyun|iyl|ıyl|iyul|ıyul|"
+    r"avq|avqust|sen|sentyabr|"
     r"okt|oktyabr|noy|noyabr|dek|dekabr|"
     r"янв(?:арь|аря)?|фев(?:раль|раля)?|мар(?:та?)?|апр(?:ель|еля)?|мая?|"
     r"июн(?:ь|я)?|июл(?:ь|я)?|авг(?:уста?)?|сен(?:тябрь|тября)?|"
     r"окт(?:ябрь|ября)?|ноя(?:брь|бря)?|дек(?:абрь|абря)?)"
 )
 
+# Optional day before month: "16 Fev 2026", "03 İyul 2026"
+_DAY_PREFIX = r"(?:(?:0?[1-9]|[12]\d|3[01])\s+)?"
+_MONTH_YEAR = rf"(?:{_DAY_PREFIX}{_MONTH_TOKEN}[\s\./\-]+)?(?:19|20)\d{{2}}"
+
 _RANGE = re.compile(
     rf"(?ix)"
     rf"(?P<start>"
-    rf"(?:{_MONTH_TOKEN}"
-    rf"[\s\./\-]+)?"
-    rf"(?:19|20)\d{{2}}"
+    rf"{_MONTH_YEAR}"
     rf"|"
     rf"(?:0?[1-9]|1[0-2])[\./\-](?:19|20)\d{{2}}"
     rf")"
     rf"\s*(?:–|—|-|to|until|через|dək|:)\s*"
     rf"(?P<end>"
     rf"{_PRESENT_TOKEN}|"
-    rf"(?:{_MONTH_TOKEN}"
-    rf"[\s\./\-]+)?"
-    rf"(?:19|20)\d{{2}}"
+    rf"{_MONTH_YEAR}"
     rf"|"
     rf"(?:0?[1-9]|1[0-2])[\./\-](?:19|20)\d{{2}}"
     rf")"
 )
+
+
+def _month_num(token: str) -> int:
+    """Resolve month name; map folded ASCII-I (ı) back to dotted i for AZ months."""
+    key = fold_az(token or "")
+    if not key:
+        return 0
+    if key in _MONTHS:
+        return _MONTHS[key]
+    return _MONTHS.get(key.replace("ı", "i"), 0)
 
 
 def parse_month(token: str, *, end: bool = False) -> date | None:
@@ -150,18 +162,26 @@ def parse_month(token: str, *, end: bool = False) -> date | None:
     if len(parts) == 1 and re.fullmatch(r"(?:19|20)\d{2}", parts[0]):
         year = int(parts[0])
         month = 12 if end else 1
+    elif len(parts) >= 3 and parts[0].isdigit() and len(parts[0]) <= 2:
+        # "16 fev 2026" / "03 iyul 2026"
+        if parts[-1].isdigit() and len(parts[-1]) == 4:
+            month = _month_num(parts[1])
+            year = int(parts[-1])
+        else:
+            return None
     elif len(parts) >= 2:
         if (
             parts[0].isdigit()
             and len(parts[0]) <= 2
             and parts[-1].isdigit()
             and len(parts[-1]) == 4
+            and all(p.isdigit() for p in parts[:-1])
         ):
             month = int(parts[0])
             year = int(parts[-1])
         elif parts[-1].isdigit() and len(parts[-1]) == 4:
             year = int(parts[-1])
-            month = _MONTHS.get(parts[0], 0)
+            month = _month_num(parts[0])
         else:
             return None
     else:

@@ -142,6 +142,16 @@ def _normalize_work(item: object) -> dict | None:
             name = _as_str(skill.get("name"), max_len=SKILL_NAME_MAX)
             if name:
                 skills.append(name)
+    employment_type = _as_str(item.get("employment_type"), max_len=40).lower()
+    if employment_type not in {
+        "",
+        "internship",
+        "full_time",
+        "part_time",
+        "contract",
+        "freelance",
+    }:
+        employment_type = ""
     return {
         "title": title,
         "company": company,
@@ -150,6 +160,7 @@ def _normalize_work(item: object) -> dict | None:
         "end": _as_str(item.get("end"), max_len=20) or None,
         "summary": _as_str(item.get("summary"), max_len=SUMMARY_MAX),
         "skills": skills[:40],
+        "employment_type": employment_type,
     }
 
 

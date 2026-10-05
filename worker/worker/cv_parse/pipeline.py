@@ -9,14 +9,34 @@ from datetime import date
 from worker.cv_parse.ai_fallback import maybe_ai_fallback
 from worker.cv_parse.contact import extract_contact
 from worker.cv_parse.dates import find_ranges, iso_month, merge_years
+from worker.cv_parse.locale import fold_az
 from worker.cv_parse.sections import split_sections
 from worker.cv_parse.text import extract
 from worker.techstack import find_stack
 
-PARSER_VERSION = "1.4"
+PARSER_VERSION = "1.6"
+
+# Intern calendar time counts at half weight vs professional roles for total_years /
+# skill years. 6 months intern ≠ 6 months senior IC time.
+_INTERN_YEAR_WEIGHT = 0.5
 
 _SENIORITY_PAT = re.compile(
     r"(?i)\b(intern|junior|jr\.?|middle|mid-level|mid\b|senior|sr\.?|lead|principal|staff)\b"
+)
+_SENIORITY_RANK = {
+    "intern": 0,
+    "junior": 1,
+    "middle": 2,
+    "senior": 3,
+    "lead": 4,
+    "principal": 4,
+    "staff": 4,
+}
+_INTERN_HINT = re.compile(
+    r"(?i)\b("
+    r"intern(?:ship)?|təcrübəçi|tecrubeci|"
+    r"staj(?:yer|ı|i)?|стаж[ёе]р(?:ка)?|стажировка"
+    r")\b"
 )
 _JOB_LINE = re.compile(
     r"(?ix)^\s*(?P<title>.+?)\s+(?:[-–—@|]|at|в|də)\s+(?P<company>.+?)\s*$"
@@ -33,9 +53,18 @@ _EMPLOYMENT_HINT = re.compile(
     r"занятость"
     r")\b"
 )
-_DEGREE_START = re.compile(
+_DEGREE_TOKEN = re.compile(
     r"(?i)^(bsc|ba|b\.?s\.?|msc|ma|m\.?s\.?|phd|bachelor|master|bakalavr|бакалавр|"
     r"magistr|магистр|associate|diploma|diplom)\b"
+)
+_DEGREE_START = _DEGREE_TOKEN
+_EDUCATION_HINT = re.compile(
+    r"(?i)\b("
+    r"university|universitet(?:i)?|университет|college|institute|institut|"
+    r"akademiya|academy|məktəb|school|"
+    r"bakalavr|bachelor|magistr|master|phd|təhsil|образование|"
+    r"fakültə|faculty"
+    r")\b"
 )
 
 
@@ -101,12 +130,12 @@ def parse_text(text: str) -> dict:
     sections = {key: _join_wrapped_dates(val) for key, val in sections.items()}
     contact = extract_contact(body) if body else extract_contact("")
     work_history, dated_jobs = _work_history(sections.get("experience", "") or body)
-    total_years = merge_years([(w["start_date"], w["end_date"]) for w in dated_jobs])
+    pro_years, intern_years, total_years = _experience_years(dated_jobs)
     skills = _skills(body, sections, dated_jobs)
     education = _education(sections.get("education", ""))
     languages = _languages(sections.get("languages", ""))
     headline = _headline(body, sections, work_history)
-    seniority = _seniority(body, headline, total_years)
+    seniority = _seniority(body, headline, work_history, pro_years, intern_years)
     confidence = _confidence(body, sections, contact, dated_jobs, skills)
     return {
         "contact": contact,
@@ -122,6 +151,7 @@ def parse_text(text: str) -> dict:
                 "end": item["end"],
                 "summary": item.get("summary", ""),
                 "skills": item.get("skills", []),
+                "employment_type": item.get("employment_type") or "",
             }
             for item in work_history
         ],
@@ -185,30 +215,97 @@ def _headline(text: str, sections: dict[str, str], work: list[dict]) -> str:
     return ""
 
 
-def _seniority(text: str, headline: str, total_years: float) -> str:
-    sample = f"{headline}\n{text[:2000]}"
-    m = _SENIORITY_PAT.search(sample)
-    if m:
-        token = m.group(1).lower().rstrip(".")
-        if token in {"intern"}:
-            return "junior"
-        if token in {"junior", "jr"}:
-            return "junior"
-        if token in {"middle", "mid-level", "mid"}:
-            return "middle"
-        if token in {"senior", "sr"}:
-            return "senior"
-        if token in {"lead", "principal", "staff"}:
-            return "lead"
-    if total_years >= 8:
-        return "lead"
-    if total_years >= 5:
-        return "senior"
-    if total_years >= 2:
-        return "middle"
-    if total_years > 0:
+def _canonical_seniority(token: str) -> str:
+    raw = (token or "").lower().rstrip(".")
+    if raw in {"intern"}:
+        return "intern"
+    if raw in {"junior", "jr"}:
         return "junior"
+    if raw in {"middle", "mid-level", "mid"}:
+        return "middle"
+    if raw in {"senior", "sr"}:
+        return "senior"
+    if raw in {"lead", "principal", "staff"}:
+        return raw if raw in {"lead", "principal", "staff"} else "lead"
     return ""
+
+
+def _seniority(
+    text: str,
+    headline: str,
+    work: list[dict],
+    pro_years: float,
+    intern_years: float,
+) -> str:
+    """Infer seniority from professional roles first; intern-only CVs stay intern."""
+    if pro_years <= 0 and intern_years > 0:
+        return "intern"
+
+    best = ""
+    best_rank = -1
+
+    def consider(level: str) -> None:
+        nonlocal best, best_rank
+        if not level or level == "intern":
+            return
+        rank = _SENIORITY_RANK.get(level, -1)
+        if rank > best_rank:
+            best = level
+            best_rank = rank
+
+    for job in work:
+        if job.get("is_intern"):
+            continue
+        consider(_title_seniority(job.get("title") or ""))
+    consider(_title_seniority(headline))
+    # Highest explicit level in early text (e.g. "Middle …" in summary) wins
+    # over an older "Junior …" job title.
+    for match in _SENIORITY_PAT.finditer(f"{headline}\n{text[:2000]}"):
+        consider(_canonical_seniority(match.group(1)))
+    if best:
+        return best
+
+    if pro_years >= 8:
+        return "lead"
+    if pro_years >= 5:
+        return "senior"
+    if pro_years >= 2:
+        return "middle"
+    if pro_years > 0:
+        return "junior"
+    if intern_years > 0:
+        return "intern"
+    return ""
+
+
+def _title_seniority(title: str) -> str:
+    match = _SENIORITY_PAT.search(title or "")
+    if not match:
+        return ""
+    return _canonical_seniority(match.group(1))
+
+
+def _is_intern_job(title: str, company: str, block: str) -> bool:
+    sample = f"{title}\n{company}\n{(block or '')[:400]}"
+    return bool(_INTERN_HINT.search(sample))
+
+
+def _experience_years(dated_jobs: list[dict]) -> tuple[float, float, float]:
+    """Return (professional_years, intern_years, weighted_total_years)."""
+    pro = [
+        (w["start_date"], w["end_date"])
+        for w in dated_jobs
+        if w.get("start_date") and w.get("end_date") and not w.get("is_intern")
+    ]
+    intern = [
+        (w["start_date"], w["end_date"])
+        for w in dated_jobs
+        if w.get("start_date") and w.get("end_date") and w.get("is_intern")
+    ]
+    pro_years = merge_years(pro)
+    intern_years = merge_years(intern)
+    total = round(pro_years + intern_years * _INTERN_YEAR_WEIGHT, 2)
+    return pro_years, intern_years, total
 
 
 def _work_history(experience_text: str) -> tuple[list[dict], list[dict]]:
@@ -224,6 +321,8 @@ def _work_history(experience_text: str) -> tuple[list[dict], list[dict]]:
         if ranges:
             start, end, _start_s, end_s = ranges[0]
         title, company = _title_company(block)
+        if _looks_like_education_job(block, title, company):
+            continue
         skills = find_stack(block)
         present = bool(
             end_s
@@ -233,6 +332,7 @@ def _work_history(experience_text: str) -> tuple[list[dict], list[dict]]:
                 end_s,
             )
         )
+        is_intern = _is_intern_job(title, company, block)
         item = {
             "title": title,
             "company": company,
@@ -241,6 +341,8 @@ def _work_history(experience_text: str) -> tuple[list[dict], list[dict]]:
             "end": None if present else iso_month(end),
             "summary": _job_summary(block),
             "skills": skills,
+            "employment_type": "internship" if is_intern else "",
+            "is_intern": is_intern,
             "start_date": start,
             "end_date": end or date.today(),
             "body": block,
@@ -249,6 +351,23 @@ def _work_history(experience_text: str) -> tuple[list[dict], list[dict]]:
         if start and end:
             dated.append(item)
     return history, dated
+
+
+def _looks_like_education_job(block: str, title: str, company: str) -> bool:
+    """Drop education rows that landed in the experience section (2-column PDFs)."""
+    sample = f"{title}\n{company}\n{block}"
+    if not _EDUCATION_HINT.search(sample):
+        return False
+    # Real jobs at a university still mention a role; keep those.
+    if re.search(
+        r"(?i)\b("
+        r"developer|engineer|intern|internship|mentor|lecturer|müəllim|"
+        r"разработчик|инженер|стажёр|стажер"
+        r")\b",
+        sample,
+    ):
+        return False
+    return True
 
 
 def _looks_like_bullet(line: str) -> bool:
@@ -376,7 +495,8 @@ def _skills(text: str, sections: dict[str, str], jobs: list[dict]) -> list[dict]
 
 
 def _skill_years(name: str, jobs: list[dict]) -> float | None:
-    ranges: list[tuple[date, date]] = []
+    pro: list[tuple[date, date]] = []
+    intern: list[tuple[date, date]] = []
     for job in jobs:
         body = job.get("body") or ""
         job_skills = job.get("skills") or []
@@ -384,10 +504,13 @@ def _skill_years(name: str, jobs: list[dict]) -> float | None:
             start = job.get("start_date")
             end = job.get("end_date")
             if start and end:
-                ranges.append((start, end))
-    if not ranges:
+                if job.get("is_intern"):
+                    intern.append((start, end))
+                else:
+                    pro.append((start, end))
+    if not pro and not intern:
         return None
-    return merge_years(ranges)
+    return round(merge_years(pro) + merge_years(intern) * _INTERN_YEAR_WEIGHT, 2)
 
 
 def _level_for_years(years: float | None) -> str:
@@ -407,6 +530,11 @@ def _education(text: str) -> list[dict]:
         return []
     body = _join_wrapped_dates(text.strip())
     lines = [ln.strip() for ln in body.splitlines() if ln.strip()]
+    # AZ CVs often use "Field | Bakalavr/Magistr" rows paired with school + years.
+    pipe_degrees = [_split_degree_line(ln) for ln in lines]
+    if any(item[0] for item in pipe_degrees):
+        return _education_from_pipe_rows(lines, pipe_degrees)[:8]
+
     blocks: list[list[str]] = []
     current: list[str] = []
     for line in lines:
@@ -453,6 +581,54 @@ def _education(text: str) -> list[dict]:
     return items[:8]
 
 
+def _split_degree_line(line: str) -> tuple[str, str]:
+    """Return (degree, field) for 'Field | Magistr' / 'BSc, CS' lines."""
+    if "|" in line:
+        left, right = [p.strip() for p in line.split("|", 1)]
+        if _DEGREE_TOKEN.match(right):
+            return right[:120], left[:120]
+        if _DEGREE_TOKEN.match(left):
+            return left[:120], right[:120]
+    if "," in line:
+        left, right = [p.strip() for p in line.split(",", 1)]
+        if _DEGREE_TOKEN.match(left):
+            return left[:120], right[:120]
+    if _DEGREE_TOKEN.match(line):
+        return line[:120], ""
+    return "", ""
+
+
+def _education_from_pipe_rows(
+    lines: list[str], pipe_degrees: list[tuple[str, str]]
+) -> list[dict]:
+    degrees = [(i, deg, field) for i, (deg, field) in enumerate(pipe_degrees) if deg]
+    schools: list[tuple[int, str]] = []
+    years: list[tuple[int, int]] = []
+    for i, line in enumerate(lines):
+        if pipe_degrees[i][0]:
+            continue
+        if find_ranges(line) or re.fullmatch(r"(?:19|20)\d{2}\s*[-–—]\s*(?:19|20)\d{2}", line):
+            m = re.search(r"((?:19|20)\d{2})", line)
+            if m:
+                years.append((i, int(m.group(1))))
+            continue
+        if _EDUCATION_HINT.search(line) or len(line) >= 12:
+            schools.append((i, line[:120]))
+    items: list[dict] = []
+    for idx, (_line_i, degree, field) in enumerate(degrees):
+        school = schools[idx][1] if idx < len(schools) else (schools[-1][1] if schools else "")
+        year = years[idx][1] if idx < len(years) else (years[-1][1] if years else None)
+        items.append(
+            {
+                "degree": degree,
+                "field": field,
+                "school": school,
+                "year": year,
+            }
+        )
+    return items
+
+
 def _languages(text: str) -> list[dict]:
     if not text.strip():
         return []
@@ -471,9 +647,13 @@ def _languages(text: str) -> list[dict]:
         ("немецкий", "de"),
         ("german", "de"),
         ("deutsch", "de"),
+        ("türk dili", "tr"),
+        ("turk dili", "tr"),
         ("türkçe", "tr"),
         ("turkish", "tr"),
         ("турецкий", "tr"),
+        ("türk", "tr"),
+        ("turk", "tr"),
         ("français", "fr"),
         ("french", "fr"),
         ("французский", "fr"),
@@ -510,17 +690,17 @@ def _languages(text: str) -> list[dict]:
         piece = raw.strip()
         if not piece:
             continue
-        low = piece.lower()
+        low = fold_az(piece)
         code = ""
         for key, val in code_map:
-            if re.search(rf"(?<!\w){re.escape(key)}(?!\w)", low):
+            if re.search(rf"(?<!\w){re.escape(fold_az(key))}(?!\w)", low):
                 code = val
                 break
         if not code:
             continue
         level = ""
         for key, val in level_map:
-            if key in low:
+            if fold_az(key) in low:
                 level = val
                 break
         if not any(item["code"] == code for item in out):

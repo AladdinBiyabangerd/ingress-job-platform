@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { academyCareerPathUrl, academyCourseUrl, hrefFor, text } from "../lib/copy";
+import { academyCareerPathUrl, academyCourseUrl } from "../lib/academy-urls";
+import { hrefFor, text } from "../lib/copy";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 
