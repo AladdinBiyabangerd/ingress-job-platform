@@ -26,6 +26,7 @@ export function ProfileForm({ locale }) {
   const [visibility, setVisibility] = useState("anonymous");
   const [privacyError, setPrivacyError] = useState("");
   const [privacyNote, setPrivacyNote] = useState("");
+  const [privacyBusy, setPrivacyBusy] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -144,6 +145,55 @@ export function ProfileForm({ locale }) {
     setPrivacyNote(t.privacySaved);
   }
 
+  async function exportMyData() {
+    setPrivacyError("");
+    setPrivacyNote("");
+    setPrivacyBusy("export");
+    try {
+      const res = await fetch("/api/auth/me/export", { cache: "no-store" });
+      if (!res.ok) {
+        setPrivacyError(t.privacyExportError);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "ingress-job-export.zip";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setPrivacyError(t.privacyExportError);
+    } finally {
+      setPrivacyBusy("");
+    }
+  }
+
+  async function deleteMyData() {
+    if (!window.confirm(t.privacyDeleteConfirm)) return;
+    setPrivacyError("");
+    setPrivacyNote("");
+    setPrivacyBusy("delete");
+    try {
+      const res = await fetch("/api/auth/me", { method: "DELETE" });
+      if (!res.ok) {
+        setPrivacyError(t.privacyDeleteError);
+        return;
+      }
+      setConsentPayload(null);
+      setDisplayName("");
+      setPhone("");
+      setEmail("");
+      setPrivacyNote(t.privacyDeleteDone);
+    } catch {
+      setPrivacyError(t.privacyDeleteError);
+    } finally {
+      setPrivacyBusy("");
+    }
+  }
+
   return (
     <Shell locale={locale} mode="profile">
       {me === undefined ? null : showCompany || showApplicant ? (
@@ -234,6 +284,44 @@ export function ProfileForm({ locale }) {
               <div className="ad-actions">
                 <button type="submit" className="btn primary">{t.companySave}</button>
               </div>
+              {Array.isArray(consentPayload.privacy_rights) && consentPayload.privacy_rights.length ? (
+                <div className="privacy-rights">
+                  {consentPayload.retention_stub ? (
+                    <p className="hint">{consentPayload.retention_stub}</p>
+                  ) : null}
+                  {consentPayload.privacy_rights.map((right) => (
+                    <div key={right.id} className="privacy-right-item">
+                      <div>
+                        <strong>{right.label}</strong>
+                        {right.description ? <p className="hint">{right.description}</p> : null}
+                      </div>
+                      {right.id === "export" ? (
+                        <button
+                          type="button"
+                          className="btn"
+                          disabled={Boolean(privacyBusy)}
+                          onClick={exportMyData}
+                        >
+                          {right.label}
+                        </button>
+                      ) : null}
+                      {right.id === "delete" ? (
+                        <button
+                          type="button"
+                          className="btn"
+                          disabled={Boolean(privacyBusy)}
+                          onClick={deleteMyData}
+                        >
+                          {right.label}
+                        </button>
+                      ) : null}
+                      {right.id === "who_viewed" ? (
+                        <p className="hint">{t.privacyWhoViewedSoon}</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </form>
           ) : null}
         </div>

@@ -10,14 +10,12 @@
 - Phase 1.5: role suggestions (`GET /api/v1/me/roles`)
 - Phase 1.6: OCR text extract for scans (Tesseract)
 - Phase 1.7: AI #1 fallback + `ai_gateway` skeleton
-  - `worker/worker/ai_gateway/`: redact, cache (`ai_cache`), daily budget (`ai_usage_daily`), cost estimate, OTEL span, feature flag
-  - Trigger: rules `confidence` < `CV_AI_LOW_CONFIDENCE` (default 0.55)
-  - PII mask → OpenAI structured JSON → skill dictionary + in-text filter
-  - Contact always from rules; soft-fail keeps rules profile
-  - `parse_meta.method`: `rules` | `llm`; `prompt_version`: `cv-parse-ai1-v1`
-  - Parser version `1.2`
-  - Env: `OPENAI_API_KEY`, `AI_GATEWAY_ENABLED`, `AI_GATEWAY_MODEL`, `AI_GATEWAY_DAILY_CALL_LIMIT`, `CV_AI_FALLBACK_ENABLED`, `CV_AI_LOW_CONFIDENCE`
-  - Tests: `worker/tests/test_ai_gateway.py`, `test_cv_ai_fallback.py`
+- Phase 1.8: export/delete (plan §10.3)
+  - `GET /api/v1/me/export` → zip (`export.json` + original CV files)
+  - `DELETE /api/v1/me` → hard-delete profile, parse queue, consents/email prefs, contact profile, CV files; applications anonymized; `profile_edit_log` → pseudonym
+  - BFF: `/api/auth/me/export`, `DELETE /api/auth/me`
+  - Privacy rights UI on `/profile` (from `consent-copy` `privacy_rights`)
+  - Tests: `api/tests/test_me_data.py`
 
 ## Decisions
 - Deterministic first; AI only at the 4 named plan points
@@ -32,9 +30,13 @@
 - OCR optional at runtime: digital CVs still parse if Tesseract missing
 - AI gateway default-on only when `OPENAI_API_KEY` set; over-budget → AI-less mode
 - LLM never receives raw PII; skills not in dictionary or CV text are dropped
+- Plan GET `/api/me` export collides with account `GET /api/v1/me` → export at `/api/v1/me/export`
+- Audit pseudonym: `anon_` + sha256(`ingress-job-audit:{user_id}`)[:32]
+- Applications kept for employers but PII/CV cleared and `candidate_subject` → pseudonym
+- `who_viewed` privacy right is stub-only (Phase 3)
 
 ## Remaining
-- Later Phase 1: export/delete (`GET/DELETE /api/v1/me`)
+- Phase 1 complete for core CV→profile→privacy path
 - Phase 2+: `/me/matches`, skill-gap, feedback, `/me/recommendations` page
 - Optional: `/profile/cv` upload page (plan §13.2); parse still enqueue on apply
 - Optional: dedicated `/settings/privacy`; privacy lives on `/profile` for now
@@ -43,11 +45,13 @@
 - Optional: copy `ai_gateway` into API when matching/embeddings need it
 
 ## Relevant files
-- `worker/worker/ai_gateway/` (`gateway.py`, `redact.py`)
-- `worker/worker/cv_parse/ai_fallback.py`, `pipeline.py`
-- `worker/worker/cv_queue.py`
-- `worker/tests/test_ai_gateway.py`, `test_cv_ai_fallback.py`
-- `docs/ingress-job-cv-ai-plan.pdf` (§5.1 / §11 / §17)
+- `api/app/me_data.py`, `api/app/routers/me.py`
+- `api/app/applications.py` (`normalize_cv_key`, `read_stored_cv`, `delete_stored_cv`)
+- `api/app/consents.py` (`privacy_rights` in payload)
+- `frontend/app/api/auth/me/export/route.js`, `frontend/app/api/auth/me/route.js`
+- `frontend/components/profile-form.js`
+- `api/tests/test_me_data.py`
+- `docs/ingress-job-cv-ai-plan.pdf` (§10.3)
 
 ## Continue prompt (new chat)
-Phase 1 next: export/delete (`GET/DELETE /api/v1/me` — JSON + original CV files; hard-delete profile/skills/embeddings/CV/email prefs; audit keeps pseudonym). Read `.cursor/context/current-task.md` and plan §10.3.
+Phase 2 start (or pick): matching `/me/matches` / skill-gap / recommendations UI. Read `.cursor/context/current-task.md` and plan Phase 2 overview. Phase 1 export/delete is done.

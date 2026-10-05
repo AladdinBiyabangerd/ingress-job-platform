@@ -1532,6 +1532,27 @@ textarea { min-height: 120px; resize: vertical; }
   height: auto;
 }
 
+.privacy-rights {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+  display: grid;
+  gap: 14px;
+}
+
+.privacy-right-item {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .privacy-right-item {
+    grid-template-columns: 1fr;
+  }
+}
+
 .bell {
   position: relative;
   width: 34px;

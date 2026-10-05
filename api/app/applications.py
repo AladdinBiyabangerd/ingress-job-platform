@@ -221,18 +221,51 @@ def _object_key(stored: str) -> str:
     return f"cvs/{stored}"
 
 
+def normalize_cv_key(value: str) -> str:
+    """Strip optional cvs/ prefix; return stored filename or empty when invalid."""
+    key = (value or "").strip()
+    if key.startswith("cvs/"):
+        key = key[4:]
+    return key if _STORED.fullmatch(key) else ""
+
+
 def _delete_stored(stored: str) -> None:
-    if not _STORED.fullmatch(stored or ""):
+    key = normalize_cv_key(stored)
+    if not key:
         return
     if bucket_config() is not None:
         try:
-            delete_object(_object_key(stored))
+            delete_object(_object_key(key))
         except Exception:
             pass
     root = CV_ROOT.resolve()
-    path = (root / stored).resolve()
+    path = (root / key).resolve()
     if path.parent == root:
         path.unlink(missing_ok=True)
+
+
+def read_stored_cv(stored: str) -> bytes | None:
+    """Return CV bytes for a stored filename, or None when missing/invalid."""
+    key = normalize_cv_key(stored)
+    if not key:
+        return None
+    data = None
+    if bucket_config() is not None:
+        try:
+            data = get_object(_object_key(key))
+        except Exception:
+            data = None
+    if data is not None:
+        return data if isinstance(data, bytes) else None
+    root = CV_ROOT.resolve()
+    path = (root / key).resolve()
+    if path.parent == root and path.is_file():
+        return path.read_bytes()
+    return None
+
+
+def delete_stored_cv(stored: str) -> None:
+    _delete_stored(stored)
 
 
 def _write_cv(ext: str, data: bytes) -> str:

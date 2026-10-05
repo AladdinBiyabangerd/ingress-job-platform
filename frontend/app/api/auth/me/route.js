@@ -10,3 +10,11 @@ export async function GET(request) {
   const data = await upstream.json();
   return noStore(appendCookies(Response.json(data), setCookies));
 }
+
+export async function DELETE(request) {
+  const { upstream, setCookies } = await authorizedApi(request, "/api/v1/me", {
+    method: "DELETE",
+  });
+  const payload = await upstream.json().catch(() => ({}));
+  return noStore(appendCookies(Response.json(payload, { status: upstream.status || 502 }), setCookies));
+}

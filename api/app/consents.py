@@ -192,6 +192,20 @@ def consents_payload(conn, *, user_id: str, lang: str | None = None) -> dict:
                 "description": _localized(level.get("description"), locale),
             }
         )
+    rights = []
+    for entry in copy.get("privacy_rights") or []:
+        if not isinstance(entry, dict):
+            continue
+        right_id = str(entry.get("id") or "").strip()
+        if not right_id:
+            continue
+        rights.append(
+            {
+                "id": right_id,
+                "label": _localized(entry.get("label"), locale),
+                "description": _localized(entry.get("description"), locale),
+            }
+        )
     return {
         "version": str(copy.get("version") or ""),
         "status": str(copy.get("status") or ""),
@@ -202,6 +216,7 @@ def consents_payload(conn, *, user_id: str, lang: str | None = None) -> dict:
         "consents": items,
         "visibility": _visibility_for(conn, user_id, defaults),
         "visibility_levels": levels,
+        "privacy_rights": rights,
     }
 
 
