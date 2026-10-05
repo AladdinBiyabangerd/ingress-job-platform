@@ -17,6 +17,7 @@ CAP = 30
 class RemoteOkConnector:
     name = "Remote OK"
     entry_url = API
+    remote_default = True
 
     def __init__(self, client: PoliteClient, store: Store) -> None:
         self.client = client
@@ -86,6 +87,9 @@ class RemoteOkConnector:
                 "source_name": self.name,
                 "external_id": clean(job.get("id") or "")[:200],
                 "credit_note": getattr(self, "_credit", REMOTE_OK_CREDIT),
+                "tags": [clean(t) for t in (job.get("tags") or []) if clean(t)],
+                "category": [clean(t) for t in (job.get("tags") or []) if clean(t)][:3],
+                "remote": True,
             }
         except Exception:
             return None

@@ -80,6 +80,10 @@ _COLUMNS = {
     "merged_into": "INTEGER",
     "content_locked": "INTEGER NOT NULL DEFAULT 0",
     "apply_form": "TEXT NOT NULL DEFAULT ''",
+    # Written by the worker for collected ads: JSON list of tech names, and
+    # 1 when the ad offers visa sponsorship or relocation support.
+    "tech_stack": "TEXT NOT NULL DEFAULT ''",
+    "relocation": "INTEGER NOT NULL DEFAULT 0",
 }
 
 _APP_COLUMNS = {
@@ -89,6 +93,26 @@ _APP_COLUMNS = {
     "email": "TEXT NOT NULL DEFAULT ''",
     "answers": "TEXT NOT NULL DEFAULT '[]'",
 }
+
+# Same table the worker seeds from worker/worker/catalog.py. Only the homepage
+# is read here, for the visible "source" link on collected ads.
+_CRAWL_SOURCES = """
+CREATE TABLE IF NOT EXISTS crawl_sources (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    homepage TEXT NOT NULL,
+    connector TEXT NOT NULL,
+    entry_url TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 0,
+    min_delay_seconds REAL NOT NULL DEFAULT 1,
+    go_decision TEXT NOT NULL DEFAULT 'pending',
+    go_decided_by TEXT NOT NULL DEFAULT '',
+    go_decided_at TEXT NOT NULL DEFAULT '',
+    credit_note TEXT NOT NULL DEFAULT '',
+    api_key_env TEXT NOT NULL DEFAULT '',
+    note TEXT NOT NULL DEFAULT ''
+)
+"""
 
 _MERGES = """
 CREATE TABLE IF NOT EXISTS job_merges (
@@ -138,6 +162,7 @@ def _now() -> str:
 def _apply_schema(conn) -> None:
     conn.execute(_JOBS)
     conn.execute(_SOURCES)
+    conn.execute(_CRAWL_SOURCES)
     conn.execute(_MERGES)
     conn.execute(_APPLICATIONS)
     cols = {row[1] for row in conn.execute("PRAGMA table_info(jobs)")}

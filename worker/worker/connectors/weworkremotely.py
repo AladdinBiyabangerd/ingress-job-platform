@@ -14,6 +14,7 @@ CAP = 30
 class WeWorkRemotelyConnector:
     name = "We Work Remotely"
     entry_url = "https://weworkremotely.com/remote-jobs.rss"
+    remote_default = True
 
     def __init__(self, client: PoliteClient, store: Store) -> None:
         self.client = client
@@ -71,6 +72,9 @@ class WeWorkRemotelyConnector:
                 "source_url": url,
                 "source_name": self.name,
                 "external_id": clean(_child(item, "guid") or url)[:200],
+                "category": clean(_child(item, "category")),
+                "tags": [clean(el.text or "") for el in item.findall("skills")],
+                "remote": True,
             }
         except Exception:
             return None

@@ -98,7 +98,17 @@ export function JobDetail({ locale, job }) {
           </ol>
         </nav>
         <article className="detail">
-          {job.source_name ? <p className="source-pill">{job.source_name}</p> : null}
+          {job.source_name ? (
+            job.source_homepage ? (
+              <p className="source-line">
+                <a className="source-pill" href={job.source_homepage} target="_blank" rel="noopener" title={t.sourceSite}>
+                  {job.source_name}
+                </a>
+              </p>
+            ) : (
+              <p className="source-pill">{job.source_name}</p>
+            )
+          ) : null}
           <h1>{job.title}</h1>
           <p className="meta line">
             <span>{job.company || t.noCompany}</span>
@@ -107,7 +117,18 @@ export function JobDetail({ locale, job }) {
             {job.job_type === "hibrid" ? <span>{t.jobHybrid}</span> : null}
             {job.job_type === "uzaqdan" ? <span>{t.jobRemoteType}</span> : null}
             {job.salary ? <span>{job.salary}</span> : null}
+            {job.relocation ? <span>{t.relocationBadge}</span> : null}
           </p>
+          {Array.isArray(job.tech_stack) && job.tech_stack.length ? (
+            <div className="tech-block">
+              <h2 className="tech-title">{t.techStack}</h2>
+              <ul className="tech-chips">
+                {job.tech_stack.map((name) => (
+                  <li key={name} className="tech-chip">{name}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {parts.length ? (
             <div className="posting">
               {parts.map((part, index) => {

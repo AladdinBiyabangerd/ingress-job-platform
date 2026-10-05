@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-GO_AT = "2026-10-04T12:00:00+04:00"
-GO_BY = "ingress-job plan, worker task 2026-10-04"
+GO_AT = "2026-10-05T12:00:00+04:00"
+GO_BY = "ingress-job plan, worker task 2026-10-05 (foreign remote/relocation tech sources)"
 
 REMOTE_OK_CREDIT = (
     "Listings must show a Remote OK follow link (rel=follow, not nofollow) "
@@ -40,35 +40,16 @@ def _row(
     }
 
 
+# Foreign tech job sources with remote or relocation (visa) focus only.
+# Domestic Azerbaijani boards (Busy.az, Boss.az, HelloJob, Glorri, JobSearch.az,
+# HRX, Work.az, eJob.az, hh1.az) and hh.ru were removed on 2026-10-05. Their
+# rows stay in crawl_sources switched off (go_decision 'retired') and their
+# stored ads are kept; nothing collects them any more.
 # LinkedIn, Indeed, Tap.az, gloria.az and job.az are intentionally absent.
+# Every enabled row: robots.txt allows the exact URLs read, the source terms do
+# not forbid it, there is no login wall or bot challenge, and at most 30 new
+# ads are saved per source per pass.
 SOURCES: list[dict] = [
-    _row(
-        "Busy.az",
-        "https://busy.az/",
-        "sitemap",
-        "https://busy.az/sitemap_all.xml",
-        enabled=True,
-        go="go",
-        note="Sitemap, sonra açıq vakansiya səhifəsi. Hər keçiddə ən çox 30 yeni elan.",
-    ),
-    _row(
-        "Boss.az",
-        "https://boss.az/",
-        "sitemap",
-        "https://boss.az/sitemap.xml",
-        enabled=True,
-        go="go",
-        note="Sitemap. Hər keçiddə ən çox 30 yeni elan.",
-    ),
-    _row(
-        "HelloJob",
-        "https://www.hellojob.az/",
-        "sitemap",
-        "https://www.hellojob.az/sitemap.xml",
-        enabled=True,
-        go="go",
-        note="Sitemap. Hər keçiddə ən çox 30 yeni elan.",
-    ),
     _row(
         "We Work Remotely",
         "https://weworkremotely.com/",
@@ -76,7 +57,7 @@ SOURCES: list[dict] = [
         "https://weworkremotely.com/remote-jobs.rss",
         enabled=True,
         go="go",
-        note="Açıq RSS. Partnyor API çağırılmır. Hər keçiddə ən çox 30 yeni elan.",
+        note="Açıq RSS. Partnyor API çağırılmır. Yalnız IT elanları. Hər keçiddə ən çox 30 yeni elan.",
     ),
     _row(
         "Remote OK",
@@ -87,60 +68,6 @@ SOURCES: list[dict] = [
         go="go",
         note="Yalnız JSON API. ?action=get_jobs çağırılmır.",
         credit_note=REMOTE_OK_CREDIT,
-    ),
-    _row(
-        "Glorri",
-        "https://jobs.glorri.az/",
-        "open_list",
-        "https://jobs.glorri.az/",
-        enabled=True,
-        go="go",
-        note="Açıq siyahı, sonra vakansiya səhifəsi. /_next/ yox. Hər keçiddə ən çox 30 yeni elan.",
-    ),
-    _row(
-        "JobSearch.az",
-        "https://jobsearch.az/",
-        "open_list",
-        "https://jobsearch.az/vacancies",
-        enabled=True,
-        go="go",
-        note="Açıq /vacancies siyahısı. Hər keçiddə ən çox 30 yeni elan.",
-    ),
-    _row(
-        "HRX",
-        "https://hrx.az/",
-        "open_list",
-        "https://hrx.az/is-elanlari",
-        enabled=True,
-        go="go",
-        note="Açıq siyahı. /api/ çağırılmır. Sitemap 403 olduğu üçün oxunmur. Hər keçiddə ən çox 30 yeni elan.",
-    ),
-    _row(
-        "Work.az",
-        "https://www.work.az/",
-        "open_list",
-        "https://www.work.az/vakansiyalar",
-        enabled=True,
-        go="go",
-        note="Açıq siyahı. Giriş və kabinet yox. Hər keçiddə ən çox 30 yeni elan.",
-    ),
-    _row(
-        "eJob.az",
-        "https://ejob.az/",
-        "sitemap",
-        "https://ejob.az/sitemap/sitemap.xml",
-        enabled=True,
-        go="go",
-        note="Yalnız vakansiya sitemap-i. CV sitemap-i yox. Hər keçiddə ən çox 30 yeni elan.",
-    ),
-    _row(
-        "hh1.az",
-        "https://hh1.az/",
-        "open_list",
-        "https://hh1.az/vacancies",
-        enabled=True,
-        go="go",
-        note="Açıq /vacancy/ səhifələri. Sorğu sətri, RSS və CV yox. hh.ru API deyil. Hər keçiddə ən çox 30 yeni elan.",
     ),
     _row(
         "Djinni",
@@ -161,6 +88,156 @@ SOURCES: list[dict] = [
         note="Açıq /jobs siyahısı. /search toplanmır. Hər keçiddə ən çox 30 yeni elan.",
     ),
     _row(
+        "Arbeitnow",
+        "https://www.arbeitnow.com/",
+        "official_api",
+        "https://www.arbeitnow.com/api/job-board-api",
+        enabled=True,
+        go="go",
+        note="Pulsuz açıq API. visa_sponsorship=true və remote elanlar. Yalnız IT.",
+        credit_note="Arbeitnow free Job Board API. Link back to arbeitnow.com and name Arbeitnow as the source.",
+    ),
+    _row(
+        "Himalayas",
+        "https://himalayas.app/",
+        "official_api",
+        "https://himalayas.app/jobs/api/search",
+        enabled=True,
+        go="go",
+        note="Rəsmi açıq API (açarsız). Gündə bir dəfə. HTML toplanmır (saytın şərtləri scraping-i qadağan edir).",
+        credit_note="Himalayas Remote Jobs API. Show a visible link back to himalayas.app and say the data is sourced from Himalayas.",
+    ),
+    _row(
+        "Jobicy",
+        "https://jobicy.com/",
+        "official_api",
+        "https://jobicy.com/api/v2/remote-jobs",
+        enabled=True,
+        go="go",
+        note="Rəsmi açıq Jobs API. Ən tez 3 saatdan bir. Remote elanlar.",
+        credit_note="Jobicy public Jobs API. Credit Jobicy with a direct link to the source; the apply button must lead to the Jobicy listing URL from the feed.",
+    ),
+    _row(
+        "Working Nomads",
+        "https://www.workingnomads.com/",
+        "official_api",
+        "https://www.workingnomads.com/api/exposed_jobs/",
+        enabled=True,
+        go="go",
+        note="Saytın özünün göstərdiyi açıq JSON API. Remote elanlar.",
+        credit_note="Working Nomads public jobs API. Name Working Nomads as the source.",
+    ),
+    _row(
+        "4 Day Week",
+        "https://4dayweek.io/",
+        "official_api",
+        "https://4dayweek.io/api/v2/jobs",
+        enabled=True,
+        go="go",
+        note="Rəsmi açıq v2 API (engineering, remote). HTML scraping şərtlərlə qadağandır, toplanmır.",
+        credit_note="4dayweek.io public API. Link back to https://4dayweek.io.",
+    ),
+    _row(
+        "HN Who is hiring",
+        "https://news.ycombinator.com/",
+        "official_api",
+        "https://hn.algolia.com/api/v1/search_by_date",
+        enabled=True,
+        go="go",
+        note="Algolia HN Search API: son 'Who is hiring?' mövzusu. Yalnız REMOTE və ya VISA qeyd olunanlar. news.ycombinator.com oxunmur.",
+        credit_note="Hacker News 'Who is hiring?' thread via the Algolia HN Search API.",
+    ),
+    _row(
+        "Python.org Jobs",
+        "https://www.python.org/jobs/",
+        "rss",
+        "https://www.python.org/jobs/feed/rss/",
+        enabled=True,
+        go="go",
+        note="Açıq RSS. Yalnız remote və ya viza/relokasiya elanları.",
+    ),
+    _row(
+        "Crypto Jobs List",
+        "https://cryptojobslist.com/",
+        "rss",
+        "https://api.cryptojobslist.com/jobs.rss",
+        enabled=True,
+        go="go",
+        note="Açıq RSS. Elan səhifəsi oxunmur. Yalnız IT və remote/relokasiya.",
+    ),
+    _row(
+        "Real Work From Anywhere",
+        "https://www.realworkfromanywhere.com/",
+        "rss",
+        "https://www.realworkfromanywhere.com/rss.xml",
+        enabled=True,
+        go="go",
+        note="Açıq RSS, dünya üzrə remote. /go/ (robots bağlı) oxunmur.",
+    ),
+    _row(
+        "Berlin Startup Jobs",
+        "https://berlinstartupjobs.com/",
+        "rss",
+        "https://berlinstartupjobs.com/feed/",
+        enabled=True,
+        go="go",
+        note="Açıq RSS, mətn qısa olanda açıq elan səhifəsi (JobPosting). İngilis dilli Berlin startap elanları.",
+    ),
+    _row(
+        "Golang Projects",
+        "https://www.golangprojects.com/",
+        "rss",
+        "https://www.golangprojects.com/rss.xml",
+        enabled=True,
+        go="go",
+        note="Açıq RSS, sonra açıq elan səhifəsi (JobPosting). Go elanları.",
+    ),
+    _row(
+        "Elixir Jobs",
+        "https://elixirjobs.net/",
+        "rss",
+        "https://elixirjobs.net/rss",
+        enabled=True,
+        go="go",
+        note="Açıq RSS, sonra açıq elan səhifəsi (JobPosting). Elixir elanları.",
+    ),
+    _row(
+        "Jobspresso",
+        "https://jobspresso.co/",
+        "rss",
+        "https://jobspresso.co/feed/job_feed/",
+        enabled=True,
+        go="go",
+        note="Açıq iş RSS-i (yol ilə). robots.txt '/*?' bağladığı üçün sorğu sətirli feed oxunmur. Crawl-delay 3.",
+    ),
+    _row(
+        "Relocate.me",
+        "https://relocate.me/",
+        "open_list",
+        "https://relocate.me/international-jobs",
+        enabled=True,
+        go="go",
+        note="Açıq siyahı, sonra elan səhifəsi. Hər elan relokasiya paketi ilə.",
+    ),
+    _row(
+        "Japan Dev",
+        "https://japan-dev.com/",
+        "open_list",
+        "https://japan-dev.com/jobs",
+        enabled=True,
+        go="go",
+        note="Açıq siyahı, sonra elan səhifəsi (JobPosting). Yaponiyada ingilisdilli IT, çoxu viza ilə.",
+    ),
+    _row(
+        "Remote First Jobs",
+        "https://remotefirstjobs.com/",
+        "open_list",
+        "https://remotefirstjobs.com/jobs/software-development",
+        enabled=True,
+        go="go",
+        note="Açıq kateqoriya siyahısı, sonra elan səhifəsi (JobPosting). /api/ çağırılmır.",
+    ),
+    _row(
         "Dice",
         "https://www.dice.com/",
         "open_list",
@@ -168,16 +245,6 @@ SOURCES: list[dict] = [
         enabled=False,
         go="pending",
         note="Sönülüdür. robots.txt Disallow: /job ilk uyğunluqla /jobs və /job-detail yolunu bağlayır. Sorğu sətirli axtarış və RSS də bağlıdır.",
-    ),
-    _row(
-        "hh.ru",
-        "https://hh.ru/",
-        "official_api",
-        "https://api.hh.ru/vacancies",
-        enabled=False,
-        go="pending",
-        note="Açar olmadan sönülüdür. HTML toplanmır.",
-        api_key_env="HH_API_KEY",
     ),
     _row(
         "Jooble",

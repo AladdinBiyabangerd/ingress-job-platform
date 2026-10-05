@@ -5,6 +5,7 @@ SQLite when DATABASE_URL is unset. Postgres, shared with the API, when it is set
 
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
 from datetime import datetime
@@ -80,10 +81,10 @@ def now_iso() -> str:
 
 
 class Store:
-    def __init__(self, path: Path | None = None) -> None:
+    def __init__(self, path: Path | None = None, *, sqlite_only: bool = False) -> None:
         from worker.jobs_db import connect, postgres_enabled
 
-        if postgres_enabled():
+        if postgres_enabled() and not sqlite_only:
             self.path = None
             self.conn = connect()
         else:
@@ -112,6 +113,13 @@ class Store:
             "hidden": "INTEGER NOT NULL DEFAULT 0",
             "merged_into": "INTEGER",
             "reject_reason": "TEXT NOT NULL DEFAULT ''",
+            # Same declarations as api/app/cabinet_store.py, so either side may add them.
+            "owner_subject": "TEXT NOT NULL DEFAULT ''",
+            "remote": "INTEGER NOT NULL DEFAULT 0",
+            # JSON list of curated tech names, e.g. ["Python", "AWS"]. '' = not scanned yet.
+            "tech_stack": "TEXT NOT NULL DEFAULT ''",
+            # 1 when the ad offers visa sponsorship or relocation support.
+            "relocation": "INTEGER NOT NULL DEFAULT 0",
         }
         for name, decl in alters.items():
             if name not in cols:
@@ -147,6 +155,19 @@ class Store:
         """
         with self.conn:
             self.conn.executemany(sql, SOURCES)
+            # Sources dropped from the catalog stay in the table (their runs and
+            # ads are kept) but are switched off so no pass collects them again.
+            names = [row["name"] for row in SOURCES]
+            marks = ", ".join("?" for _ in names)
+            self.conn.execute(
+                f"""
+                UPDATE crawl_sources
+                SET enabled = 0, go_decision = 'retired',
+                    note = 'Kataloqdan çıxarılıb: daxili mənbə, artıq toplanmır. Köhnə elanlar saxlanılır.'
+                WHERE name NOT IN ({marks}) AND (enabled != 0 OR go_decision != 'retired')
+                """,
+                names,
+            )
 
     def source_by_name(self, name: str) -> sqlite3.Row:
         row = self.conn.execute("SELECT * FROM crawl_sources WHERE name = ?", (name,)).fetchone()
@@ -155,7 +176,22 @@ class Store:
         return row
 
     def disabled_sources(self) -> list[sqlite3.Row]:
-        return list(self.conn.execute("SELECT * FROM crawl_sources WHERE enabled = 0 ORDER BY id"))
+        return list(
+            self.conn.execute(
+                "SELECT * FROM crawl_sources WHERE enabled = 0 AND go_decision != 'retired' ORDER BY id"
+            )
+        )
+
+    def last_ok_run(self, source_id: int) -> str:
+        row = self.conn.execute(
+            """
+            SELECT started_at FROM crawl_runs
+            WHERE source_id = ? AND status = 'ok'
+            ORDER BY id DESC LIMIT 1
+            """,
+            (source_id,),
+        ).fetchone()
+        return str(row["started_at"]) if row else ""
 
     def set_credit_note(self, name: str, credit_note: str) -> None:
         with self.conn:
@@ -206,6 +242,10 @@ class Store:
         source_name = str(item["source_name"]).strip()
         external_id = str(item.get("external_id") or "")[:200]
         credit = str(item.get("credit_note") or "")
+        stack = item.get("tech_stack") or []
+        stack_json = json.dumps([str(x) for x in stack][:12], ensure_ascii=False)
+        remote = 1 if item.get("remote") else 0
+        relocation = 1 if item.get("relocation") else 0
         key = norm_key(title, company, city)
         seen = now_iso()
         with self.conn:
@@ -241,10 +281,14 @@ class Store:
                         """
                         UPDATE jobs
                         SET title = ?, company = ?, city = ?, text = ?, status = 'published',
-                            cleaned_text = CASE WHEN text = ? THEN cleaned_text ELSE NULL END
+                            cleaned_text = CASE WHEN text = ? THEN cleaned_text ELSE NULL END,
+                            tech_stack = ?, remote = ?, relocation = ?
                         WHERE id = ?
                         """,
-                        (title, company, city, text, text, existing["job_id"]),
+                        (
+                            title, company, city, text, text,
+                            stack_json, remote, relocation, existing["job_id"],
+                        ),
                     )
                     self._set_norm_key(int(existing["job_id"]), key)
                 return "updated"
@@ -255,10 +299,13 @@ class Store:
             else:
                 cur = self.conn.execute(
                     """
-                    INSERT INTO jobs (title, company, city, text, status, created_at, norm_key)
-                    VALUES (?, ?, ?, ?, 'published', ?, ?)
+                    INSERT INTO jobs (
+                        title, company, city, text, status, created_at, norm_key,
+                        tech_stack, remote, relocation
+                    )
+                    VALUES (?, ?, ?, ?, 'published', ?, ?, ?, ?, ?)
                     """,
-                    (title, company, city, text, seen, key),
+                    (title, company, city, text, seen, key, stack_json, remote, relocation),
                 )
                 job_id = int(cur.lastrowid)
                 kind = "created"
@@ -271,6 +318,41 @@ class Store:
                 (job_id, source_name, url, external_id, seen, credit),
             )
             return kind
+
+    def backfill_derived(self, limit: int = 500) -> int:
+        """Tech stack and relocation for collected rows saved before those columns.
+
+        Only scraped rows (empty owner_subject) whose tech_stack is still '' are
+        read. Nothing is deleted; remote and relocation are only ever switched on.
+        """
+        from worker.techstack import extract_stack, relocation_flag, remote_flag
+
+        rows = self.conn.execute(
+            """
+            SELECT id, title, city, COALESCE(NULLIF(cleaned_text, ''), text) AS body,
+                   COALESCE(remote, 0) AS remote, COALESCE(relocation, 0) AS relocation
+            FROM jobs
+            WHERE COALESCE(owner_subject, '') = '' AND COALESCE(tech_stack, '') = ''
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        done = 0
+        with self.conn:
+            for row in rows:
+                title = str(row["title"] or "")
+                city = str(row["city"] or "")
+                body = str(row["body"] or "")
+                stack = extract_stack(body, None, title)
+                remote = 1 if int(row["remote"] or 0) or remote_flag(title, city, body) else 0
+                relocation = 1 if int(row["relocation"] or 0) or relocation_flag(title, city, body) else 0
+                self.conn.execute(
+                    "UPDATE jobs SET tech_stack = ?, remote = ?, relocation = ? WHERE id = ?",
+                    (json.dumps(stack, ensure_ascii=False), remote, relocation, row["id"]),
+                )
+                done += 1
+        return done
 
     def _set_norm_key(self, job_id: int, key: str) -> None:
         other = self.conn.execute(

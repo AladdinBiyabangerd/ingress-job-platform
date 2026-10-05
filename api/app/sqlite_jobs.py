@@ -11,6 +11,7 @@ response is built, so a listing address cannot leak through the text.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import sqlite3
@@ -39,6 +40,8 @@ SELECT
     j.created_at,
     COALESCE(j.language, '') AS language,
     COALESCE(j.remote, 0) AS remote,
+    COALESCE(j.relocation, 0) AS relocation,
+    COALESCE(j.tech_stack, '') AS tech_stack,
     COALESCE(j.salary, '') AS salary,
     COALESCE(j.job_type, '') AS job_type,
     COALESCE(j.owner_subject, '') AS owner_subject,
@@ -57,7 +60,18 @@ SELECT
             LIMIT 1
         ),
         ''
-    ) AS source_name
+    ) AS source_name,
+    COALESCE(
+        (
+            SELECT cs.homepage
+            FROM job_sources js3
+            JOIN crawl_sources cs ON cs.name = js3.source_name
+            WHERE js3.job_id = j.id
+            ORDER BY js3.id
+            LIMIT 1
+        ),
+        ''
+    ) AS source_homepage
 FROM jobs j
 WHERE j.status = 'published'
   AND COALESCE(j.hidden, 0) = 0
@@ -158,6 +172,30 @@ def _plain(value: str) -> str:
     return _URL.sub("", repair_text(value or "")).strip()
 
 
+def tech_stack(value: object) -> list[str]:
+    """Stored JSON list of tech names. Anything unreadable is an empty list."""
+    raw = str(value or "").strip()
+    if not raw:
+        return []
+    try:
+        items = json.loads(raw)
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(items, list):
+        return []
+    out: list[str] = []
+    for item in items:
+        name = str(item or "").strip()
+        if name and len(name) <= 40 and name not in out:
+            out.append(name)
+    return out[:12]
+
+
+def _homepage(value: object) -> str:
+    url = str(value or "").strip()
+    return url if re.match(r"(?i)^https?://[^\s\"<>]+$", url) else ""
+
+
 def _public(row: sqlite3.Row) -> dict:
     title = _plain(row["title"] or "")
     body = public_text(row["text"] or "")
@@ -172,6 +210,8 @@ def _public(row: sqlite3.Row) -> dict:
         "company": _plain(row["company"] or ""),
         "city": _plain(row["city"] or ""),
         "remote": bool(int(row["remote"] or 0)),
+        "relocation": bool(int(row["relocation"] or 0)),
+        "tech_stack": tech_stack(row["tech_stack"]),
         "text": body,
         "language": language,
         "salary": _plain(row["salary"] or ""),
@@ -204,7 +244,11 @@ def get_job(job_id: int) -> dict | None:
         conn.close()
     if row is None:
         return None
-    return _public(row)
+    job = _public(row)
+    # Only the detail page links the source site (attribution some feeds
+    # require). The list stays free of addresses for guests.
+    job["source_homepage"] = _homepage(row["source_homepage"])
+    return job
 
 
 def published_source_url(job_id: int) -> str | None:

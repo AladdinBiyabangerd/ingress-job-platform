@@ -1802,3 +1802,62 @@ textarea { min-height: 120px; resize: vertical; }
     min-height: 44px;
   }
 }
+
+/* Tech stack chips (job cards and the ad page) */
+.tech-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.tech-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid #d6dcf5;
+  background: #f4f6ff;
+  color: #1f2a5c;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.tech-chip.more {
+  background: transparent;
+  color: #5c6570;
+}
+
+.tech-block {
+  margin: 16px 0 4px;
+}
+
+.tech-block .tech-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #20242b;
+}
+
+.source-line {
+  margin: 0 0 12px;
+}
+
+.source-line .source-pill {
+  margin: 0;
+  text-decoration: none;
+}
+
+.source-line .source-pill:hover {
+  text-decoration: underline;
+}
+
+.check-count {
+  color: #8a929c;
+  font-weight: 500;
+  font-size: 12px;
+}

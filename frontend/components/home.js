@@ -18,6 +18,10 @@ function unique(jobs, key) {
   return Array.from(names).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
+function stackOf(job) {
+  return Array.isArray(job.tech_stack) ? job.tech_stack : [];
+}
+
 function languageOf(job) {
   if (job.language) return job.language;
   const sample = `${job.title}\n${job.text}`;
@@ -165,6 +169,21 @@ function FilterIcon({ name }) {
       </svg>
     );
   }
+  if (name === "relocation") {
+    return (
+      <svg {...props}>
+        <path d="M2.5 9.5 13.5 4l-2 9-3-3.25L6 11.5V8.5" />
+        <path d="M8.5 9.75 13.5 4" />
+      </svg>
+    );
+  }
+  if (name === "stack") {
+    return (
+      <svg {...props}>
+        <path d="M6 4.5 2.75 8 6 11.5M10 4.5 13.25 8 10 11.5" />
+      </svg>
+    );
+  }
   if (name === "remote") {
     return (
       <svg {...props}>
@@ -201,6 +220,9 @@ export function Home({ locale, jobs, error }) {
   const [inDescription, setInDescription] = useState(true);
   const [withCity, setWithCity] = useState(false);
   const [remote, setRemote] = useState(false);
+  const [relocation, setRelocation] = useState(false);
+  const [stacks, setStacks] = useState([]);
+  const [techQuery, setTechQuery] = useState("");
   const [when, setWhen] = useState("any");
   const [sort, setSort] = useState("newest");
   const [salaryMin, setSalaryMin] = useState("");
@@ -218,6 +240,17 @@ export function Home({ locale, jobs, error }) {
   }, [jobs]);
   const cityOptions = useMemo(() => unique(jobs, "city"), [jobs, t.lang]);
   const sourceOptions = useMemo(() => unique(jobs, "source_name"), [jobs, t.lang]);
+  const techOptions = useMemo(() => {
+    const counts = new Map();
+    for (const job of jobs) {
+      for (const name of stackOf(job)) counts.set(name, (counts.get(name) || 0) + 1);
+    }
+    const q = techQuery.trim().toLowerCase();
+    return Array.from(counts.entries())
+      .filter(([name]) => !q || name.toLowerCase().includes(q))
+      .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+      .map(([name, total]) => ({ name, total }));
+  }, [jobs, techQuery]);
   const companyOptions = useMemo(() => {
     const q = company.trim().toLowerCase();
     return unique(jobs, "company").filter((name) => !q || name.toLowerCase().includes(q));
@@ -237,8 +270,13 @@ export function Home({ locale, jobs, error }) {
       if (languages.length && !languages.includes(languageOf(job))) return false;
       if (withCity && !job.city) return false;
       if (remote) {
-        const looksRemote = !job.city || REMOTE.test(`${job.title} ${job.text}`);
+        const looksRemote = job.remote || !job.city || REMOTE.test(`${job.title} ${job.text}`);
         if (!looksRemote) return false;
+      }
+      if (relocation && !job.relocation) return false;
+      if (stacks.length) {
+        const own = stackOf(job);
+        if (!stacks.some((name) => own.includes(name))) return false;
       }
       const days = ageDays(job);
       if (when === "today" && (days === null || days >= 1)) return false;
@@ -272,7 +310,7 @@ export function Home({ locale, jobs, error }) {
       return sort === "oldest" ? at - bt : bt - at;
     });
     return sorted;
-  }, [jobs, query, company, cities, sources, companies, languages, inDescription, withCity, remote, when, sort, salaryMin, salaryMax, t.lang]);
+  }, [jobs, query, company, cities, sources, companies, languages, inDescription, withCity, remote, relocation, stacks, when, sort, salaryMin, salaryMax, t.lang]);
 
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -283,7 +321,7 @@ export function Home({ locale, jobs, error }) {
 
   useEffect(() => {
     setPage(1);
-  }, [query, company, cities, sources, companies, languages, inDescription, withCity, remote, when, sort, salaryMin, salaryMax]);
+  }, [query, company, cities, sources, companies, languages, inDescription, withCity, remote, relocation, stacks, when, sort, salaryMin, salaryMax]);
 
   function clear() {
     setQuery("");
@@ -295,6 +333,9 @@ export function Home({ locale, jobs, error }) {
     setInDescription(true);
     setWithCity(false);
     setRemote(false);
+    setRelocation(false);
+    setStacks([]);
+    setTechQuery("");
     setWhen("any");
     setSort("newest");
     setSalaryMin("");
@@ -346,6 +387,7 @@ export function Home({ locale, jobs, error }) {
             {pageItems.map((job) => {
               const when = postedOn(job.created_at, locale);
               const place = job.remote ? t.placeRemote : (job.city || t.noCity);
+              const stack = stackOf(job);
               return (
                 <a key={job.id} className="job-card" href={hrefFor(locale, { jobId: job.id })}>
                   <span className="job-card-body">
@@ -354,11 +396,25 @@ export function Home({ locale, jobs, error }) {
                       {job.source_name ? <span className="source-pill">{job.source_name}</span> : null}
                     </span>
                     <h2>{job.title}</h2>
+                    {stack.length ? (
+                      <span className="tech-chips" aria-label={t.techStack}>
+                        {stack.slice(0, 6).map((name) => (
+                          <span key={name} className="tech-chip">{name}</span>
+                        ))}
+                        {stack.length > 6 ? <span className="tech-chip more">+{stack.length - 6}</span> : null}
+                      </span>
+                    ) : null}
                     <span className="job-facts">
                       <span className="job-fact">
                         <FilterIcon name="city" />
                         {place}
                       </span>
+                      {job.relocation ? (
+                        <span className="job-fact">
+                          <FilterIcon name="relocation" />
+                          {t.relocationBadge}
+                        </span>
+                      ) : null}
                       {when ? (
                         <span className="job-fact">
                           <FilterIcon name="date" />
@@ -460,6 +516,26 @@ export function Home({ locale, jobs, error }) {
             <input type="checkbox" checked={remote} onChange={(event) => setRemote(event.target.checked)} />
             <GroupLabel icon="remote">{t.remote}</GroupLabel>
           </label>
+          <label className="check">
+            <input type="checkbox" checked={relocation} onChange={(event) => setRelocation(event.target.checked)} />
+            <GroupLabel icon="relocation">{t.relocationFilter}</GroupLabel>
+          </label>
+          <div className="filter-group">
+            <label className="stack">
+              <GroupLabel icon="stack">{t.techStack}</GroupLabel>
+              <input type="search" value={techQuery} placeholder={t.techPlaceholder} onChange={(event) => setTechQuery(event.target.value)} />
+            </label>
+            {techOptions.length ? (
+              <div className="checks scroll-set">
+                {techOptions.map(({ name, total }) => (
+                  <label key={name} className="check">
+                    <input type="checkbox" checked={stacks.includes(name)} onChange={() => toggle(stacks, setStacks, name)} />
+                    <span>{name} <span className="check-count">{total}</span></span>
+                  </label>
+                ))}
+              </div>
+            ) : null}
+          </div>
           <div className="filter-group">
             <GroupLabel icon="salary">{t.salaryFilter}</GroupLabel>
             <div className="salary-bounds">

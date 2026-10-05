@@ -35,7 +35,13 @@ Toplanmış elanlar ayrıca siyahıdadır: mətn redaktəsi, gizlətmə və iki 
 
 ## Saatlıq toplama
 
-Toplayıcı açıq mənbələrdən **hər saat** bir keçid edir. LinkedIn, Indeed və Tap **toplanmır**. hh, Jooble və Reed **açar olmadan sönülü qalır**: `HH_API_KEY`, `JOOBLE_API_KEY` və ya `REED_API_KEY` yoxdursa həmin mənbə çağırılmır.
+Toplayıcı **hər saat** bir keçid edir. Yalnız xarici, uzaqdan iş və ya relokasiya (viza dəstəyi) verən **IT** elanları toplanır: rəsmi API/RSS lentləri (Arbeitnow, Himalayas, Jobicy, Working Nomads, 4 Day Week, HN "Who is hiring", Python.org, Crypto Jobs List və s.) və robots.txt-in icazə verdiyi bir neçə sayt (We Work Remotely, Remote OK, Djinni, Wellfound, Relocate.me, Japan Dev, Remote First Jobs). Tam siyahı və hər mənbənin qeydi `worker/worker/catalog.py`-dadır. Yerli (Azərbaycan) saytlar 2026-10-05-dən toplanmır; əvvəl toplanmış elanlar bazada qalır. Hər elanın texnologiya siyahısı (`tech_stack`), `remote` və `relocation` bayraqları saxlanır. LinkedIn, Indeed və Tap **toplanmır**. Jooble və Reed **açar olmadan sönülü qalır**: `JOOBLE_API_KEY` və ya `REED_API_KEY` yoxdursa həmin mənbə çağırılmır.
+
+Yeni mənbələri bazaya yazmadan yoxlamaq üçün (müvəqqəti SQLite, hər mənbədən 3 elan):
+
+```bash
+cd worker && .venv/bin/python -m worker probe "Himalayas" "Arbeitnow"
+```
 
 ## Kompüterdə işə salmaq
 
@@ -93,7 +99,6 @@ Dəyərlər buraya və git-ə yazılmır. Lokal fayl `.env`-dir. Nümunə adlar 
 - `BUCKET_REGION`
 - `BUCKET_ENDPOINT`
 - `DATABASE_URL`
-- `HH_API_KEY`
 - `JOOBLE_API_KEY`
 - `REED_API_KEY`
 

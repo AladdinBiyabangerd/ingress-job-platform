@@ -111,9 +111,9 @@ Set on the web service if the private-host wiring is not applied:
 Set the same `DATABASE_URL` on the worker. `.railway/railway.ts` wires the
 Postgres service URL onto both services; do not point them at different
 databases, and do not set `JOBS_DB_PATH` on Railway. Set the same `SENTRY_*`
-and `OTEL_*` names on the worker if that process should report. `HH_API_KEY`,
-`JOOBLE_API_KEY`, and `REED_API_KEY` stay optional; the worker skips those
-sources when they are missing.
+and `OTEL_*` names on the worker if that process should report. `JOOBLE_API_KEY`
+and `REED_API_KEY` stay optional; the worker skips those sources when they
+are missing.
 
 CV upload uses the bucket only when `BUCKET_NAME`, `BUCKET_ACCESS_KEY`, and
 `BUCKET_SECRET_KEY` are all set. Otherwise files stay in `api/data/cvs/`.

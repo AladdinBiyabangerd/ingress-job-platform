@@ -1,4 +1,10 @@
-"""Polite HTTP. robots.txt is checked before a fetch. No browser bypass."""
+"""Polite HTTP. robots.txt is checked before a fetch. No browser bypass.
+
+Two robots readers must both allow a URL: the stdlib parser (first match) and a
+Google-style reader that understands ``*`` and ``$`` with longest-match wins.
+The stdlib parser treats ``Disallow: /*?`` literally, so without the second
+reader a wildcard rule would silently be ignored.
+"""
 
 from __future__ import annotations
 
@@ -29,6 +35,68 @@ REFUSED_HOSTS = {
 }
 
 
+ROBOT_TOKEN = "ingress-job-bot"
+
+
+class WildcardRobots:
+    """Google-style robots rules for one host: groups, ``*``, ``$``, longest match."""
+
+    def __init__(self, lines: list[str]) -> None:
+        groups: list[tuple[list[str], list[tuple[bool, str]]]] = []
+        agents: list[str] = []
+        rules: list[tuple[bool, str]] = []
+        last_was_agent = False
+        for raw in lines:
+            line = raw.split("#", 1)[0].strip()
+            if not line or ":" not in line:
+                continue
+            key, _, value = line.partition(":")
+            key = key.strip().lower()
+            value = value.strip()
+            if key == "user-agent":
+                if not last_was_agent and (agents or rules):
+                    groups.append((agents, rules))
+                    agents, rules = [], []
+                agents.append(value.lower())
+                last_was_agent = True
+                continue
+            last_was_agent = False
+            if key in {"allow", "disallow"}:
+                rules.append((key == "allow", value))
+        if agents or rules:
+            groups.append((agents, rules))
+        mine = [r for a, r in groups if ROBOT_TOKEN in a]
+        star = [r for a, r in groups if "*" in a]
+        chosen = mine or star
+        self.rules: list[tuple[bool, str]] = [rule for group in chosen for rule in group]
+
+    def allowed(self, url: str) -> bool:
+        parsed = urlparse(url)
+        target = parsed.path or "/"
+        if parsed.query:
+            target += "?" + parsed.query
+        best_len = -1
+        best_allow = True
+        for allow, pattern in self.rules:
+            if not pattern:
+                continue
+            if not _robots_match(pattern, target):
+                continue
+            size = len(pattern)
+            if size > best_len or (size == best_len and allow):
+                best_len = size
+                best_allow = allow
+        return best_allow
+
+
+def _robots_match(pattern: str, target: str) -> bool:
+    anchored = pattern.endswith("$")
+    body = pattern[:-1] if anchored else pattern
+    regex = "".join(".*" if ch == "*" else re.escape(ch) for ch in body)
+    regex = "^" + regex + ("$" if anchored else "")
+    return re.match(regex, target) is not None
+
+
 class Disallowed(Exception):
     """robots.txt does not allow this path."""
 
@@ -57,6 +125,7 @@ class PoliteClient:
             follow_redirects=True,
         )
         self._robots: dict[str, RobotFileParser] = {}
+        self._wild: dict[str, WildcardRobots] = {}
         self._delay: dict[str, float] = {}
         self._last: dict[str, float] = {}
 
@@ -66,7 +135,8 @@ class PoliteClient:
     def allowed(self, url: str) -> bool:
         self._check_url(url)
         self._ensure_robots(url)
-        return self._robots[_host(url)].can_fetch(USER_AGENT, url)
+        host = _host(url)
+        return self._robots[host].can_fetch(USER_AGENT, url) and self._wild[host].allowed(url)
 
     def get_text(self, url: str, accept: str | None = None) -> str:
         return self.get(url, accept=accept).text
@@ -90,7 +160,7 @@ class PoliteClient:
         self._check_url(final)
         if _host(final) != _host(url):
             self._ensure_robots(final)
-        if not self._robots[_host(final)].can_fetch(USER_AGENT, final):
+        if not self.allowed(final):
             raise Disallowed(final)
         if response.status_code in BLOCK_STATUSES:
             raise SourceBlocked(f"HTTP {response.status_code} for {url}")
@@ -134,6 +204,7 @@ class PoliteClient:
         if response.status_code in BLOCK_STATUSES:
             raise SourceBlocked(f"robots.txt HTTP {response.status_code} for {host}")
         parser = RobotFileParser()
+        wild = WildcardRobots([])
         if response.status_code == 404:
             parser.parse([])
             delay = MIN_DELAY
@@ -141,6 +212,7 @@ class PoliteClient:
             raise SourceFailed(f"robots.txt HTTP {response.status_code} for {host}")
         else:
             parser.parse(response.text.splitlines())
+            wild = WildcardRobots(response.text.splitlines())
             raw_delay = parser.crawl_delay(USER_AGENT)
             if raw_delay is None:
                 raw_delay = parser.crawl_delay("*")
@@ -148,6 +220,7 @@ class PoliteClient:
         # parse() does not mark the file as read. can_fetch() then refuses every URL.
         parser.last_checked = time.time()
         self._robots[host] = parser
+        self._wild[host] = wild
         self._delay[host] = delay
 
     def _pause(self, host: str) -> None:
