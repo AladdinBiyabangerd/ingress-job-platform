@@ -1,0 +1,172 @@
+{
+  "version": "1.0",
+  "status": "stub_pending_legal_review",
+  "generated_at": "2026-10-05T08:10:00Z",
+  "source": {
+    "plan": "docs/ingress-job-cv-ai-plan.pdf §10",
+    "consent_kinds": "matching / emails / recruiter_visibility",
+    "note": "Deterministic UI copy stubs only. Not legal advice. Final wording needs lawyer review before product use."
+  },
+  "defaults": {
+    "matching": false,
+    "emails": false,
+    "recruiter_visibility": false,
+    "visibility": "anonymous"
+  },
+  "legal_disclaimer": {
+    "az": "Bu mətnlər işçi qaralamadır və hüquqi məsləhət deyil. Yekun mətnlər hüquqşünasla yoxlanılmalıdır.",
+    "en": "These texts are working stubs and are not legal advice. Final wording must be reviewed by a lawyer.",
+    "ru": "Эти тексты — рабочие заготовки и не являются юридической консультацией. Итоговые формулировки нужно согласовать с юристом."
+  },
+  "cv_upload_intro": {
+    "az": "CV yükləyəndə aşağıdakı seçimləri ayrıca açıb bağlaya bilərsiniz. Hamısı standart olaraq sönülüdür. İstədiyiniz zaman geri götürə bilərsiniz.",
+    "en": "When you upload a CV, you can turn each option on or off separately. All are off by default. You can withdraw any choice later.",
+    "ru": "При загрузке CV каждый пункт можно включить или выключить отдельно. По умолчанию всё выключено. Выбор можно отозвать в любой момент."
+  },
+  "consents": [
+    {
+      "kind": "matching",
+      "default_granted": false,
+      "checkbox_label": {
+        "az": "CV-nin avtomatik təhlilinə və iş uyğunluğu tövsiyələrinə razıyam",
+        "en": "I agree to automatic CV analysis and job-match recommendations",
+        "ru": "Согласен(на) на автоматический анализ CV и рекомендации по вакансиям"
+      },
+      "short_help": {
+        "az": "Profil və rol tövsiyələri üçün CV-niz qaydalarla (lazım olsa AI ilə) təhlil olunur.",
+        "en": "We analyze your CV with rules (and AI only when needed) to build a profile and suggest roles.",
+        "ru": "Мы анализируем CV правилами (и AI только при необходимости), чтобы собрать профиль и предложить роли."
+      },
+      "detail": {
+        "az": "Bu razılıq CV faylınızdan bacarıq, təcrübə və digər strukturlaşdırılmış sahələrin çıxarılmasına, namizəd profilinin yaradılmasına və sizə uyğun vəzifə/elan tövsiyələrinin göstərilməsinə aiddir. Tranzaksion bildirişlər (məs. müraciət statusu) bu razılıqdan asılı deyil. Razılığı geri götürsəniz, yeni tövsiyələr dayanır; mövcud profili silmək üçün ayrıca silmə sorğusu lazımdır.",
+        "en": "This consent covers extracting structured fields from your CV, building a candidate profile, and showing role or job recommendations. Transactional notices (for example application status) do not depend on this consent. If you withdraw it, new recommendations stop; deleting an existing profile needs a separate delete request.",
+        "ru": "Это согласие покрывает извлечение структурированных полей из CV, создание профиля кандидата и показ рекомендаций по ролям и вакансиям. Транзакционные уведомления (например, статус отклика) от него не зависят. При отзыве новые рекомендации останавливаются; удаление уже созданного профиля — отдельный запрос."
+      }
+    },
+    {
+      "kind": "emails",
+      "default_granted": false,
+      "checkbox_label": {
+        "az": "E-poçt dayjestləri və tövsiyə məktublarına razıyam",
+        "en": "I agree to email digests and recommendation messages",
+        "ru": "Согласен(на) на email-дайджесты и письма с рекомендациями"
+      },
+      "short_help": {
+        "az": "Həftəlik və ya hadisəyə bağlı faydalı e-poçtlar. Tranzaksion məktublar ayrıca qalır.",
+        "en": "Useful weekly or event-based emails. Transactional mail stays separate.",
+        "ru": "Полезные еженедельные или событийные письма. Транзакционная почта остаётся отдельно."
+      },
+      "detail": {
+        "az": "Bu razılıq marketinq və tövsiyə e-poçtlarını (dayjest, yüksək uyğunluq xəbərdarlığı və oxşar) əhatə edir. Müraciət və hesabla bağlı tranzaksion e-poçtlar bu seçimdən asılı olmayaraq göndərilə bilər. Tezlik və növləri sonra e-poçt seçimlərində dəyişə, abunəlikdən çıxa bilərsiniz.",
+        "en": "This consent covers marketing and recommendation emails (digests, high-match alerts, and similar). Transactional emails about applications or your account may still be sent. You can change frequency and types later in email settings, or unsubscribe.",
+        "ru": "Это согласие покрывает маркетинговые и рекомендательные письма (дайджесты, оповещения о сильных совпадениях и т.п.). Транзакционные письма про отклики или аккаунт могут отправляться отдельно. Частоту и типы можно изменить в настройках почты или отписаться."
+      }
+    },
+    {
+      "kind": "recruiter_visibility",
+      "default_granted": false,
+      "checkbox_label": {
+        "az": "Təsdiqlənmiş işəgötürənlərin namizəd axtarışında mənə baxmasına razıyam",
+        "en": "I agree to appear in recruiter talent search for verified employers",
+        "ru": "Согласен(на), чтобы меня видели в поиске кандидатов проверенные работодатели"
+      },
+      "short_help": {
+        "az": "Standart olaraq anonim kart görünür. Adınız yalnız siz açıq profil seçsəniz göstərilir.",
+        "en": "By default recruiters see an anonymous card. Your name appears only if you choose an open profile.",
+        "ru": "По умолчанию рекрутеры видят анонимную карточку. Имя показывается только при открытом профиле."
+      },
+      "detail": {
+        "az": "Bu razılıq olmadan CV-niz və profiliniz talent search-ə düşmür — hətta əvvəl müraciət üçün yüklənmiş olsa belə. Razılıq verdikdə təsdiqlənmiş şirkətlər seçdiyiniz görünmə səviyyəsinə uyğun kartı görə bilər və əlaqə sorğusu göndərə bilər; siz qəbul və ya rədd edə bilərsiniz. Geri götürdükdə axtarışdan çıxırsınız.",
+        "en": "Without this consent your CV and profile stay out of talent search — even if you uploaded a CV for a job application earlier. With consent, verified companies can see a card at your chosen visibility level and send contact requests that you can accept or decline. Withdrawing removes you from search.",
+        "ru": "Без этого согласия CV и профиль не попадают в talent search — даже если CV уже загружали для отклика. При согласии проверенные компании видят карточку на выбранном уровне видимости и могут отправить запрос на контакт; вы можете принять или отклонить. Отзыв убирает вас из поиска."
+      }
+    }
+  ],
+  "visibility_levels": [
+    {
+      "id": "hidden",
+      "label": {
+        "az": "Gizli",
+        "en": "Hidden",
+        "ru": "Скрытый"
+      },
+      "description": {
+        "az": "Heç bir işəgötürən sizi görmür. Tövsiyələr yalnız sizə qalır.",
+        "en": "No employer can see you. Recommendations stay for you only.",
+        "ru": "Работодатели вас не видят. Рекомендации остаются только для вас."
+      }
+    },
+    {
+      "id": "anonymous",
+      "label": {
+        "az": "Anonim (standart)",
+        "en": "Anonymous (default)",
+        "ru": "Анонимный (по умолчанию)"
+      },
+      "description": {
+        "az": "HR bacarıq və təcrübə kartını görür; ad, foto və birbaşa əlaqə gizli qalır.",
+        "en": "Recruiters see skills and experience; name, photo, and direct contact stay hidden.",
+        "ru": "Рекрутеры видят навыки и опыт; имя, фото и прямые контакты скрыты."
+      }
+    },
+    {
+      "id": "public",
+      "label": {
+        "az": "Açıq profil",
+        "en": "Open profile",
+        "ru": "Открытый профиль"
+      },
+      "description": {
+        "az": "Siz özünüz adınızın göstərilməsinə icazə verirsiniz. Əlaqə yenə də sorğu ilə gedir.",
+        "en": "You allow your name to be shown. Contact still goes through a request you approve.",
+        "ru": "Вы разрешаете показывать имя. Контакт по-прежнему через запрос, который вы подтверждаете."
+      }
+    }
+  ],
+  "privacy_rights": [
+    {
+      "id": "export",
+      "label": {
+        "az": "Məlumatlarımı ixrac et",
+        "en": "Export my data",
+        "ru": "Экспортировать мои данные"
+      },
+      "description": {
+        "az": "Profil JSON-u və orijinal CV fayllarını yükləyə bilərsiniz.",
+        "en": "You can download your profile as JSON plus original CV files.",
+        "ru": "Можно скачать профиль в JSON и исходные файлы CV."
+      }
+    },
+    {
+      "id": "delete",
+      "label": {
+        "az": "Məlumatlarımı sil",
+        "en": "Delete my data",
+        "ru": "Удалить мои данные"
+      },
+      "description": {
+        "az": "Profil, bacarıqlar, embedding-lər, CV faylı və e-poçt seçimləri silinir. Audit jurnalında yalnız psevdonim ID qala bilər.",
+        "en": "Profile, skills, embeddings, CV file, and email preferences are removed. Audit logs may keep only a pseudonymous ID.",
+        "ru": "Удаляются профиль, навыки, эмбеддинги, файл CV и настройки почты. В аудите может остаться только псевдонимный ID."
+      }
+    },
+    {
+      "id": "who_viewed",
+      "label": {
+        "az": "Profilimə kim baxıb",
+        "en": "Who viewed my profile",
+        "ru": "Кто смотрел мой профиль"
+      },
+      "description": {
+        "az": "Recruiter baxışları şirkət səviyyəsində göstərilir.",
+        "en": "Recruiter views are shown at company level.",
+        "ru": "Просмотры рекрутеров показываются на уровне компании."
+      }
+    }
+  ],
+  "retention_stub": {
+    "az": "Uzun müddət aktivlik olmayanda (məsələn ~24 ay) xəbərdarlıq və sonra avtomatik silmə nəzərdə tutulur. Müddət hüquqşünasla təsdiqlənəcək.",
+    "en": "After a long period of inactivity (for example ~24 months), a warning and then automatic deletion are planned. The exact period will be confirmed with a lawyer.",
+    "ru": "После долгого отсутствия активности (например ~24 месяца) планируются предупреждение и затем автоматическое удаление. Срок будет подтверждён с юристом."
+  }
+}

@@ -16,6 +16,11 @@
   - `worker/worker/roles.py` → `role_taxonomy` + `role_skill_weight`
   - Wired in `worker/worker/db.py` + table create in `api/app/cabinet_store.py`
   - Tests: `worker/tests/test_roles.py`
+- Phase 0.4: consent/privacy copy stubs (AZ/EN/RU)
+  - `docs/cv-ai/consent-copy-v1.json`
+  - kinds: matching / emails / recruiter_visibility (all default off)
+  - visibility levels + export/delete/who-viewed stubs
+  - status: `stub_pending_legal_review` (not wired to UI/API yet)
 
 ## Decisions
 - Principle: deterministic first; AI only at the 4 named points in the plan
@@ -27,20 +32,19 @@
 - Role signature skills must match `skill_dictionary.canonical_name`; unknown names skipped at seed
 - Hand weights for v1 (plan §6.1); later refresh from ad frequencies (TF-style, no AI)
 - Product/Design/Manual QA roles intentionally sparse on tech weights until non-tech signals exist
+- Consent copy is versioned stub JSON only; lawyer review before product use; wire into `/api/consents` + UI in Phase 1
 
-## Remaining (Phase 0 → then Phase 1)
-- 0.4: consent/privacy copy stubs (AZ/EN/RU) — legal review later
-- Then Phase 1: CV parse queue (rules-only prototype first, AI #1 later)
+## Remaining
+- Optional Phase 0 leftover (manual): test CV set (plan §17.2) — needs real anonymized CVs with consent; not inventable in-repo
+- Phase 1: CV parse queue (rules-only prototype first, AI #1 later) + consent UI/API using `consent-copy-v1.json`
 
 ## Relevant files
+- `docs/cv-ai/consent-copy-v1.json`
 - `docs/cv-ai/role-taxonomy-v1.json`
-- `worker/worker/role_taxonomy_v1.json`
+- `docs/cv-ai/skill-dictionary-v1.json`
 - `worker/worker/roles.py`
-- `worker/tests/test_roles.py`
-- `worker/worker/db.py`
-- `api/app/cabinet_store.py`
 - `worker/worker/skills.py`
-- `worker/worker/skill_dictionary_v1.json`
+- `docs/ingress-job-cv-ai-plan.pdf`
 
 ## Continue prompt (new chat)
-Phase 0.4: consent/privacy copy stubs (AZ/EN/RU) for matching / emails / recruiter visibility. Deterministic stubs only; legal review later. Read `.cursor/context/current-task.md` first.
+Phase 1 start: CV parse queue rules-only prototype (text extract + regex + skill dictionary). No AI #1 yet. Read `.cursor/context/current-task.md` and plan §5.1 first.
