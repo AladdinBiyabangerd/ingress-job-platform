@@ -9,21 +9,48 @@ export function generateMetadata() {
   return homeMetadata("en");
 }
 
+function emptyPayload() {
+  return {
+    items: [],
+    total: 0,
+    pages: 1,
+    catalog_total: 0,
+    facets: { languages: [], categories: [], stacks: [] },
+  };
+}
+
 export default async function Page() {
   const jsonLd = homeJsonLd("en");
   try {
-    const jobs = await getJobs();
+    const data = await getJobs("{}");
     return (
       <>
         <JsonLd data={jsonLd} />
-        <Home locale="en" jobs={jobs} error={false} />
+        <Home
+          locale="en"
+          jobs={data.items}
+          total={data.total}
+          catalogTotal={data.catalog_total}
+          pages={data.pages}
+          facets={data.facets}
+          error={false}
+        />
       </>
     );
   } catch {
+    const data = emptyPayload();
     return (
       <>
         <JsonLd data={jsonLd} />
-        <Home locale="en" jobs={[]} error />
+        <Home
+          locale="en"
+          jobs={data.items}
+          total={data.total}
+          catalogTotal={data.catalog_total}
+          pages={data.pages}
+          facets={data.facets}
+          error
+        />
       </>
     );
   }

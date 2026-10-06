@@ -17,13 +17,19 @@ export default defineRailway(() => {
     BUCKET_ENDPOINT: media.env.ENDPOINT,
   };
 
+  // Fixed listen port so web can reference it. Railway's runtime PORT injection
+  // is not readable via ${{api.PORT}} unless this service variable exists.
+  const apiListenPort = "8080";
+
   const api = service("api", {
     // rootDirectory = api (matches live Railway). Dockerfile installs worker via git.
     root: "api",
-    start: "sh -c 'exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8010}'",
+    // :: for Railway private IPv6; see docs/railway.md
+    start: `sh -c 'exec uvicorn app.main:app --host :: --port \${PORT:-${apiListenPort}}'`,
     env: {
       ...storageEnv,
       DEBUG: "False",
+      PORT: apiListenPort,
       DATABASE_URL: db.env.DATABASE_URL,
       CV_OCR_ENABLED: "1",
       CV_OCR_LANG: "eng",
@@ -36,8 +42,10 @@ export default defineRailway(() => {
     start: "sh -c 'exec npx next start --hostname 0.0.0.0 --port ${PORT:-3010}'",
     env: {
       NODE_ENV: "production",
+      // Next server/BFF only (browser never hits private DNS).
+      // api.js → http://$API_PRIVATE_HOST:$API_PORT
       API_PRIVATE_HOST: api.env.RAILWAY_PRIVATE_DOMAIN,
-      API_PORT: api.env.PORT,
+      API_PORT: apiListenPort,
     },
   });
 

@@ -108,15 +108,32 @@ Set on the web service if the private-host wiring is not applied:
 
 | Variable | Role |
 |---|---|
-| `API_PRIVATE_HOST` | API private hostname. With `API_PORT`, builds the server-side API URL. |
-| `API_PORT` | API port. Railway's `PORT` on the API service. |
-| `JOB_API_BASE_URL` | Full API base. Overrides the host and port pair. Unset locally keeps `http://127.0.0.1:8010`. |
+| `JOB_API_BASE_URL` | Full server-side API base. Preferred. Example: `http://${{api.RAILWAY_PRIVATE_DOMAIN}}:${{api.PORT}}`. Must be `http://`, never `https://`. Unset locally keeps `http://127.0.0.1:8010`. |
+| `API_PRIVATE_HOST` | API private hostname only. Used when `JOB_API_BASE_URL` is unset. |
+| `API_PORT` | API listen port. Must match the API service `PORT` variable (set `PORT=8080` on **api** yourself — `${{api.PORT}}` does not read Railway's runtime injection). |
 | `APP_URL` | Public web origin for OIDC. Optional when `RAILWAY_PUBLIC_DOMAIN` is present. |
 | `NEXT_PUBLIC_APP_URL` | Same fallback as `APP_URL`. |
 | `JOB_OIDC_ISSUER` | Academy issuer. Unset locally keeps `http://127.0.0.1:8000/`. |
 | `JOB_OIDC_CLIENT_ID` | Default `job-web`. |
 | `JOB_OIDC_AUTHORIZE_URL` | Academy authorize URL. |
 | `JOB_OIDC_LOGOUT_URL` | Ignored. Job logout stays on the public site and does not call Academy. |
+
+### Private network checklist (empty UI = web cannot reach API)
+
+The browser only talks to the **web** public domain. Next.js (SSR + `/api/*` BFF)
+calls the API over Railway private DNS. If that hop fails, the shell still
+renders and job lists stay empty.
+
+1. On **api**: set `PORT=8080` as a service variable (not only runtime). Start with
+   `--host ::` (Dockerfile does this) so IPv6 private networking works.
+2. On **web**: set
+   `JOB_API_BASE_URL=http://${{api.RAILWAY_PRIVATE_DOMAIN}}:${{api.PORT}}`
+   (same project + environment; `http`, not `https`).
+3. Keep a public domain on **web** only. API may stay private.
+4. Redeploy **api** then **web**. In web logs, a failed BFF shows
+   `[api/jobs] upstream failed` with the resolved base URL.
+5. Quick check: open `https://<web-domain>/api/jobs` — JSON with `items` means
+   private hop works; HTTP 502 with empty `items` means it does not.
 
 Set the same `DATABASE_URL` on the worker. `.railway/railway.ts` wires the
 Postgres service URL onto both services; do not point them at different

@@ -15,6 +15,19 @@ function entry(path, { jobId, lastModified, priority = 0.7 } = {}) {
   };
 }
 
+async function allJobSummaries() {
+  const jobs = [];
+  let page = 1;
+  let pages = 1;
+  do {
+    const data = await fetchJobs({ page, perPage: 60, sort: "newest" });
+    jobs.push(...(data.items || []));
+    pages = Math.max(1, Number(data.pages) || 1);
+    page += 1;
+  } while (page <= pages);
+  return jobs;
+}
+
 export default async function sitemap() {
   const entries = LOCALES.map((locale) =>
     entry(localePath(locale), { priority: locale === "az" ? 1 : 0.9 }),
@@ -25,7 +38,7 @@ export default async function sitemap() {
   }
 
   try {
-    const jobs = await fetchJobs();
+    const jobs = await allJobSummaries();
     for (const job of jobs) {
       const modified = job.created_at ? new Date(job.created_at) : new Date();
       for (const locale of LOCALES) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CATEGORY_ORDER, categoryLabel, languageLabel, text } from "../lib/copy";
+import { jobsListParams } from "../lib/api";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
 import { useMediaQuery } from "../lib/use-media-query";
 import { JobCard } from "./job-card";
@@ -9,67 +10,8 @@ import { Shell } from "./shell";
 import { PageHeader } from "./page-header";
 
 const PAGE_SIZE = 20;
-const AZ = /[əğıöüşçƏĞİÖÜŞÇ]/;
-const RU = /[а-яёА-ЯЁ]/;
-
-function stackOf(job) {
-  return Array.isArray(job.tech_stack) ? job.tech_stack : [];
-}
-
-function languageOf(job) {
-  if (job.language) return job.language;
-  const sample = String(job.title || "");
-  if (AZ.test(sample)) return "az";
-  if (RU.test(sample)) return "ru";
-  return "en";
-}
-
-function ageDays(job) {
-  const time = Date.parse(job.created_at || "");
-  if (Number.isNaN(time)) return null;
-  return (Date.now() - time) / 86400000;
-}
-
-/** First number in free-text salary; currency words/symbols ignored. null if none. */
-function parseSalaryAmount(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return null;
-  const cleaned = raw
-    .replace(/[₼$€£¥₽]/g, " ")
-    .replace(/\b(azn|usd|eur|gbp|try|rub|rur|manat|dollar|dollars|euro|euros|руб(?:ль|ля|лей)?|доллар(?:а|ов|ы)?|евро|манат)\b/gi, " ");
-  const match = cleaned.match(/\d{1,3}(?:[.,\s]\d{3})+|\d+/);
-  if (!match) return null;
-  const token = match[0];
-  const digits = /^\d{1,3}([.,\s]\d{3})+$/.test(token)
-    ? token.replace(/[.,\s]/g, "")
-    : token.match(/\d+/)[0];
-  const num = Number(digits);
-  return Number.isFinite(num) ? num : null;
-}
-
-function normalizeSalaryText(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/ё/g, "е")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/ə/g, "e")
-    .replace(/ı/g, "i")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function isNegotiableSalary(value) {
-  const normalized = normalizeSalaryText(value);
-  return [
-    /\bmuqavile\s+ile\b/u,
-    /\brazilasma\b/u,
-    /\bnegotiable\b/u,
-    /\bby[\s-]+agreement\b/u,
-    /(?:^|[^\p{L}])договорная(?:$|[^\p{L}])/u,
-    /(?:^|[^\p{L}])по\s+договоренности(?:$|[^\p{L}])/u,
-  ].some((pattern) => pattern.test(normalized));
-}
+const TEXT_DEBOUNCE_MS = 300;
+const EMPTY_FACETS = { languages: [], categories: [], stacks: [] };
 
 function FilterIcon({ name }) {
   const props = {
@@ -198,7 +140,15 @@ function GroupLabel({ icon, children }) {
   );
 }
 
-export function Home({ locale, jobs, error }) {
+export function Home({
+  locale,
+  jobs = [],
+  total = 0,
+  catalogTotal = 0,
+  pages = 1,
+  facets = EMPTY_FACETS,
+  error = false,
+}) {
   const t = text(locale);
   const [query, setQuery] = useState("");
   const [company, setCompany] = useState("");
@@ -213,6 +163,13 @@ export function Home({ locale, jobs, error }) {
   const [salaryMin, setSalaryMin] = useState("");
   const [salaryMax, setSalaryMax] = useState("");
   const [page, setPage] = useState(1);
+  const [items, setItems] = useState(jobs);
+  const [resultTotal, setResultTotal] = useState(total);
+  const [resultPages, setResultPages] = useState(Math.max(1, pages));
+  const [catalogCount, setCatalogCount] = useState(catalogTotal || total);
+  const [facetData, setFacetData] = useState(facets?.languages ? facets : EMPTY_FACETS);
+  const [loadError, setLoadError] = useState(Boolean(error));
+  const [loading, setLoading] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const compact = useMediaQuery("(max-width: 900px)");
   const drawerOpen = compact && filtersOpen;
@@ -220,98 +177,124 @@ export function Home({ locale, jobs, error }) {
   const toggleRef = useRef(null);
   const closeRef = useRef(null);
   const resultsRef = useRef(null);
+  const skipFirstFetch = useRef(true);
+  const prevTextKey = useRef(`${query}|${company}|${salaryMin}|${salaryMax}`);
+  const prevFilterKey = useRef("");
 
-  const languageOptions = useMemo(() => {
-    const order = ["az", "en", "ru", "tr", "es", "uk", "de", "fr", "pt"];
-    const codes = new Set(jobs.map((job) => languageOf(job)).filter(Boolean));
-    return Array.from(codes).sort((a, b) => {
-      const ai = order.indexOf(a);
-      const bi = order.indexOf(b);
-      return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi) || (a < b ? -1 : a > b ? 1 : 0);
-    });
-  }, [jobs]);
-  const techOptions = useMemo(() => {
-    const counts = new Map();
-    for (const job of jobs) {
-      for (const name of stackOf(job)) counts.set(name, (counts.get(name) || 0) + 1);
-    }
-    const q = techQuery.trim().toLowerCase();
-    return Array.from(counts.entries())
-      .filter(([name]) => !q || name.toLowerCase().includes(q))
-      .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
-      .map(([name, total]) => ({ name, total }));
-  }, [jobs, techQuery]);
+  const filterKey = useMemo(
+    () =>
+      JSON.stringify({
+        query,
+        company,
+        languages,
+        remote,
+        relocation,
+        stacks,
+        categories,
+        when,
+        sort,
+        salaryMin,
+        salaryMax,
+      }),
+    [query, company, languages, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax],
+  );
+
+  const languageOptions = useMemo(
+    () => (Array.isArray(facetData.languages) ? facetData.languages : []).map((item) => item.code).filter(Boolean),
+    [facetData],
+  );
   const categoryOptions = useMemo(() => {
-    const counts = new Map();
-    for (const job of jobs) {
-      if (job.category) counts.set(job.category, (counts.get(job.category) || 0) + 1);
-    }
+    const list = Array.isArray(facetData.categories) ? facetData.categories : [];
     const rank = (name) => {
       const index = CATEGORY_ORDER.indexOf(name);
       return index < 0 ? 99 : index;
     };
-    return Array.from(counts.entries())
-      .sort((a, b) => rank(a[0]) - rank(b[0]))
-      .map(([name, total]) => ({ name, total }));
-  }, [jobs]);
+    return [...list].sort((a, b) => rank(a.name) - rank(b.name));
+  }, [facetData]);
+  const techOptions = useMemo(() => {
+    const list = Array.isArray(facetData.stacks) ? facetData.stacks : [];
+    const q = techQuery.trim().toLowerCase();
+    return list.filter((item) => !q || String(item.name || "").toLowerCase().includes(q));
+  }, [facetData, techQuery]);
+
   function toggle(list, setList, value) {
     setList(list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
   }
 
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const companyQuery = company.trim().toLowerCase();
-    const filtered = jobs.filter((job) => {
-      if (languages.length && !languages.includes(languageOf(job))) return false;
-      if (remote && !(job.remote || job.job_type === "uzaqdan")) return false;
-      if (relocation && !job.relocation) return false;
-      if (categories.length && !categories.includes(job.category)) return false;
-      if (stacks.length) {
-        const own = stackOf(job);
-        if (!stacks.some((name) => own.includes(name))) return false;
-      }
-      const days = ageDays(job);
-      if (when === "today" && (days === null || days >= 1)) return false;
-      if (when === "week" && (days === null || days >= 7)) return false;
-      const minRaw = salaryMin.trim();
-      const maxRaw = salaryMax.trim();
-      const minBound = minRaw === "" ? null : Number(minRaw);
-      const maxBound = maxRaw === "" ? null : Number(maxRaw);
-      const hasMin = minBound !== null && Number.isFinite(minBound);
-      const hasMax = maxBound !== null && Number.isFinite(maxBound);
-      if (hasMin || hasMax) {
-        const amount = parseSalaryAmount(job.salary);
-        if (amount === null && !isNegotiableSalary(job.salary)) return false;
-        if (amount !== null) {
-          if (hasMin && amount < minBound) return false;
-          if (hasMax && amount > maxBound) return false;
-        }
-      }
-      if (companyQuery && !(job.company || "").toLowerCase().includes(companyQuery)) return false;
-      if (!q) return true;
-      const haystack = `${job.title} ${job.company}`;
-      return haystack.toLowerCase().includes(q);
-    });
-    const sorted = [...filtered];
-    sorted.sort((a, b) => {
-      if (sort === "title") return a.title.localeCompare(b.title, t.lang);
-      const at = Date.parse(a.created_at || "") || 0;
-      const bt = Date.parse(b.created_at || "") || 0;
-      return sort === "oldest" ? at - bt : bt - at;
-    });
-    return sorted;
-  }, [jobs, query, company, languages, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax, t.lang]);
-
-  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageItems = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return visible.slice(start, start + PAGE_SIZE);
-  }, [visible, currentPage]);
-
   useEffect(() => {
-    setPage(1);
-  }, [query, company, languages, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax]);
+    if (skipFirstFetch.current) {
+      skipFirstFetch.current = false;
+      prevFilterKey.current = filterKey;
+      prevTextKey.current = `${query}|${company}|${salaryMin}|${salaryMax}`;
+      return undefined;
+    }
+    if (prevFilterKey.current !== filterKey) {
+      prevFilterKey.current = filterKey;
+      if (page !== 1) {
+        setPage(1);
+        return undefined;
+      }
+    }
+    const textKey = `${query}|${company}|${salaryMin}|${salaryMax}`;
+    const debounceMs = textKey !== prevTextKey.current ? TEXT_DEBOUNCE_MS : 0;
+    prevTextKey.current = textKey;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      const params = jobsListParams({
+        page,
+        perPage: PAGE_SIZE,
+        q: query,
+        company,
+        remote,
+        relocation,
+        when,
+        sort,
+        languages,
+        categories,
+        stacks,
+        salaryMin,
+        salaryMax,
+      });
+      setLoading(true);
+      fetch(`/api/jobs?${params.toString()}`, {
+        cache: "no-store",
+        signal: controller.signal,
+      })
+        .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+        .then(({ ok, data }) => {
+          if (!ok) throw new Error("jobs");
+          setItems(Array.isArray(data.items) ? data.items : []);
+          setResultTotal(Number(data.total) || 0);
+          setResultPages(Math.max(1, Number(data.pages) || 1));
+          setCatalogCount(Number(data.catalog_total) || 0);
+          if (data.facets && typeof data.facets === "object") setFacetData(data.facets);
+          setLoadError(false);
+        })
+        .catch((err) => {
+          if (err?.name === "AbortError") return;
+          setLoadError(true);
+        })
+        .finally(() => setLoading(false));
+    }, debounceMs);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [
+    page,
+    filterKey,
+    query,
+    company,
+    languages,
+    remote,
+    relocation,
+    stacks,
+    categories,
+    when,
+    sort,
+    salaryMin,
+    salaryMax,
+  ]);
 
   function clear() {
     setQuery("");
@@ -339,13 +322,15 @@ export function Home({ locale, jobs, error }) {
     (when !== "any" ? 1 : 0) +
     (salaryMin.trim() || salaryMax.trim() ? 1 : 0);
 
+  const currentPage = Math.min(page, resultPages);
+
   useEffect(() => {
     if (!compact) setFiltersOpen(false);
   }, [compact]);
 
   useEffect(() => {
     if (!drawerOpen) return undefined;
-    const toggle = toggleRef.current;
+    const toggleBtn = toggleRef.current;
     const unlock = lockBodyScroll();
     closeRef.current?.focus();
     function onKey(event) {
@@ -360,7 +345,7 @@ export function Home({ locale, jobs, error }) {
     return () => {
       document.removeEventListener("keydown", onKey);
       unlock();
-      toggle?.focus({ preventScroll: true });
+      toggleBtn?.focus({ preventScroll: true });
     };
   }, [drawerOpen]);
 
@@ -373,7 +358,7 @@ export function Home({ locale, jobs, error }) {
   }
 
   function goToPage(next) {
-    const clamped = Math.max(1, Math.min(totalPages, next));
+    const clamped = Math.max(1, Math.min(resultPages, next));
     setPage(clamped);
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -383,7 +368,7 @@ export function Home({ locale, jobs, error }) {
   return (
     <Shell locale={locale} mode="browse">
       <div className="home">
-      <PageHeader title={t.heading} count={t.count(jobs.length)} lede={t.lede}>
+      <PageHeader title={t.heading} count={t.count(catalogCount)} lede={t.lede}>
         <form className="hero-search" role="search" onSubmit={(event) => event.preventDefault()}>
           <label className="visually-hidden" htmlFor="job-search">{t.search}</label>
           <div className="hero-search-bar">
@@ -399,11 +384,11 @@ export function Home({ locale, jobs, error }) {
           </div>
         </form>
       </PageHeader>
-      {error ? <p className="note">{t.loadError}</p> : null}
+      {loadError ? <p className="note">{t.loadError}</p> : null}
       <div className="board">
         <section className="results" ref={resultsRef}>
           <div className="results-bar">
-            <p className="count">{t.count(visible.length)}</p>
+            <p className="count">{loading ? t.count(resultTotal) : t.count(resultTotal)}</p>
             <button
               ref={toggleRef}
               type="button"
@@ -423,27 +408,27 @@ export function Home({ locale, jobs, error }) {
               ) : null}
             </button>
           </div>
-          {visible.length === 0 && !error ? <p className="job-empty">{t.empty}</p> : null}
+          {resultTotal === 0 && !loadError ? <p className="job-empty">{t.empty}</p> : null}
           <div className="job-list">
-            {pageItems.map((job) => (
+            {items.map((job) => (
               <JobCard key={job.id} locale={locale} job={job} />
             ))}
           </div>
-          {visible.length > PAGE_SIZE ? (
-            <nav className="pager" aria-label={t.pageOf(currentPage, totalPages)}>
+          {resultTotal > PAGE_SIZE ? (
+            <nav className="pager" aria-label={t.pageOf(currentPage, resultPages)}>
               <button
                 type="button"
                 className="pager-btn"
-                disabled={currentPage <= 1}
+                disabled={currentPage <= 1 || loading}
                 onClick={() => goToPage(currentPage - 1)}
               >
                 {t.pagePrev}
               </button>
-              <span className="pager-status">{t.pageOf(currentPage, totalPages)}</span>
+              <span className="pager-status">{t.pageOf(currentPage, resultPages)}</span>
               <button
                 type="button"
                 className="pager-btn"
-                disabled={currentPage >= totalPages}
+                disabled={currentPage >= resultPages || loading}
                 onClick={() => goToPage(currentPage + 1)}
               >
                 {t.pageNext}
@@ -528,10 +513,10 @@ export function Home({ locale, jobs, error }) {
                 {t.categoryFilter}
               </legend>
               <div className="checks scroll-set">
-                {categoryOptions.map(({ name, total }) => (
+                {categoryOptions.map(({ name, total: count }) => (
                   <label key={name} className="check">
                     <input type="checkbox" checked={categories.includes(name)} onChange={() => toggle(categories, setCategories, name)} />
-                    <span>{categoryLabel(locale, name)} <span className="check-count">{total}</span></span>
+                    <span>{categoryLabel(locale, name)} <span className="check-count">{count}</span></span>
                   </label>
                 ))}
               </div>
@@ -544,10 +529,10 @@ export function Home({ locale, jobs, error }) {
             </label>
             {techOptions.length ? (
               <div className="checks scroll-set">
-                {techOptions.map(({ name, total }) => (
+                {techOptions.map(({ name, total: count }) => (
                   <label key={name} className="check">
                     <input type="checkbox" checked={stacks.includes(name)} onChange={() => toggle(stacks, setStacks, name)} />
-                    <span>{name} <span className="check-count">{total}</span></span>
+                    <span>{name} <span className="check-count">{count}</span></span>
                   </label>
                 ))}
               </div>
@@ -588,7 +573,7 @@ export function Home({ locale, jobs, error }) {
               <button type="button" className="btn" onClick={clear}>{t.filtersClear}</button>
               <button type="button" className="btn primary" onClick={applyFilters}>
                 {t.filtersApply}{" "}
-                <span className="filter-actions-count">({t.count(visible.length)})</span>
+                <span className="filter-actions-count">({t.count(resultTotal)})</span>
               </button>
             </div>
           ) : null}

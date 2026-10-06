@@ -17,6 +17,7 @@ import json
 import os
 import re
 import sqlite3
+import unicodedata
 from pathlib import Path
 
 from app.apply_form import parse_stored
@@ -76,11 +77,15 @@ _LIST_SELECT_CORE = """
     ) AS source_homepage
 """
 
-_LIST_FROM_WHERE = """
+_PUBLISHED_WHERE = """
 FROM jobs j
 WHERE j.status = 'published'
   AND COALESCE(j.hidden, 0) = 0
   AND (j.merged_into IS NULL OR j.merged_into = 0)
+"""
+
+_LIST_FROM_WHERE = f"""
+{_PUBLISHED_WHERE}
 ORDER BY j.id
 """
 
@@ -100,6 +105,20 @@ SELECT
 {_LIST_FROM_WHERE}
 """
 
+_FACET_SQL = f"""
+SELECT
+    j.title,
+    COALESCE(j.language, '') AS language,
+    COALESCE(j.category, '') AS category,
+    COALESCE(j.tech_stack, '') AS tech_stack
+{_PUBLISHED_WHERE}
+"""
+
+SORTS = ("newest", "oldest", "title")
+WHENS = ("any", "today", "week")
+DEFAULT_PER_PAGE = 20
+MAX_PER_PAGE = 60
+_LANG_FACET_ORDER = ("az", "en", "ru", "tr", "es", "uk", "de", "fr", "pt")
 
 _NOISE = re.compile(
     r"(?im)^(?:application url|apply url)\s*$"
@@ -274,6 +293,317 @@ def list_jobs() -> list[dict]:
     finally:
         conn.close()
     return [_public(row, counts, full=False) for row in rows]
+
+
+def _parse_salary_amount(value: object) -> int | None:
+    """First number in free-text salary; currency words/symbols ignored."""
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    cleaned = re.sub(r"[₼$€£¥₽]", " ", raw)
+    cleaned = re.sub(
+        r"(?i)\b(azn|usd|eur|gbp|try|rub|rur|manat|dollar|dollars|euro|euros|"
+        r"руб(?:ль|ля|лей)?|доллар(?:а|ов|ы)?|евро|манат)\b",
+        " ",
+        cleaned,
+    )
+    match = re.search(r"\d{1,3}(?:[.,\s]\d{3})+|\d+", cleaned)
+    if not match:
+        return None
+    token = match.group(0)
+    if re.fullmatch(r"\d{1,3}([.,\s]\d{3})+", token):
+        digits = re.sub(r"[.,\s]", "", token)
+    else:
+        digits = re.search(r"\d+", token).group(0)
+    try:
+        return int(digits)
+    except ValueError:
+        return None
+
+
+def _normalize_salary_text(value: object) -> str:
+    text = str(value or "").lower().replace("ё", "е")
+    text = unicodedata.normalize("NFD", text)
+    text = re.sub(r"[\u0300-\u036f]", "", text)
+    text = text.replace("ə", "e").replace("ı", "i")
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _is_negotiable_salary(value: object) -> bool:
+    normalized = _normalize_salary_text(value)
+    patterns = (
+        r"\bmuqavile\s+ile\b",
+        r"\brazilasma\b",
+        r"\bnegotiable\b",
+        r"\bby[\s-]+agreement\b",
+        r"(?:^|[^\w])договорная(?:$|[^\w])",
+        r"(?:^|[^\w])по\s+договоренности(?:$|[^\w])",
+    )
+    return any(re.search(p, normalized, re.IGNORECASE | re.UNICODE) for p in patterns)
+
+
+def _tokens(values: list[str] | str | None) -> list[str]:
+    if values is None:
+        return []
+    if isinstance(values, str):
+        parts = values.split(",")
+    else:
+        parts = []
+        for value in values:
+            parts.extend(str(value or "").split(","))
+    out: list[str] = []
+    for part in parts:
+        name = part.strip()
+        if name and name not in out:
+            out.append(name)
+    return out
+
+
+def _row_language(row) -> str:
+    title = _plain(row["title"] or "")
+    stored = (row["language"] or "").strip().lower()
+    if stored in {"az", "en", "ru"}:
+        return stored
+    return listing_language(title, "")
+
+
+def _salary_matches(salary: str, salary_min: int | None, salary_max: int | None) -> bool:
+    if salary_min is None and salary_max is None:
+        return True
+    amount = _parse_salary_amount(salary)
+    if amount is None:
+        return _is_negotiable_salary(salary)
+    if salary_min is not None and amount < salary_min:
+        return False
+    if salary_max is not None and amount > salary_max:
+        return False
+    return True
+
+
+def _build_sql_filters(
+    *,
+    q: str,
+    company: str,
+    remote: bool,
+    relocation: bool,
+    categories: list[str],
+) -> tuple[str, list]:
+    clauses: list[str] = []
+    params: list = []
+    needle = q.strip().lower()
+    if needle:
+        like = f"%{needle}%"
+        clauses.append("(LOWER(j.title) LIKE ? OR LOWER(j.company) LIKE ?)")
+        params.extend([like, like])
+    company_q = company.strip().lower()
+    if company_q:
+        clauses.append("LOWER(j.company) LIKE ?")
+        params.append(f"%{company_q}%")
+    if remote:
+        clauses.append("(COALESCE(j.remote, 0) = 1 OR LOWER(COALESCE(j.job_type, '')) = 'uzaqdan')")
+    if relocation:
+        clauses.append("COALESCE(j.relocation, 0) = 1")
+    valid_cats = [c for c in categories if c in CATEGORIES]
+    if valid_cats:
+        placeholders = ",".join("?" * len(valid_cats))
+        clauses.append(f"j.category IN ({placeholders})")
+        params.extend(valid_cats)
+    where = _PUBLISHED_WHERE
+    if clauses:
+        where = where + " AND " + " AND ".join(clauses)
+    return where, params
+
+
+def _age_days(created_at: object) -> float | None:
+    from datetime import datetime, timezone
+
+    raw = str(created_at or "").strip()
+    if not raw:
+        return None
+    try:
+        # Accept trailing Z and offset-less values.
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - parsed.astimezone(timezone.utc)).total_seconds() / 86400.0
+
+
+def _when_matches(created_at: object, when: str) -> bool:
+    if when == "any":
+        return True
+    days = _age_days(created_at)
+    if days is None:
+        return False
+    if when == "today":
+        return days < 1
+    if when == "week":
+        return days < 7
+    return True
+
+
+def _order_sql(sort: str) -> str:
+    if sort == "oldest":
+        return "ORDER BY j.created_at ASC, j.id ASC"
+    if sort == "title":
+        return "ORDER BY LOWER(j.title) ASC, j.id ASC"
+    return "ORDER BY j.created_at DESC, j.id DESC"
+
+
+def _page_counts(conn, job_ids: list[int]) -> dict[int, int]:
+    if not job_ids:
+        return {}
+    placeholders = ",".join("?" * len(job_ids))
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT a.job_id AS job_id, COUNT(*) AS total
+            FROM applications a
+            WHERE a.job_id IN ({placeholders})
+              AND LOWER(COALESCE(a.status, '')) NOT IN ('withdrawn', 'deleted')
+            GROUP BY a.job_id
+            """,
+            job_ids,
+        ).fetchall()
+    except Exception:
+        return {}
+    return {int(row["job_id"]): int(row["total"] or 0) for row in rows}
+
+
+def _build_facets(conn) -> dict:
+    from collections import Counter
+
+    lang_counts: Counter[str] = Counter()
+    cat_counts: Counter[str] = Counter()
+    stack_counts: Counter[str] = Counter()
+    for row in conn.execute(_FACET_SQL).fetchall():
+        lang_counts[_row_language(row)] += 1
+        cat = job_category(row["category"])
+        if cat:
+            cat_counts[cat] += 1
+        for name in tech_stack(row["tech_stack"]):
+            stack_counts[name] += 1
+
+    languages = sorted(
+        [{"code": code, "total": total} for code, total in lang_counts.items()],
+        key=lambda item: (
+            _LANG_FACET_ORDER.index(item["code"]) if item["code"] in _LANG_FACET_ORDER else 99,
+            item["code"],
+        ),
+    )
+    categories = sorted(
+        [{"name": name, "total": total} for name, total in cat_counts.items()],
+        key=lambda item: (
+            CATEGORIES.index(item["name"]) if item["name"] in CATEGORIES else 99,
+            item["name"],
+        ),
+    )
+    stacks = sorted(
+        [{"name": name, "total": total} for name, total in stack_counts.items()],
+        key=lambda item: (-item["total"], item["name"]),
+    )
+    return {"languages": languages, "categories": categories, "stacks": stacks}
+
+
+def query_jobs(
+    *,
+    page: int = 1,
+    per_page: int = DEFAULT_PER_PAGE,
+    q: str = "",
+    company: str = "",
+    remote: bool = False,
+    relocation: bool = False,
+    when: str = "any",
+    sort: str = "newest",
+    languages: list[str] | str | None = None,
+    categories: list[str] | str | None = None,
+    stacks: list[str] | str | None = None,
+    salary_min: int | None = None,
+    salary_max: int | None = None,
+) -> dict:
+    """Paginated public job list with optional filters and catalog facets."""
+    import math
+
+    page = max(1, int(page or 1))
+    per_page = max(1, min(MAX_PER_PAGE, int(per_page or DEFAULT_PER_PAGE)))
+    sort = sort if sort in SORTS else "newest"
+    when = when if when in WHENS else "any"
+    lang_filter = [c.strip().lower() for c in _tokens(languages) if c.strip()]
+    cat_filter = _tokens(categories)
+    stack_filter = _tokens(stacks)
+    needs_python = bool(
+        lang_filter
+        or stack_filter
+        or salary_min is not None
+        or salary_max is not None
+        or when in {"today", "week"}
+    )
+
+    where, params = _build_sql_filters(
+        q=q,
+        company=company,
+        remote=remote,
+        relocation=relocation,
+        categories=cat_filter,
+    )
+    order = _order_sql(sort)
+
+    conn = _connect()
+    try:
+        catalog_row = conn.execute(f"SELECT COUNT(*) AS total {_PUBLISHED_WHERE}").fetchone()
+        catalog_total = int(catalog_row["total"] or 0)
+        facets = _build_facets(conn)
+
+        if needs_python:
+            rows = conn.execute(
+                f"SELECT {_LIST_SELECT_CORE} {where} {order}",
+                params,
+            ).fetchall()
+            matched = []
+            for row in rows:
+                if not _when_matches(row["created_at"], when):
+                    continue
+                if lang_filter and _row_language(row) not in lang_filter:
+                    continue
+                if stack_filter:
+                    own = tech_stack(row["tech_stack"])
+                    if not any(name in own for name in stack_filter):
+                        continue
+                salary = _plain(row["salary"] or "")
+                if not _salary_matches(salary, salary_min, salary_max):
+                    continue
+                matched.append(row)
+            total = len(matched)
+            pages = max(1, math.ceil(total / per_page)) if total else 1
+            current = min(page, pages)
+            start = (current - 1) * per_page
+            page_rows = matched[start : start + per_page]
+        else:
+            count_row = conn.execute(f"SELECT COUNT(*) AS total {where}", params).fetchone()
+            total = int(count_row["total"] or 0)
+            pages = max(1, math.ceil(total / per_page)) if total else 1
+            current = min(page, pages)
+            offset = (current - 1) * per_page
+            page_rows = conn.execute(
+                f"SELECT {_LIST_SELECT_CORE} {where} {order} LIMIT ? OFFSET ?",
+                [*params, per_page, offset],
+            ).fetchall()
+
+        ids = [int(row["id"]) for row in page_rows]
+        counts = _page_counts(conn, ids)
+    finally:
+        conn.close()
+
+    return {
+        "items": [_public(row, counts, full=False) for row in page_rows],
+        "total": total,
+        "page": current,
+        "per_page": per_page,
+        "pages": pages,
+        "catalog_total": catalog_total,
+        "facets": facets,
+    }
 
 
 def get_job(job_id: int) -> dict | None:

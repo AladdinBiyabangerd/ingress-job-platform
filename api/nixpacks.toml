@@ -2,4 +2,4 @@
 # This file is only a fallback when the service builder is Nixpacks instead.
 
 [start]
-cmd = "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8010}"
+cmd = "uvicorn app.main:app --host :: --port ${PORT:-8010}"

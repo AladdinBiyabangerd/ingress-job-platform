@@ -2,12 +2,21 @@
 
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app.account import VerifiedAccess, current_user
 from app.applications import create_application
 from app.cabinet_store import CabinetError
-from app.sqlite_jobs import apply_target, get_job, list_jobs, published_source_url
+from app.sqlite_jobs import (
+    DEFAULT_PER_PAGE,
+    MAX_PER_PAGE,
+    SORTS,
+    WHENS,
+    apply_target,
+    get_job,
+    published_source_url,
+    query_jobs,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["jobs"])
 
@@ -22,9 +31,41 @@ def _candidate(user: VerifiedAccess) -> None:
         raise HTTPException(status_code=403, detail=_CANDIDATE)
 
 
+def _bool_flag(value: bool | None) -> bool:
+    return bool(value)
+
+
 @router.get("/jobs")
-def read_jobs() -> dict:
-    return {"items": list_jobs()}
+def read_jobs(
+    page: int = Query(1, ge=1, le=10000),
+    per_page: int = Query(DEFAULT_PER_PAGE, ge=1, le=MAX_PER_PAGE),
+    q: str = Query("", max_length=120),
+    company: str = Query("", max_length=120),
+    remote: bool = Query(False),
+    relocation: bool = Query(False),
+    when: str = Query("any"),
+    sort: str = Query("newest"),
+    language: list[str] | None = Query(None),
+    category: list[str] | None = Query(None),
+    stack: list[str] | None = Query(None),
+    salary_min: int | None = Query(None, ge=0),
+    salary_max: int | None = Query(None, ge=0),
+) -> dict:
+    return query_jobs(
+        page=page,
+        per_page=per_page,
+        q=q.strip(),
+        company=company.strip(),
+        remote=_bool_flag(remote),
+        relocation=_bool_flag(relocation),
+        when=when if when in WHENS else "any",
+        sort=sort if sort in SORTS else "newest",
+        languages=language,
+        categories=category,
+        stacks=stack,
+        salary_min=salary_min,
+        salary_max=salary_max,
+    )
 
 
 @router.get("/jobs/{job_id}")

@@ -26,4 +26,6 @@ RUN pip install \
 
 EXPOSE 8010
 
-CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8010}"]
+# :: = all interfaces (IPv4+IPv6). Required for Railway private networking on
+# legacy IPv6-only environments; 0.0.0.0 alone is unreachable there.
+CMD ["sh", "-c", "exec uvicorn app.main:app --host :: --port ${PORT:-8010}"]

@@ -32,7 +32,7 @@ compose.yaml
 
 ## Domains
 
-- Public job list / search / detail (guest: no original URL)
+- Public job list / search / detail (guest: no original URL); `GET /api/v1/jobs` is paginated (`page`/`per_page`, filters, `facets`/`catalog_total`); Home SSR loads page 1, client refetches via `/api/jobs` BFF
 - Company jobs (moderation: pending → published)
 - Candidate applications + CV upload
 - Staff moderation (manual role): approve/reject/edit, crawled job tools
