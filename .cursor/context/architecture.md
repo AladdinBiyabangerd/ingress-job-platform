@@ -37,14 +37,14 @@ compose.yaml
 - Skill trends (`GET /api/v1/trends`): current+prior skill/job counts in one scan each; job denom uses `created_at` range (not `substr`) for `jobs_public_list`; trend DDL ensure is process-cached (no PRAGMA/ALTER per request)
 - Company jobs (moderation: pending → published)
 - Candidate applications + CV upload
-- Staff moderation (manual role): approve/reject/edit, crawled job tools
+- Staff moderation (manual role): approve/reject/edit, crawled job tools; AI flow toggles (`GET/PUT /api/v1/admin/ai-flags`, jobs-DB `ai_feature_flags`) so staff can turn CV/tidy/embed/rerank/why/digest on or off without deleting `OPENAI_API_KEY`
 - Aggregation: remote/relocation IT sources (API/RSS/ATS); Jooble/Reed gated by API keys + monthly budgets
 - CV parse: API enqueues `parse_cv_queue` then drains in-process (`app.cv_parse_jobs` background thread → `worker.cv_parse` + OCR + AI #1 if confidence < 0.55 → jobs-DB `candidate_profile`); hourly crawl worker may drain stranded rows; accounts.sqlite `candidate_profiles` remains contact-only
 - `ai_gateway` (worker package, also loaded by API): PII redact, `ai_cache`, daily call budget, cost log, OTEL spans; `complete_json` (CV #1, digest #4, match why) + `embed()` (OpenAI embeddings for AI #2)
 - Consents (`consent` in jobs DB; `GET/PUT /api/v1/consents`); copy from `docs/cv-ai/consent-copy-v1.json`; visibility on `candidate_profile`
 - CV profile review: `GET/PUT /api/v1/profile` + `/profile/review`; `profile_edit_log`; status draft→confirmed
 - Role suggestions: `GET /api/v1/me/roles` (signature skill weights × years_factor; matching consent; BFF `/api/auth/me/roles`)
-- Job matches: `GET /api/v1/me/matches` structured score (skills/seniority/location/language/freshness); AI #2 re-rank on Postgres+pgvector (`embeddings` table, `0.7×struct + 0.3×cosine`, top-5 LLM why); off on SQLite / missing vectors (`ai_rerank: false`); flags `AI_RERANK_ENABLED`, `AI_MATCH_WHY_ENABLED`; feedback `POST .../matches/{id}/feedback` → `match_feedback`
+- Job matches: `GET /api/v1/me/matches` structured score (skills/seniority/location/language/freshness); AI #2 re-rank on Postgres+pgvector (`embeddings` table, `0.7×struct + 0.3×cosine`, top-5 LLM why); off on SQLite / missing vectors (`ai_rerank: false`); flags `AI_RERANK_ENABLED`, `AI_MATCH_WHY_ENABLED` plus staff DB toggles; feedback `POST .../matches/{id}/feedback` → `match_feedback`
 - Skill gap: `GET /api/v1/me/skill-gap?role=` from `role_skill_weight`; share/growth from `skill_trend_daily` when present; Academy course links from `skill_dictionary.academy_course_ids` (map → seed); Academy career-path from `role_taxonomy.academy_career_path_id` (map `docs/cv-ai/academy-career-path-role-map-v1.json` → worker seed; base `/career-paths/`)
 - Skill trends: worker `skill_trends.refresh_skill_trends` → `skill_trend_daily` + `skill_pair_daily`; public `GET /api/v1/trends`; UI `/trends`
 - Trend salary signals: worker `salary_parse` annualizes free-text `jobs.salary` (currency+period required, no FX) into `salary_median/currency/n/low/high`; API shows `salary` on trends when `n >= 5`

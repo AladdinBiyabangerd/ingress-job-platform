@@ -97,7 +97,7 @@ that file is applied; set them yourself only if you use another bucket):
 | `OIDC_TOKEN_URL` | Same name the API already uses. |
 | `OIDC_REDIRECT_URIS` | Include the deployed web callback. |
 | `OPENAI_API_KEY` | Optional. Enables `ai_gateway` (CV AI #1, digest intro, embeddings, match why). |
-| `AI_GATEWAY_ENABLED` | Optional. `0` forces AI off even when a key is set. |
+| `AI_GATEWAY_ENABLED` | Optional. `0` forces AI off even when a key is set. Staff can also toggle flows in Moderasiya without changing env. |
 | `AI_EMBEDDING_MODEL` | Optional. Default `text-embedding-3-small` (AI #2). |
 | `AI_RERANK_ENABLED` | Optional. Default follows gateway; `0` keeps structured-only matches. |
 | `AI_MATCH_WHY_ENABLED` | Optional. Default follows gateway; `0` skips LLM why sentences. |

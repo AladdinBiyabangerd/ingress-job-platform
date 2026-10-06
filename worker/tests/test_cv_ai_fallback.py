@@ -133,6 +133,18 @@ class AiFallbackTest(unittest.TestCase):
         self.assertEqual(out["parse_meta"]["ai_fallback"], "failed")
         self.assertEqual(out["contact"]["email"], rules["contact"]["email"])
 
+    def test_db_flag_off_skips_llm(self):
+        from worker.ai_flags import set_flags
+
+        rules = parse_text(LOW_TEXT)
+        set_flags(self.store.conn, {"cv_fallback": False}, updated_by="test")
+        env = {"CV_AI_FALLBACK_ENABLED": "1", "OPENAI_API_KEY": "sk-test", "AI_GATEWAY_ENABLED": "1"}
+        with patch.dict(os.environ, env, clear=False):
+            with patch("worker.cv_parse.ai_fallback.complete_json") as api:
+                out = maybe_ai_fallback(rules, LOW_TEXT, conn=self.store.conn)
+        api.assert_not_called()
+        self.assertEqual(out["parse_meta"]["ai_fallback"], "skipped")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -149,6 +149,7 @@ def _split_script(script: str) -> list[str]:
 # Composite / non-integer PKs — Postgres adapter must not append RETURNING id.
 _NO_ID_TABLES = {
     "ai_cache",
+    "ai_feature_flags",
     "ai_usage_daily",
     "api_usage",
     "embeddings",

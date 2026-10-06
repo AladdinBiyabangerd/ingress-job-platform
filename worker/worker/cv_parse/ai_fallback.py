@@ -14,7 +14,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from worker.ai_gateway import complete_json, enabled as gateway_enabled
+from worker.ai_flags import feature_on
+from worker.ai_gateway import complete_json
 from worker.techstack import find_stack
 
 LOW_CONFIDENCE = 0.55
@@ -115,14 +116,8 @@ _SCHEMA: dict[str, Any] = {
 }
 
 
-def fallback_enabled() -> bool:
-    raw = os.environ.get("CV_AI_FALLBACK_ENABLED", "").strip().lower()
-    if raw in {"0", "false", "no", "off"}:
-        return False
-    if raw in {"1", "true", "yes", "on"}:
-        return True
-    # Default on when gateway can run (key + AI_GATEWAY_ENABLED).
-    return gateway_enabled()
+def fallback_enabled(conn: sqlite3.Connection | None = None) -> bool:
+    return feature_on("cv_fallback", conn)
 
 
 def low_confidence_threshold() -> float:
@@ -157,7 +152,7 @@ def maybe_ai_fallback(
         return profile
     if not (text or "").strip():
         return profile
-    if not fallback_enabled():
+    if not fallback_enabled(conn):
         meta["ai_fallback"] = "skipped"
         meta["ai_error"] = "ai_disabled"
         return profile

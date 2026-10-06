@@ -107,6 +107,10 @@ def embed_profile(conn, *, user_id: str, profile: dict) -> bool:
     text = profile_embed_text(profile)
     if not text.strip():
         return False
+    from worker.ai_flags import feature_on
+
+    if not feature_on("embeddings", conn):
+        return False
     model = embedding_model()
     from worker.ai_gateway import embed
 
@@ -295,7 +299,11 @@ def embed_job(conn, job_id: int) -> bool:
     if _stored_hash(conn, entity_id=str(job_id), model=model) == ch:
         return True
 
+    from worker.ai_flags import feature_on
     from worker.ai_gateway import embed
+
+    if not feature_on("embeddings", conn):
+        return False
 
     result = embed(texts=[embed_text], purpose="embed_job", conn=conn)
     if not result.ok or not result.vectors:
@@ -337,8 +345,9 @@ def embed_stale_jobs(conn, *, limit: int = 40) -> dict[str, Any]:
     ).fetchall()
 
     from worker.ai_gateway import embed, enabled
+    from worker.ai_flags import feature_on
 
-    if not enabled():
+    if not feature_on("embeddings", conn) or not enabled(conn):
         return stats
 
     batch_texts: list[str] = []

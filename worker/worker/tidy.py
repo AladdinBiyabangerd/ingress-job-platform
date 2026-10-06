@@ -197,6 +197,10 @@ def tidy_pending(conn: sqlite3.Connection, limit: int = PER_RUN) -> tuple[int, i
     _tables(conn)
     if not key:
         return (0, 0)
+    from worker.ai_flags import feature_on
+
+    if not feature_on("job_tidy", conn):
+        return (0, 0)
     saved = _collect(conn, key)
     try:
         queued = _submit(conn, key, limit)

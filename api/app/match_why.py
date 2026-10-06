@@ -6,10 +6,10 @@ Only top-N results. Soft-fails to template explanation. Cached via ai_gateway
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
-from app.ai_gateway import complete_json, enabled as gateway_enabled
+from app.ai_flags import feature_on
+from app.ai_gateway import complete_json
 
 PURPOSE = "match_why"
 PROMPT_VERSION = "match-why-v1"
@@ -34,13 +34,8 @@ _SCHEMA: dict[str, Any] = {
 }
 
 
-def why_enabled() -> bool:
-    raw = os.environ.get("AI_MATCH_WHY_ENABLED", "").strip().lower()
-    if raw in {"0", "false", "no", "off"}:
-        return False
-    if raw in {"1", "true", "yes", "on"}:
-        return True
-    return gateway_enabled()
+def why_enabled(conn=None) -> bool:
+    return feature_on("match_why", conn)
 
 
 def _pick_locale(lang: str) -> str:
@@ -86,7 +81,7 @@ def append_why_sentences(
     top_n: int = DEFAULT_TOP,
 ) -> None:
     """Mutate matches[:top_n] explanations in place when AI succeeds."""
-    if not why_enabled() or not matches:
+    if not why_enabled(conn) or not matches:
         return
     n = max(0, min(int(top_n or DEFAULT_TOP), len(matches)))
     version = (profile_version or "v0")[:80]

@@ -76,6 +76,23 @@ class RerankFlagTests(unittest.TestCase):
         with patch.dict(os.environ, {"AI_RERANK_ENABLED": "0"}, clear=False):
             self.assertFalse(rerank_enabled())
 
+    def test_db_flag_off_with_env_on(self):
+        import sqlite3
+        import tempfile
+        from pathlib import Path
+
+        from app.ai_flags import set_flags
+
+        tmp = tempfile.TemporaryDirectory()
+        try:
+            conn = sqlite3.connect(Path(tmp.name) / "t.sqlite")
+            set_flags(conn, {"rerank": False}, updated_by="test")
+            with patch.dict(os.environ, {"AI_RERANK_ENABLED": "1"}, clear=False):
+                self.assertFalse(rerank_enabled(conn))
+            conn.close()
+        finally:
+            tmp.cleanup()
+
     def test_apply_noop_without_postgres(self):
         class FakeConn:
             def execute(self, *a, **k):

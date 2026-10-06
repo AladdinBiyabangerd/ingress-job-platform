@@ -69,6 +69,12 @@ class MergeIn(BaseModel):
     hide_id: int
 
 
+class AiFlagsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    flags: dict[str, bool]
+
+
 def require_staff(user: VerifiedAccess = Depends(current_user)) -> VerifiedAccess:
     if "job:staff" not in user.scopes:
         raise HTTPException(status_code=403, detail=_STAFF_ONLY)
@@ -248,3 +254,32 @@ def decide_application(
             reason=body.reason,
         )
     )
+
+
+@router.get("/ai-flags")
+def read_ai_flags(_user: VerifiedAccess = Depends(require_staff)) -> dict:
+    from app.ai_flags import effective_flags, key_configured
+    from app.cabinet_store import _LOCK, _connect
+
+    with _LOCK:
+        conn = _connect()
+        try:
+            return {"key_configured": key_configured(), "flags": effective_flags(conn)}
+        finally:
+            conn.close()
+
+
+@router.put("/ai-flags")
+def write_ai_flags(body: AiFlagsIn, user: VerifiedAccess = Depends(require_staff)) -> dict:
+    from app.ai_flags import FlagError, key_configured, set_flags
+    from app.cabinet_store import _LOCK, _connect
+
+    with _LOCK:
+        conn = _connect()
+        try:
+            flags = set_flags(conn, body.flags, updated_by=user.subject)
+        except FlagError as exc:
+            raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
+        finally:
+            conn.close()
+    return {"key_configured": key_configured(), "flags": flags}

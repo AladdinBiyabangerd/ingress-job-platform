@@ -77,14 +77,10 @@ class EmbedResult:
     meta: dict = field(default_factory=dict)
 
 
-def enabled() -> bool:
-    raw = os.environ.get("AI_GATEWAY_ENABLED", "").strip().lower()
-    if raw in {"0", "false", "no", "off"}:
-        return False
-    if raw in {"1", "true", "yes", "on"}:
-        return True
-    # Default: on when a provider key exists.
-    return bool(os.environ.get("OPENAI_API_KEY", "").strip())
+def enabled(conn: sqlite3.Connection | None = None) -> bool:
+    from worker.ai_flags import feature_on
+
+    return feature_on("gateway", conn)
 
 
 def model_name() -> str:
@@ -109,6 +105,9 @@ def ensure_ai_tables(conn: sqlite3.Connection | None) -> None:
     if conn is None:
         return
     conn.executescript(PROMPT_CACHE_SCHEMA)
+    from worker.ai_flags import ensure_flag_table
+
+    ensure_flag_table(conn)
 
 
 def complete_json(
@@ -128,7 +127,7 @@ def complete_json(
     prompt_version = (prompt_version or "v0")[:40]
     result = GatewayResult(ok=False, prompt_version=prompt_version, model=model_name())
 
-    if not enabled():
+    if not enabled(conn):
         result.error = "ai_disabled"
         return result
     key = os.environ.get("OPENAI_API_KEY", "").strip()
@@ -317,7 +316,7 @@ def embed(
     if not cleaned:
         result.error = "ai_empty_input"
         return result
-    if not enabled():
+    if not enabled(conn):
         result.error = "ai_disabled"
         return result
     key = os.environ.get("OPENAI_API_KEY", "").strip()

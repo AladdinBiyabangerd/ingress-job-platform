@@ -7,7 +7,6 @@ SQLite / missing vectors → structured only (ai_rerank false).
 
 from __future__ import annotations
 
-import os
 import re
 from datetime import datetime, timezone
 from typing import Any
@@ -109,19 +108,11 @@ def ensure_match_tables(conn) -> None:
     conn.executescript(FEEDBACK_SCHEMA)
 
 
-def rerank_enabled() -> bool:
+def rerank_enabled(conn=None) -> bool:
     """AI #2 flag. Default on when gateway can run; force off with AI_RERANK_ENABLED=0."""
-    raw = os.environ.get("AI_RERANK_ENABLED", "").strip().lower()
-    if raw in {"0", "false", "no", "off"}:
-        return False
-    if raw in {"1", "true", "yes", "on"}:
-        return True
-    try:
-        from app.ai_gateway import enabled
+    from app.ai_flags import feature_on
 
-        return bool(enabled())
-    except Exception:
-        return False
+    return feature_on("rerank", conn)
 
 
 def clamp_limit(value: int | None) -> int:
@@ -556,7 +547,7 @@ def _apply_semantic_rerank(
 
     Returns True when at least one item was re-ranked.
     """
-    if not pool or not rerank_enabled():
+    if not pool or not rerank_enabled(conn):
         return False
     try:
         from app.embeddings import (

@@ -6,10 +6,10 @@ keep the static locale intro.
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
-from app.ai_gateway import complete_json, enabled as gateway_enabled
+from app.ai_flags import feature_on
+from app.ai_gateway import complete_json
 from app.cv_profile import _profile_payload
 
 PURPOSE = "digest_intro"
@@ -35,14 +35,8 @@ _SCHEMA: dict[str, Any] = {
 }
 
 
-def intro_enabled() -> bool:
-    raw = os.environ.get("DIGEST_AI_INTRO_ENABLED", "").strip().lower()
-    if raw in {"0", "false", "no", "off"}:
-        return False
-    if raw in {"1", "true", "yes", "on"}:
-        return True
-    # Default on when gateway can run (key + AI_GATEWAY_ENABLED).
-    return gateway_enabled()
+def intro_enabled(conn=None) -> bool:
+    return feature_on("digest_intro", conn)
 
 
 def _pick_locale(lang: str) -> str:
@@ -125,7 +119,7 @@ def maybe_digest_intro(
     gap: str,
 ) -> tuple[str | None, str]:
     """Return (intro_or_None, status) where status is applied|skipped:<reason>."""
-    if not intro_enabled():
+    if not intro_enabled(conn):
         return None, "skipped:disabled"
     if not matches:
         return None, "skipped:empty"

@@ -321,6 +321,10 @@ def embed_and_store(
     text_s = (text or "").strip()
     if not text_s:
         return False
+    from app.ai_flags import feature_on
+
+    if not feature_on("embeddings", conn):
+        return False
     if not pgvector_available(conn):
         return False
     model = embedding_model()

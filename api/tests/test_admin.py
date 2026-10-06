@@ -1,5 +1,6 @@
 """Staff moderation: approve, reject, close, and edit without leaking source URLs."""
 
+import os
 import sqlite3
 import tempfile
 import unittest
@@ -344,6 +345,60 @@ class AdminTests(unittest.TestCase):
             self.assertEqual(original.json()["url"], body["source_url"])
 
 
+class AdminAiFlagTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = Path(self.tmp.name) / "jobs.sqlite"
+        self.path_patch = patch("app.sqlite_jobs.DB_PATH", self.db)
+        self.path_patch.start()
+        ensure_schema(create=True)
+        self.client = TestClient(app)
+
+    def tearDown(self):
+        self.path_patch.stop()
+        self.tmp.cleanup()
+
+    def _auth(self, scopes: str, subject: str):
+        return patch("app.account.verify_access_token", return_value=user(scopes, subject))
+
+    def test_employer_forbidden_and_staff_put(self):
+        with self._auth("job:employer", "ai-employer"):
+            denied = self.client.get(
+                "/api/v1/admin/ai-flags",
+                headers={"Authorization": "Bearer test"},
+            )
+            self.assertEqual(denied.status_code, 403)
+
+        env = {"OPENAI_API_KEY": "sk-test", "AI_GATEWAY_ENABLED": "1"}
+        with patch.dict(os.environ, env, clear=False):
+            with self._auth("job:staff", "ai-staff"):
+                headers = {"Authorization": "Bearer test"}
+                got = self.client.get("/api/v1/admin/ai-flags", headers=headers)
+                self.assertEqual(got.status_code, 200, got.text)
+                body = got.json()
+                self.assertTrue(body["key_configured"])
+                self.assertTrue(body["flags"]["gateway"])
+                self.assertTrue(body["flags"]["rerank"])
+
+                saved = self.client.put(
+                    "/api/v1/admin/ai-flags",
+                    headers=headers,
+                    json={"flags": {"rerank": False, "digest_intro": False}},
+                )
+                self.assertEqual(saved.status_code, 200, saved.text)
+                self.assertFalse(saved.json()["flags"]["rerank"])
+                self.assertFalse(saved.json()["flags"]["digest_intro"])
+                self.assertTrue(saved.json()["flags"]["gateway"])
+
+                again = self.client.get("/api/v1/admin/ai-flags", headers=headers)
+                self.assertFalse(again.json()["flags"]["rerank"])
+
+                bad = self.client.put(
+                    "/api/v1/admin/ai-flags",
+                    headers=headers,
+                    json={"flags": {"nope": True}},
+                )
+                self.assertEqual(bad.status_code, 422)
 
 
 if __name__ == "__main__":

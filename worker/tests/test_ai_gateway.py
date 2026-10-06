@@ -147,6 +147,30 @@ class GatewayTest(unittest.TestCase):
         self.assertFalse(second.ok)
         self.assertEqual(second.error, "ai_budget_exceeded")
 
+    def test_db_gateway_off_skips_with_key(self):
+        from worker.ai_flags import set_flags
+
+        set_flags(self.store.conn, {"gateway": False}, updated_by="test")
+        env = {"OPENAI_API_KEY": "sk-test", "AI_GATEWAY_ENABLED": "1"}
+        with patch.dict(os.environ, env, clear=False):
+            with patch("worker.ai_gateway.gateway._openai_json") as api:
+                result = complete_json(
+                    purpose="cv_parse",
+                    prompt_version="t1",
+                    system="sys",
+                    user="Java",
+                    schema={
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {"headline": {"type": "string"}},
+                        "required": ["headline"],
+                    },
+                    conn=self.store.conn,
+                )
+        api.assert_not_called()
+        self.assertFalse(result.ok)
+        self.assertEqual(result.error, "ai_disabled")
+
 
 if __name__ == "__main__":
     unittest.main()

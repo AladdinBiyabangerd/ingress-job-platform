@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { applyFormFromJob, applyFormPayload, applyFormReady } from "../lib/apply-form";
 import { hrefFor, languageLabel, text } from "../lib/copy";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
+import { AdminAiFlags } from "./admin-ai-flags";
 import { ApplicationList } from "./application-list";
 import { ApplyFormFields } from "./apply-form-fields";
 import { CollectedAdmin } from "./collected-admin";
@@ -232,6 +233,15 @@ export function Admin({ locale }) {
             {t.applicationsTitle}
             {applications.length ? <span className="cabinet-tab-count">{applications.length}</span> : null}
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "ai"}
+            className={tab === "ai" ? "on" : ""}
+            onClick={() => setTab("ai")}
+          >
+            {t.adminAiTitle}
+          </button>
         </div>
       </div>
       {error ? <p className="note">{error}</p> : null}
@@ -396,6 +406,7 @@ export function Admin({ locale }) {
       {tab === "applications" ? (
         <ApplicationList locale={locale} items={applications} mode="staff" onChanged={load} />
       ) : null}
+      {tab === "ai" ? <AdminAiFlags locale={locale} /> : null}
     </div>
   );
 }
