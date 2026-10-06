@@ -25,7 +25,8 @@ export default defineRailway(() => {
     // rootDirectory = api (matches live Railway). Dockerfile installs worker via git.
     root: "api",
     // :: for Railway private IPv6; see docs/railway.md
-    start: `sh -c 'exec uvicorn app.main:app --host :: --port \${PORT:-${apiListenPort}}'`,
+    // Do not put $PORT on the uvicorn CLI — Railway start is not a shell.
+    start: "python start.py",
     env: {
       ...storageEnv,
       DEBUG: "False",

@@ -10,7 +10,9 @@ Railway home: UI var, Network-də API yox, data yox.
 - Web logs: `[home] getJobs failed` / `[api/jobs] upstream failed`.
 
 ## Remaining
-- Web + api redeploy. Yoxla: `https://<web>/api/jobs` JSON `items`.
+- **api** Start Command: `python start.py` (not `uvicorn ... --port $PORT`).
+- `PORT=8080` on api. Redeploy api then web.
+- Yoxla: `https://<web>/api/jobs` JSON `items`.
 - `JOB_API_BASE_URL=http://${{api.RAILWAY_PRIVATE_DOMAIN}}:8080` (port şərtdir).
 
 ## Relevant files

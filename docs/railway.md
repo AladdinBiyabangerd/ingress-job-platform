@@ -127,8 +127,10 @@ renders and job lists stay empty. DevTools Network will **not** show
 (SSR errors or an empty first payload). If even `/api/jobs` is missing, you
 are on an old web deploy that skipped the client fetch.
 
-1. On **api**: set `PORT=8080` as a service variable (not only runtime). Start with
-   `--host ::` (Dockerfile does this) so IPv6 private networking works.
+1. On **api**: set `PORT=8080` as a service variable (not only runtime). Start
+   command must be `python start.py` (Dockerfile default). Do **not** use
+   `uvicorn ... --port $PORT` — Railway does not expand `$PORT`, uvicorn then
+   crashes, and web `/api/jobs` returns 502. `start.py` listens on `::`.
 2. On **web**: set
    `JOB_API_BASE_URL=http://${{api.RAILWAY_PRIVATE_DOMAIN}}:${{api.PORT}}`
    (same project + environment; `http`, not `https`). Include **`:8080`** —
