@@ -49,32 +49,23 @@ _LIST_SELECT_CORE = """
     COALESCE(j.salary, '') AS salary,
     COALESCE(j.job_type, '') AS job_type,
     COALESCE(j.owner_subject, '') AS owner_subject,
-    CASE WHEN EXISTS (
-        SELECT 1
-        FROM job_sources js2
-        WHERE js2.job_id = j.id AND TRIM(js2.source_url) != ''
-    ) THEN 1 ELSE 0 END AS has_original,
-    COALESCE(
-        (
-            SELECT js.source_name
-            FROM job_sources js
-            WHERE js.job_id = j.id
-            ORDER BY js.id
-            LIMIT 1
-        ),
-        ''
-    ) AS source_name,
-    COALESCE(
-        (
-            SELECT cs.homepage
-            FROM job_sources js3
-            JOIN crawl_sources cs ON cs.name = js3.source_name
-            WHERE js3.job_id = j.id
-            ORDER BY js3.id
-            LIMIT 1
-        ),
-        ''
-    ) AS source_homepage
+    COALESCE(js_agg.has_original, 0) AS has_original,
+    COALESCE(js.source_name, '') AS source_name,
+    COALESCE(cs.homepage, '') AS source_homepage
+"""
+
+# One row per job: earliest job_sources.id, plus whether any source has a URL.
+_SOURCE_JOINS = """
+LEFT JOIN (
+    SELECT
+        job_id,
+        MIN(id) AS source_id,
+        MAX(CASE WHEN TRIM(source_url) != '' THEN 1 ELSE 0 END) AS has_original
+    FROM job_sources
+    GROUP BY job_id
+) js_agg ON js_agg.job_id = j.id
+LEFT JOIN job_sources js ON js.id = js_agg.source_id
+LEFT JOIN crawl_sources cs ON cs.name = js.source_name
 """
 
 _PUBLISHED_WHERE = """
@@ -85,7 +76,11 @@ WHERE j.status = 'published'
 """
 
 _LIST_FROM_WHERE = f"""
-{_PUBLISHED_WHERE}
+FROM jobs j
+{_SOURCE_JOINS}
+WHERE j.status = 'published'
+  AND COALESCE(j.hidden, 0) = 0
+  AND (j.merged_into IS NULL OR j.merged_into = 0)
 ORDER BY j.id
 """
 
@@ -414,6 +409,11 @@ def _build_sql_filters(
     return where, params
 
 
+def _with_source_joins(from_where: str) -> str:
+    """List/detail only. Count and facets stay on jobs so source rows do not multiply totals."""
+    return from_where.replace("FROM jobs j", f"FROM jobs j\n{_SOURCE_JOINS}", 1)
+
+
 def _age_days(created_at: object) -> float | None:
     from datetime import datetime, timezone
 
@@ -557,7 +557,7 @@ def query_jobs(
 
         if needs_python:
             rows = conn.execute(
-                f"SELECT {_LIST_SELECT_CORE} {where} {order}",
+                f"SELECT {_LIST_SELECT_CORE} {_with_source_joins(where)} {order}",
                 params,
             ).fetchall()
             matched = []
@@ -586,7 +586,7 @@ def query_jobs(
             current = min(page, pages)
             offset = (current - 1) * per_page
             page_rows = conn.execute(
-                f"SELECT {_LIST_SELECT_CORE} {where} {order} LIMIT ? OFFSET ?",
+                f"SELECT {_LIST_SELECT_CORE} {_with_source_joins(where)} {order} LIMIT ? OFFSET ?",
                 [*params, per_page, offset],
             ).fetchall()
 

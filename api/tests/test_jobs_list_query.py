@@ -108,6 +108,35 @@ class JobsListQueryTests(unittest.TestCase):
         self.assertEqual(self.client.get("/api/v1/jobs", params={"per_page": 0}).status_code, 422)
         self.assertEqual(self.client.get("/api/v1/jobs", params={"per_page": 61}).status_code, 422)
 
+    def test_source_join_uses_first_source_without_duplicating_rows(self):
+        ids = self._seed(1)
+        job_id = ids[0]
+        conn = sqlite3.connect(self.db)
+        conn.execute(
+            """
+            INSERT INTO crawl_sources (name, homepage, connector, entry_url, enabled)
+            VALUES ('Alpha', 'https://alpha.example', 'x', 'https://alpha.example/jobs', 1)
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO job_sources (job_id, source_name, source_url, external_id, last_seen)
+            VALUES (?, 'Alpha', 'https://alpha.example/a', '', '2026-10-05T09:00:00+04:00'),
+                   (?, 'Beta', 'https://beta.example/b', '', '2026-10-05T09:00:00+04:00')
+            """,
+            (job_id, job_id),
+        )
+        conn.commit()
+        conn.close()
+        body = self.client.get("/api/v1/jobs").json()
+        self.assertEqual(body["total"], 1)
+        self.assertEqual(len(body["items"]), 1)
+        item = body["items"][0]
+        self.assertEqual(item["source_name"], "Alpha")
+        self.assertTrue(item["has_original"])
+        detail = self.client.get(f"/api/v1/jobs/{job_id}").json()
+        self.assertEqual(detail["source_homepage"], "https://alpha.example")
+
 
 if __name__ == "__main__":
     unittest.main()

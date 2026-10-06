@@ -211,6 +211,10 @@ class Store:
         for name, decl in alters.items():
             if name not in cols:
                 self.conn.execute(f"ALTER TABLE jobs ADD COLUMN {name} {decl}")
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS jobs_public_list ON jobs(status, hidden, merged_into, created_at, id)"
+        )
+        self.conn.execute("CREATE INDEX IF NOT EXISTS job_sources_job ON job_sources(job_id, id)")
         self.conn.commit()
 
 

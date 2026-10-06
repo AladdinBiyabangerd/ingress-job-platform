@@ -234,6 +234,10 @@ def _apply_schema(conn) -> None:
         if name not in app_cols:
             conn.execute(f"ALTER TABLE applications ADD COLUMN {name} {decl}")
     conn.execute("CREATE INDEX IF NOT EXISTS jobs_owner ON jobs(owner_subject)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS jobs_public_list ON jobs(status, hidden, merged_into, created_at, id)"
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS job_sources_job ON job_sources(job_id, id)")
     conn.execute("CREATE INDEX IF NOT EXISTS applications_job ON applications(job_id)")
     conn.execute(
         "CREATE INDEX IF NOT EXISTS applications_candidate ON applications(candidate_subject)"
