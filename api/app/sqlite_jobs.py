@@ -19,6 +19,7 @@ import re
 import sqlite3
 import unicodedata
 from pathlib import Path
+from threading import Lock
 
 from app.apply_form import parse_stored
 from app.companies import application_count, application_counts, company_slug
@@ -31,6 +32,13 @@ def _db_path() -> Path:
 
 
 DB_PATH = _db_path()
+
+# Catalog-wide facets and company grouping are expensive (title/stack scans,
+# slug normalize). Memoize per process until the published catalog or
+# applications table actually changes.
+_CATALOG_LOCK = Lock()
+_FACETS_MEMO: tuple | None = None
+_COMPANY_MEMO: tuple | None = None
 
 # No leading \b: a link glued to a word ("gärnahttps://…") must go too.
 _URL = re.compile(r"(?i)(?:https?://|www\.)\S+")
@@ -100,20 +108,12 @@ SELECT
 {_LIST_FROM_WHERE}
 """
 
-_FACET_SQL = f"""
-SELECT
-    j.title,
-    COALESCE(j.language, '') AS language,
-    COALESCE(j.category, '') AS category,
-    COALESCE(j.tech_stack, '') AS tech_stack
-{_PUBLISHED_WHERE}
-"""
-
 SORTS = ("newest", "oldest", "title")
 WHENS = ("any", "today", "week")
 DEFAULT_PER_PAGE = 20
 MAX_PER_PAGE = 60
 _LANG_FACET_ORDER = ("az", "en", "ru", "tr", "es", "uk", "de", "fr", "pt")
+_STORED_LANGS = ("az", "en", "ru")
 
 _NOISE = re.compile(
     r"(?im)^(?:application url|apply url)\s*$"
@@ -248,7 +248,7 @@ def _public(row: sqlite3.Row, applications: dict[int, int] | None = None, *, ful
     title = _plain(row["title"] or "")
     body = public_text(row["text"] or "") if full else ""
     stored = (row["language"] or "").strip().lower()
-    language = stored if stored in {"az", "en", "ru"} else listing_language(title, body)
+    language = stored if stored in _STORED_LANGS else listing_language(title, body)
     job_type = (row["job_type"] or "").strip().lower()
     if job_type not in {"ofis", "hibrid", "uzaqdan"}:
         job_type = ""
@@ -280,6 +280,22 @@ def _public(row: sqlite3.Row, applications: dict[int, int] | None = None, *, ful
     return job
 
 
+_COMPANY_CATALOG_SQL = f"""
+SELECT
+    j.id,
+    j.company,
+    j.city,
+    j.created_at,
+    COALESCE(j.remote, 0) AS remote,
+    COALESCE(j.relocation, 0) AS relocation,
+    COALESCE(j.tech_stack, '') AS tech_stack,
+    COALESCE(j.category, '') AS category,
+    COALESCE(j.job_type, '') AS job_type,
+    COALESCE(j.owner_subject, '') AS owner_subject
+{_PUBLISHED_WHERE}
+"""
+
+
 def list_jobs() -> list[dict]:
     conn = _connect()
     try:
@@ -288,6 +304,83 @@ def list_jobs() -> list[dict]:
     finally:
         conn.close()
     return [_public(row, counts, full=False) for row in rows]
+
+
+def _company_catalog_job(row, counts: dict[int, int]) -> dict:
+    """Fields company grouping needs. No source join, no language/title payload."""
+    company = _plain(row["company"] or "")
+    onsite = bool((row["owner_subject"] or "").strip())
+    job_type = (row["job_type"] or "").strip().lower()
+    if job_type not in {"ofis", "hibrid", "uzaqdan"}:
+        job_type = ""
+    return {
+        "id": int(row["id"]),
+        "company": company,
+        "city": _plain(row["city"] or ""),
+        "remote": bool(int(row["remote"] or 0)),
+        "relocation": bool(int(row["relocation"] or 0)),
+        "tech_stack": tech_stack(row["tech_stack"]),
+        "category": job_category(row["category"]),
+        "created_at": row["created_at"] or "",
+        "job_type": job_type,
+        "onsite": onsite,
+        "applications": int(counts.get(int(row["id"]), 0)) if onsite else None,
+    }
+
+
+def _public_jobs_for_ids(conn, ids: list[int]) -> list[dict]:
+    if not ids:
+        return []
+    placeholders = ",".join("?" * len(ids))
+    rows = conn.execute(
+        f"""
+        SELECT {_LIST_SELECT_CORE}
+        FROM jobs j
+        {_SOURCE_JOINS}
+        WHERE j.id IN ({placeholders})
+          AND j.status = 'published'
+          AND COALESCE(j.hidden, 0) = 0
+          AND (j.merged_into IS NULL OR j.merged_into = 0)
+        """,
+        ids,
+    ).fetchall()
+    by_id = {int(row["id"]): row for row in rows}
+    counts = _page_counts(conn, ids)
+    return [_public(by_id[job_id], counts, full=False) for job_id in ids if job_id in by_id]
+
+
+def query_companies(*, q: str = "", sort: str = "jobs", page: int = 1, per_page: int = 24) -> dict:
+    from app.companies import SORTS, paginate_directory
+
+    conn = _connect()
+    try:
+        summaries, _, total_apps = _company_groups(conn)
+    finally:
+        conn.close()
+    return paginate_directory(
+        summaries,
+        total_apps,
+        q=q,
+        sort=sort if sort in SORTS else "jobs",
+        page=page,
+        per_page=per_page,
+    )
+
+
+def query_company(slug: str, *, page: int = 1, per_page: int = 20) -> dict | None:
+    from app.companies import company_page_from_groups
+
+    conn = _connect()
+    try:
+        summaries, ordered, total_apps = _company_groups(conn)
+        found = company_page_from_groups(summaries, ordered, total_apps, slug, page=page, per_page=per_page)
+        if found is None:
+            return None
+        ids = [int(job["id"]) for job in found["jobs"]["items"]]
+        found["jobs"]["items"] = _public_jobs_for_ids(conn, ids)
+    finally:
+        conn.close()
+    return found
 
 
 def _parse_salary_amount(value: object) -> int | None:
@@ -357,7 +450,7 @@ def _tokens(values: list[str] | str | None) -> list[str]:
 def _row_language(row) -> str:
     title = _plain(row["title"] or "")
     stored = (row["language"] or "").strip().lower()
-    if stored in {"az", "en", "ru"}:
+    if stored in _STORED_LANGS:
         return stored
     return listing_language(title, "")
 
@@ -477,11 +570,51 @@ def _build_facets(conn) -> dict:
     lang_counts: Counter[str] = Counter()
     cat_counts: Counter[str] = Counter()
     stack_counts: Counter[str] = Counter()
-    for row in conn.execute(_FACET_SQL).fetchall():
+
+    # Stored az/en/ru — GROUP BY, no title scan.
+    for row in conn.execute(
+        f"""
+        SELECT lower(trim(COALESCE(j.language, ''))) AS language, COUNT(*) AS total
+        {_PUBLISHED_WHERE}
+          AND lower(trim(COALESCE(j.language, ''))) IN ('az', 'en', 'ru')
+        GROUP BY 1
+        """
+    ).fetchall():
+        code = (row["language"] or "").strip().lower()
+        if code:
+            lang_counts[code] += int(row["total"] or 0)
+
+    # Infer language only when the column is empty / not az|en|ru.
+    for row in conn.execute(
+        f"""
+        SELECT j.title, COALESCE(j.language, '') AS language
+        {_PUBLISHED_WHERE}
+          AND lower(trim(COALESCE(j.language, ''))) NOT IN ('az', 'en', 'ru')
+        """
+    ).fetchall():
         lang_counts[_row_language(row)] += 1
+
+    cat_placeholders = ",".join("?" * len(CATEGORIES))
+    for row in conn.execute(
+        f"""
+        SELECT j.category AS category, COUNT(*) AS total
+        {_PUBLISHED_WHERE}
+          AND j.category IN ({cat_placeholders})
+        GROUP BY j.category
+        """,
+        list(CATEGORIES),
+    ).fetchall():
         cat = job_category(row["category"])
         if cat:
-            cat_counts[cat] += 1
+            cat_counts[cat] += int(row["total"] or 0)
+
+    for row in conn.execute(
+        f"""
+        SELECT COALESCE(j.tech_stack, '') AS tech_stack
+        {_PUBLISHED_WHERE}
+          AND trim(COALESCE(j.tech_stack, '')) NOT IN ('', '[]')
+        """
+    ).fetchall():
         for name in tech_stack(row["tech_stack"]):
             stack_counts[name] += 1
 
@@ -504,6 +637,80 @@ def _build_facets(conn) -> dict:
         key=lambda item: (-item["total"], item["name"]),
     )
     return {"languages": languages, "categories": categories, "stacks": stacks}
+
+
+def _cache_db_key() -> str:
+    from app.jobs_db import postgres_enabled
+
+    if postgres_enabled():
+        return "postgres"
+    return str(DB_PATH)
+
+
+def _sqlite_mtime_ns() -> int:
+    from app.jobs_db import postgres_enabled
+
+    if postgres_enabled():
+        return 0
+    try:
+        return int(DB_PATH.stat().st_mtime_ns)
+    except OSError:
+        return 0
+
+
+def _jobs_fingerprint(conn) -> tuple:
+    row = conn.execute(
+        f"SELECT COUNT(*) AS n, MAX(j.id) AS max_id, MAX(j.created_at) AS latest {_PUBLISHED_WHERE}"
+    ).fetchone()
+    return (
+        int(row["n"] or 0),
+        int(row["max_id"] or 0),
+        str(row["latest"] or ""),
+        _sqlite_mtime_ns(),
+    )
+
+
+def _apps_fingerprint(conn) -> tuple:
+    try:
+        row = conn.execute("SELECT COUNT(*) AS n, MAX(id) AS max_id FROM applications").fetchone()
+        return (int(row["n"] or 0), int(row["max_id"] or 0))
+    except Exception:
+        return (0, 0)
+
+
+def _catalog_facets(conn) -> tuple[dict, int]:
+    """Facets + published count. Shared across list pages until the catalog changes."""
+    global _FACETS_MEMO
+    key = _cache_db_key()
+    fp = _jobs_fingerprint(conn)
+    with _CATALOG_LOCK:
+        memo = _FACETS_MEMO
+        if memo is not None and memo[0] == key and memo[1] == fp:
+            return memo[2], fp[0]
+    facets = _build_facets(conn)
+    with _CATALOG_LOCK:
+        _FACETS_MEMO = (key, fp, facets)
+    return facets, fp[0]
+
+
+def _company_groups(conn) -> tuple[dict, dict, int]:
+    """Grouped company summaries. Directory and detail share one catalog scan."""
+    global _COMPANY_MEMO
+    from app.companies import summarize
+
+    key = _cache_db_key()
+    fp = (_jobs_fingerprint(conn), _apps_fingerprint(conn))
+    with _CATALOG_LOCK:
+        memo = _COMPANY_MEMO
+        if memo is not None and memo[0] == key and memo[1] == fp:
+            return memo[2], memo[3], memo[4]
+    rows = conn.execute(_COMPANY_CATALOG_SQL).fetchall()
+    counts = application_counts(conn)
+    jobs = [_company_catalog_job(row, counts) for row in rows]
+    summaries, ordered, total_apps = summarize(jobs)
+    with _CATALOG_LOCK:
+        _COMPANY_MEMO = (key, fp, summaries, ordered, total_apps)
+    return summaries, ordered, total_apps
 
 
 def query_jobs(
@@ -551,9 +758,7 @@ def query_jobs(
 
     conn = _connect()
     try:
-        catalog_row = conn.execute(f"SELECT COUNT(*) AS total {_PUBLISHED_WHERE}").fetchone()
-        catalog_total = int(catalog_row["total"] or 0)
-        facets = _build_facets(conn)
+        facets, catalog_total = _catalog_facets(conn)
 
         if needs_python:
             rows = conn.execute(

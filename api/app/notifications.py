@@ -202,6 +202,22 @@ def _view(row) -> dict:
     return payload
 
 
+def unread_count(subject: str) -> int:
+    """Cheap badge count for /me; avoids loading the full notification list."""
+    conn = _connect()
+    try:
+        row = conn.execute(
+            """
+            SELECT COUNT(*) FROM notifications
+            WHERE recipient_subject = ? AND read_at = ''
+            """,
+            (subject,),
+        ).fetchone()
+        return int((row[0] if row else 0) or 0)
+    finally:
+        conn.close()
+
+
 def list_for(subject: str) -> dict:
     conn = _connect()
     try:
@@ -214,16 +230,10 @@ def list_for(subject: str) -> dict:
             """,
             (subject,),
         ).fetchall()
-        unread = conn.execute(
-            """
-            SELECT COUNT(*) FROM notifications
-            WHERE recipient_subject = ? AND read_at = ''
-            """,
-            (subject,),
-        ).fetchone()[0]
+        unread = sum(1 for row in rows if not (row["read_at"] or "").strip())
     finally:
         conn.close()
-    return {"unread": int(unread or 0), "items": [_view(row) for row in rows]}
+    return {"unread": unread, "items": [_view(row) for row in rows]}
 
 
 def mark_read(subject: str, notification_id: int) -> dict | None:

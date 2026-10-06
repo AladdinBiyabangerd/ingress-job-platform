@@ -19,6 +19,9 @@ from app.trends import (
     MIN_ADS_FOR_GROWTH,
     MIN_PAIR_BASE_ADS,
     MIN_SALARY_SAMPLES,
+    _TRENDS_ENSURED,
+    _category_job_count,
+    _day_after,
     combine_salary_days,
     ensure_trend_tables,
     growth_wow,
@@ -57,6 +60,7 @@ class TrendsTests(unittest.TestCase):
         from app import cabinet_store
 
         cabinet_store._ENSURED.clear()
+        _TRENDS_ENSURED.clear()
         ensure_schema(create=True)
         self._seed_skills()
         self.client = TestClient(app)
@@ -67,6 +71,7 @@ class TrendsTests(unittest.TestCase):
         from app import cabinet_store
 
         cabinet_store._ENSURED.clear()
+        _TRENDS_ENSURED.clear()
         self.tmp.cleanup()
 
     def _auth(self, scopes: str, subject: str):
@@ -141,6 +146,34 @@ class TrendsTests(unittest.TestCase):
                 json={"matching": True},
             )
         self.assertEqual(res.status_code, 200, res.text)
+
+    def test_day_after_and_job_count_uses_created_at_range(self):
+        self.assertEqual(_day_after("2026-10-05"), "2026-10-06")
+        self._insert_job(title="RangeA", day="2026-10-05")
+        self._insert_job(title="RangeB", day="2026-10-06")
+        with sqlite3.connect(self.db) as conn:
+            conn.row_factory = sqlite3.Row
+            # Inclusive end day via created_at < next calendar day (no substr).
+            self.assertEqual(
+                _category_job_count(
+                    conn, start="2026-10-05", end="2026-10-05", category="", region=""
+                ),
+                1,
+            )
+            self.assertEqual(
+                _category_job_count(
+                    conn, start="2026-10-05", end="2026-10-06", category="", region=""
+                ),
+                2,
+            )
+
+    def test_ensure_trend_tables_is_cached(self):
+        with sqlite3.connect(self.db) as conn:
+            ensure_trend_tables(conn)
+            self.assertIn(str(self.db), _TRENDS_ENSURED)
+            before = len(_TRENDS_ENSURED)
+            ensure_trend_tables(conn)
+            self.assertEqual(len(_TRENDS_ENSURED), before)
 
     def test_growth_wow_suppressed_below_min_ads(self):
         self.assertIsNone(growth_wow(0.5, 0.4, ad_count=MIN_ADS_FOR_GROWTH - 1))

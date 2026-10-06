@@ -131,6 +131,18 @@ class CompanyApiTests(unittest.TestCase):
         self.assertEqual(beta["applications"], 4)
         self.assertNotIn("candidate_subject", str(data))
 
+    def test_directory_cache_survives_repeat_reads_and_sees_new_jobs(self):
+        self._seed()
+        first = self.client.get("/api/v1/companies").json()
+        second = self.client.get("/api/v1/companies", params={"page": 2, "per_page": 1}).json()
+        self.assertEqual(first["total"], 2)
+        self.assertEqual(second["total"], 2)
+        self.assertEqual(first["items"][0]["open_jobs"], 3)
+        self._job("Acme, Inc.", created="2026-10-05T10:00:00+04:00")
+        refreshed = self.client.get("/api/v1/companies").json()
+        acme = next(item for item in refreshed["items"] if item["slug"] == "acme")
+        self.assertEqual(acme["open_jobs"], 4)
+
     def test_sort_search_and_pagination(self):
         self._seed()
         names = lambda params: [item["slug"] for item in self.client.get("/api/v1/companies", params=params).json()["items"]]
@@ -156,6 +168,41 @@ class CompanyApiTests(unittest.TestCase):
         self.assertEqual([job["id"] for job in more["jobs"]["items"]], [a3])
         self.assertEqual(self.client.get("/api/v1/companies/nope").status_code, 404)
         self.assertEqual(self.client.get("/api/v1/companies/hidden-co").status_code, 404)
+
+    def test_extra_job_sources_do_not_duplicate_directory_jobs(self):
+        a1, a2, a3, _ = self._seed()
+        conn = sqlite3.connect(self.db)
+        conn.execute(
+            """
+            INSERT INTO crawl_sources (name, homepage, connector, entry_url, enabled)
+            VALUES ('Alpha', 'https://alpha.example', 'x', 'https://alpha.example/jobs', 1)
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO job_sources (job_id, source_name, source_url, external_id, last_seen)
+            VALUES (?, 'Alpha', 'https://alpha.example/a', '', '2026-10-05T09:00:00+04:00'),
+                   (?, 'Beta', 'https://beta.example/b', '', '2026-10-05T09:00:00+04:00')
+            """,
+            (a1, a1),
+        )
+        conn.commit()
+        conn.close()
+        data = self.client.get("/api/v1/companies").json()
+        acme = next(item for item in data["items"] if item["slug"] == "acme")
+        self.assertEqual(acme["open_jobs"], 3)
+        page = self.client.get("/api/v1/companies/acme").json()
+        self.assertEqual(page["jobs"]["total"], 3)
+        self.assertEqual([job["id"] for job in page["jobs"]["items"]], [a1, a2, a3])
+        self.assertEqual(page["jobs"]["items"][0]["source_name"], "Alpha")
+        self.assertTrue(page["jobs"]["items"][0]["has_original"])
+
+    def test_catalog_sql_skips_source_tables(self):
+        from app.sqlite_jobs import _COMPANY_CATALOG_SQL, _LIST_SQL
+
+        self.assertNotIn("job_sources", _COMPANY_CATALOG_SQL)
+        self.assertNotIn("crawl_sources", _COMPANY_CATALOG_SQL)
+        self.assertIn("job_sources", _LIST_SQL)
 
     def test_job_payloads_carry_slug_and_onsite_counts(self):
         a1, _, a3, b1 = self._seed()

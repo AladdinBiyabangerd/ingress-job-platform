@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.companies import SORTS, company_directory, company_detail
-from app.sqlite_jobs import list_jobs
+from app.companies import SORTS
+from app.sqlite_jobs import query_companies, query_company
 
 router = APIRouter(prefix="/api/v1", tags=["companies"])
 
@@ -15,7 +15,12 @@ def read_companies(
     page: int = Query(1, ge=1, le=10000),
     per_page: int = Query(24, ge=1, le=60),
 ) -> dict:
-    return company_directory(list_jobs(), q=q.strip(), sort=sort if sort in SORTS else "jobs", page=page, per_page=per_page)
+    return query_companies(
+        q=q.strip(),
+        sort=sort if sort in SORTS else "jobs",
+        page=page,
+        per_page=per_page,
+    )
 
 
 @router.get("/companies/{slug}")
@@ -24,7 +29,7 @@ def read_company(
     page: int = Query(1, ge=1, le=10000),
     per_page: int = Query(20, ge=1, le=60),
 ) -> dict:
-    found = company_detail(list_jobs(), slug.strip().lower()[:120], page=page, per_page=per_page)
+    found = query_company(slug.strip().lower()[:120], page=page, per_page=per_page)
     if found is None:
         raise HTTPException(status_code=404, detail="Şirkət tapılmadı")
     return found

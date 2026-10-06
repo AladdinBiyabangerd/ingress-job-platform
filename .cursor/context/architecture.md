@@ -7,7 +7,7 @@ Job board (Ingress Job). Companies post jobs; candidates browse/apply. Hourly cr
 - Frontend: Next.js 15, React 19 (`frontend/`, port 3010)
 - API: FastAPI / Uvicorn (`api/`, port 8010)
 - Worker: Python crawler (`worker/`, hourly schedule)
-- Auth: Ingress Academy OIDC (no separate password). Account bar reads `me` from SSR `getMe()` in the root layout (guests skip FastAPI; access cookie → `GET /api/v1/me` once on the server). Client `/api/auth/me` BFF remains for token refresh, logout, and privacy delete
+- Auth: Ingress Academy OIDC (no separate password). Account bar reads `me` from SSR `getMe()` in the root layout (guests skip FastAPI; access cookie → `GET /api/v1/me` once on the server). `/me` includes `unread_notifications` so the header bell skips a separate notifications fetch. Client `/api/auth/me` BFF remains for token refresh, logout, and privacy delete
 - DB: SQLite locally if `DATABASE_URL` empty; Postgres when set (API + worker share it)
 - Locales: az / en / ru
 - Deploy: Docker / Railway / Nixpacks per service
@@ -32,7 +32,9 @@ compose.yaml
 
 ## Domains
 
-- Public job list / search / detail (guest: no original URL); `GET /api/v1/jobs` is paginated (`page`/`per_page`, filters, `facets`/`catalog_total`); Home SSR loads page 1, client refetches via `/api/jobs` BFF; list SQL LEFT JOINs first `job_sources` row (`MIN(id)`) + `crawl_sources`, not per-row subqueries
+- Public job list / search / detail (guest: no original URL); `GET /api/v1/jobs` is paginated (`page`/`per_page`, filters, `facets`/`catalog_total`); Home SSR loads page 1, client refetches via `/api/jobs` BFF; list SQL LEFT JOINs first `job_sources` row (`MIN(id)`) + `crawl_sources`, not per-row subqueries; facets GROUP BY stored language/category and only title-scan rows without az|en|ru language; facets+catalog_total are process-cached until the published catalog fingerprint (count/max id/created_at, sqlite mtime) changes
+- Company directory (`GET /api/v1/companies`, `/companies/{slug}`) groups published jobs in Python (slug from name); catalog SQL skips `job_sources`; company page hydrates only the current job page with the list JOIN; grouped summaries are process-cached until catalog or applications fingerprint changes
+- Skill trends (`GET /api/v1/trends`): current+prior skill/job counts in one scan each; job denom uses `created_at` range (not `substr`) for `jobs_public_list`; trend DDL ensure is process-cached (no PRAGMA/ALTER per request)
 - Company jobs (moderation: pending → published)
 - Candidate applications + CV upload
 - Staff moderation (manual role): approve/reject/edit, crawled job tools

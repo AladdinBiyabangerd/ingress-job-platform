@@ -103,6 +103,35 @@ class JobsListQueryTests(unittest.TestCase):
         self.assertEqual(body["total"], 8)
         self.assertEqual(len(body["items"]), 8)
 
+    def test_facets_infer_language_only_when_column_empty(self):
+        self._seed(3)
+        conn = sqlite3.connect(self.db)
+        conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key,
+                language, remote, tech_stack, category
+            )
+            VALUES (?, 'Acme', 'Baku', 'Mətn', 'published', ?, ?, '', 0, '[]', 'Backend')
+            """,
+            ("Backend mühəndisi əməkdaş", "2026-10-05T09:00:00+04:00", "facet-az-infer"),
+        )
+        conn.commit()
+        conn.close()
+        body = self.client.get("/api/v1/jobs").json()
+        langs = {item["code"]: item["total"] for item in body["facets"]["languages"]}
+        self.assertEqual(langs.get("en"), 3)
+        self.assertEqual(langs.get("az"), 1)
+
+    def test_facets_reuse_catalog_until_published_set_changes(self):
+        self._seed(4)
+        first = self.client.get("/api/v1/jobs").json()["facets"]
+        second = self.client.get("/api/v1/jobs", params={"page": 2, "per_page": 2}).json()["facets"]
+        self.assertEqual(first, second)
+        self._seed(1, title_prefix="Yeni")
+        langs = {item["code"]: item["total"] for item in self.client.get("/api/v1/jobs").json()["facets"]["languages"]}
+        self.assertEqual(langs.get("en"), 5)
+
     def test_per_page_cap(self):
         self._seed(5)
         self.assertEqual(self.client.get("/api/v1/jobs", params={"per_page": 0}).status_code, 422)

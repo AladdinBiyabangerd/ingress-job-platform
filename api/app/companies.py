@@ -239,8 +239,15 @@ def _matches(summary: dict, query: str) -> bool:
     return bool(key) and slug_for(key) in summary["slug"]
 
 
-def company_directory(jobs: list[dict], *, q: str = "", sort: str = "jobs", page: int = 1, per_page: int = 24) -> dict:
-    summaries, _, total_apps = summarize(jobs)
+def paginate_directory(
+    summaries: dict[str, dict],
+    total_apps: int,
+    *,
+    q: str = "",
+    sort: str = "jobs",
+    page: int = 1,
+    per_page: int = 24,
+) -> dict:
     chosen = sort if sort in SORTS else "jobs"
     items = _sorted([item for item in summaries.values() if _matches(item, q)], chosen)
     result = _page(items, page, per_page)
@@ -248,8 +255,25 @@ def company_directory(jobs: list[dict], *, q: str = "", sort: str = "jobs", page
     return result
 
 
+def company_directory(jobs: list[dict], *, q: str = "", sort: str = "jobs", page: int = 1, per_page: int = 24) -> dict:
+    summaries, _, total_apps = summarize(jobs)
+    return paginate_directory(summaries, total_apps, q=q, sort=sort, page=page, per_page=per_page)
+
+
 def company_detail(jobs: list[dict], slug: str, *, page: int = 1, per_page: int = 20) -> dict | None:
     summaries, ordered, total_apps = summarize(jobs)
+    return company_page_from_groups(summaries, ordered, total_apps, slug, page=page, per_page=per_page)
+
+
+def company_page_from_groups(
+    summaries: dict[str, dict],
+    ordered: dict[str, list[dict]],
+    total_apps: int,
+    slug: str,
+    *,
+    page: int = 1,
+    per_page: int = 20,
+) -> dict | None:
     summary = summaries.get(slug)
     if summary is None:
         return None

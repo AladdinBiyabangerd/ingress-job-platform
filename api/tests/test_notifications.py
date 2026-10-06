@@ -135,6 +135,10 @@ class NotificationTests(unittest.TestCase):
             self.assertEqual(owner["unread"], 1)
             self.assertEqual(owner["items"][0]["kind"], "ad_approved")
             self.assertNotIn("reason", owner["items"][0])
+            with self._auth("job:employer", "note-employer"):
+                me = self.client.get("/api/v1/me", headers={"Authorization": "Bearer test"})
+            self.assertEqual(me.status_code, 200)
+            self.assertEqual(me.json()["unread_notifications"], 1)
             self.assertEqual(self._items("note-candidate", "job:candidate")["items"], [])
 
             with self._auth("job:candidate", "note-candidate"):

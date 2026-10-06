@@ -82,7 +82,7 @@ export function AccountBar({ locale, returnTo, onMe }) {
       {ssoError ? <span className="account-error">{t.ssoError}</span> : null}
       {me?.authenticated ? (
         <>
-          <NotificationsBell locale={locale} />
+          <NotificationsBell locale={locale} initialUnread={me?.unread_notifications} />
           <div className="account-menu" ref={menuRef}>
             <button
               type="button"

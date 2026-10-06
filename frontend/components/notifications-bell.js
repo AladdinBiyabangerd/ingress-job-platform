@@ -3,11 +3,17 @@
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 
-export function NotificationsBell({ locale }) {
+/** Badge uses SSR /me.unread_notifications when present — skips /api/auth/notifications. */
+export function NotificationsBell({ locale, initialUnread }) {
   const t = text(locale);
-  const [unread, setUnread] = useState(0);
+  const seeded = initialUnread != null && Number.isFinite(Number(initialUnread));
+  const [unread, setUnread] = useState(seeded ? Number(initialUnread) || 0 : 0);
 
   useEffect(() => {
+    if (initialUnread != null && Number.isFinite(Number(initialUnread))) {
+      setUnread(Number(initialUnread) || 0);
+      return undefined;
+    }
     let cancelled = false;
     fetch("/api/auth/notifications", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : { unread: 0 }))
@@ -20,7 +26,7 @@ export function NotificationsBell({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialUnread]);
 
   const label = unread > 0 ? t.notificationsUnread(unread) : t.notifications;
 

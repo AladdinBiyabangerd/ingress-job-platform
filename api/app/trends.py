@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import os
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from statistics import median
+from threading import Lock
 from typing import Any
 
 DEFAULT_LIMIT = 30
@@ -28,6 +30,23 @@ _SALARY_COLUMNS = (
     ("salary_low", "REAL"),
     ("salary_high", "REAL"),
 )
+
+# Schema DDL is also applied by cabinet_store.ensure_schema; cache so hot
+# GET /trends does not re-run PRAGMA / ALTER / CREATE INDEX every request.
+_TRENDS_ENSURED: set[str] = set()
+_TRENDS_LOCK = Lock()
+
+
+def _trends_ensure_key() -> str:
+    if os.environ.get("DATABASE_URL", "").strip():
+        return "postgres"
+    try:
+        from app.sqlite_jobs import DB_PATH
+
+        return str(DB_PATH)
+    except Exception:
+        configured = os.environ.get("JOBS_DB_PATH", "").strip()
+        return configured or "sqlite-default"
 
 DISCLAIMER = {
     "az": "Trendlər yalnız Ingress Job-un izlədiyi elanlar əsasında hesablanır, bütün bazarı əks etdirmir.",
@@ -89,57 +108,64 @@ def clamp_window(value: int | None) -> int:
 
 
 def ensure_trend_tables(conn) -> None:
-    conn.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS skill_trend_daily (
-            day TEXT NOT NULL,
-            skill_id INTEGER NOT NULL REFERENCES skill_dictionary(id),
-            category TEXT NOT NULL DEFAULT '',
-            region TEXT NOT NULL DEFAULT '',
-            remote INTEGER NOT NULL DEFAULT 0,
-            relocation INTEGER NOT NULL DEFAULT 0,
-            ad_count INTEGER NOT NULL DEFAULT 0,
-            salary_median REAL,
-            salary_currency TEXT NOT NULL DEFAULT '',
-            salary_n INTEGER NOT NULL DEFAULT 0,
-            salary_low REAL,
-            salary_high REAL,
-            PRIMARY KEY (day, skill_id, category, region, remote, relocation)
-        );
-        CREATE TABLE IF NOT EXISTS skill_pair_daily (
-            day TEXT NOT NULL,
-            base_skill_id INTEGER NOT NULL REFERENCES skill_dictionary(id),
-            pair_skill_id INTEGER NOT NULL REFERENCES skill_dictionary(id),
-            category TEXT NOT NULL DEFAULT '',
-            co_ad_count INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY (day, base_skill_id, pair_skill_id, category)
-        );
-        """
-    )
-    try:
-        existing = {
-            str(row[1])
-            for row in conn.execute("PRAGMA table_info(skill_trend_daily)").fetchall()
-        }
-    except Exception:
-        existing = set()
-    for name, decl in _SALARY_COLUMNS:
-        if name not in existing:
-            try:
-                conn.execute(f"ALTER TABLE skill_trend_daily ADD COLUMN {name} {decl}")
-            except Exception:
-                pass
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS skill_trend_daily_skill_day ON skill_trend_daily(skill_id, day)"
-    )
-    conn.execute("CREATE INDEX IF NOT EXISTS skill_trend_daily_day ON skill_trend_daily(day)")
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS skill_trend_daily_category_day ON skill_trend_daily(category, day)"
-    )
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS skill_pair_daily_base_day ON skill_pair_daily(base_skill_id, day)"
-    )
-    conn.execute("CREATE INDEX IF NOT EXISTS skill_pair_daily_day ON skill_pair_daily(day)")
+    key = _trends_ensure_key()
+    if key in _TRENDS_ENSURED:
+        return
+    with _TRENDS_LOCK:
+        if key in _TRENDS_ENSURED:
+            return
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS skill_trend_daily (
+                day TEXT NOT NULL,
+                skill_id INTEGER NOT NULL REFERENCES skill_dictionary(id),
+                category TEXT NOT NULL DEFAULT '',
+                region TEXT NOT NULL DEFAULT '',
+                remote INTEGER NOT NULL DEFAULT 0,
+                relocation INTEGER NOT NULL DEFAULT 0,
+                ad_count INTEGER NOT NULL DEFAULT 0,
+                salary_median REAL,
+                salary_currency TEXT NOT NULL DEFAULT '',
+                salary_n INTEGER NOT NULL DEFAULT 0,
+                salary_low REAL,
+                salary_high REAL,
+                PRIMARY KEY (day, skill_id, category, region, remote, relocation)
+            );
+            CREATE TABLE IF NOT EXISTS skill_pair_daily (
+                day TEXT NOT NULL,
+                base_skill_id INTEGER NOT NULL REFERENCES skill_dictionary(id),
+                pair_skill_id INTEGER NOT NULL REFERENCES skill_dictionary(id),
+                category TEXT NOT NULL DEFAULT '',
+                co_ad_count INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (day, base_skill_id, pair_skill_id, category)
+            );
+            """
+        )
+        try:
+            existing = {
+                str(row[1])
+                for row in conn.execute("PRAGMA table_info(skill_trend_daily)").fetchall()
+            }
+        except Exception:
+            existing = set()
+        for name, decl in _SALARY_COLUMNS:
+            if name not in existing:
+                try:
+                    conn.execute(f"ALTER TABLE skill_trend_daily ADD COLUMN {name} {decl}")
+                except Exception:
+                    pass
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS skill_trend_daily_skill_day ON skill_trend_daily(skill_id, day)"
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS skill_trend_daily_day ON skill_trend_daily(day)")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS skill_trend_daily_category_day ON skill_trend_daily(category, day)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS skill_pair_daily_base_day ON skill_pair_daily(base_skill_id, day)"
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS skill_pair_daily_day ON skill_pair_daily(day)")
+        _TRENDS_ENSURED.add(key)
 
 
 def clamp_pair_limit(value: int | None) -> int:
@@ -173,6 +199,11 @@ def _as_of_day(conn) -> date:
 def _window_bounds(as_of: date, window_days: int) -> tuple[str, str]:
     start = as_of - timedelta(days=window_days - 1)
     return start.isoformat(), as_of.isoformat()
+
+
+def _day_after(day: str) -> str:
+    """Exclusive upper bound for ISO created_at comparisons (YYYY-MM-DD inclusive end)."""
+    return (date.fromisoformat(str(day)[:10]) + timedelta(days=1)).isoformat()
 
 
 def _skill_counts(
@@ -210,6 +241,55 @@ def _skill_counts(
     return out
 
 
+def _skill_counts_windows(
+    conn,
+    *,
+    cur_start: str,
+    cur_end: str,
+    prior_start: str,
+    prior_end: str,
+    category: str,
+    region: str,
+) -> tuple[dict[int, int], dict[int, int]]:
+    """Current + prior skill ad counts in one scan of skill_trend_daily."""
+    clauses = ["day >= ?", "day <= ?"]
+    params: list[Any] = [prior_start, cur_end]
+    if category:
+        clauses.append("category = ?")
+        params.append(category)
+    if region:
+        clauses.append("region = ?")
+        params.append(region)
+    sql = f"""
+        SELECT
+            skill_id,
+            SUM(CASE WHEN day >= ? AND day <= ? THEN ad_count ELSE 0 END) AS current_count,
+            SUM(CASE WHEN day >= ? AND day <= ? THEN ad_count ELSE 0 END) AS prior_count
+        FROM skill_trend_daily
+        WHERE {' AND '.join(clauses)}
+        GROUP BY skill_id
+    """
+    try:
+        rows = conn.execute(
+            sql, [cur_start, cur_end, prior_start, prior_end, *params]
+        ).fetchall()
+    except Exception:
+        return {}, {}
+    current: dict[int, int] = {}
+    prior: dict[int, int] = {}
+    for row in rows:
+        skill_id = int(_row_get(row, "skill_id", 0) or 0)
+        if skill_id <= 0:
+            continue
+        cur = int(_row_get(row, "current_count", 1) or 0)
+        prev = int(_row_get(row, "prior_count", 2) or 0)
+        if cur > 0:
+            current[skill_id] = cur
+        if prev > 0:
+            prior[skill_id] = prev
+    return current, prior
+
+
 def _category_job_count(
     conn,
     *,
@@ -218,24 +298,74 @@ def _category_job_count(
     category: str,
     region: str,
 ) -> int:
-    """Distinct published jobs in the calendar window (denominator for share)."""
+    """Published jobs in the calendar window (denominator for share).
+
+    Uses created_at range (not substr) so jobs_public_list can apply.
+    """
     del region  # jobs have no region column yet; reserved for API filter parity
     clauses = [
         "status = 'published'",
         "COALESCE(hidden, 0) = 0",
-        "substr(created_at, 1, 10) >= ?",
-        "substr(created_at, 1, 10) <= ?",
+        "(merged_into IS NULL OR merged_into = 0)",
+        "created_at >= ?",
+        "created_at < ?",
     ]
-    params: list[Any] = [start, end]
+    params: list[Any] = [start, _day_after(end)]
     if category:
         clauses.append("COALESCE(category, '') = ?")
         params.append(category)
-    sql = f"SELECT COUNT(*) FROM jobs WHERE {' AND '.join(clauses)}"
+    sql = f"SELECT COUNT(*) AS total FROM jobs WHERE {' AND '.join(clauses)}"
     try:
         row = conn.execute(sql, params).fetchone()
     except Exception:
         return 0
-    return int(_row_get(row, "COUNT(*)", 0) or 0)
+    return int(_row_get(row, "total", 0) or 0)
+
+
+def _category_job_counts_windows(
+    conn,
+    *,
+    cur_start: str,
+    cur_end: str,
+    prior_start: str,
+    prior_end: str,
+    category: str,
+    region: str,
+) -> tuple[int, int]:
+    """Current + prior published job counts in one jobs scan."""
+    del region
+    cur_hi = _day_after(cur_end)
+    prior_hi = _day_after(prior_end)
+    clauses = [
+        "status = 'published'",
+        "COALESCE(hidden, 0) = 0",
+        "(merged_into IS NULL OR merged_into = 0)",
+        "created_at >= ?",
+        "created_at < ?",
+    ]
+    params: list[Any] = [prior_start, cur_hi]
+    if category:
+        clauses.append("COALESCE(category, '') = ?")
+        params.append(category)
+    sql = f"""
+        SELECT
+            SUM(CASE WHEN created_at >= ? AND created_at < ? THEN 1 ELSE 0 END) AS current_n,
+            SUM(CASE WHEN created_at >= ? AND created_at < ? THEN 1 ELSE 0 END) AS prior_n
+        FROM jobs
+        WHERE {' AND '.join(clauses)}
+    """
+    try:
+        row = conn.execute(
+            sql, [cur_start, cur_hi, prior_start, prior_hi, *params]
+        ).fetchone()
+    except Exception:
+        return 0, 0
+    if row is None:
+        return 0, 0
+    return (
+        int(_row_get(row, "current_n", 0) or 0),
+        int(_row_get(row, "prior_n", 1) or 0),
+    )
 
 
 def _skill_meta(conn, skill_ids: list[int]) -> dict[int, dict]:
@@ -329,7 +459,6 @@ def companions_for_skills(
     pair_limit: int = DEFAULT_PAIR_LIMIT,
 ) -> dict[int, list[dict]]:
     """Top companions: share of base-skill ads that also require the pair skill."""
-    ensure_trend_tables(conn)
     chosen_limit = clamp_pair_limit(pair_limit)
     eligible = [
         sid
@@ -530,11 +659,23 @@ def trends_payload(
     prior_end = as_of - timedelta(days=chosen_window)
     prior_start, prior_end_s = _window_bounds(prior_end, chosen_window)
 
-    current = _skill_counts(conn, start=cur_start, end=cur_end, category=cat, region=reg)
-    prior = _skill_counts(conn, start=prior_start, end=prior_end_s, category=cat, region=reg)
-    denom = _category_job_count(conn, start=cur_start, end=cur_end, category=cat, region=reg)
-    prior_denom = _category_job_count(
-        conn, start=prior_start, end=prior_end_s, category=cat, region=reg
+    current, prior = _skill_counts_windows(
+        conn,
+        cur_start=cur_start,
+        cur_end=cur_end,
+        prior_start=prior_start,
+        prior_end=prior_end_s,
+        category=cat,
+        region=reg,
+    )
+    denom, prior_denom = _category_job_counts_windows(
+        conn,
+        cur_start=cur_start,
+        cur_end=cur_end,
+        prior_start=prior_start,
+        prior_end=prior_end_s,
+        category=cat,
+        region=reg,
     )
 
     ranked = sorted(current.items(), key=lambda kv: (-kv[1], kv[0]))[:chosen_limit]
@@ -633,11 +774,23 @@ def trend_metrics_for_skills(
     cur_start, cur_end = _window_bounds(as_of, chosen_window)
     prior_end = as_of - timedelta(days=chosen_window)
     prior_start, prior_end_s = _window_bounds(prior_end, chosen_window)
-    current = _skill_counts(conn, start=cur_start, end=cur_end, category=cat, region="")
-    prior = _skill_counts(conn, start=prior_start, end=prior_end_s, category=cat, region="")
-    denom = _category_job_count(conn, start=cur_start, end=cur_end, category=cat, region="")
-    prior_denom = _category_job_count(
-        conn, start=prior_start, end=prior_end_s, category=cat, region=""
+    current, prior = _skill_counts_windows(
+        conn,
+        cur_start=cur_start,
+        cur_end=cur_end,
+        prior_start=prior_start,
+        prior_end=prior_end_s,
+        category=cat,
+        region="",
+    )
+    denom, prior_denom = _category_job_counts_windows(
+        conn,
+        cur_start=cur_start,
+        cur_end=cur_end,
+        prior_start=prior_start,
+        prior_end=prior_end_s,
+        category=cat,
+        region="",
     )
     out: dict[int, dict] = {}
     for skill_id in skill_ids:

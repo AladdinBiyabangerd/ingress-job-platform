@@ -46,6 +46,8 @@ def current_user(authorization: str | None = Header(default=None)) -> VerifiedAc
 
 
 def account_payload(user: VerifiedAccess) -> dict:
+    from app.notifications import unread_count
+
     profile = profile_for(user.subject)
     candidate_profile = candidate_profile_for(user.subject)
     employer = "job:employer" in user.scopes
@@ -65,6 +67,8 @@ def account_payload(user: VerifiedAccess) -> dict:
         "company_profile": profile,
         "candidate_profile": candidate_profile,
         "needs_company_profile": employer and not staff and not profile["complete"],
+        # Seeds the header bell from SSR getMe — no second /notifications round-trip.
+        "unread_notifications": unread_count(user.subject),
     }
 
 
