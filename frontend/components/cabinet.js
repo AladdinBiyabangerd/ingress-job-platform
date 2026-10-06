@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { applyFormFromJob, applyFormPayload, applyFormReady, defaultApplyForm } from "../lib/apply-form";
 import { hrefFor, languageLabel, text } from "../lib/copy";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
+import { cabinetCloseJob, cabinetSaveJob, refreshCabinet } from "../lib/server/refresh";
 import { ApplicationList } from "./application-list";
 import { ApplyFormFields } from "./apply-form-fields";
 import { Pager } from "./pager";
@@ -58,29 +59,29 @@ function canEdit(me, job) {
   return job.status === "pending" || job.status === "published" || job.status === "rejected";
 }
 
-export function Cabinet({ locale, me }) {
+export function Cabinet({ locale, me, initialJobs = null, initialApplications = null }) {
   const t = text(locale);
-  const [items, setItems] = useState([]);
+  const seededJobs = Array.isArray(initialJobs);
+  const seededApps = Array.isArray(initialApplications);
+  const seededList = seededJobs && seededApps;
+  const [items, setItems] = useState(() => (seededJobs ? initialJobs : []));
   const [form, setForm] = useState(() => blank(locale, me));
   const [editing, setEditing] = useState(null);
   const [tab, setTab] = useState("create");
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
-  const [applications, setApplications] = useState([]);
+  const [applications, setApplications] = useState(() => (seededApps ? initialApplications : []));
   const { pageItems, currentPage, totalPages, pageSize, total, goToPage, resetPage } = usePagination(items, LIST_PAGE_SIZE);
 
   async function load() {
-    const res = await fetch("/api/auth/cabinet/jobs", { cache: "no-store" });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error("load");
-    setItems(Array.isArray(data.items) ? data.items : []);
-    const apps = await fetch("/api/auth/cabinet/applications", { cache: "no-store" });
-    const appData = await apps.json().catch(() => ({}));
-    if (apps.ok) setApplications(Array.isArray(appData.items) ? appData.items : []);
+    const data = await refreshCabinet();
+    setItems(data.jobs);
+    setApplications(data.applications);
   }
 
   useEffect(() => {
+    if (seededList) return undefined;
     let cancelled = false;
     load()
       .catch(() => {
@@ -89,7 +90,7 @@ export function Cabinet({ locale, me }) {
     return () => {
       cancelled = true;
     };
-  }, [t.loadError]);
+  }, [seededList, t.loadError]);
 
   function setField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -140,12 +141,8 @@ export function Cabinet({ locale, me }) {
       job_type: form.job_type,
       form: applyFormPayload(form.applicationForm),
     };
-    const res = await fetch(editing ? `/api/auth/cabinet/jobs/${editing}` : "/api/auth/cabinet/jobs", {
-      method: editing ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const saved = await res.json().catch(() => ({}));
+    const res = await cabinetSaveJob(editing, payload);
+    const saved = res.data;
     setBusy(false);
     if (!res.ok) {
       setError(res.status === 422 ? t.adRequired : res.status === 409 ? t.cannotChange : res.status === 403 ? t.cannotEdit : t.cabinetError);
@@ -166,7 +163,7 @@ export function Cabinet({ locale, me }) {
     if (!window.confirm(t.adCloseAsk)) return;
     setError("");
     setNote("");
-    const res = await fetch(`/api/auth/cabinet/jobs/${job.id}/close`, { method: "POST" });
+    const res = await cabinetCloseJob(job.id);
     if (!res.ok) {
       setError(t.cabinetError);
       return;

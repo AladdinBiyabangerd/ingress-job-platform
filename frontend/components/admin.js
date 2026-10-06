@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { applyFormFromJob, applyFormPayload, applyFormReady } from "../lib/apply-form";
 import { hrefFor, languageLabel, text } from "../lib/copy";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
+import { adminActJob, adminPatchJob, adminRejectJob, refreshAdminQueue } from "../lib/server/refresh";
 import { AdminAiFlags } from "./admin-ai-flags";
 import { ApplicationList } from "./application-list";
 import { ApplyFormFields } from "./apply-form-fields";
@@ -48,28 +49,36 @@ function fromJob(locale, job) {
   };
 }
 
-export function Admin({ locale }) {
+export function Admin({
+  locale,
+  initialJobs = null,
+  initialApplications = null,
+  initialCrawled = null,
+  initialAiFlags = null,
+}) {
   const t = text(locale);
+  const seededJobs = Array.isArray(initialJobs);
+  const seededApps = Array.isArray(initialApplications);
+  const seededList = seededJobs && seededApps;
   const [tab, setTab] = useState("queue");
-  const [items, setItems] = useState([]);
+  const [seenCollected, setSeenCollected] = useState(false);
+  const [seenAi, setSeenAi] = useState(false);
+  const [items, setItems] = useState(() => (seededJobs ? initialJobs : []));
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(null);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
-  const [applications, setApplications] = useState([]);
+  const [applications, setApplications] = useState(() => (seededApps ? initialApplications : []));
 
   async function load() {
-    const res = await fetch("/api/auth/admin/jobs", { cache: "no-store" });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error("load");
-    setItems(Array.isArray(data.items) ? data.items : []);
-    const apps = await fetch("/api/auth/admin/applications", { cache: "no-store" });
-    const appData = await apps.json().catch(() => ({}));
-    if (apps.ok) setApplications(Array.isArray(appData.items) ? appData.items : []);
+    const data = await refreshAdminQueue();
+    setItems(data.jobs);
+    setApplications(data.applications);
   }
 
   useEffect(() => {
+    if (seededList) return undefined;
     let cancelled = false;
     load().catch(() => {
       if (!cancelled) setError(t.loadError);
@@ -77,7 +86,7 @@ export function Admin({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, [t.loadError]);
+  }, [seededList, t.loadError]);
 
   const { pageItems, currentPage, totalPages, pageSize, total, goToPage } = usePagination(items, LIST_PAGE_SIZE);
 
@@ -121,11 +130,7 @@ export function Admin({ locale }) {
       job_type: form.job_type,
       form: applyFormPayload(form.applicationForm),
     };
-    const res = await fetch(`/api/auth/admin/jobs/${editing}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const res = await adminPatchJob(editing, payload);
     setBusy(false);
     if (!res.ok) {
       setError(res.status === 422 ? t.adRequired : t.adminError);
@@ -149,11 +154,7 @@ export function Admin({ locale }) {
     }
     setError("");
     setNote("");
-    const res = await fetch(`/api/auth/admin/jobs/${job.id}/reject`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason }),
-    });
+    const res = await adminRejectJob(job.id, reason);
     if (!res.ok) {
       setError(res.status === 422 ? t.rejectReasonRequired : t.adminError);
       return;
@@ -171,7 +172,7 @@ export function Admin({ locale }) {
     if (ask && !window.confirm(ask)) return;
     setError("");
     setNote("");
-    const res = await fetch(`/api/auth/admin/jobs/${job.id}/${action}`, { method: "POST" });
+    const res = await adminActJob(job.id, action);
     if (!res.ok) {
       setError(t.adminError);
       return;
@@ -210,7 +211,10 @@ export function Admin({ locale }) {
             role="tab"
             aria-selected={tab === "collected"}
             className={tab === "collected" ? "on" : ""}
-            onClick={() => setTab("collected")}
+            onClick={() => {
+              setTab("collected");
+              setSeenCollected(true);
+            }}
           >
             {t.collectedTitle}
           </button>
@@ -238,7 +242,10 @@ export function Admin({ locale }) {
             role="tab"
             aria-selected={tab === "ai"}
             className={tab === "ai" ? "on" : ""}
-            onClick={() => setTab("ai")}
+            onClick={() => {
+              setTab("ai");
+              setSeenAi(true);
+            }}
           >
             {t.adminAiTitle}
           </button>
@@ -401,12 +408,20 @@ export function Admin({ locale }) {
         </section>
       ) : null}
 
-      {tab === "collected" ? <CollectedAdmin locale={locale} /> : null}
+      {tab === "collected" || seenCollected ? (
+        <div hidden={tab !== "collected"}>
+          <CollectedAdmin locale={locale} initialItems={initialCrawled} />
+        </div>
+      ) : null}
       {tab === "manual" ? <ManualAd locale={locale} onSaved={load} /> : null}
       {tab === "applications" ? (
         <ApplicationList locale={locale} items={applications} mode="staff" onChanged={load} />
       ) : null}
-      {tab === "ai" ? <AdminAiFlags locale={locale} /> : null}
+      {tab === "ai" || seenAi ? (
+        <div hidden={tab !== "ai"}>
+          <AdminAiFlags locale={locale} initial={initialAiFlags} />
+        </div>
+      ) : null}
     </div>
   );
 }

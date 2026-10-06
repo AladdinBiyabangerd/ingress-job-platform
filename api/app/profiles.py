@@ -14,6 +14,7 @@ from threading import Lock
 
 DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "accounts.sqlite"
 _LOCK = Lock()
+_ACCOUNTS_ENSURED: set[str] = set()
 
 NAME_MAX = 120
 CITY_MAX = 80
@@ -29,6 +30,9 @@ def _connect() -> sqlite3.Connection:
     DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DATA_PATH)
     conn.row_factory = sqlite3.Row
+    key = str(DATA_PATH)
+    if key in _ACCOUNTS_ENSURED:
+        return conn
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS company_profiles (
@@ -82,6 +86,7 @@ def _connect() -> sqlite3.Connection:
         )
         """
     )
+    _ACCOUNTS_ENSURED.add(key)
     return conn
 
 
@@ -94,16 +99,7 @@ def _clean(value: str, limit: int) -> str:
     return text[:limit]
 
 
-def profile_for(subject: str) -> dict:
-    with _LOCK:
-        conn = _connect()
-        try:
-            row = conn.execute(
-                "SELECT company_name, city, about FROM company_profiles WHERE subject = ?",
-                (subject,),
-            ).fetchone()
-        finally:
-            conn.close()
+def _company_view(row) -> dict:
     if row is None:
         return {"company_name": "", "city": "", "about": "", "complete": False}
     name = (row["company_name"] or "").strip()
@@ -115,6 +111,61 @@ def profile_for(subject: str) -> dict:
         "about": about,
         "complete": bool(name and city and about),
     }
+
+
+def _candidate_view(row) -> dict:
+    if row is None:
+        return empty_candidate_profile()
+    return {
+        "display_name": (row["display_name"] or "").strip(),
+        "phone": (row["phone"] or "").strip(),
+        "email": (row["email"] or "").strip(),
+    }
+
+
+def account_fields_for(subject: str) -> dict:
+    """Company, candidate, academy name, and contact email in one accounts open."""
+    who = (subject or "").strip()
+    with _LOCK:
+        conn = _connect()
+        try:
+            company = conn.execute(
+                "SELECT company_name, city, about FROM company_profiles WHERE subject = ?",
+                (who,),
+            ).fetchone()
+            candidate = conn.execute(
+                "SELECT display_name, phone, email FROM candidate_profiles WHERE subject = ?",
+                (who,),
+            ).fetchone()
+            academy = conn.execute(
+                "SELECT name FROM academy_identities WHERE subject = ?",
+                (who,),
+            ).fetchone()
+            contact = conn.execute(
+                "SELECT email FROM contact_emails WHERE subject = ?",
+                (who,),
+            ).fetchone()
+        finally:
+            conn.close()
+    return {
+        "company_profile": _company_view(company),
+        "candidate_profile": _candidate_view(candidate),
+        "academy_name": (academy["name"] or "").strip() if academy is not None else "",
+        "contact_email": (contact["email"] or "").strip().lower() if contact is not None else "",
+    }
+
+
+def profile_for(subject: str) -> dict:
+    with _LOCK:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT company_name, city, about FROM company_profiles WHERE subject = ?",
+                (subject,),
+            ).fetchone()
+        finally:
+            conn.close()
+    return _company_view(row)
 
 
 def save_profile(subject: str, company_name: str, city: str, about: str) -> dict:
@@ -195,13 +246,7 @@ def candidate_profile_for(subject: str) -> dict:
             ).fetchone()
         finally:
             conn.close()
-    if row is None:
-        return empty_candidate_profile()
-    return {
-        "display_name": (row["display_name"] or "").strip(),
-        "phone": (row["phone"] or "").strip(),
-        "email": (row["email"] or "").strip(),
-    }
+    return _candidate_view(row)
 
 
 def save_candidate_profile(subject: str, display_name: str, phone: str, email: str) -> dict:

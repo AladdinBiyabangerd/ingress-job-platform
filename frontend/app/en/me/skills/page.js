@@ -1,8 +1,10 @@
 import { MeSkills } from "../../../../components/me-skills";
+import { getSkillBundle } from "../../../../lib/server/skills";
 import { privatePageMetadata } from "../../../../lib/seo";
 
 export const metadata = privatePageMetadata;
 
-export default function Page() {
-  return <MeSkills locale="en" />;
+export default async function Page() {
+  const initial = await getSkillBundle("en");
+  return <MeSkills locale="en" initialRoles={initial.roles} initialGap={initial.gap} />;
 }

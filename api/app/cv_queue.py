@@ -8,6 +8,7 @@ The hourly crawl worker may still drain stranded rows as a backup.
 from __future__ import annotations
 
 from datetime import datetime
+from threading import Lock
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS parse_cv_queue (
@@ -51,10 +52,23 @@ def _now() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
+_QUEUE_ENSURED: set[str] = set()
+_QUEUE_LOCK = Lock()
+
+
 def ensure_cv_queue_tables(conn) -> None:
-    conn.executescript(SCHEMA)
-    for sql in INDEXES:
-        conn.execute(sql)
+    from app.jobs_db import schema_cache_key
+
+    key = schema_cache_key()
+    if key in _QUEUE_ENSURED:
+        return
+    with _QUEUE_LOCK:
+        if key in _QUEUE_ENSURED:
+            return
+        conn.executescript(SCHEMA)
+        for sql in INDEXES:
+            conn.execute(sql)
+        _QUEUE_ENSURED.add(key)
 
 
 def enqueue_parse(

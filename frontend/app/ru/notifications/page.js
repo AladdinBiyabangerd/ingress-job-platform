@@ -1,8 +1,12 @@
 import { NotificationsPage } from "../../../components/notifications-page";
+import { getNotifications } from "../../../lib/server/notifications";
 import { privatePageMetadata } from "../../../lib/seo";
 
 export const metadata = privatePageMetadata;
 
-export default function Page() {
-  return <NotificationsPage locale="ru" />;
+export default async function Page() {
+  const initial = await getNotifications();
+  return (
+    <NotificationsPage locale="ru" initialItems={initial.items} initialUnread={initial.unread} />
+  );
 }

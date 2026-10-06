@@ -11,6 +11,7 @@ import json
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
+from threading import Lock
 
 CONSENT_KINDS = ("matching", "emails", "recruiter_visibility")
 VISIBILITY_LEVELS = ("hidden", "anonymous", "public")
@@ -39,8 +40,21 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+_CONSENT_ENSURED: set[str] = set()
+_CONSENT_LOCK = Lock()
+
+
 def ensure_consent_tables(conn) -> None:
-    conn.executescript(SCHEMA)
+    from app.jobs_db import schema_cache_key
+
+    key = schema_cache_key()
+    if key in _CONSENT_ENSURED:
+        return
+    with _CONSENT_LOCK:
+        if key in _CONSENT_ENSURED:
+            return
+        conn.executescript(SCHEMA)
+        _CONSENT_ENSURED.add(key)
 
 
 @lru_cache(maxsize=1)

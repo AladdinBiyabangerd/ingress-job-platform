@@ -71,114 +71,11 @@ def apply_academy_course_map(
         row["academy_course_ids"] = courses
     return updated
 
-# Mirrors comment groups in worker/worker/techstack.py (_TECH).
-_CATEGORY_BY_CANONICAL: dict[str, str] = {
-    "Python": "language",
-    "Java": "language",
-    "Kotlin": "language",
-    "Scala": "language",
-    "Go": "language",
-    "Rust": "language",
-    "TypeScript": "language",
-    "JavaScript": "language",
-    "PHP": "language",
-    "Ruby": "language",
-    "C#": "language",
-    "C++": "language",
-    "C": "language",
-    ".NET": "language",
-    "Swift": "language",
-    "Objective-C": "language",
-    "Dart": "language",
-    "Elixir": "language",
-    "Erlang": "language",
-    "Haskell": "language",
-    "Clojure": "language",
-    "Solidity": "language",
-    "SQL": "language",
-    "Bash": "language",
-    "React": "frontend",
-    "React Native": "mobile",
-    "Next.js": "frontend",
-    "Vue.js": "frontend",
-    "Nuxt": "frontend",
-    "Angular": "frontend",
-    "Svelte": "frontend",
-    "Redux": "frontend",
-    "Tailwind": "frontend",
-    "HTML": "frontend",
-    "CSS": "frontend",
-    "Flutter": "mobile",
-    "iOS": "mobile",
-    "Android": "mobile",
-    "Node.js": "backend",
-    "NestJS": "backend",
-    "Express": "backend",
-    "Django": "backend",
-    "Flask": "backend",
-    "FastAPI": "backend",
-    "Spring": "backend",
-    "Ruby on Rails": "backend",
-    "Laravel": "backend",
-    "Symfony": "backend",
-    "Phoenix": "backend",
-    "GraphQL": "backend",
-    "gRPC": "backend",
-    "WordPress": "backend",
-    "Shopify": "backend",
-    "AWS": "cloud",
-    "GCP": "cloud",
-    "Azure": "cloud",
-    "Kubernetes": "devops",
-    "Docker": "devops",
-    "Terraform": "devops",
-    "Ansible": "devops",
-    "Helm": "devops",
-    "Linux": "devops",
-    "CI/CD": "devops",
-    "Jenkins": "devops",
-    "GitHub Actions": "devops",
-    "Prometheus": "devops",
-    "Grafana": "devops",
-    "Datadog": "devops",
-    "Nginx": "devops",
-    "PostgreSQL": "data",
-    "MySQL": "data",
-    "MongoDB": "data",
-    "Redis": "data",
-    "Elasticsearch": "data",
-    "DynamoDB": "data",
-    "Cassandra": "data",
-    "ClickHouse": "data",
-    "Kafka": "data",
-    "RabbitMQ": "data",
-    "Spark": "data",
-    "Airflow": "data",
-    "dbt": "data",
-    "Snowflake": "data",
-    "BigQuery": "data",
-    "Databricks": "data",
-    "Pandas": "data",
-    "PyTorch": "ml",
-    "TensorFlow": "ml",
-    "scikit-learn": "ml",
-    "LLM": "ml",
-    "Selenium": "qa",
-    "Cypress": "qa",
-    "Playwright": "qa",
-    "Jest": "qa",
-    "Figma": "design",
-    "Unity": "gamedev",
-    "Unreal Engine": "gamedev",
-    "Ethereum": "web3",
-}
-
-
-def _load_tech_entries() -> list[tuple[str, tuple[str, ...]]]:
+def _load_tech_entries() -> list[tuple[str, tuple[str, ...], str]]:
     sys.path.insert(0, str(WORKER_DIR))
     from worker.techstack import _TECH  # noqa: WPS433
 
-    return [(name, aliases) for name, _pattern, aliases in _TECH]
+    return [(name, aliases, cat) for name, _pattern, aliases, cat in _TECH]
 
 
 def _job_skill_counts(db_path: Path) -> tuple[int, int, Counter[str]]:
@@ -232,7 +129,7 @@ def main() -> int:
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     skills = []
-    for name, aliases in entries:
+    for name, aliases, category in entries:
         synonym_set = {name.lower(), *(a.lower() for a in aliases)}
         # Keep synonyms distinct from the canonical display name.
         synonyms = sorted(s for s in synonym_set if s != name.lower())
@@ -240,7 +137,7 @@ def main() -> int:
             {
                 "canonical_name": name,
                 "synonyms": synonyms,
-                "category_hint": _CATEGORY_BY_CANONICAL.get(name, "other"),
+                "category_hint": category or "other",
                 "ad_count": int(freq.get(name, 0)),
                 "academy_course_ids": [],
             }

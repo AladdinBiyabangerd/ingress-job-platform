@@ -20,7 +20,7 @@ from worker.skills import load_seed, seed_skill_dictionary  # noqa: E402
 class AcademyCourseMapTest(unittest.TestCase):
     def test_map_covers_real_dictionary_skills(self):
         mapping = load_academy_course_map()
-        self.assertGreater(len(mapping), 20)
+        self.assertGreater(len(mapping), 80)
         names = {s["canonical_name"] for s in load_seed()}
         missing = sorted(k for k in mapping if k not in names)
         self.assertEqual(missing, [])
@@ -28,7 +28,7 @@ class AcademyCourseMapTest(unittest.TestCase):
     def test_packaged_seed_includes_courses(self):
         skills = load_seed()
         filled = [s for s in skills if s.get("academy_course_ids")]
-        self.assertGreaterEqual(len(filled), 20)
+        self.assertGreaterEqual(len(filled), 80)
         aws = next(s for s in skills if s["canonical_name"] == "AWS")
         self.assertIn(
             "cloud-computing-with-aws-and-terraform-az",

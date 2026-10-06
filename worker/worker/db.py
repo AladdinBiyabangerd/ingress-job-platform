@@ -90,6 +90,8 @@ RETIRED_LOCAL_SOURCES = (
     "HRX", "Work.az", "eJob.az", "hh1.az", "hh.ru",
 )
 HIDE_RETIRED_STEP = "hide-retired-local-sources-2026-10-05"
+# One-shot: re-run extract_stack on scraped ads after the curated dictionary grows.
+REEXTRACT_STACK_STEP = "reextract-tech-stack-dict-v2-2026-10-06"
 
 _MAINTENANCE = """
 CREATE TABLE IF NOT EXISTS maintenance_steps (
@@ -501,6 +503,66 @@ class Store:
                 sync_job_skills(self.conn, int(row["id"]), stack)
                 done += 1
         return done
+
+    def reextract_tech_stack(self, *, force: bool = False) -> int:
+        """Re-extract chips from stored title+body with the current dictionary.
+
+        Scraped rows only (empty owner_subject). Staff-locked and merged ads
+        are skipped. Existing chips are remapped through the new aliases, then
+        text matches fill in names the old list missed (no TAGS_ENOUGH skip).
+        Returns how many jobs had their stored tech_stack JSON change.
+        """
+        from worker.skills import sync_job_skills
+        from worker.techstack import MAX_STACK, dump_stack, extract_stack, stack_from_tags
+
+        self.conn.execute(_MAINTENANCE)
+        if not force:
+            done = self.conn.execute(
+                "SELECT 1 FROM maintenance_steps WHERE name = ?",
+                (REEXTRACT_STACK_STEP,),
+            ).fetchone()
+            if done:
+                return 0
+
+        rows = self.conn.execute(
+            """
+            SELECT id, title, COALESCE(NULLIF(cleaned_text, ''), text) AS body,
+                   COALESCE(tech_stack, '') AS tech_stack
+            FROM jobs
+            WHERE COALESCE(owner_subject, '') = ''
+              AND COALESCE(content_locked, 0) = 0
+              AND (merged_into IS NULL OR merged_into = 0)
+            """
+        ).fetchall()
+        updated = 0
+        with self.conn:
+            for row in rows:
+                title = str(row["title"] or "")
+                body = str(row["body"] or "")
+                raw = row["tech_stack"]
+                fresh = extract_stack(body, None, title)
+                for name in stack_from_tags(raw):
+                    if name not in fresh:
+                        fresh.append(name)
+                stack = fresh[:MAX_STACK]
+                stack_json = dump_stack(stack)
+                previous = raw if isinstance(raw, str) else dump_stack(
+                    [str(x) for x in raw] if isinstance(raw, list) else []
+                )
+                if stack_json == previous:
+                    continue
+                self.conn.execute(
+                    "UPDATE jobs SET tech_stack = ? WHERE id = ?",
+                    (stack_json, row["id"]),
+                )
+                sync_job_skills(self.conn, int(row["id"]), stack)
+                updated += 1
+            self.conn.execute(
+                "INSERT INTO maintenance_steps (name, done_at) VALUES (?, ?) "
+                "ON CONFLICT (name) DO NOTHING",
+                (REEXTRACT_STACK_STEP, now_iso()),
+            )
+        return updated
 
     def _set_norm_key(self, job_id: int, key: str) -> None:
         other = self.conn.execute(

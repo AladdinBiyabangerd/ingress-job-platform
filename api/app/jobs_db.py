@@ -45,6 +45,18 @@ def postgres_enabled() -> bool:
     return url.startswith(_POSTGRES_SCHEMES)
 
 
+def schema_cache_key() -> str:
+    """Process-local key so DDL / taxonomy caches do not leak across DBs."""
+    if postgres_enabled():
+        return "postgres"
+    try:
+        from app.sqlite_jobs import DB_PATH
+
+        return str(DB_PATH)
+    except Exception:
+        return os.environ.get("JOBS_DB_PATH", "").strip() or "sqlite-default"
+
+
 def normalize_database_url(url: str) -> str:
     raw = url.strip()
     for prefix in (

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { text } from "../lib/copy";
+import { saveAdminAiFlags } from "../lib/server/refresh";
 
 const FLOWS = [
   ["gateway", "adminAiGateway"],
@@ -13,10 +14,19 @@ const FLOWS = [
   ["digest_intro", "adminAiDigest"],
 ];
 
-export function AdminAiFlags({ locale }) {
+function flagsFromPayload(data) {
+  const next = {};
+  for (const [key] of FLOWS) {
+    next[key] = Boolean(data?.flags && data.flags[key]);
+  }
+  return next;
+}
+
+export function AdminAiFlags({ locale, initial = null }) {
   const t = text(locale);
-  const [flags, setFlags] = useState(null);
-  const [keyConfigured, setKeyConfigured] = useState(true);
+  const seeded = Boolean(initial && typeof initial === "object" && initial.flags && typeof initial.flags === "object");
+  const [flags, setFlags] = useState(() => (seeded ? flagsFromPayload(initial) : null));
+  const [keyConfigured, setKeyConfigured] = useState(() => (seeded ? Boolean(initial.key_configured) : true));
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -25,15 +35,12 @@ export function AdminAiFlags({ locale }) {
     const res = await fetch("/api/auth/admin/ai-flags", { cache: "no-store" });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error("load");
-    const next = {};
-    for (const [key] of FLOWS) {
-      next[key] = Boolean(data.flags && data.flags[key]);
-    }
-    setFlags(next);
+    setFlags(flagsFromPayload(data));
     setKeyConfigured(Boolean(data.key_configured));
   }
 
   useEffect(() => {
+    if (seeded) return undefined;
     let cancelled = false;
     load().catch(() => {
       if (!cancelled) setError(t.loadError);
@@ -41,7 +48,7 @@ export function AdminAiFlags({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, [t.loadError]);
+  }, [seeded, t.loadError]);
 
   function setFlow(key, value) {
     setFlags((current) => (current ? { ...current, [key]: value } : current));
@@ -53,24 +60,20 @@ export function AdminAiFlags({ locale }) {
     setError("");
     setNote("");
     setBusy(true);
-    const res = await fetch("/api/auth/admin/ai-flags", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ flags }),
-    });
-    const data = await res.json().catch(() => ({}));
-    setBusy(false);
-    if (!res.ok) {
+    try {
+      const data = await saveAdminAiFlags(flags);
+      if (!data.ok) {
+        setError(t.adminError);
+        return;
+      }
+      setFlags(flagsFromPayload(data));
+      setKeyConfigured(Boolean(data.key_configured));
+      setNote(t.adminAiSaved);
+    } catch {
       setError(t.adminError);
-      return;
+    } finally {
+      setBusy(false);
     }
-    const next = {};
-    for (const [key] of FLOWS) {
-      next[key] = Boolean(data.flags && data.flags[key]);
-    }
-    setFlags(next);
-    setKeyConfigured(Boolean(data.key_configured));
-    setNote(t.adminAiSaved);
   }
 
   return (

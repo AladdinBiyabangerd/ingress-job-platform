@@ -3,26 +3,34 @@
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
+import { refreshMyApplications } from "../lib/server/refresh";
 import { ApplicationList } from "./application-list";
+import { useInitialMe } from "./me-seed";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 
-export function MyApplications({ locale }) {
+export function MyApplications({ locale, initialItems = null }) {
   const t = text(locale);
-  const [me, setMe] = useState(undefined);
-  const [items, setItems] = useState([]);
+  const initialMe = useInitialMe();
+  const seededList = Array.isArray(initialItems);
+  const [me, setMe] = useState(() => {
+    if (initialMe && typeof initialMe === "object") return initialMe.authenticated ? initialMe : null;
+    return undefined;
+  });
+  const [items, setItems] = useState(() => (seededList ? initialItems : []));
   const [error, setError] = useState("");
 
   const allowed = Boolean(me?.authenticated && (me.candidate || me.staff));
 
   async function load() {
-    const res = await fetch("/api/auth/applications", { cache: "no-store" });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error("load");
-    setItems(Array.isArray(data.items) ? data.items : []);
+    setItems(await refreshMyApplications());
   }
 
   useEffect(() => {
+    if (initialMe && typeof initialMe === "object") {
+      setMe(initialMe.authenticated ? initialMe : null);
+      return undefined;
+    }
     let cancelled = false;
     fetchMe()
       .then((data) => {
@@ -34,10 +42,11 @@ export function MyApplications({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialMe]);
 
   useEffect(() => {
     if (!allowed) return undefined;
+    if (seededList) return undefined;
     let cancelled = false;
     load().catch(() => {
       if (!cancelled) setError(t.loadError);
@@ -45,7 +54,7 @@ export function MyApplications({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, [allowed, t.loadError]);
+  }, [allowed, seededList, t.loadError]);
 
   return (
     <Shell locale={locale} mode="applications">

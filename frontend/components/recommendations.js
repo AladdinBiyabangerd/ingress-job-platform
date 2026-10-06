@@ -8,6 +8,7 @@ import { Pager } from "./pager";
 import { RegisterChoice } from "./register-choice";
 import { RoleSkillParts } from "./role-skill-parts";
 import { Shell } from "./shell";
+import { useInitialMe } from "./me-seed";
 
 const REASONS = ["location", "seniority", "technology", "salary"];
 const MATCHES_FETCH_LIMIT = 50;
@@ -102,18 +103,27 @@ function MatchJob({ t, locale, job, busy, onFeedback }) {
   );
 }
 
-export function Recommendations({ locale }) {
+export function Recommendations({ locale, initialRoles = null, initialMatches = null }) {
   const t = text(locale);
   const lang = locale === "en" || locale === "ru" ? locale : "az";
-  const [me, setMe] = useState(undefined);
-  const [roles, setRoles] = useState(null);
-  const [matches, setMatches] = useState(null);
-  const [activeRole, setActiveRole] = useState("");
+  const initialMe = useInitialMe();
+  const seededCatalog = initialRoles != null && initialMatches != null;
+  const [me, setMe] = useState(() => {
+    if (initialMe && typeof initialMe === "object") return initialMe.authenticated ? initialMe : null;
+    return undefined;
+  });
+  const [roles, setRoles] = useState(initialRoles);
+  const [matches, setMatches] = useState(initialMatches);
+  const [activeRole, setActiveRole] = useState(initialRoles?.roles?.[0]?.canonical_name || "");
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
 
   useEffect(() => {
+    if (initialMe && typeof initialMe === "object") {
+      setMe(initialMe.authenticated ? initialMe : null);
+      return undefined;
+    }
     let cancelled = false;
     fetchMe()
       .then((data) => {
@@ -125,10 +135,11 @@ export function Recommendations({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialMe]);
 
   useEffect(() => {
     if (!me || !(me.candidate || me.staff)) return undefined;
+    if (seededCatalog) return undefined;
     let cancelled = false;
     Promise.all([
       fetch(`/api/auth/me/roles?lang=${lang}`, { cache: "no-store" }).then((res) =>
@@ -154,7 +165,7 @@ export function Recommendations({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, [me, lang]);
+  }, [me, lang, seededCatalog]);
 
   const jobList = Array.isArray(matches?.matches) ? matches.matches : [];
   const { pageItems, currentPage, totalPages, pageSize, total, goToPage } = usePagination(

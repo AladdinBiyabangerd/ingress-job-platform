@@ -1,8 +1,12 @@
 import { Recommendations } from "../../../components/recommendations";
+import { getRecommendationBundle } from "../../../lib/server/recommendations";
 import { privatePageMetadata } from "../../../lib/seo";
 
 export const metadata = privatePageMetadata;
 
-export default function Page() {
-  return <Recommendations locale="az" />;
+export default async function Page() {
+  const initial = await getRecommendationBundle("az");
+  return (
+    <Recommendations locale="az" initialRoles={initial.roles} initialMatches={initial.matches} />
+  );
 }

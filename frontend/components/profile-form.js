@@ -3,46 +3,68 @@
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { clearMeCache, fetchMe } from "../lib/me-client";
+import { saveCompanyProfile } from "../lib/server/refresh";
 import { ConsentFields, grantsFromPayload } from "./consent-fields";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
+import { useInitialMe } from "./me-seed";
 
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function applyMe(data, setters) {
+  if (!data || typeof data !== "object") return;
+  const company = data.company_profile || {};
+  const person = data.candidate_profile || {};
+  setters.setCompanyName(company.company_name || "");
+  setters.setCity(company.city || "");
+  setters.setAbout(company.about || "");
+  setters.setDisplayName(person.display_name || "");
+  setters.setPhone(person.phone || "");
+  setters.setEmail(person.email || "");
+}
+
+function consentsLang(locale) {
+  return locale === "en" || locale === "ru" ? locale : "az";
+}
+
 export function ProfileForm({ locale }) {
   const t = text(locale);
-  const [me, setMe] = useState(undefined);
-  const [companyName, setCompanyName] = useState("");
-  const [city, setCity] = useState("");
-  const [about, setAbout] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
+  const initialMe = useInitialMe();
+  const [me, setMe] = useState(() => {
+    if (initialMe && typeof initialMe === "object") return initialMe;
+    return undefined;
+  });
+  const [companyName, setCompanyName] = useState(() => initialMe?.company_profile?.company_name || "");
+  const [city, setCity] = useState(() => initialMe?.company_profile?.city || "");
+  const [about, setAbout] = useState(() => initialMe?.company_profile?.about || "");
+  const [displayName, setDisplayName] = useState(() => initialMe?.candidate_profile?.display_name || "");
+  const [phone, setPhone] = useState(() => initialMe?.candidate_profile?.phone || "");
+  const [email, setEmail] = useState(() => initialMe?.candidate_profile?.email || "");
   const [companyError, setCompanyError] = useState("");
   const [companyNote, setCompanyNote] = useState("");
   const [applicantError, setApplicantError] = useState("");
   const [applicantNote, setApplicantNote] = useState("");
-  const [consentPayload, setConsentPayload] = useState(null);
-  const [grants, setGrants] = useState({ matching: false, emails: false, recruiter_visibility: false });
-  const [visibility, setVisibility] = useState("anonymous");
+  const seededConsents =
+    initialMe?.consents && initialMe.consents.lang === consentsLang(locale) ? initialMe.consents : null;
+  const [consentPayload, setConsentPayload] = useState(seededConsents);
+  const [grants, setGrants] = useState(() => grantsFromPayload(seededConsents));
+  const [visibility, setVisibility] = useState(() => seededConsents?.visibility || "anonymous");
   const [privacyError, setPrivacyError] = useState("");
   const [privacyNote, setPrivacyNote] = useState("");
   const [privacyBusy, setPrivacyBusy] = useState("");
 
   useEffect(() => {
+    if (initialMe && typeof initialMe === "object") {
+      setMe(initialMe);
+      applyMe(initialMe, { setCompanyName, setCity, setAbout, setDisplayName, setPhone, setEmail });
+      return undefined;
+    }
     let cancelled = false;
     fetchMe()
       .then((data) => {
         if (cancelled) return;
         setMe(data);
-        const company = data.company_profile || {};
-        const person = data.candidate_profile || {};
-        setCompanyName(company.company_name || "");
-        setCity(company.city || "");
-        setAbout(company.about || "");
-        setDisplayName(person.display_name || "");
-        setPhone(person.phone || "");
-        setEmail(person.email || "");
+        applyMe(data, { setCompanyName, setCity, setAbout, setDisplayName, setPhone, setEmail });
       })
       .catch(() => {
         if (!cancelled) setMe({ authenticated: false });
@@ -50,13 +72,20 @@ export function ProfileForm({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialMe]);
 
   const showCompany = Boolean(me?.authenticated && (me.employer || me.staff));
   const showApplicant = Boolean(me?.authenticated && (me.candidate || me.staff));
 
   useEffect(() => {
     if (!showApplicant) return undefined;
+    const seeded = me?.consents;
+    if (seeded && seeded.lang === consentsLang(locale)) {
+      setConsentPayload(seeded);
+      setGrants(grantsFromPayload(seeded));
+      setVisibility(seeded.visibility || "anonymous");
+      return undefined;
+    }
     let cancelled = false;
     fetch(`/api/auth/consents?lang=${encodeURIComponent(locale)}`, { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
@@ -70,17 +99,13 @@ export function ProfileForm({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, [showApplicant, locale]);
+  }, [showApplicant, locale, me]);
 
   async function saveCompany(event) {
     event.preventDefault();
     setCompanyError("");
     setCompanyNote("");
-    const res = await fetch("/api/auth/company", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ company_name: companyName, city, about }),
-    });
+    const res = await saveCompanyProfile({ company_name: companyName, city, about });
     if (!res.ok) {
       setCompanyError(t.companyRequired);
       return;

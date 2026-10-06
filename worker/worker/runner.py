@@ -263,6 +263,12 @@ def _run_pass(store: Store) -> int:
             print(f"tech stack backfill: {filled}", flush=True)
     except Exception:
         capture_exception()
+    try:
+        refreshed = store.reextract_tech_stack()
+        if refreshed:
+            print(f"tech stack reextract: {refreshed}", flush=True)
+    except Exception:
+        capture_exception()
     saved, queued = tidy_pending(store.conn)
     if saved or queued:
         print(f"tidy: saved={saved} queued={queued}", flush=True)

@@ -3,9 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
+import {
+  cancelCvParse,
+  deleteCvProfile,
+  loadCvProfile,
+  loadRoles as loadRolesFromApi,
+  saveCvProfile,
+  uploadCvProfile,
+} from "../lib/server/refresh";
 import { RegisterChoice } from "./register-choice";
 import { RoleSkillParts } from "./role-skill-parts";
 import { Shell } from "./shell";
+import { useInitialMe } from "./me-seed";
 
 const SENIORITY = ["", "intern", "junior", "middle", "senior", "lead", "principal", "staff"];
 const CV_ACCEPT =
@@ -26,23 +35,22 @@ function emptyWork() {
   };
 }
 
-function applyPayload(data, setters) {
+function snapshotFromPayload(data) {
   const profile = data?.profile || {};
   const contact = profile.contact || {};
-  setters.setHeadline(data?.headline || profile.headline || "");
-  setters.setSeniority(data?.seniority || profile.seniority || "");
-  setters.setTotalYears(
-    data?.total_years != null
-      ? String(data.total_years)
-      : profile.total_years != null
-        ? String(profile.total_years)
-        : "",
-  );
-  setters.setFullName(contact.full_name || "");
-  setters.setEmail(contact.email || "");
-  setters.setPhone(contact.phone || "");
-  setters.setSkills(
-    Array.isArray(profile.skills)
+  return {
+    headline: data?.headline || profile.headline || "",
+    seniority: data?.seniority || profile.seniority || "",
+    totalYears:
+      data?.total_years != null
+        ? String(data.total_years)
+        : profile.total_years != null
+          ? String(profile.total_years)
+          : "",
+    fullName: contact.full_name || "",
+    email: contact.email || "",
+    phone: contact.phone || "",
+    skills: Array.isArray(profile.skills)
       ? profile.skills.map((item) => ({
           name: item?.name || "",
           years: item?.years != null ? String(item.years) : "",
@@ -50,9 +58,7 @@ function applyPayload(data, setters) {
           source: item?.source || "user",
         }))
       : [],
-  );
-  setters.setWork(
-    Array.isArray(profile.work_history)
+    work: Array.isArray(profile.work_history)
       ? profile.work_history.map((item) => ({
           title: item?.title || "",
           company: item?.company || "",
@@ -64,8 +70,28 @@ function applyPayload(data, setters) {
           employment_type: item?.employment_type || "",
         }))
       : [],
-  );
-  setters.setLowFields(Array.isArray(data?.low_confidence_fields) ? data.low_confidence_fields : []);
+    lowFields: Array.isArray(data?.low_confidence_fields) ? data.low_confidence_fields : [],
+  };
+}
+
+function applyPayload(data, setters) {
+  const snap = snapshotFromPayload(data);
+  setters.setHeadline(snap.headline);
+  setters.setSeniority(snap.seniority);
+  setters.setTotalYears(snap.totalYears);
+  setters.setFullName(snap.fullName);
+  setters.setEmail(snap.email);
+  setters.setPhone(snap.phone);
+  setters.setSkills(snap.skills);
+  setters.setWork(snap.work);
+  setters.setLowFields(snap.lowFields);
+}
+
+function entryFromPayload(data) {
+  if (!data || typeof data !== "object") return null;
+  if (data.exists) return "form";
+  if (parseOpen(data.parse_status)) return "upload";
+  return null;
 }
 
 function FieldMark({ show, label }) {
@@ -123,38 +149,44 @@ function ParseProgress({ t, uploading, parseStatus, fileName, onCancel, cancelBu
   );
 }
 
-export function ProfileReview({ locale }) {
+export function ProfileReview({ locale, initialProfile = null, initialRoles = null }) {
   const t = text(locale);
-  const [me, setMe] = useState(undefined);
-  const [payload, setPayload] = useState(null);
-  const [entry, setEntry] = useState(null);
-  const [headline, setHeadline] = useState("");
-  const [seniority, setSeniority] = useState("");
-  const [totalYears, setTotalYears] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [skills, setSkills] = useState([]);
-  const [work, setWork] = useState([]);
+  const initialMe = useInitialMe();
+  const seededProfile = initialProfile != null && typeof initialProfile === "object";
+  const seededRoles = initialRoles != null && typeof initialRoles === "object";
+  const seedSnap = seededProfile ? snapshotFromPayload(initialProfile) : null;
+  const seedParseOpen = Boolean(seededProfile && parseOpen(initialProfile.parse_status));
+  const [me, setMe] = useState(() => {
+    if (initialMe && typeof initialMe === "object") return initialMe;
+    return undefined;
+  });
+  const [payload, setPayload] = useState(() => (seededProfile ? initialProfile : null));
+  const [entry, setEntry] = useState(() => (seededProfile ? entryFromPayload(initialProfile) : null));
+  const [headline, setHeadline] = useState(() => seedSnap?.headline || "");
+  const [seniority, setSeniority] = useState(() => seedSnap?.seniority || "");
+  const [totalYears, setTotalYears] = useState(() => seedSnap?.totalYears || "");
+  const [fullName, setFullName] = useState(() => seedSnap?.fullName || "");
+  const [email, setEmail] = useState(() => seedSnap?.email || "");
+  const [phone, setPhone] = useState(() => seedSnap?.phone || "");
+  const [skills, setSkills] = useState(() => seedSnap?.skills || []);
+  const [work, setWork] = useState(() => seedSnap?.work || []);
   const [skillDraft, setSkillDraft] = useState("");
   const [skillYearsDraft, setSkillYearsDraft] = useState("");
-  const [lowFields, setLowFields] = useState([]);
-  const [rolesPayload, setRolesPayload] = useState(null);
+  const [lowFields, setLowFields] = useState(() => seedSnap?.lowFields || []);
+  const [rolesPayload, setRolesPayload] = useState(() => (seededRoles ? initialRoles : null));
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [polling, setPolling] = useState(false);
+  const [polling, setPolling] = useState(() => seedParseOpen);
   const [cvName, setCvName] = useState("");
   const fileRef = useRef(null);
-  const pollLeft = useRef(0);
+  const pollLeft = useRef(seedParseOpen ? POLL_MAX : 0);
   /** Bumped on cancel/reset so in-flight poll responses cannot re-open the progress UI. */
   const pollEpoch = useRef(0);
 
   function loadRoles() {
-    const lang = locale === "en" || locale === "ru" ? locale : "az";
-    return fetch(`/api/auth/me/roles?lang=${lang}`, { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
+    return loadRolesFromApi(locale)
       .then((data) => {
         if (data) setRolesPayload(data);
       })
@@ -174,6 +206,10 @@ export function ProfileReview({ locale }) {
   };
 
   useEffect(() => {
+    if (initialMe && typeof initialMe === "object") {
+      setMe(initialMe);
+      return undefined;
+    }
     let cancelled = false;
     fetchMe()
       .then((data) => {
@@ -185,7 +221,7 @@ export function ProfileReview({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialMe]);
 
   const allowed = Boolean(me?.authenticated && (me.candidate || me.staff));
 
@@ -207,9 +243,12 @@ export function ProfileReview({ locale }) {
 
   useEffect(() => {
     if (!allowed) return undefined;
+    if (seededProfile) {
+      if (!seededRoles) loadRoles();
+      return undefined;
+    }
     let cancelled = false;
-    fetch("/api/auth/cv-profile", { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
+    loadCvProfile()
       .then((data) => {
         if (cancelled || !data) return;
         ingestProfile(data);
@@ -220,7 +259,7 @@ export function ProfileReview({ locale }) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load once when access is known
-  }, [allowed]);
+  }, [allowed, seededProfile, seededRoles]);
 
   useEffect(() => {
     if (!polling || !allowed) return undefined;
@@ -232,8 +271,8 @@ export function ProfileReview({ locale }) {
       if (pollLeft.current <= 0) {
         setPolling(false);
         try {
-          const res = await fetch("/api/auth/cv-profile/cv/cancel", { method: "POST" });
-          const data = await res.json().catch(() => null);
+          const res = await cancelCvParse();
+          const data = res.ok ? res.data : null;
           if (stillCurrent() && data) {
             setPayload(data);
             if (!data.exists) setEntry(null);
@@ -246,8 +285,7 @@ export function ProfileReview({ locale }) {
       }
       pollLeft.current -= 1;
       try {
-        const res = await fetch("/api/auth/cv-profile", { cache: "no-store" });
-        const data = await res.json().catch(() => null);
+        const data = await loadCvProfile();
         if (!stillCurrent() || !data) return;
         setPayload(data);
         if (data.parse_status === "failed") {
@@ -321,16 +359,12 @@ export function ProfileReview({ locale }) {
     setNote("");
     setBusy(true);
     try {
-      const res = await fetch("/api/auth/cv-profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildBody(confirm)),
-      });
-      const data = await res.json().catch(() => ({}));
+      const res = await saveCvProfile(buildBody(confirm));
       if (!res.ok) {
         setError(t.profileReviewError);
         return;
       }
+      const data = res.data;
       setPayload(data);
       applyPayload(data, setters);
       setEntry("form");
@@ -352,12 +386,12 @@ export function ProfileReview({ locale }) {
     try {
       const body = new FormData();
       body.set("cv", file);
-      const res = await fetch("/api/auth/cv-profile/cv", { method: "POST", body });
-      const data = await res.json().catch(() => ({}));
+      const res = await uploadCvProfile(body);
       if (!res.ok) {
         setError(res.status === 422 ? t.applyCvRequired : t.profileReviewUploadError);
         return;
       }
+      const data = res.data;
       setPayload(data);
       setEntry("upload");
       setNote(t.profileReviewUploadQueued);
@@ -423,8 +457,8 @@ export function ProfileReview({ locale }) {
     // Optimistic: clear progress immediately so a late poll cannot stick the UI.
     stopParseLocally({ keepEntry: hadProfile });
     try {
-      const res = await fetch("/api/auth/cv-profile/cv/cancel", { method: "POST" });
-      const data = await res.json().catch(() => ({}));
+      const res = await cancelCvParse();
+      const data = res.data;
       if (!res.ok) {
         if (!hadProfile) setEntry(null);
         setError(t.profileReviewFailed);
@@ -455,8 +489,8 @@ export function ProfileReview({ locale }) {
     setPolling(false);
     pollLeft.current = 0;
     try {
-      const res = await fetch("/api/auth/cv-profile", { method: "DELETE" });
-      const data = await res.json().catch(() => ({}));
+      const res = await deleteCvProfile();
+      const data = res.data;
       if (!res.ok) {
         setError(t.profileReviewResetError);
         return;

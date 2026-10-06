@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
+import { markAllNotificationsRead, markNotificationRead, refreshNotifications } from "../lib/server/refresh";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
 import { Pager } from "./pager";
+import { useInitialMe } from "./me-seed";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 
@@ -27,23 +29,30 @@ function destination(locale, item) {
   return hrefFor(locale);
 }
 
-export function NotificationsPage({ locale }) {
+export function NotificationsPage({ locale, initialItems = null, initialUnread = null }) {
   const t = text(locale);
-  const [me, setMe] = useState(undefined);
-  const [items, setItems] = useState([]);
-  const [unread, setUnread] = useState(0);
+  const initialMe = useInitialMe();
+  const seededList = Array.isArray(initialItems);
+  const [me, setMe] = useState(() => {
+    if (initialMe && typeof initialMe === "object") return initialMe.authenticated ? initialMe : null;
+    return undefined;
+  });
+  const [items, setItems] = useState(() => (seededList ? initialItems : []));
+  const [unread, setUnread] = useState(() => (seededList ? Number(initialUnread) || 0 : 0));
   const [error, setError] = useState("");
   const { pageItems, currentPage, totalPages, pageSize, total, goToPage } = usePagination(items, LIST_PAGE_SIZE);
 
   async function load() {
-    const res = await fetch("/api/auth/notifications", { cache: "no-store" });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error("load");
-    setItems(Array.isArray(data.items) ? data.items : []);
-    setUnread(Number(data.unread) || 0);
+    const data = await refreshNotifications();
+    setItems(data.items);
+    setUnread(data.unread);
   }
 
   useEffect(() => {
+    if (initialMe && typeof initialMe === "object") {
+      setMe(initialMe.authenticated ? initialMe : null);
+      return undefined;
+    }
     let cancelled = false;
     fetchMe()
       .then((data) => {
@@ -55,10 +64,11 @@ export function NotificationsPage({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialMe]);
 
   useEffect(() => {
     if (!me?.authenticated) return undefined;
+    if (seededList) return undefined;
     let cancelled = false;
     load().catch(() => {
       if (!cancelled) setError(t.loadError);
@@ -66,10 +76,10 @@ export function NotificationsPage({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, [me, t.loadError]);
+  }, [me, seededList, t.loadError]);
 
   async function markOne(id) {
-    const res = await fetch(`/api/auth/notifications/${id}/read`, { method: "POST" });
+    const res = await markNotificationRead(id);
     if (!res.ok) {
       setError(t.loadError);
       return;
@@ -78,7 +88,7 @@ export function NotificationsPage({ locale }) {
   }
 
   async function markAll() {
-    const res = await fetch("/api/auth/notifications/read", { method: "POST" });
+    const res = await markAllNotificationsRead();
     if (!res.ok) {
       setError(t.loadError);
       return;

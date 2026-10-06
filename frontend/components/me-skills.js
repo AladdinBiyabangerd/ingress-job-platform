@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   academyCareerPathUrl,
   academyCourseLabel,
@@ -8,8 +8,10 @@ import {
 } from "../lib/academy-urls";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
+import { loadSkillGap } from "../lib/server/refresh";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
+import { useInitialMe } from "./me-seed";
 
 const GROWTH_CAP_PCT = 300;
 const MAX_COURSE_LINKS = 2;
@@ -124,15 +126,27 @@ function SkillRow({ t, item, tone }) {
   );
 }
 
-export function MeSkills({ locale }) {
+export function MeSkills({ locale, initialRoles = null, initialGap = null }) {
   const t = text(locale);
   const lang = locale === "en" || locale === "ru" ? locale : "az";
-  const [me, setMe] = useState(undefined);
-  const [roles, setRoles] = useState(null);
-  const [gap, setGap] = useState(null);
-  const [activeRole, setActiveRole] = useState("");
+  const initialMe = useInitialMe();
+  const seededRoles = initialRoles != null;
+  const initialTopRole = initialRoles?.roles?.[0]?.canonical_name || "";
+  const seededInitialGap = initialGap != null;
+  const ssrGapPending = useRef(seededInitialGap);
+  const [me, setMe] = useState(() => {
+    if (initialMe && typeof initialMe === "object") return initialMe.authenticated ? initialMe : null;
+    return undefined;
+  });
+  const [roles, setRoles] = useState(initialRoles);
+  const [gap, setGap] = useState(initialGap);
+  const [activeRole, setActiveRole] = useState(initialTopRole);
 
   useEffect(() => {
+    if (initialMe && typeof initialMe === "object") {
+      setMe(initialMe.authenticated ? initialMe : null);
+      return undefined;
+    }
     let cancelled = false;
     fetchMe()
       .then((data) => {
@@ -144,10 +158,11 @@ export function MeSkills({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialMe]);
 
   useEffect(() => {
     if (!me || !(me.candidate || me.staff)) return undefined;
+    if (seededRoles) return undefined;
     let cancelled = false;
     fetch(`/api/auth/me/roles?lang=${lang}`, { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
@@ -163,17 +178,20 @@ export function MeSkills({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, [me, lang]);
+  }, [me, lang, seededRoles]);
 
   useEffect(() => {
     if (!me || !(me.candidate || me.staff) || !activeRole) {
-      setGap(null);
+      if (!ssrGapPending.current) setGap(null);
       return undefined;
     }
+    if (ssrGapPending.current && activeRole === initialTopRole) {
+      ssrGapPending.current = false;
+      return undefined;
+    }
+    ssrGapPending.current = false;
     let cancelled = false;
-    const qs = new URLSearchParams({ lang, role: activeRole });
-    fetch(`/api/auth/me/skill-gap?${qs}`, { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
+    loadSkillGap(lang, activeRole)
       .then((data) => {
         if (!cancelled) setGap(data);
       })
@@ -183,7 +201,7 @@ export function MeSkills({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, [me, lang, activeRole]);
+  }, [me, lang, activeRole, initialTopRole]);
 
   const consentOk = roles?.matching_consent !== false;
   const candidate = Boolean(me?.candidate || me?.staff);

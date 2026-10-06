@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { apiBase } from "../api";
 import { ACCESS_COOKIE, GUEST_COOKIE, REFRESH_COOKIE } from "./oidc";
 
@@ -20,7 +20,9 @@ export const getMe = cache(async () => {
     return store.get(REFRESH_COOKIE)?.value ? null : GUEST_ME;
   }
   try {
-    const res = await fetch(`${apiBase()}/api/v1/me`, {
+    const headerList = await headers();
+    const locale = headerList.get("x-locale") || "az";
+    const res = await fetch(`${apiBase()}/api/v1/me?lang=${encodeURIComponent(locale)}`, {
       headers: { Authorization: `Bearer ${access}`, Accept: "application/json" },
       cache: "no-store",
       signal: AbortSignal.timeout(ME_TIMEOUT_MS),

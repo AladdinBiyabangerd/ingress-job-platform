@@ -45,7 +45,7 @@ export function fetchMe() {
   const cached = readCache();
   if (cached) return Promise.resolve(cached);
   if (inflight) return inflight;
-  inflight = fetch("/api/auth/me", { cache: "no-store" })
+  inflight = fetch(`/api/auth/me?lang=${encodeURIComponent(document.documentElement.lang || "az")}`, { cache: "no-store" })
     .then((res) => res.json())
     .then((data) => {
       writeCache(data);

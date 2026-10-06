@@ -202,18 +202,22 @@ def _view(row) -> dict:
     return payload
 
 
+def unread_count_on(conn, subject: str) -> int:
+    row = conn.execute(
+        """
+        SELECT COUNT(*) FROM notifications
+        WHERE recipient_subject = ? AND read_at = ''
+        """,
+        (subject,),
+    ).fetchone()
+    return int((row[0] if row else 0) or 0)
+
+
 def unread_count(subject: str) -> int:
     """Cheap badge count for /me; avoids loading the full notification list."""
     conn = _connect()
     try:
-        row = conn.execute(
-            """
-            SELECT COUNT(*) FROM notifications
-            WHERE recipient_subject = ? AND read_at = ''
-            """,
-            (subject,),
-        ).fetchone()
-        return int((row[0] if row else 0) or 0)
+        return unread_count_on(conn, subject)
     finally:
         conn.close()
 

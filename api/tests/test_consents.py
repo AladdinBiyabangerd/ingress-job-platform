@@ -123,6 +123,18 @@ class ConsentsTests(unittest.TestCase):
     def test_guest_is_unauthorized(self):
         self.assertEqual(self.client.get("/api/v1/consents").status_code, 401)
 
+    def test_me_includes_localized_consents(self):
+        with self._auth("job:candidate", "person-me"):
+            res = self.client.get("/api/v1/me?lang=en", headers=self.headers)
+        self.assertEqual(res.status_code, 200, res.text)
+        body = res.json()
+        consents = body["consents"]
+        self.assertEqual(consents["lang"], "en")
+        self.assertEqual(
+            {item["kind"] for item in consents["consents"]},
+            {"matching", "emails", "recruiter_visibility"},
+        )
+
     def test_invalid_visibility_rejected(self):
         with self._auth("job:candidate", "person-3"):
             bad = self.client.put(

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { applyFormPayload, applyFormReady, defaultApplyForm } from "../lib/apply-form";
 import { text } from "../lib/copy";
+import { createManualAd } from "../lib/server/refresh";
 import { ApplyFormFields } from "./apply-form-fields";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
@@ -62,21 +63,17 @@ export function ManualAd({ locale, onSaved }) {
       return;
     }
     setBusy(true);
-    const res = await fetch("/api/auth/admin/jobs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: form.title,
-        company: form.company,
-        city: form.remote ? "" : form.city,
-        remote: form.remote,
-        text: form.text,
-        language: form.language,
-        salary: form.salary,
-        job_type: form.job_type,
-        source_url: form.source_url.trim(),
-        form: applyFormPayload(form.applicationForm),
-      }),
+    const res = await createManualAd({
+      title: form.title,
+      company: form.company,
+      city: form.remote ? "" : form.city,
+      remote: form.remote,
+      text: form.text,
+      language: form.language,
+      salary: form.salary,
+      job_type: form.job_type,
+      source_url: form.source_url.trim(),
+      form: applyFormPayload(form.applicationForm),
     });
     setBusy(false);
     if (!res.ok) {

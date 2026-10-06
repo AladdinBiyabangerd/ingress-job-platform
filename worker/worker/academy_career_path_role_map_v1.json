@@ -1,5 +1,5 @@
 {
-  "version": "1.1",
+  "version": "1.2",
   "notes": [
     "Manual Ingress Academy career-path ↔ Ingress Job role map.",
     "IDs are path slugs under https://ingress.academy/career-paths/ (AZ catalog).",
@@ -24,10 +24,11 @@
     "DevOps Engineer": "devops-engineer-path",
     "Cloud Engineer": "devops-engineer-path",
     "Platform Engineer": "devops-engineer-path",
-    "System Administrator": "it-dstyi-v-sistem-mutxssisi",
+    "System Administrator": "linux-engineer",
+    "Network Engineer": "sebeke-muhendisi",
     "SRE": "site-reliability-engineer",
     "Data Engineer": "data-muhndisi",
-    "Database Administrator": "data-muhndisi",
+    "Database Administrator": "verilnlr-bazas-muhndisi",
     "Data Analyst": "ai-data-specialist",
     "Analytics Engineer": "ai-data-specialist",
     "Data Scientist": "ai-data-specialist",

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from threading import Lock
 from typing import Any
 
 from app.cv_queue import ensure_cv_queue_tables
@@ -43,9 +44,22 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+_PROFILE_ENSURED: set[str] = set()
+_PROFILE_LOCK = Lock()
+
+
 def ensure_profile_tables(conn) -> None:
+    from app.jobs_db import schema_cache_key
+
     ensure_cv_queue_tables(conn)
-    conn.executescript(EDIT_LOG_SCHEMA)
+    key = schema_cache_key()
+    if key in _PROFILE_ENSURED:
+        return
+    with _PROFILE_LOCK:
+        if key in _PROFILE_ENSURED:
+            return
+        conn.executescript(EDIT_LOG_SCHEMA)
+        _PROFILE_ENSURED.add(key)
 
 
 def _row_get(row, key: str, index: int):

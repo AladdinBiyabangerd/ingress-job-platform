@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import re
 from collections import defaultdict
+from threading import Lock
 from typing import Any
 
 from app.consents import _grants_for, ensure_consent_tables
@@ -23,6 +24,11 @@ YEARS_MAX_FACTOR = 1.5
 MIN_ROLE_WEIGHT = 1.0
 HEADLINE_BOOST = 1.15
 GROUP_MISSING_CAP = 3
+
+_TAXONOMY_LOCK = Lock()
+_SKILL_LOOKUP_MEMO: tuple | None = None
+_ROLE_WEIGHTS_MEMO: tuple | None = None
+_ROLE_TAXONOMY_MEMO: tuple | None = None
 
 EXPLANATION = {
     "az": {"have": "Sizdə var", "missing": "Çatışmır", "sep": " · ", "list": ", "},
@@ -81,8 +87,37 @@ def _parse_synonyms(raw: object) -> list[str]:
     return [str(x) for x in value if str(x).strip()]
 
 
+def _taxonomy_fp(conn) -> tuple:
+    try:
+        skills = conn.execute(
+            "SELECT COUNT(*) AS n, COALESCE(MAX(id), 0) AS max_id FROM skill_dictionary"
+        ).fetchone()
+        roles = conn.execute(
+            "SELECT COUNT(*) AS n, COALESCE(MAX(id), 0) AS max_id FROM role_taxonomy"
+        ).fetchone()
+        weights = conn.execute("SELECT COUNT(*) AS n FROM role_skill_weight").fetchone()
+    except Exception:
+        return ()
+    return (
+        int(_row_get(skills, "n", 0) or 0),
+        int(_row_get(skills, "max_id", 1) or 0),
+        int(_row_get(roles, "n", 0) or 0),
+        int(_row_get(roles, "max_id", 1) or 0),
+        int(_row_get(weights, "n", 0) or 0),
+    )
+
+
 def _build_skill_lookup(conn) -> dict[str, tuple[int, str]]:
     """Map lower(canonical|synonym) → (skill_id, canonical_name)."""
+    global _SKILL_LOOKUP_MEMO
+    from app.jobs_db import schema_cache_key
+
+    key = schema_cache_key()
+    fp = _taxonomy_fp(conn)
+    with _TAXONOMY_LOCK:
+        memo = _SKILL_LOOKUP_MEMO
+        if memo is not None and memo[0] == key and memo[1] == fp:
+            return memo[2]
     mapping: dict[str, tuple[int, str]] = {}
     try:
         rows = conn.execute(
@@ -97,9 +132,11 @@ def _build_skill_lookup(conn) -> dict[str, tuple[int, str]]:
             continue
         mapping[name.lower()] = (skill_id, name)
         for syn in _parse_synonyms(_row_get(row, "synonyms", 2)):
-            key = syn.strip().lower()
-            if key and key not in mapping:
-                mapping[key] = (skill_id, name)
+            key_name = syn.strip().lower()
+            if key_name and key_name not in mapping:
+                mapping[key_name] = (skill_id, name)
+    with _TAXONOMY_LOCK:
+        _SKILL_LOOKUP_MEMO = (key, fp, mapping)
     return mapping
 
 
@@ -206,57 +243,162 @@ def _role_affinity(profile: dict, canonical: str, synonyms: list[str]) -> bool:
     return False
 
 
-def _load_role_weights(conn, role_id: int) -> list[dict[str, Any]]:
-    """Load signature skills; group_key falls back to '' on older schemas."""
+def _weight_row(row, *, grouped: bool) -> dict[str, Any] | None:
+    # role_id, skill_id, weight, canonical_name [, group_key]
+    name = str(_row_get(row, "canonical_name", 3) or "").strip()
+    weight = float(_row_get(row, "weight", 2) or 0)
+    if weight <= 0 or not name:
+        return None
+    return {
+        "skill_id": int(_row_get(row, "skill_id", 1)),
+        "weight": weight,
+        "name": name,
+        "group_key": str(_row_get(row, "group_key", 4) or "").strip().lower() if grouped else "",
+    }
+
+
+def _role_path_id(row) -> str:
     try:
-        rows = conn.execute(
-            """
-            SELECT w.skill_id, w.weight, s.canonical_name, COALESCE(w.group_key, '') AS group_key
-            FROM role_skill_weight w
-            JOIN skill_dictionary s ON s.id = w.skill_id
-            WHERE w.role_id = ?
-            ORDER BY w.weight DESC, s.canonical_name
-            """,
-            (role_id,),
-        ).fetchall()
+        return str(_row_get(row, "academy_career_path_id", 4) or "").strip()
     except Exception:
+        pass
+    for idx in (3, 4):
+        try:
+            value = row[idx]
+        except (KeyError, IndexError, TypeError):
+            continue
+        text = str(value or "").strip()
+        if text.startswith("["):
+            continue
+        return text.strip("/")
+    return ""
+
+
+def _load_role_taxonomy(conn) -> tuple[list[dict[str, Any]], dict[str, dict], dict[str, dict]]:
+    """Roles + name/synonym indexes. Cached until taxonomy counts change."""
+    global _ROLE_TAXONOMY_MEMO
+    from app.jobs_db import schema_cache_key
+
+    key = schema_cache_key()
+    fp = _taxonomy_fp(conn)
+    with _TAXONOMY_LOCK:
+        memo = _ROLE_TAXONOMY_MEMO
+        if memo is not None and memo[0] == key and memo[1] == fp:
+            return memo[2], memo[3], memo[4]
+
+    try:
         try:
             rows = conn.execute(
                 """
-                SELECT w.skill_id, w.weight, s.canonical_name
-                FROM role_skill_weight w
-                JOIN skill_dictionary s ON s.id = w.skill_id
-                WHERE w.role_id = ?
-                ORDER BY w.weight DESC, s.canonical_name
-                """,
-                (role_id,),
+                SELECT id, canonical_name, category, synonyms, academy_career_path_id
+                FROM role_taxonomy
+                ORDER BY canonical_name
+                """
             ).fetchall()
         except Exception:
-            return []
-        return [
-            {
-                "skill_id": int(_row_get(row, "skill_id", 0)),
-                "weight": float(_row_get(row, "weight", 1) or 0),
-                "name": str(_row_get(row, "canonical_name", 2) or "").strip(),
-                "group_key": "",
-            }
-            for row in rows
-        ]
-    out: list[dict[str, Any]] = []
+            rows = conn.execute(
+                """
+                SELECT id, canonical_name, category, synonyms
+                FROM role_taxonomy
+                ORDER BY canonical_name
+                """
+            ).fetchall()
+    except Exception:
+        empty: list[dict[str, Any]] = []
+        return empty, {}, {}
+
+    roles: list[dict[str, Any]] = []
+    by_name: dict[str, dict] = {}
+    by_synonym: dict[str, dict] = {}
     for row in rows:
-        name = str(_row_get(row, "canonical_name", 2) or "").strip()
-        weight = float(_row_get(row, "weight", 1) or 0)
-        if weight <= 0 or not name:
+        canonical = str(_row_get(row, "canonical_name", 1) or "").strip()
+        if not canonical:
             continue
-        out.append(
-            {
-                "skill_id": int(_row_get(row, "skill_id", 0)),
-                "weight": weight,
-                "name": name,
-                "group_key": str(_row_get(row, "group_key", 3) or "").strip().lower(),
-            }
-        )
+        item = {
+            "id": int(_row_get(row, "id", 0)),
+            "canonical_name": canonical,
+            "category": str(_row_get(row, "category", 2) or ""),
+            "synonyms": _parse_synonyms(_row_get(row, "synonyms", 3)),
+            "academy_career_path_id": _role_path_id(row),
+        }
+        roles.append(item)
+        by_name[canonical.lower()] = item
+        for syn in item["synonyms"]:
+            key_name = syn.strip().lower()
+            if key_name and key_name not in by_name and key_name not in by_synonym:
+                by_synonym[key_name] = item
+
+    with _TAXONOMY_LOCK:
+        _ROLE_TAXONOMY_MEMO = (key, fp, roles, by_name, by_synonym)
+    return roles, by_name, by_synonym
+
+
+def resolve_taxonomy_role(conn, role: str | None) -> dict | None:
+    name = (role or "").strip()
+    if not name:
+        return None
+    _roles, by_name, by_synonym = _load_role_taxonomy(conn)
+    needle = name.lower()
+    hit = by_name.get(needle) or by_synonym.get(needle)
+    if hit is None:
+        return None
+    return {
+        "id": int(hit["id"]),
+        "canonical_name": str(hit["canonical_name"]),
+        "category": str(hit["category"]),
+        "academy_career_path_id": str(hit.get("academy_career_path_id") or ""),
+    }
+
+
+def _load_all_role_weights(conn) -> dict[int, list[dict[str, Any]]]:
+    """All signature skills in one scan. Cached until taxonomy counts change."""
+    global _ROLE_WEIGHTS_MEMO
+    from app.jobs_db import schema_cache_key
+
+    key = schema_cache_key()
+    fp = _taxonomy_fp(conn)
+    with _TAXONOMY_LOCK:
+        memo = _ROLE_WEIGHTS_MEMO
+        if memo is not None and memo[0] == key and memo[1] == fp:
+            return memo[2]
+
+    grouped = True
+    try:
+        rows = conn.execute(
+            """
+            SELECT w.role_id, w.skill_id, w.weight, s.canonical_name, COALESCE(w.group_key, '') AS group_key
+            FROM role_skill_weight w
+            JOIN skill_dictionary s ON s.id = w.skill_id
+            """
+        ).fetchall()
+    except Exception:
+        grouped = False
+        try:
+            rows = conn.execute(
+                """
+                SELECT w.role_id, w.skill_id, w.weight, s.canonical_name
+                FROM role_skill_weight w
+                JOIN skill_dictionary s ON s.id = w.skill_id
+                """
+            ).fetchall()
+        except Exception:
+            return {}
+
+    out: dict[int, list[dict[str, Any]]] = {}
+    for row in rows:
+        role_id = int(_row_get(row, "role_id", 0))
+        item = _weight_row(row, grouped=grouped)
+        if item is None:
+            continue
+        out.setdefault(role_id, []).append(item)
+    with _TAXONOMY_LOCK:
+        _ROLE_WEIGHTS_MEMO = (key, fp, out)
     return out
+
+
+def _load_role_weights(conn, role_id: int) -> list[dict[str, Any]]:
+    """Load signature skills; group_key falls back to '' on older schemas."""
+    return list(_load_all_role_weights(conn).get(int(role_id), []))
 
 
 def _score_role_weights(
@@ -333,30 +475,15 @@ def _score_roles(
     limit: int,
     lang: str,
 ) -> list[dict[str, Any]]:
-    try:
-        try:
-            roles = conn.execute(
-                """
-                SELECT id, canonical_name, category, synonyms, academy_career_path_id
-                FROM role_taxonomy
-                ORDER BY canonical_name
-                """
-            ).fetchall()
-        except Exception:
-            roles = conn.execute(
-                """
-                SELECT id, canonical_name, category, synonyms
-                FROM role_taxonomy
-                ORDER BY canonical_name
-                """
-            ).fetchall()
-    except Exception:
+    roles, _by_name, _by_synonym = _load_role_taxonomy(conn)
+    if not roles:
         return []
 
+    weights_by_role = _load_all_role_weights(conn)
     scored: list[dict[str, Any]] = []
     for role in roles:
-        role_id = int(_row_get(role, "id", 0))
-        weights = _load_role_weights(conn, role_id)
+        role_id = int(role["id"])
+        weights = weights_by_role.get(role_id) or []
         if not weights:
             continue
 
@@ -368,25 +495,20 @@ def _score_roles(
         # Thin roles (sparse signature weights) cannot dominate via 100% of a tiny set.
         score *= min(1.0, total / MIN_ROLE_WEIGHT)
 
-        canonical = str(_row_get(role, "canonical_name", 1) or "")
-        synonyms = _parse_synonyms(_row_get(role, "synonyms", 3))
+        canonical = str(role["canonical_name"] or "")
+        synonyms = role.get("synonyms") or []
         if _role_affinity(profile, canonical, synonyms):
             score = min(1.0, score * HEADLINE_BOOST)
 
         score = round(score, 4)
-        path_id = ""
-        try:
-            path_id = str(_row_get(role, "academy_career_path_id", 4) or "").strip()
-        except Exception:
-            path_id = ""
         scored.append(
             {
                 "canonical_name": canonical,
-                "category": str(_row_get(role, "category", 2) or ""),
+                "category": str(role.get("category") or ""),
                 "score": score,
                 "have": have,
                 "missing": missing,
-                "academy_career_path": path_id,
+                "academy_career_path": str(role.get("academy_career_path_id") or ""),
                 "explanation": _format_explanation(lang, have, missing),
             }
         )

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { text } from "../lib/copy";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
+import { crawledMerge, crawledPatchJob, crawledVisibility, refreshCrawled } from "../lib/server/refresh";
 import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
@@ -27,9 +28,10 @@ function fromJob(locale, job) {
   };
 }
 
-export function CollectedAdmin({ locale }) {
+export function CollectedAdmin({ locale, initialItems = null }) {
   const t = text(locale);
-  const [items, setItems] = useState([]);
+  const seeded = Array.isArray(initialItems);
+  const [items, setItems] = useState(() => (seeded ? initialItems : []));
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(null);
   const [keepId, setKeepId] = useState(null);
@@ -37,13 +39,11 @@ export function CollectedAdmin({ locale }) {
   const [note, setNote] = useState("");
 
   async function load() {
-    const res = await fetch("/api/auth/admin/crawled", { cache: "no-store" });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error("load");
-    setItems(Array.isArray(data.items) ? data.items : []);
+    setItems(await refreshCrawled());
   }
 
   useEffect(() => {
+    if (seeded) return undefined;
     let cancelled = false;
     load().catch(() => {
       if (!cancelled) setError(t.loadError);
@@ -51,7 +51,7 @@ export function CollectedAdmin({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, [t.loadError]);
+  }, [seeded, t.loadError]);
 
   const { pageItems, currentPage, totalPages, pageSize, total, goToPage } = usePagination(items, LIST_PAGE_SIZE);
 
@@ -67,13 +67,9 @@ export function CollectedAdmin({ locale }) {
     }
     setError("");
     setNote("");
-    const res = await fetch(`/api/auth/admin/crawled/${editing}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        city: form.remote ? "" : form.city,
-      }),
+    const res = await crawledPatchJob(editing, {
+      ...form,
+      city: form.remote ? "" : form.city,
     });
     if (!res.ok) {
       setError(t.adminError);
@@ -92,7 +88,7 @@ export function CollectedAdmin({ locale }) {
   async function visibility(job, action) {
     setError("");
     setNote("");
-    const res = await fetch(`/api/auth/admin/crawled/${job.id}/${action}`, { method: "POST" });
+    const res = await crawledVisibility(job.id, action);
     if (!res.ok) {
       setError(t.adminError);
       return;
@@ -109,11 +105,7 @@ export function CollectedAdmin({ locale }) {
     if (!keepId || keepId === job.id) return;
     setError("");
     setNote("");
-    const res = await fetch("/api/auth/admin/crawled/merge", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keep_id: keepId, hide_id: job.id }),
-    });
+    const res = await crawledMerge(keepId, job.id);
     if (!res.ok) {
       setError(t.adminError);
       return;

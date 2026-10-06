@@ -8,13 +8,14 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.auth_oidc import AuthError, VerifiedAccess, id_token_nonce_status, verify_access_token
 from app.config import settings
 from app.profiles import (
     academy_name_for,
+    account_fields_for,
     candidate_profile_for,
     contact_email_for,
     profile_for,
@@ -45,17 +46,33 @@ def current_user(authorization: str | None = Header(default=None)) -> VerifiedAc
         raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
 
 
-def account_payload(user: VerifiedAccess) -> dict:
-    from app.notifications import unread_count
+def account_payload(user: VerifiedAccess, *, lang: str | None = None) -> dict:
+    from app.cabinet_store import _LOCK, _connect
+    from app.consents import consents_payload
+    from app.notifications import unread_count_on
 
-    profile = profile_for(user.subject)
-    candidate_profile = candidate_profile_for(user.subject)
+    fields = account_fields_for(user.subject)
+    profile = fields["company_profile"]
+    candidate_profile = fields["candidate_profile"]
     employer = "job:employer" in user.scopes
     candidate = "job:candidate" in user.scopes
     staff = "job:staff" in user.scopes
-    name = (user.name or "").strip() or academy_name_for(user.subject)
-    email = (candidate_profile.get("email") or "").strip() or contact_email_for(user.subject)
-    return {
+    name = (user.name or "").strip() or fields["academy_name"]
+    email = (candidate_profile.get("email") or "").strip() or fields["contact_email"]
+    unread = 0
+    consents = None
+    with _LOCK:
+        conn = _connect()
+        try:
+            unread = unread_count_on(conn, user.subject)
+            if candidate or staff:
+                try:
+                    consents = consents_payload(conn, user_id=user.subject, lang=lang)
+                except Exception:
+                    consents = None
+        finally:
+            conn.close()
+    payload = {
         "authenticated": True,
         "subject": user.subject,
         "scopes": sorted(user.scopes),
@@ -68,8 +85,12 @@ def account_payload(user: VerifiedAccess) -> dict:
         "candidate_profile": candidate_profile,
         "needs_company_profile": employer and not staff and not profile["complete"],
         # Seeds the header bell from SSR getMe — no second /notifications round-trip.
-        "unread_notifications": unread_count(user.subject),
+        "unread_notifications": unread,
     }
+    # Seeds /profile privacy fields so the page skips GET /consents.
+    if consents is not None:
+        payload["consents"] = consents
+    return payload
 
 
 def safe_return_to(value: str | None) -> str:
@@ -228,8 +249,11 @@ def _tokens_from(payload: dict, *, require_refresh: bool, expected_nonce: str | 
 
 
 @router.get("/me")
-def read_me(user: VerifiedAccess = Depends(current_user)) -> dict:
-    return account_payload(user)
+def read_me(
+    lang: str | None = Query(default=None, max_length=8),
+    user: VerifiedAccess = Depends(current_user),
+) -> dict:
+    return account_payload(user, lang=lang)
 
 
 @router.post("/company-profile")

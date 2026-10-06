@@ -1093,10 +1093,145 @@ ROLES: list[dict] = [
 ]
 
 
+# Extra signature skills / title synonyms layered on after the v1.2 role list
+# (new dictionary names: Hibernate, Argo CD, Power BI, …).
+_EXTRA_SKILLS: dict[str, list[dict]] = {
+    "Java Developer": [s("Hibernate", 0.4), s("JPA", 0.35), s("Git", 0.2)],
+    "Python Developer": [s("Celery", 0.3), s("pytest", 0.25), s("Git", 0.2)],
+    "Go Developer": [s("Git", 0.2)],
+    ".NET Developer": [s("Entity Framework", 0.55), s("Blazor", 0.3), s("Git", 0.2)],
+    "Node.js Developer": [
+        s("Fastify", 0.4, "fw"),
+        s("Prisma", 0.3),
+        s("TypeORM", 0.25),
+        s("Git", 0.2),
+    ],
+    "PHP Developer": [s("Git", 0.2)],
+    "Backend Engineer": [s("Git", 0.25), s("GraphQL", 0.25)],
+    "React Developer": [s("Vite", 0.3), s("Storybook", 0.25), s("Material UI", 0.2)],
+    "Angular Developer": [s("RxJS", 0.45), s("Jest", 0.25)],
+    "Vue.js Developer": [s("Vite", 0.3)],
+    "Next.js Developer": [s("Vite", 0.2), s("Jest", 0.2)],
+    "Frontend Engineer": [s("Vite", 0.3), s("Webpack", 0.2), s("Storybook", 0.2)],
+    "Full-stack JS Developer": [s("Prisma", 0.25), s("GraphQL", 0.25)],
+    "Full-stack Python Developer": [s("Celery", 0.2)],
+    "Android Developer": [s("Jetpack Compose", 0.55)],
+    "Mobile Engineer": [s("Jetpack Compose", 0.35)],
+    "DevOps Engineer": [
+        s("Argo CD", 0.4),
+        s("GitLab CI", 0.35),
+        s("GitHub Actions", 0.3),
+        s("Istio", 0.25),
+        s("Git", 0.25),
+    ],
+    "SRE": [
+        s("OpenTelemetry", 0.4),
+        s("Sentry", 0.25),
+        s("New Relic", 0.2),
+        s("CI/CD", 0.35),
+    ],
+    "Cloud Engineer": [s("CloudFormation", 0.35), s("Pulumi", 0.3), s("Git", 0.2)],
+    "Platform Engineer": [s("Argo CD", 0.45), s("GitLab CI", 0.3), s("Istio", 0.25)],
+    "System Administrator": [s("Git", 0.25), s("PowerShell", 0.3)],
+    "Network Engineer": [s("HAProxy", 0.25)],
+    "Data Engineer": [s("Flink", 0.35), s("Hadoop", 0.3), s("Redshift", 0.25)],
+    "Data Analyst": [
+        s("Tableau", 0.5),
+        s("Power BI", 0.5),
+        s("Looker", 0.35),
+        s("NumPy", 0.3),
+    ],
+    "Analytics Engineer": [s("Tableau", 0.3), s("Looker", 0.3)],
+    "Database Administrator": [
+        s("SQL Server", 0.45, "db"),
+        s("Oracle", 0.4, "db"),
+        s("MariaDB", 0.35, "db"),
+    ],
+    "Data Scientist": [
+        s("Keras", 0.3),
+        s("NumPy", 0.35),
+        s("Hugging Face", 0.3),
+        s("NLP", 0.3),
+    ],
+    "ML Engineer": [
+        s("Hugging Face", 0.45),
+        s("LangChain", 0.4),
+        s("RAG", 0.4),
+        s("Keras", 0.3),
+        s("CUDA", 0.3),
+        s("OpenAI", 0.25),
+        s("NLP", 0.3),
+        s("Computer Vision", 0.3),
+    ],
+    "MLOps Engineer": [s("MLflow", 0.5), s("LangChain", 0.25)],
+    "QA Automation Engineer": [
+        s("pytest", 0.4, "tool"),
+        s("JUnit", 0.35),
+        s("Postman", 0.3),
+        s("Cucumber", 0.25),
+    ],
+    "Manual QA": [s("Postman", 0.4), s("Jira", 0.35)],
+    "SDET": [s("pytest", 0.4), s("JUnit", 0.4), s("Postman", 0.25)],
+    "AppSec Engineer": [s("OWASP", 0.7)],
+    "Security Engineer": [s("OWASP", 0.55)],
+    "SOC Analyst": [s("Splunk", 0.55), s("OWASP", 0.3)],
+    "Product Manager": [s("Jira", 0.45), s("Tableau", 0.2)],
+    "Product Owner": [s("Jira", 0.45)],
+    "Project Manager": [s("Jira", 0.55)],
+    "Scrum Master": [s("Jira", 0.4)],
+    "IT Support": [s("PowerShell", 0.4), s("Jira", 0.2)],
+    "Support Engineer": [s("Postman", 0.2)],
+    "Solutions Architect": [s("CloudFormation", 0.3), s("LLM", 0.2)],
+}
+
+_EXTRA_SYNONYMS: dict[str, list[str]] = {
+    "Java Developer": ["Java Programmer", "J2EE Developer"],
+    "Python Developer": ["Python Programmer", "Django Developer"],
+    "Go Developer": ["Golang Backend Engineer"],
+    ".NET Developer": ["ASP.NET Core Developer"],
+    "Node.js Developer": ["Node.js Engineer", "TypeScript Backend Developer"],
+    "React Developer": ["React.js Engineer", "Frontend React Developer"],
+    "Frontend Engineer": ["Front End Developer", "UI Developer"],
+    "Full-stack Engineer": ["Fullstack Developer", "Full Stack Software Engineer"],
+    "DevOps Engineer": ["CI/CD Engineer", "Infrastructure Engineer"],
+    "SRE": ["SRE Engineer", "Site Reliability"],
+    "Cloud Engineer": ["AWS Cloud Engineer", "Cloud Ops Engineer"],
+    "Data Engineer": ["Big Data Engineer", "ETL Developer"],
+    "Data Analyst": ["BI Developer", "SQL Analyst"],
+    "Data Scientist": ["ML Scientist"],
+    "ML Engineer": ["LLM Engineer", "Generative AI Engineer"],
+    "QA Automation Engineer": ["AQA Engineer", "Automation Tester"],
+    "SDET": ["SDET Engineer"],
+    "Security Engineer": ["Cyber Security Engineer"],
+    "SOC Analyst": ["Blue Team Analyst"],
+    "IT Support": ["IT Helpdesk", "Desktop Support Engineer"],
+}
+
+
+def _merge_role_extras(item: dict) -> dict:
+    name = item["canonical_name"]
+    skills = list(item["signature_skills"])
+    seen = {str(x.get("skill")) for x in skills}
+    for extra in _EXTRA_SKILLS.get(name) or []:
+        skill = str(extra.get("skill") or "")
+        if skill and skill not in seen:
+            skills.append(extra)
+            seen.add(skill)
+    synonyms = list(item["synonyms"])
+    syn_seen = {s.lower() for s in synonyms}
+    for extra in _EXTRA_SYNONYMS.get(name) or []:
+        key = extra.lower()
+        if extra and key not in syn_seen:
+            synonyms.append(extra)
+            syn_seen.add(key)
+    return {**item, "signature_skills": skills, "synonyms": synonyms}
+
+
 def main() -> None:
     cleaned = []
     names = set()
-    for r in ROLES:
+    for raw in ROLES:
+        r = _merge_role_extras(raw)
         skills = [x for x in r["signature_skills"] if float(x.get("weight") or 0) > 0]
         if not skills:
             raise SystemExit(f"no skills: {r['canonical_name']}")
@@ -1106,15 +1241,15 @@ def main() -> None:
         cleaned.append({**r, "signature_skills": skills})
 
     payload = {
-        "version": "1.2",
-        "generated_at": "2026-10-05T12:00:00Z",
+        "version": "1.3",
+        "generated_at": "2026-10-06T10:30:00Z",
         "source": {
             "plan": "docs/ingress-job-cv-ai-plan.pdf §6.1",
             "categories": "worker/worker/techstack.py CATEGORIES",
             "skill_dictionary": "docs/cv-ai/skill-dictionary-v1.json",
             "note": (
-                "v1.2: broader role coverage + denser signature skills/synonyms. "
-                "Optional signature group = OR (max weight). Hand-weighted; later TF refresh from ads."
+                "v1.3: denser signature skills after skill-dictionary expansion "
+                "(Hibernate, Argo CD, Power BI, RAG, …). Optional signature group = OR (max weight)."
             ),
         },
         "roles": cleaned,

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { calendarDate } from "../lib/dates";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
+import { patchApplicationStatus, withdrawApplication } from "../lib/server/refresh";
 import { Pager } from "./pager";
 
 export function appStatusLabel(t, status) {
@@ -71,7 +72,7 @@ export function ApplicationList({ locale, title, items, hideEmpty = false, mode 
     setError("");
     setNote("");
     setBusy(item.id);
-    const res = await fetch(`/api/auth/applications/${item.id}`, { method: "DELETE" });
+    const res = await withdrawApplication(item.id);
     setBusy(0);
     if (!res.ok) {
       setError(t.appStatusError);
@@ -91,12 +92,7 @@ export function ApplicationList({ locale, title, items, hideEmpty = false, mode 
     setError("");
     setNote("");
     setBusy(item.id);
-    const path = mode === "staff" ? `/api/auth/admin/applications/${item.id}` : `/api/auth/cabinet/applications/${item.id}`;
-    const res = await fetch(path, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status, reason }),
-    });
+    const res = await patchApplicationStatus(mode, item.id, status, reason);
     setBusy(0);
     if (!res.ok) {
       setError(t.appStatusError);

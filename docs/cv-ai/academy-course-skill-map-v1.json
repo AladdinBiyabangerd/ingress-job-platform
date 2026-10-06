@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "notes": [
     "Manual Ingress Academy course ↔ skill map (plan §7.2).",
     "IDs are path slugs under https://ingress.academy/trainings/ (AZ catalog default).",
@@ -9,7 +9,10 @@
   "skills": {
     "AWS": ["cloud-computing-with-aws-and-terraform-az"],
     "Terraform": ["cloud-computing-with-aws-and-terraform-az"],
+    "Pulumi": ["cloud-computing-with-aws-and-terraform-az"],
+    "CloudFormation": ["cloud-computing-with-aws-and-terraform-az"],
     "Azure": ["azure-administrator-az"],
+    "PowerShell": ["windows-server-administration-az", "azure-administrator-az"],
     "Kubernetes": [
       "certified-kubernetes-administrator-cka-az",
       "devops-engineer-az"
@@ -18,35 +21,90 @@
     "CI/CD": ["devops-engineer-az"],
     "Jenkins": ["devops-engineer-az"],
     "GitHub Actions": ["devops-engineer-az"],
+    "GitLab CI": ["devops-engineer-az"],
+    "GitLab": ["devops-engineer-az"],
+    "CircleCI": ["devops-engineer-az"],
     "Ansible": ["devops-engineer-az"],
     "Helm": ["certified-kubernetes-administrator-cka-az", "devops-engineer-az"],
+    "Argo CD": ["certified-kubernetes-administrator-cka-az", "devops-engineer-az"],
+    "Istio": ["certified-kubernetes-administrator-cka-az"],
+    "OpenShift": ["certified-kubernetes-administrator-cka-az", "devops-engineer-az"],
     "Linux": [
       "linux-foundation-az",
       "red-hat-certified-system-administrator-rhcsa-az"
     ],
+    "Bash": [
+      "linux-foundation-az",
+      "red-hat-certified-system-administrator-rhcsa-az"
+    ],
+    "Git": ["linux-foundation-az", "devops-engineer-az"],
     "Prometheus": ["site-reliability-engineering-sre-bootcamp", "devops-engineer-az"],
     "Grafana": ["site-reliability-engineering-sre-bootcamp", "devops-engineer-az"],
     "Datadog": ["site-reliability-engineering-sre-bootcamp", "devops-engineer-az"],
+    "OpenTelemetry": [
+      "site-reliability-engineering-sre-bootcamp",
+      "devops-engineer-az"
+    ],
+    "Sentry": ["site-reliability-engineering-sre-bootcamp"],
+    "New Relic": ["site-reliability-engineering-sre-bootcamp"],
+    "Splunk": ["blue-team-analyst-az", "site-reliability-engineering-sre-bootcamp"],
     "Nginx": ["devops-engineer-az"],
+    "Traefik": ["devops-engineer-az"],
+    "HAProxy": ["devops-engineer-az"],
+    "HashiCorp Vault": [
+      "devops-engineer-az",
+      "site-reliability-engineering-sre-bootcamp"
+    ],
+    "Consul": ["devops-engineer-az"],
     "Java": [
       "java-se-oca-az",
       "junior-java-and-ai-engineer-az",
-      "senior-java-and-ai-engineer-az"
+      "senior-java-and-ai-engineer-az",
+      "ai-for-java-developers"
     ],
     "Spring": [
       "junior-java-and-ai-engineer-az",
       "senior-java-and-ai-engineer-az",
-      "advanced-backend-microservices-development-az"
+      "advanced-backend-microservices-development-az",
+      "ai-for-java-developers"
     ],
+    "Hibernate": [
+      "junior-java-and-ai-engineer-az",
+      "senior-java-and-ai-engineer-az"
+    ],
+    "JPA": ["junior-java-and-ai-engineer-az", "senior-java-and-ai-engineer-az"],
     "Kafka": ["advanced-backend-microservices-development-az"],
     "Redis": ["advanced-backend-microservices-development-az"],
     "RabbitMQ": ["advanced-backend-microservices-development-az"],
     "gRPC": ["advanced-backend-microservices-development-az"],
+    "JWT": [
+      "advanced-backend-microservices-development-az",
+      "junior-java-and-ai-engineer-az"
+    ],
     "Node.js": ["advanced-backend-microservices-development-az"],
     "NestJS": ["advanced-backend-microservices-development-az"],
     "Express": ["advanced-backend-microservices-development-az"],
+    "Fastify": ["advanced-backend-microservices-development-az"],
+    "Prisma": ["advanced-backend-microservices-development-az"],
+    "TypeORM": ["advanced-backend-microservices-development-az"],
+    "Sequelize": ["advanced-backend-microservices-development-az"],
+    "GraphQL": [
+      "advanced-backend-microservices-development-az",
+      "advanced-frontend-development-az"
+    ],
+    "MongoDB": [
+      "advanced-backend-microservices-development-az",
+      "data-engineering-bootcamp-az"
+    ],
+    "Quarkus": [
+      "senior-java-and-ai-engineer-az",
+      "advanced-backend-microservices-development-az"
+    ],
+    "Micronaut": ["senior-java-and-ai-engineer-az"],
     "C#": ["c-az", "advanced-csharp-backend-development-az"],
     ".NET": ["c-az", "advanced-csharp-backend-development-az"],
+    "Entity Framework": ["c-az", "advanced-csharp-backend-development-az"],
+    "Blazor": ["advanced-csharp-backend-development-az", "c-az"],
     "React": ["frontend-react-development-az", "advanced-frontend-development-az"],
     "Next.js": ["frontend-react-development-az", "advanced-frontend-development-az"],
     "TypeScript": ["frontend-react-development-az", "advanced-frontend-development-az"],
@@ -59,6 +117,13 @@
     "CSS": ["frontend-react-development-az"],
     "Tailwind": ["frontend-react-development-az", "advanced-frontend-development-az"],
     "Redux": ["frontend-react-development-az"],
+    "Bootstrap": ["frontend-react-development-az", "advanced-frontend-development-az"],
+    "Vite": ["frontend-react-development-az", "advanced-frontend-development-az"],
+    "Webpack": ["advanced-frontend-development-az"],
+    "Material UI": ["frontend-react-development-az", "advanced-frontend-development-az"],
+    "Storybook": ["frontend-react-development-az", "advanced-frontend-development-az"],
+    "jQuery": ["frontend-react-development-az"],
+    "Remix": ["advanced-frontend-development-az"],
     "SQL": [
       "oracle-sql-az",
       "postgresql-database-administration-az",
@@ -66,18 +131,45 @@
     ],
     "PostgreSQL": ["postgresql-database-administration-az"],
     "MySQL": ["oracle-sql-az", "data-analytics-foundation-az"],
+    "MariaDB": ["oracle-sql-az", "data-analytics-foundation-az"],
+    "Oracle": ["oracle-sql-az"],
+    "SQL Server": ["oracle-sql-az", "data-analytics-foundation-az"],
+    "SQLite": ["oracle-sql-az", "data-analytics-foundation-az"],
     "Python": [
       "data-science-machine-learning-az",
       "data-engineering-bootcamp-az",
       "algorithms-data-structures-az"
     ],
     "Pandas": ["data-analytics-foundation-az", "data-science-machine-learning-az"],
+    "NumPy": ["data-analytics-foundation-az", "data-science-machine-learning-az"],
+    "FastAPI": [
+      "data-engineering-bootcamp-az",
+      "data-science-machine-learning-az"
+    ],
+    "Django": ["data-science-machine-learning-az"],
+    "Flask": ["data-science-machine-learning-az"],
+    "Celery": ["data-engineering-bootcamp-az"],
     "Spark": ["data-engineering-bootcamp-az"],
     "Airflow": ["data-engineering-bootcamp-az"],
     "dbt": ["data-engineering-bootcamp-az"],
     "BigQuery": ["data-engineering-bootcamp-az"],
     "Snowflake": ["data-engineering-bootcamp-az"],
     "Databricks": ["data-engineering-bootcamp-az"],
+    "Flink": ["data-engineering-bootcamp-az"],
+    "Hadoop": ["data-engineering-bootcamp-az"],
+    "Hive": ["data-engineering-bootcamp-az"],
+    "Trino": ["data-engineering-bootcamp-az"],
+    "Redshift": [
+      "data-engineering-bootcamp-az",
+      "cloud-computing-with-aws-and-terraform-az"
+    ],
+    "Elasticsearch": [
+      "data-engineering-bootcamp-az",
+      "site-reliability-engineering-sre-bootcamp"
+    ],
+    "Tableau": ["data-analytics-foundation-az"],
+    "Power BI": ["data-analytics-foundation-az"],
+    "Looker": ["data-analytics-foundation-az"],
     "LLM": [
       "ai-agents-prompt-engineering-az",
       "ai-for-everyone",
@@ -86,9 +178,50 @@
     "PyTorch": ["data-science-machine-learning-az"],
     "TensorFlow": ["data-science-machine-learning-az"],
     "scikit-learn": ["data-science-machine-learning-az"],
+    "Keras": ["data-science-machine-learning-az"],
+    "Hugging Face": [
+      "data-science-machine-learning-az",
+      "ai-agents-prompt-engineering-az"
+    ],
+    "LangChain": [
+      "ai-agents-prompt-engineering-az",
+      "data-science-machine-learning-az"
+    ],
+    "OpenAI": ["ai-agents-prompt-engineering-az", "ai-for-everyone"],
+    "NLP": [
+      "data-science-machine-learning-az",
+      "ai-agents-prompt-engineering-az"
+    ],
+    "RAG": [
+      "ai-agents-prompt-engineering-az",
+      "ai-for-java-developers",
+      "data-science-machine-learning-az"
+    ],
+    "Computer Vision": ["data-science-machine-learning-az"],
+    "CUDA": ["data-science-machine-learning-az"],
+    "MLflow": [
+      "data-science-machine-learning-az",
+      "data-engineering-bootcamp-az"
+    ],
     "Selenium": ["qa-automation-az", "qa-dan-sdet-bootcamp"],
     "Playwright": ["qa-automation-az", "qa-dan-sdet-bootcamp"],
     "Cypress": ["qa-automation-az", "qa-dan-sdet-bootcamp"],
-    "Jest": ["qa-automation-az"]
+    "Jest": ["qa-automation-az"],
+    "pytest": [
+      "qa-automation-az",
+      "qa-dan-sdet-bootcamp",
+      "data-science-machine-learning-az"
+    ],
+    "JUnit": ["qa-automation-az", "qa-dan-sdet-bootcamp", "java-se-oca-az"],
+    "TestNG": ["qa-automation-az", "qa-dan-sdet-bootcamp"],
+    "Postman": ["qa-automation-az", "qa-manual-az", "qa-dan-sdet-bootcamp"],
+    "JMeter": ["qa-automation-az", "qa-dan-sdet-bootcamp"],
+    "k6": ["qa-automation-az", "site-reliability-engineering-sre-bootcamp"],
+    "Appium": ["qa-automation-az", "qa-dan-sdet-bootcamp"],
+    "Mocha": ["qa-automation-az", "frontend-react-development-az"],
+    "Vitest": ["qa-automation-az", "frontend-react-development-az"],
+    "Cucumber": ["qa-automation-az", "qa-dan-sdet-bootcamp"],
+    "OWASP": ["cybersecurity-az", "pentest", "comptia-security-az"],
+    "Jira": ["agile-in-practice-az", "it-business-analyst-tech-writer-az"]
   }
 }

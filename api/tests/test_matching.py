@@ -278,6 +278,71 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual([x["name"] for x in body["missing"]], ["Kafka"])
         self.assertIn("Learn next: Kafka", body["explanation"])
 
+    def test_ensure_match_tables_is_cached(self):
+        from app.matching import _MATCH_ENSURED, ensure_match_tables
+
+        with sqlite3.connect(self.db) as conn:
+            ensure_match_tables(conn)
+            self.assertIn(str(self.db), _MATCH_ENSURED)
+            before = len(_MATCH_ENSURED)
+            ensure_match_tables(conn)
+            self.assertEqual(len(_MATCH_ENSURED), before)
+
+    def test_matches_reuse_catalog_until_jobs_change(self):
+        from app.matching import _MATCH_JOBS_MEMO, _load_match_catalog
+
+        subject = "match-cache"
+        self._seed_profile(subject)
+        first_id = self._insert_job(title="Java Developer", skills=["Java", "Spring"])
+        self._grant_matching(subject)
+        with sqlite3.connect(self.db) as conn:
+            conn.row_factory = sqlite3.Row
+            jobs, _skills = _load_match_catalog(conn)
+            self.assertEqual({job["id"] for job in jobs}, {first_id})
+            memo = _MATCH_JOBS_MEMO
+            self.assertIsNotNone(memo)
+            again, _skills = _load_match_catalog(conn)
+            self.assertIs(_MATCH_JOBS_MEMO, memo)
+            self.assertEqual([job["id"] for job in again], [job["id"] for job in jobs])
+        second_id = self._insert_job(title="Kafka Engineer", skills=["Java", "Kafka"])
+        with sqlite3.connect(self.db) as conn:
+            conn.row_factory = sqlite3.Row
+            refreshed, _skills = _load_match_catalog(conn)
+        self.assertEqual({job["id"] for job in refreshed}, {first_id, second_id})
+
+    def test_skill_gap_resolves_role_synonym(self):
+        subject = "gap-syn"
+        self._seed_profile(
+            subject,
+            skills=[{"name": "Java", "years": 5, "level": "", "source": "cv"}],
+        )
+        ids = self._skill_ids()
+        with sqlite3.connect(self.db) as conn:
+            conn.execute(
+                """
+                INSERT INTO role_taxonomy (canonical_name, category, synonyms, updated_at)
+                VALUES ('Java Developer', 'Backend', ?, '2026-10-05T12:00:00+00:00')
+                """,
+                (json.dumps(["Java Dev"]),),
+            )
+            role_id = conn.execute(
+                "SELECT id FROM role_taxonomy WHERE canonical_name = 'Java Developer'"
+            ).fetchone()[0]
+            conn.execute(
+                "INSERT INTO role_skill_weight (role_id, skill_id, weight) VALUES (?, ?, 1.0)",
+                (role_id, ids["Java"]),
+            )
+            conn.commit()
+        self._grant_matching(subject)
+        with self._auth("job:candidate", subject):
+            res = self.client.get(
+                "/api/v1/me/skill-gap?role=Java%20Dev&lang=en",
+                headers=self.headers,
+            )
+        self.assertEqual(res.status_code, 200, res.text)
+        self.assertEqual(res.json()["role"], "Java Developer")
+        self.assertEqual([x["name"] for x in res.json()["have"]], ["Java"])
+
 
 if __name__ == "__main__":
     unittest.main()

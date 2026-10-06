@@ -1,8 +1,12 @@
+import { redirect } from "next/navigation";
 import { CompanyForm } from "../../../components/company-form";
+import { companyLoginPath, getCompanyProfile, isGuestMe } from "../../../lib/server/company";
 import { privatePageMetadata } from "../../../lib/seo";
 
 export const metadata = privatePageMetadata;
 
-export default function Page() {
-  return <CompanyForm locale="en" />;
+export default async function Page() {
+  const initial = await getCompanyProfile();
+  if (isGuestMe(initial.me)) redirect(companyLoginPath("en"));
+  return <CompanyForm locale="en" initialMe={initial.me} initialProfile={initial.profile} />;
 }

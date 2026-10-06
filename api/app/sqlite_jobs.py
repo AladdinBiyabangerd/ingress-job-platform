@@ -670,6 +670,11 @@ def _jobs_fingerprint(conn) -> tuple:
     )
 
 
+def published_catalog_fingerprint(conn) -> tuple:
+    """Published catalog identity shared by list facets and match job cache."""
+    return _jobs_fingerprint(conn)
+
+
 def _apps_fingerprint(conn) -> tuple:
     try:
         row = conn.execute("SELECT COUNT(*) AS n, MAX(id) AS max_id FROM applications").fetchone()

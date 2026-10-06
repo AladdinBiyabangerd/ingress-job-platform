@@ -3,30 +3,56 @@
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { clearMeCache, fetchMe } from "../lib/me-client";
+import { saveCompanyProfile } from "../lib/server/refresh";
+import { useInitialMe } from "./me-seed";
 import { Shell } from "./shell";
 
-export function CompanyForm({ locale }) {
+function fieldsFrom(me, profile) {
+  const source = profile && typeof profile === "object" ? profile : me?.company_profile || {};
+  return {
+    companyName: source.company_name || "",
+    city: source.city || "",
+    about: source.about || "",
+  };
+}
+
+function loginHref(locale) {
+  return `/api/auth/login?intent=job_employer&returnTo=${encodeURIComponent(hrefFor(locale, { mode: "company" }))}`;
+}
+
+export function CompanyForm({ locale, initialMe, initialProfile = null }) {
   const t = text(locale);
-  const [companyName, setCompanyName] = useState("");
-  const [city, setCity] = useState("");
-  const [about, setAbout] = useState("");
+  const contextMe = useInitialMe();
+  const meSeed = initialMe !== undefined ? initialMe : contextMe;
+  const seededMe = meSeed && typeof meSeed === "object";
+  const seed = fieldsFrom(meSeed, initialProfile);
+  const [companyName, setCompanyName] = useState(() => seed.companyName);
+  const [city, setCity] = useState(() => seed.city);
+  const [about, setAbout] = useState(() => seed.about);
   const [error, setError] = useState("");
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(() => Boolean(seededMe && meSeed.authenticated));
 
   useEffect(() => {
+    function apply(me) {
+      if (!me?.authenticated) {
+        window.location.href = loginHref(locale);
+        return;
+      }
+      const fields = fieldsFrom(me, initialProfile);
+      setCompanyName(fields.companyName);
+      setCity(fields.city);
+      setAbout(fields.about);
+      setReady(true);
+    }
+    if (seededMe) {
+      apply(meSeed);
+      return undefined;
+    }
     let cancelled = false;
     fetchMe()
       .then((me) => {
         if (cancelled) return;
-        if (!me.authenticated) {
-          window.location.href = `/api/auth/login?intent=job_employer&returnTo=${encodeURIComponent(hrefFor(locale, { mode: "company" }))}`;
-          return;
-        }
-        const profile = me.company_profile || {};
-        setCompanyName(profile.company_name || "");
-        setCity(profile.city || "");
-        setAbout(profile.about || "");
-        setReady(true);
+        apply(me);
       })
       .catch(() => {
         if (!cancelled) setError(t.ssoError);
@@ -34,16 +60,12 @@ export function CompanyForm({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, [locale, t.ssoError]);
+  }, [initialProfile, meSeed, seededMe, locale, t.ssoError]);
 
   async function onSubmit(event) {
     event.preventDefault();
     setError("");
-    const res = await fetch("/api/auth/company", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ company_name: companyName, city, about }),
-    });
+    const res = await saveCompanyProfile({ company_name: companyName, city, about });
     if (!res.ok) {
       setError(t.companyRequired);
       return;

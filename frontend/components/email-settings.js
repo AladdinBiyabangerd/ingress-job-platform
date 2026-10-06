@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
+import { saveEmailPrefs } from "../lib/server/refresh";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
+import { useInitialMe } from "./me-seed";
 
 const FREQUENCIES = ["weekly", "biweekly", "important_only", "none"];
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
@@ -29,20 +31,44 @@ function weekdayLabel(t, value) {
   return labels[value] || labels[0];
 }
 
-export function EmailSettings({ locale }) {
+function applyPrefs(data, setters, fallbackLang) {
+  if (!data || typeof data !== "object") return;
+  setters.setPrefs(data);
+  setters.setFrequency(data.frequency || "none");
+  setters.setDigest(data.digest !== false);
+  setters.setHighMatch(data.high_match !== false);
+  setters.setLanguage(data.language || fallbackLang);
+  setters.setSendWeekday(typeof data.send_weekday === "number" ? data.send_weekday : 0);
+}
+
+export function EmailSettings({ locale, initialPrefs = null }) {
   const t = text(locale);
-  const [me, setMe] = useState(undefined);
-  const [prefs, setPrefs] = useState(null);
-  const [frequency, setFrequency] = useState("none");
-  const [digest, setDigest] = useState(true);
-  const [highMatch, setHighMatch] = useState(true);
-  const [language, setLanguage] = useState(locale === "en" || locale === "ru" ? locale : "az");
-  const [sendWeekday, setSendWeekday] = useState(0);
+  const initialMe = useInitialMe();
+  const fallbackLang = locale === "en" || locale === "ru" ? locale : "az";
+  const seededPrefs = initialPrefs && typeof initialPrefs === "object";
+  const [me, setMe] = useState(() => {
+    if (initialMe && typeof initialMe === "object") return initialMe.authenticated ? initialMe : null;
+    return undefined;
+  });
+  const [prefs, setPrefs] = useState(() => (seededPrefs ? initialPrefs : null));
+  const [frequency, setFrequency] = useState(() => (seededPrefs ? initialPrefs.frequency || "none" : "none"));
+  const [digest, setDigest] = useState(() => (seededPrefs ? initialPrefs.digest !== false : true));
+  const [highMatch, setHighMatch] = useState(() => (seededPrefs ? initialPrefs.high_match !== false : true));
+  const [language, setLanguage] = useState(() => (seededPrefs ? initialPrefs.language || fallbackLang : fallbackLang));
+  const [sendWeekday, setSendWeekday] = useState(() =>
+    seededPrefs && typeof initialPrefs.send_weekday === "number" ? initialPrefs.send_weekday : 0,
+  );
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const setters = { setPrefs, setFrequency, setDigest, setHighMatch, setLanguage, setSendWeekday };
+
   useEffect(() => {
+    if (initialMe && typeof initialMe === "object") {
+      setMe(initialMe.authenticated ? initialMe : null);
+      return undefined;
+    }
     let cancelled = false;
     fetchMe()
       .then((data) => {
@@ -54,27 +80,23 @@ export function EmailSettings({ locale }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialMe]);
 
   useEffect(() => {
     if (!me || !(me.candidate || me.staff)) return undefined;
+    if (seededPrefs) return undefined;
     let cancelled = false;
     fetch("/api/auth/email-prefs", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (cancelled || !data) return;
-        setPrefs(data);
-        setFrequency(data.frequency || "none");
-        setDigest(data.digest !== false);
-        setHighMatch(data.high_match !== false);
-        setLanguage(data.language || language);
-        setSendWeekday(typeof data.send_weekday === "number" ? data.send_weekday : 0);
+        applyPrefs(data, setters, fallbackLang);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [me]);
+  }, [me, seededPrefs, fallbackLang]);
 
   async function save(event) {
     event.preventDefault();
@@ -82,23 +104,18 @@ export function EmailSettings({ locale }) {
     setError("");
     setNote("");
     try {
-      const res = await fetch("/api/auth/email-prefs", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          frequency,
-          digest,
-          high_match: highMatch,
-          language,
-          send_weekday: sendWeekday,
-        }),
+      const res = await saveEmailPrefs({
+        frequency,
+        digest,
+        high_match: highMatch,
+        language,
+        send_weekday: sendWeekday,
       });
-      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(t.emailSettingsError);
         return;
       }
-      setPrefs(data);
+      applyPrefs(res.data, setters, fallbackLang);
       setNote(t.emailSettingsSaved);
     } catch {
       setError(t.emailSettingsError);

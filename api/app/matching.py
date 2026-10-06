@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
+from threading import Lock
 from typing import Any
 
 from app.cv_profile import _profile_payload, ensure_profile_tables
@@ -104,8 +105,22 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+_MATCH_ENSURED: set[str] = set()
+_MATCH_LOCK = Lock()
+_MATCH_JOBS_MEMO: tuple | None = None
+
+
 def ensure_match_tables(conn) -> None:
-    conn.executescript(FEEDBACK_SCHEMA)
+    from app.jobs_db import schema_cache_key
+
+    key = schema_cache_key()
+    if key in _MATCH_ENSURED:
+        return
+    with _MATCH_LOCK:
+        if key in _MATCH_ENSURED:
+            return
+        conn.executescript(FEEDBACK_SCHEMA)
+        _MATCH_ENSURED.add(key)
 
 
 def rerank_enabled(conn=None) -> bool:
@@ -302,7 +317,21 @@ def _format_explanation(
     return tpl["sep"].join(parts)
 
 
-def _load_published_jobs(conn) -> list[dict[str, Any]]:
+def _match_catalog_fp(conn) -> tuple:
+    from app.sqlite_jobs import published_catalog_fingerprint
+
+    skills = (0, 0)
+    try:
+        row = conn.execute(
+            "SELECT COUNT(*) AS n, COALESCE(MAX(job_id), 0) AS max_job FROM job_skill"
+        ).fetchone()
+        skills = (int(_row_get(row, "n", 0) or 0), int(_row_get(row, "max_job", 1) or 0))
+    except Exception:
+        pass
+    return (published_catalog_fingerprint(conn), skills)
+
+
+def _scan_published_jobs(conn) -> list[dict[str, Any]]:
     try:
         rows = conn.execute(
             """
@@ -341,7 +370,7 @@ def _load_published_jobs(conn) -> list[dict[str, Any]]:
     return jobs
 
 
-def _load_job_skills(conn) -> dict[int, list[tuple[int, str]]]:
+def _scan_job_skills(conn) -> dict[int, list[tuple[int, str]]]:
     out: dict[int, list[tuple[int, str]]] = {}
     try:
         rows = conn.execute(
@@ -362,6 +391,24 @@ def _load_job_skills(conn) -> dict[int, list[tuple[int, str]]]:
             continue
         out.setdefault(job_id, []).append((skill_id, name))
     return out
+
+
+def _load_match_catalog(conn) -> tuple[list[dict[str, Any]], dict[int, list[tuple[int, str]]]]:
+    """Published jobs + skills until catalog / job_skill fingerprint changes."""
+    global _MATCH_JOBS_MEMO
+    from app.jobs_db import schema_cache_key
+
+    key = schema_cache_key()
+    fp = _match_catalog_fp(conn)
+    with _MATCH_LOCK:
+        memo = _MATCH_JOBS_MEMO
+        if memo is not None and memo[0] == key and memo[1] == fp:
+            return memo[2], memo[3]
+    jobs = _scan_published_jobs(conn)
+    skills_by_job = _scan_job_skills(conn)
+    with _MATCH_LOCK:
+        _MATCH_JOBS_MEMO = (key, fp, jobs, skills_by_job)
+    return jobs, skills_by_job
 
 
 def _load_feedback(conn, user_id: str) -> dict[int, dict]:
@@ -489,8 +536,7 @@ def matches_payload(
     candidate_seniority = str(profile.get("seniority") or "").strip().lower() or None
     candidate_langs = _candidate_languages(profile)
     feedback = _load_feedback(conn, user_id)
-    jobs = _load_published_jobs(conn)
-    skills_by_job = _load_job_skills(conn)
+    jobs, skills_by_job = _load_match_catalog(conn)
 
     scored: list[dict[str, Any]] = []
     for job in jobs:

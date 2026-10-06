@@ -1,11 +1,11 @@
 {
-  "version": "1.2",
-  "generated_at": "2026-10-05T12:00:00Z",
+  "version": "1.3",
+  "generated_at": "2026-10-06T10:30:00Z",
   "source": {
     "plan": "docs/ingress-job-cv-ai-plan.pdf §6.1",
     "categories": "worker/worker/techstack.py CATEGORIES",
     "skill_dictionary": "docs/cv-ai/skill-dictionary-v1.json",
-    "note": "v1.2: broader role coverage + denser signature skills/synonyms. Optional signature group = OR (max weight). Hand-weighted; later TF refresh from ads."
+    "note": "v1.3: denser signature skills after skill-dictionary expansion (Hibernate, Argo CD, Power BI, RAG, …). Optional signature group = OR (max weight)."
   },
   "roles": [
     {
@@ -16,7 +16,9 @@
         "Java Backend Developer",
         "Backend Java Developer",
         "Java Software Engineer",
-        "Spring Boot Developer"
+        "Spring Boot Developer",
+        "Java Programmer",
+        "J2EE Developer"
       ],
       "signature_skills": [
         {
@@ -58,6 +60,18 @@
         {
           "skill": "AWS",
           "weight": 0.25
+        },
+        {
+          "skill": "Hibernate",
+          "weight": 0.4
+        },
+        {
+          "skill": "JPA",
+          "weight": 0.35
+        },
+        {
+          "skill": "Git",
+          "weight": 0.2
         }
       ]
     },
@@ -68,7 +82,9 @@
         "Python Engineer",
         "Python Backend Developer",
         "Backend Python Developer",
-        "Python Software Engineer"
+        "Python Software Engineer",
+        "Python Programmer",
+        "Django Developer"
       ],
       "signature_skills": [
         {
@@ -113,6 +129,18 @@
         {
           "skill": "Kafka",
           "weight": 0.25
+        },
+        {
+          "skill": "Celery",
+          "weight": 0.3
+        },
+        {
+          "skill": "pytest",
+          "weight": 0.25
+        },
+        {
+          "skill": "Git",
+          "weight": 0.2
         }
       ]
     },
@@ -123,7 +151,8 @@
         "Golang Developer",
         "Go Engineer",
         "Golang Engineer",
-        "Go Backend Developer"
+        "Go Backend Developer",
+        "Golang Backend Engineer"
       ],
       "signature_skills": [
         {
@@ -161,6 +190,10 @@
         {
           "skill": "SQL",
           "weight": 0.25
+        },
+        {
+          "skill": "Git",
+          "weight": 0.2
         }
       ]
     },
@@ -172,7 +205,8 @@
         "ASP.NET Developer",
         ".NET Engineer",
         "C# Engineer",
-        ".NET Backend Developer"
+        ".NET Backend Developer",
+        "ASP.NET Core Developer"
       ],
       "signature_skills": [
         {
@@ -206,6 +240,18 @@
         {
           "skill": "Kafka",
           "weight": 0.2
+        },
+        {
+          "skill": "Entity Framework",
+          "weight": 0.55
+        },
+        {
+          "skill": "Blazor",
+          "weight": 0.3
+        },
+        {
+          "skill": "Git",
+          "weight": 0.2
         }
       ]
     },
@@ -217,7 +263,9 @@
         "Node Engineer",
         "NestJS Developer",
         "Node.js Backend Developer",
-        "Express Developer"
+        "Express Developer",
+        "Node.js Engineer",
+        "TypeScript Backend Developer"
       ],
       "signature_skills": [
         {
@@ -257,6 +305,23 @@
         {
           "skill": "Docker",
           "weight": 0.25
+        },
+        {
+          "skill": "Fastify",
+          "weight": 0.4,
+          "group": "fw"
+        },
+        {
+          "skill": "Prisma",
+          "weight": 0.3
+        },
+        {
+          "skill": "TypeORM",
+          "weight": 0.25
+        },
+        {
+          "skill": "Git",
+          "weight": 0.2
         }
       ]
     },
@@ -302,6 +367,10 @@
         },
         {
           "skill": "Docker",
+          "weight": 0.2
+        },
+        {
+          "skill": "Git",
           "weight": 0.2
         }
       ]
@@ -630,6 +699,14 @@
         {
           "skill": "Kubernetes",
           "weight": 0.3
+        },
+        {
+          "skill": "Git",
+          "weight": 0.25
+        },
+        {
+          "skill": "GraphQL",
+          "weight": 0.25
         }
       ]
     },
@@ -640,7 +717,9 @@
         "React Engineer",
         "React.js Developer",
         "React Frontend Developer",
-        "React Software Engineer"
+        "React Software Engineer",
+        "React.js Engineer",
+        "Frontend React Developer"
       ],
       "signature_skills": [
         {
@@ -682,6 +761,18 @@
         {
           "skill": "GraphQL",
           "weight": 0.25
+        },
+        {
+          "skill": "Vite",
+          "weight": 0.3
+        },
+        {
+          "skill": "Storybook",
+          "weight": 0.25
+        },
+        {
+          "skill": "Material UI",
+          "weight": 0.2
         }
       ]
     },
@@ -721,6 +812,10 @@
         {
           "skill": "GraphQL",
           "weight": 0.2
+        },
+        {
+          "skill": "RxJS",
+          "weight": 0.45
         }
       ]
     },
@@ -765,6 +860,10 @@
         {
           "skill": "Jest",
           "weight": 0.2
+        },
+        {
+          "skill": "Vite",
+          "weight": 0.3
         }
       ]
     },
@@ -808,6 +907,14 @@
         {
           "skill": "GraphQL",
           "weight": 0.25
+        },
+        {
+          "skill": "Vite",
+          "weight": 0.2
+        },
+        {
+          "skill": "Jest",
+          "weight": 0.2
         }
       ]
     },
@@ -853,7 +960,9 @@
         "Front-end Engineer",
         "UI Engineer",
         "Web Developer",
-        "Client-side Engineer"
+        "Client-side Engineer",
+        "Front End Developer",
+        "UI Developer"
       ],
       "signature_skills": [
         {
@@ -903,6 +1012,18 @@
         {
           "skill": "Jest",
           "weight": 0.25
+        },
+        {
+          "skill": "Vite",
+          "weight": 0.3
+        },
+        {
+          "skill": "Webpack",
+          "weight": 0.2
+        },
+        {
+          "skill": "Storybook",
+          "weight": 0.2
         }
       ]
     },
@@ -951,6 +1072,14 @@
         {
           "skill": "Redis",
           "weight": 0.25
+        },
+        {
+          "skill": "Prisma",
+          "weight": 0.25
+        },
+        {
+          "skill": "GraphQL",
+          "weight": 0.25
         }
       ]
     },
@@ -996,6 +1125,10 @@
         {
           "skill": "Docker",
           "weight": 0.25
+        },
+        {
+          "skill": "Celery",
+          "weight": 0.2
         }
       ]
     },
@@ -1054,7 +1187,9 @@
         "Full Stack Developer",
         "Fullstack Engineer",
         "Full-stack Developer",
-        "Software Engineer Full Stack"
+        "Software Engineer Full Stack",
+        "Fullstack Developer",
+        "Full Stack Software Engineer"
       ],
       "signature_skills": [
         {
@@ -1146,6 +1281,10 @@
         {
           "skill": "CI/CD",
           "weight": 0.2
+        },
+        {
+          "skill": "Jetpack Compose",
+          "weight": 0.55
         }
       ]
     },
@@ -1295,6 +1434,10 @@
         {
           "skill": "CI/CD",
           "weight": 0.25
+        },
+        {
+          "skill": "Jetpack Compose",
+          "weight": 0.35
         }
       ]
     },
@@ -1304,7 +1447,9 @@
       "synonyms": [
         "DevOps Developer",
         "DevOps Specialist",
-        "DevOps SRE"
+        "DevOps SRE",
+        "CI/CD Engineer",
+        "Infrastructure Engineer"
       ],
       "signature_skills": [
         {
@@ -1357,6 +1502,26 @@
         {
           "skill": "Prometheus",
           "weight": 0.25
+        },
+        {
+          "skill": "Argo CD",
+          "weight": 0.4
+        },
+        {
+          "skill": "GitLab CI",
+          "weight": 0.35
+        },
+        {
+          "skill": "GitHub Actions",
+          "weight": 0.3
+        },
+        {
+          "skill": "Istio",
+          "weight": 0.25
+        },
+        {
+          "skill": "Git",
+          "weight": 0.25
         }
       ]
     },
@@ -1366,7 +1531,9 @@
       "synonyms": [
         "Site Reliability Engineer",
         "Reliability Engineer",
-        "Production Engineer"
+        "Production Engineer",
+        "SRE Engineer",
+        "Site Reliability"
       ],
       "signature_skills": [
         {
@@ -1408,6 +1575,22 @@
         {
           "skill": "Docker",
           "weight": 0.3
+        },
+        {
+          "skill": "OpenTelemetry",
+          "weight": 0.4
+        },
+        {
+          "skill": "Sentry",
+          "weight": 0.25
+        },
+        {
+          "skill": "New Relic",
+          "weight": 0.2
+        },
+        {
+          "skill": "CI/CD",
+          "weight": 0.35
         }
       ]
     },
@@ -1419,7 +1602,9 @@
         "AWS Engineer",
         "Cloud Infrastructure Engineer",
         "GCP Engineer",
-        "Azure Engineer"
+        "Azure Engineer",
+        "AWS Cloud Engineer",
+        "Cloud Ops Engineer"
       ],
       "signature_skills": [
         {
@@ -1460,6 +1645,18 @@
         {
           "skill": "Linux",
           "weight": 0.3
+        },
+        {
+          "skill": "CloudFormation",
+          "weight": 0.35
+        },
+        {
+          "skill": "Pulumi",
+          "weight": 0.3
+        },
+        {
+          "skill": "Git",
+          "weight": 0.2
         }
       ]
     },
@@ -1507,6 +1704,18 @@
         {
           "skill": "Python",
           "weight": 0.3
+        },
+        {
+          "skill": "Argo CD",
+          "weight": 0.45
+        },
+        {
+          "skill": "GitLab CI",
+          "weight": 0.3
+        },
+        {
+          "skill": "Istio",
+          "weight": 0.25
         }
       ]
     },
@@ -1551,6 +1760,14 @@
         {
           "skill": "MySQL",
           "weight": 0.25
+        },
+        {
+          "skill": "Git",
+          "weight": 0.25
+        },
+        {
+          "skill": "PowerShell",
+          "weight": 0.3
         }
       ]
     },
@@ -1590,6 +1807,10 @@
         {
           "skill": "Docker",
           "weight": 0.2
+        },
+        {
+          "skill": "HAProxy",
+          "weight": 0.25
         }
       ]
     },
@@ -1599,7 +1820,9 @@
       "synonyms": [
         "ETL Engineer",
         "Data Platform Engineer",
-        "Data Infrastructure Engineer"
+        "Data Infrastructure Engineer",
+        "Big Data Engineer",
+        "ETL Developer"
       ],
       "signature_skills": [
         {
@@ -1645,6 +1868,18 @@
         {
           "skill": "Docker",
           "weight": 0.25
+        },
+        {
+          "skill": "Flink",
+          "weight": 0.35
+        },
+        {
+          "skill": "Hadoop",
+          "weight": 0.3
+        },
+        {
+          "skill": "Redshift",
+          "weight": 0.25
         }
       ]
     },
@@ -1655,7 +1890,9 @@
         "Business Analyst Data",
         "BI Analyst",
         "Reporting Analyst",
-        "Insights Analyst"
+        "Insights Analyst",
+        "BI Developer",
+        "SQL Analyst"
       ],
       "signature_skills": [
         {
@@ -1680,6 +1917,22 @@
         },
         {
           "skill": "Snowflake",
+          "weight": 0.3
+        },
+        {
+          "skill": "Tableau",
+          "weight": 0.5
+        },
+        {
+          "skill": "Power BI",
+          "weight": 0.5
+        },
+        {
+          "skill": "Looker",
+          "weight": 0.35
+        },
+        {
+          "skill": "NumPy",
           "weight": 0.3
         }
       ]
@@ -1718,6 +1971,14 @@
         },
         {
           "skill": "Pandas",
+          "weight": 0.3
+        },
+        {
+          "skill": "Tableau",
+          "weight": 0.3
+        },
+        {
+          "skill": "Looker",
           "weight": 0.3
         }
       ]
@@ -1765,6 +2026,21 @@
         {
           "skill": "AWS",
           "weight": 0.25
+        },
+        {
+          "skill": "SQL Server",
+          "weight": 0.45,
+          "group": "db"
+        },
+        {
+          "skill": "Oracle",
+          "weight": 0.4,
+          "group": "db"
+        },
+        {
+          "skill": "MariaDB",
+          "weight": 0.35,
+          "group": "db"
         }
       ]
     },
@@ -1774,7 +2050,8 @@
       "synonyms": [
         "Applied Scientist",
         "Research Data Scientist",
-        "Data Science Engineer"
+        "Data Science Engineer",
+        "ML Scientist"
       ],
       "signature_skills": [
         {
@@ -1808,6 +2085,22 @@
         {
           "skill": "LLM",
           "weight": 0.25
+        },
+        {
+          "skill": "Keras",
+          "weight": 0.3
+        },
+        {
+          "skill": "NumPy",
+          "weight": 0.35
+        },
+        {
+          "skill": "Hugging Face",
+          "weight": 0.3
+        },
+        {
+          "skill": "NLP",
+          "weight": 0.3
         }
       ]
     },
@@ -1818,7 +2111,9 @@
         "Machine Learning Engineer",
         "AI Engineer",
         "Deep Learning Engineer",
-        "Applied ML Engineer"
+        "Applied ML Engineer",
+        "LLM Engineer",
+        "Generative AI Engineer"
       ],
       "signature_skills": [
         {
@@ -1855,6 +2150,38 @@
         },
         {
           "skill": "scikit-learn",
+          "weight": 0.3
+        },
+        {
+          "skill": "Hugging Face",
+          "weight": 0.45
+        },
+        {
+          "skill": "LangChain",
+          "weight": 0.4
+        },
+        {
+          "skill": "RAG",
+          "weight": 0.4
+        },
+        {
+          "skill": "Keras",
+          "weight": 0.3
+        },
+        {
+          "skill": "CUDA",
+          "weight": 0.3
+        },
+        {
+          "skill": "OpenAI",
+          "weight": 0.25
+        },
+        {
+          "skill": "NLP",
+          "weight": 0.3
+        },
+        {
+          "skill": "Computer Vision",
           "weight": 0.3
         }
       ]
@@ -1903,6 +2230,14 @@
         {
           "skill": "GCP",
           "weight": 0.3
+        },
+        {
+          "skill": "MLflow",
+          "weight": 0.5
+        },
+        {
+          "skill": "LangChain",
+          "weight": 0.25
         }
       ]
     },
@@ -1913,7 +2248,9 @@
         "Automation QA",
         "Test Automation Engineer",
         "QA Automation",
-        "Automated Test Engineer"
+        "Automated Test Engineer",
+        "AQA Engineer",
+        "Automation Tester"
       ],
       "signature_skills": [
         {
@@ -1954,6 +2291,23 @@
         {
           "skill": "Jenkins",
           "weight": 0.3
+        },
+        {
+          "skill": "pytest",
+          "weight": 0.4,
+          "group": "tool"
+        },
+        {
+          "skill": "JUnit",
+          "weight": 0.35
+        },
+        {
+          "skill": "Postman",
+          "weight": 0.3
+        },
+        {
+          "skill": "Cucumber",
+          "weight": 0.25
         }
       ]
     },
@@ -1987,6 +2341,14 @@
         {
           "skill": "CI/CD",
           "weight": 0.15
+        },
+        {
+          "skill": "Postman",
+          "weight": 0.4
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.35
         }
       ]
     },
@@ -1997,7 +2359,8 @@
         "Software Development Engineer in Test",
         "Quality Engineer",
         "Test Engineer",
-        "Software Test Engineer"
+        "Software Test Engineer",
+        "SDET Engineer"
       ],
       "signature_skills": [
         {
@@ -2039,6 +2402,18 @@
         },
         {
           "skill": "SQL",
+          "weight": 0.25
+        },
+        {
+          "skill": "pytest",
+          "weight": 0.4
+        },
+        {
+          "skill": "JUnit",
+          "weight": 0.4
+        },
+        {
+          "skill": "Postman",
           "weight": 0.25
         }
       ]
@@ -2084,6 +2459,10 @@
         {
           "skill": "SQL",
           "weight": 0.25
+        },
+        {
+          "skill": "OWASP",
+          "weight": 0.7
         }
       ]
     },
@@ -2094,7 +2473,8 @@
         "Information Security Engineer",
         "Cybersecurity Engineer",
         "IT Security Engineer",
-        "Cloud Security Engineer"
+        "Cloud Security Engineer",
+        "Cyber Security Engineer"
       ],
       "signature_skills": [
         {
@@ -2128,6 +2508,10 @@
         {
           "skill": "Bash",
           "weight": 0.3
+        },
+        {
+          "skill": "OWASP",
+          "weight": 0.55
         }
       ]
     },
@@ -2138,7 +2522,8 @@
         "Security Operations Analyst",
         "Security Analyst",
         "SOC Engineer",
-        "Cyber SOC Analyst"
+        "Cyber SOC Analyst",
+        "Blue Team Analyst"
       ],
       "signature_skills": [
         {
@@ -2168,6 +2553,14 @@
         {
           "skill": "SQL",
           "weight": 0.2
+        },
+        {
+          "skill": "Splunk",
+          "weight": 0.55
+        },
+        {
+          "skill": "OWASP",
+          "weight": 0.3
         }
       ]
     },
@@ -2252,6 +2645,14 @@
         {
           "skill": "Figma",
           "weight": 0.15
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.45
+        },
+        {
+          "skill": "Tableau",
+          "weight": 0.2
         }
       ]
     },
@@ -2275,6 +2676,10 @@
         {
           "skill": "Figma",
           "weight": 0.15
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.45
         }
       ]
     },
@@ -2295,6 +2700,10 @@
         {
           "skill": "CI/CD",
           "weight": 0.25
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.55
         }
       ]
     },
@@ -2314,6 +2723,10 @@
         {
           "skill": "SQL",
           "weight": 0.15
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.4
         }
       ]
     },
@@ -2326,7 +2739,9 @@
         "Desktop Support",
         "Service Desk",
         "IT Support Specialist",
-        "IT Technician"
+        "IT Technician",
+        "IT Helpdesk",
+        "Desktop Support Engineer"
       ],
       "signature_skills": [
         {
@@ -2344,6 +2759,14 @@
         {
           "skill": "SQL",
           "weight": 0.25
+        },
+        {
+          "skill": "PowerShell",
+          "weight": 0.4
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.2
         }
       ]
     },
@@ -2384,6 +2807,10 @@
         {
           "skill": "Kubernetes",
           "weight": 0.15
+        },
+        {
+          "skill": "Postman",
+          "weight": 0.2
         }
       ]
     },
@@ -2437,6 +2864,14 @@
         {
           "skill": "SQL",
           "weight": 0.25
+        },
+        {
+          "skill": "CloudFormation",
+          "weight": 0.3
+        },
+        {
+          "skill": "LLM",
+          "weight": 0.2
         }
       ]
     },

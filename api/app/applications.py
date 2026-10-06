@@ -136,7 +136,7 @@ def _timeline(row: sqlite3.Row, events: list[dict] | None = None) -> list[dict]:
     return steps
 
 
-def _view(row: sqlite3.Row, *, reviewer: bool, events: list[dict] | None = None) -> dict:
+def _view(row: sqlite3.Row, *, reviewer: bool, events: list[dict] | None = None, compact: bool = False) -> dict:
     status = (row["status"] or "submitted").strip().lower()
     if status not in _STATUSES:
         status = "submitted"
@@ -145,15 +145,16 @@ def _view(row: sqlite3.Row, *, reviewer: bool, events: list[dict] | None = None)
         "job_id": int(row["job_id"]),
         "job_title": row["job_title"] or "",
         "status": status,
-        "message": row["message"] or "",
-        "phone": row["phone"] or "",
-        "email": row["email"] or "",
-        "answers": _answers(row["answers"] or "[]"),
         "has_cv": bool(row["cv_stored"] or ""),
         "cv_name": row["cv_name"] or "",
         "created_at": row["created_at"] or "",
         "timeline": _timeline(row, events),
     }
+    if not compact:
+        payload["message"] = row["message"] or ""
+        payload["phone"] = row["phone"] or ""
+        payload["email"] = row["email"] or ""
+        payload["answers"] = _answers(row["answers"] or "[]")
     reason = " ".join((row["decision_reason"] or "").split())
     if status == "rejected" and reason:
         payload["reason"] = reason
@@ -161,6 +162,23 @@ def _view(row: sqlite3.Row, *, reviewer: bool, events: list[dict] | None = None)
         payload["candidate_subject"] = row["candidate_subject"] or ""
     return payload
 
+
+_CANDIDATE_LIST_SELECT = """
+SELECT
+    a.id,
+    a.job_id,
+    a.candidate_subject,
+    a.cv_name,
+    a.cv_stored,
+    a.status,
+    a.decision_reason,
+    a.created_at,
+    j.title AS job_title,
+    COALESCE(j.language, '') AS job_language,
+    COALESCE(j.owner_subject, '') AS owner_subject
+FROM applications a
+JOIN jobs j ON j.id = a.job_id
+"""
 
 _SELECT = """
 SELECT
@@ -453,21 +471,25 @@ def create_application(subject: str, job_id: int, fields: dict, cv: tuple[str, b
     return _view(row, reviewer=False)
 
 
-def _rows(where: str, params: tuple, *, reviewer: bool) -> list[dict]:
+def _rows(where: str, params: tuple, *, reviewer: bool, compact: bool = False) -> list[dict]:
+    sql = _CANDIDATE_LIST_SELECT if compact else _SELECT
     conn = _connect()
     try:
         rows = conn.execute(
-            f"{_SELECT} WHERE {where} ORDER BY a.id DESC",
+            f"{sql} WHERE {where} ORDER BY a.id DESC",
             params,
         ).fetchall()
         events = _status_events(conn, [int(row["id"]) for row in rows])
     finally:
         conn.close()
-    return [_view(row, reviewer=reviewer, events=events.get(int(row["id"]), [])) for row in rows]
+    return [
+        _view(row, reviewer=reviewer, events=events.get(int(row["id"]), []), compact=compact)
+        for row in rows
+    ]
 
 
 def list_for_candidate(subject: str) -> list[dict]:
-    return _rows("a.candidate_subject = ?", (subject,), reviewer=False)
+    return _rows("a.candidate_subject = ?", (subject,), reviewer=False, compact=True)
 
 
 def list_for_owner(subject: str) -> list[dict]:

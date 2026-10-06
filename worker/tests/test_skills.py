@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from worker.db import Store
+from worker.db import REEXTRACT_STACK_STEP, Store
 from worker.skills import (
     BACKFILL_STEP,
     backfill_job_skills,
@@ -30,7 +30,7 @@ class SkillsTest(unittest.TestCase):
         path = seed_path()
         self.assertTrue(path.is_file(), path)
         count = self.store.conn.execute("SELECT COUNT(*) FROM skill_dictionary").fetchone()[0]
-        self.assertGreaterEqual(int(count), 90)
+        self.assertGreaterEqual(int(count), 180)
         row = self.store.conn.execute(
             "SELECT synonyms, category_hint FROM skill_dictionary WHERE canonical_name = ?",
             ("Python",),
@@ -132,6 +132,96 @@ class SkillsTest(unittest.TestCase):
             )
         ]
         self.assertEqual(names, ["TypeScript", "Vue.js"])
+
+    def test_reextract_adds_new_dictionary_skills_from_text(self):
+        conn = self.store.conn
+        conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key, tech_stack
+            ) VALUES (
+                'Backend', 'Acme', '',
+                'Python Fastify Terraform Prisma',
+                'published', '2026-10-05T12:00:00+04:00', 'backend-acme-re',
+                ?
+            )
+            """,
+            (json.dumps(["Python"], ensure_ascii=False),),
+        )
+        job_id = int(conn.execute("SELECT id FROM jobs WHERE norm_key = 'backend-acme-re'").fetchone()[0])
+        sync_job_skills(conn, job_id, ["Python"])
+        conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key,
+                tech_stack, owner_subject
+            ) VALUES (
+                'Company post', 'Co', '', 'Prisma Fastify',
+                'published', '2026-10-05T12:00:00+04:00', 'company-post-re',
+                ?, 'company:1'
+            )
+            """,
+            (json.dumps(["Python"], ensure_ascii=False),),
+        )
+        conn.commit()
+        changed = self.store.reextract_tech_stack()
+        self.assertEqual(changed, 1)
+        stack = json.loads(
+            conn.execute(
+                "SELECT tech_stack FROM jobs WHERE norm_key = 'backend-acme-re'"
+            ).fetchone()[0]
+        )
+        self.assertIn("Python", stack)
+        self.assertIn("Fastify", stack)
+        self.assertIn("Terraform", stack)
+        self.assertIn("Prisma", stack)
+        names = {
+            row[0]
+            for row in conn.execute(
+                """
+                SELECT s.canonical_name
+                FROM job_skill js
+                JOIN skill_dictionary s ON s.id = js.skill_id
+                WHERE js.job_id = ?
+                """,
+                (job_id,),
+            )
+        }
+        self.assertGreaterEqual(names, {"Python", "Fastify", "Terraform", "Prisma"})
+        company_stack = json.loads(
+            conn.execute(
+                "SELECT tech_stack FROM jobs WHERE norm_key = 'company-post-re'"
+            ).fetchone()[0]
+        )
+        self.assertEqual(company_stack, ["Python"])
+        self.assertEqual(self.store.reextract_tech_stack(), 0)
+
+    def test_reextract_force_rewrites_after_marker(self):
+        conn = self.store.conn
+        conn.execute(
+            "INSERT INTO maintenance_steps (name, done_at) VALUES (?, 'already')",
+            (REEXTRACT_STACK_STEP,),
+        )
+        conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key, tech_stack
+            ) VALUES (
+                'DevOps', 'Acme', '', 'Ansible Helm',
+                'published', '2026-10-05T12:00:00+04:00', 'devops-re',
+                '["Linux"]'
+            )
+            """
+        )
+        conn.commit()
+        self.assertEqual(self.store.reextract_tech_stack(), 0)
+        changed = self.store.reextract_tech_stack(force=True)
+        self.assertEqual(changed, 1)
+        stack = json.loads(
+            conn.execute("SELECT tech_stack FROM jobs WHERE norm_key = 'devops-re'").fetchone()[0]
+        )
+        self.assertIn("Ansible", stack)
+        self.assertIn("Helm", stack)
 
     def test_seed_is_idempotent(self):
         first = seed_skill_dictionary(self.store.conn)

@@ -15,6 +15,7 @@ from app.role_suggestions import (
     _candidate_skills,
     _matching_granted,
     _pick_locale,
+    resolve_taxonomy_role,
 )
 
 DEFAULT_TOP = 15
@@ -74,82 +75,6 @@ def clamp_top(value: int | None) -> int:
     except (TypeError, ValueError):
         return DEFAULT_TOP
     return max(1, min(MAX_TOP, n))
-
-
-def _resolve_role(conn, role: str | None) -> dict | None:
-    name = (role or "").strip()
-    if not name:
-        return None
-    try:
-        row = conn.execute(
-            """
-            SELECT id, canonical_name, category, academy_career_path_id
-            FROM role_taxonomy
-            WHERE lower(canonical_name) = lower(?)
-            """,
-            (name,),
-        ).fetchone()
-    except Exception:
-        # Older DBs without academy_career_path_id.
-        try:
-            row = conn.execute(
-                """
-                SELECT id, canonical_name, category
-                FROM role_taxonomy
-                WHERE lower(canonical_name) = lower(?)
-                """,
-                (name,),
-            ).fetchone()
-        except Exception:
-            return None
-    if row is None:
-        # Synonym match (JSON array stored as text).
-        try:
-            rows = conn.execute(
-                """
-                SELECT id, canonical_name, category, synonyms, academy_career_path_id
-                FROM role_taxonomy
-                """
-            ).fetchall()
-        except Exception:
-            try:
-                rows = conn.execute(
-                    "SELECT id, canonical_name, category, synonyms FROM role_taxonomy"
-                ).fetchall()
-            except Exception:
-                return None
-        needle = name.lower()
-        for item in rows:
-            synonyms = _parse_json_list(_row_get(item, "synonyms", 3))
-            if any(str(s).strip().lower() == needle for s in synonyms):
-                row = item
-                break
-    if row is None:
-        return None
-    path_id = ""
-    try:
-        path_id = str(row["academy_career_path_id"] or "").strip()
-    except (KeyError, IndexError, TypeError):
-        # Tuple layouts:
-        #   id, name, category, path
-        #   id, name, category, synonyms, path
-        for idx in (3, 4):
-            try:
-                value = row[idx]
-            except (KeyError, IndexError, TypeError):
-                continue
-            # Synonyms column is JSON text starting with '[' — skip it.
-            text = str(value or "").strip()
-            if text.startswith("["):
-                continue
-            path_id = text.strip("/")
-            break
-    return {
-        "id": int(_row_get(row, "id", 0)),
-        "canonical_name": str(_row_get(row, "canonical_name", 1) or ""),
-        "category": str(_row_get(row, "category", 2) or ""),
-        "academy_career_path_id": path_id,
-    }
 
 
 def _role_target_skills(conn, role_id: int, top: int) -> list[dict[str, Any]]:
@@ -278,7 +203,7 @@ def skill_gap_payload(
     if not matching:
         return base
 
-    resolved = _resolve_role(conn, role)
+    resolved = resolve_taxonomy_role(conn, role)
     if resolved is None:
         tpl = EXPLANATION[locale]
         base["explanation"] = tpl["empty_role"]

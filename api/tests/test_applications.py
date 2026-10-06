@@ -428,7 +428,14 @@ class ApplicationTests(unittest.TestCase):
             mine = self.client.get("/api/v1/applications", headers={"Authorization": "Bearer test"})
             self.assertEqual(mine.json()["items"][0]["status"], "seen")
             self.assertNotIn("reason", mine.json()["items"][0])
-            self.assertEqual(mine.json()["items"][0]["answers"][0]["question"], "Nece eshitdiniz?")
+            self.assertNotIn("answers", mine.json()["items"][0])
+            self.assertNotIn("message", mine.json()["items"][0])
+        with self._auth("job:employer", "apply-employer"):
+            owned = self.client.get(
+                "/api/v1/cabinet/applications",
+                headers={"Authorization": "Bearer test"},
+            )
+            self.assertEqual(owned.json()["items"][0]["answers"][0]["question"], "Nece eshitdiniz?")
 
         revised = self._form(questions=[{"id": question_id, "text": "Yeni sual", "required": True}])
         with self._auth("job:employer", "apply-employer"):
@@ -443,9 +450,19 @@ class ApplicationTests(unittest.TestCase):
             self.assertFalse(edited.json()["form"]["phone"]["enabled"])
         with self._auth("job:candidate", "apply-candidate"):
             kept = self.client.get("/api/v1/applications", headers={"Authorization": "Bearer test"})
-            self.assertEqual(kept.json()["items"][0]["phone"], "0501112233")
-            self.assertEqual(kept.json()["items"][0]["answers"], [{"question": "Nece eshitdiniz?", "answer": "Dostdan"}])
             self.assertTrue(kept.json()["items"][0]["has_cv"])
+            self.assertNotIn("phone", kept.json()["items"][0])
+            self.assertNotIn("answers", kept.json()["items"][0])
+        with self._auth("job:employer", "apply-employer"):
+            owned = self.client.get(
+                "/api/v1/cabinet/applications",
+                headers={"Authorization": "Bearer test"},
+            )
+            self.assertEqual(owned.json()["items"][0]["phone"], "0501112233")
+            self.assertEqual(
+                owned.json()["items"][0]["answers"],
+                [{"question": "Nece eshitdiniz?", "answer": "Dostdan"}],
+            )
         with self._auth("job:candidate", "other-candidate"):
             stale = self.client.post(
                 f"/api/v1/jobs/{ad_id}/apply",
