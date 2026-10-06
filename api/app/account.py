@@ -11,7 +11,7 @@ import urllib.request
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.auth_oidc import AuthError, VerifiedAccess, id_token_nonce_matches, verify_access_token
+from app.auth_oidc import AuthError, VerifiedAccess, id_token_nonce_status, verify_access_token
 from app.config import settings
 from app.profiles import (
     academy_name_for,
@@ -200,8 +200,10 @@ def _tokens_from(payload: dict, *, require_refresh: bool, expected_nonce: str | 
         user = verify_access_token(access)
     except AuthError as exc:
         raise HTTPException(status_code=502, detail="Academy token qəbul edilmədi") from exc
-    if expected_nonce and not id_token_nonce_matches(payload.get("id_token"), expected_nonce):
-        raise HTTPException(status_code=502, detail="Academy token qəbul edilmədi")
+    if expected_nonce:
+        nonce_status = id_token_nonce_status(payload.get("id_token"), expected_nonce)
+        if nonce_status == "mismatch":
+            raise HTTPException(status_code=502, detail="Academy token qəbul edilmədi")
     refresh = payload.get("refresh_token")
     if require_refresh and (not isinstance(refresh, str) or len(refresh) < 20):
         raise HTTPException(status_code=502, detail="Academy token mübadiləsi alınmadı")

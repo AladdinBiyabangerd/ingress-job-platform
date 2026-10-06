@@ -138,7 +138,7 @@ class AuthRefreshTests(unittest.TestCase):
         user = VerifiedAccess(subject="42", scopes=frozenset({"job:candidate"}))
         with _urlopen(_FakeResponse(json.dumps(payload).encode())):
             with patch("app.account.verify_access_token", return_value=user):
-                with patch("app.account.id_token_nonce_matches", return_value=False):
+                with patch("app.account.id_token_nonce_status", return_value="mismatch"):
                     response = self.client.post(
                         "/api/v1/auth/exchange",
                         json={
@@ -169,7 +169,7 @@ class AuthRefreshTests(unittest.TestCase):
         user = VerifiedAccess(subject="42", scopes=frozenset({"job:candidate"}))
         with _urlopen(_FakeResponse(json.dumps(payload).encode())):
             with patch("app.account.verify_access_token", return_value=user):
-                with patch("app.account.id_token_nonce_matches", return_value=True):
+                with patch("app.account.id_token_nonce_status", return_value="ok"):
                     response = self.client.post(
                         "/api/v1/auth/exchange",
                         json={
@@ -182,6 +182,36 @@ class AuthRefreshTests(unittest.TestCase):
         data = response.json()
         self.assertEqual(data["access_token"], "access-new")
         self.assertEqual(data["return_to"], "/profile")
+
+    def test_exchange_allows_unverified_id_token(self):
+        from app.profiles import save_transaction
+
+        save_transaction(
+            state="u" * 22,
+            verifier="v" * 43,
+            nonce="expected-nonce-value-0123456789ab",
+            return_to="/",
+            intent="job_candidate",
+            redirect_uri="http://localhost:3010/api/auth/callback",
+        )
+        payload = {
+            "access_token": "access-new",
+            "expires_in": 900,
+            "refresh_token": "r" * 40,
+        }
+        user = VerifiedAccess(subject="42", scopes=frozenset({"job:candidate"}))
+        with _urlopen(_FakeResponse(json.dumps(payload).encode())):
+            with patch("app.account.verify_access_token", return_value=user):
+                with patch("app.account.id_token_nonce_status", return_value="unverified"):
+                    response = self.client.post(
+                        "/api/v1/auth/exchange",
+                        json={
+                            "state": "u" * 22,
+                            "code": "auth-code-value",
+                            "redirect_uri": "http://localhost:3010/api/auth/callback",
+                        },
+                    )
+        self.assertEqual(response.status_code, 200, response.text)
 
 
 if __name__ == "__main__":

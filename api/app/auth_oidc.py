@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hmac
+import logging
 from dataclasses import dataclass
 
 import jwt
@@ -11,6 +13,7 @@ from jwt.exceptions import InvalidTokenError, PyJWKClientError
 from app.config import settings
 
 _jwks: PyJWKClient | None = None
+_log = logging.getLogger(__name__)
 
 
 class AuthError(Exception):
@@ -45,7 +48,9 @@ def verify_access_token(token: str) -> VerifiedAccess:
         raise AuthError(401, "Hesab tələb olunur")
     issuer = settings.issuer()
     audience = settings.oidc_audience.strip()
-    if not issuer or not audience or not settings.oidc_jwks_url.strip():
+    issuers = [value for value in (issuer, issuer.rstrip("/")) if value]
+    issuers = list(dict.fromkeys(issuers))
+    if not issuers or not audience or not settings.oidc_jwks_url.strip():
         raise AuthError(503, "OIDC konfiqurasiyası tam deyil")
     try:
         header = jwt.get_unverified_header(token)
@@ -60,11 +65,12 @@ def verify_access_token(token: str) -> VerifiedAccess:
             signing_key.key,
             algorithms=["RS256"],
             audience=audience,
-            issuer=issuer,
-            leeway=30,
+            issuer=issuers,
+            leeway=60,
             options={"require": ["aud", "exp", "iat", "iss", "sub"]},
         )
     except (InvalidTokenError, PyJWKClientError, TimeoutError) as exc:
+        _log.warning("access_token_rejected: %s: %s", type(exc).__name__, exc)
         raise AuthError(401, "Hesab tələb olunur") from exc
 
     subject = claims.get("sub")
@@ -80,34 +86,50 @@ def verify_access_token(token: str) -> VerifiedAccess:
     return VerifiedAccess(subject=subject.strip(), scopes=scopes, name=name.strip())
 
 
-def _id_token_claims(token: str) -> dict | None:
+def _id_token_claims(token: str, *, verify_aud: bool = True) -> dict | None:
     if not token or token.count(".") != 2:
         return None
     issuer = settings.issuer()
     audience = settings.oidc_client_id.strip()
-    if not issuer or not audience:
+    issuers = [value for value in (issuer, issuer.rstrip("/")) if value]
+    issuers = list(dict.fromkeys(issuers))
+    if not issuers or (verify_aud and not audience):
         return None
     try:
         signing_key = _jwks_client().get_signing_key_from_jwt(token)
-        return jwt.decode(
-            token,
-            signing_key.key,
-            algorithms=["RS256"],
-            audience=audience,
-            issuer=issuer,
-            leeway=30,
-            options={"require": ["aud", "exp", "iat", "iss", "sub"]},
-        )
-    except (InvalidTokenError, PyJWKClientError, TimeoutError):
+        kwargs: dict = {
+            "algorithms": ["RS256"],
+            "issuer": issuers,
+            "leeway": 60,
+            "options": {
+                "require": ["aud", "exp", "iat", "iss", "sub"] if verify_aud else ["exp", "iat", "iss", "sub"],
+                "verify_aud": verify_aud,
+            },
+        }
+        if verify_aud:
+            kwargs["audience"] = audience
+        return jwt.decode(token, signing_key.key, **kwargs)
+    except (InvalidTokenError, PyJWKClientError, TimeoutError) as exc:
+        _log.warning("id_token_rejected: verify_aud=%s %s: %s", verify_aud, type(exc).__name__, exc)
         return None
+
+
+def id_token_nonce_status(token: object, nonce: str) -> str:
+    """ok | mismatch | unverified. Only mismatch must fail the code grant."""
+    if not isinstance(token, str) or not nonce:
+        return "unverified"
+    claims = _id_token_claims(token) or _id_token_claims(token, verify_aud=False)
+    if not isinstance(claims, dict):
+        return "unverified"
+    got = claims.get("nonce")
+    if not isinstance(got, str) or not hmac.compare_digest(got, nonce):
+        return "mismatch"
+    return "ok"
 
 
 def id_token_nonce_matches(token: object, nonce: str) -> bool:
     """True when the verified Academy id_token carries this authorize nonce."""
-    if not isinstance(token, str) or not nonce:
-        return False
-    claims = _id_token_claims(token)
-    return isinstance(claims, dict) and claims.get("nonce") == nonce
+    return id_token_nonce_status(token, nonce) == "ok"
 
 
 def identity_from_id_token(token: str) -> tuple[str, str, str] | None:
