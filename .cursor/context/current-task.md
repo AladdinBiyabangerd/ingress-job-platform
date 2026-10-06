@@ -1,19 +1,19 @@
 # Current task
 
 ## Goal
-Trends page UI polish: cards, pagination, selectable window (presets + custom days).
+Fix CV parse "Ləğv et" so stuck analysis UI actually clears.
 
 ## Completed
-- Redesigned `/trends` cards (share bar, chips)
-- Growth cold-start fix (API + frontend cap)
-- Pagination `?page=` (10/page)
-- Window: presets 7/14/28/56 + custom number input 1–56 (`?days=`)
+- Root cause: late poll response re-applied `pending` after cancel
+- Frontend: optimistic cancel + `pollEpoch` to ignore stale polls
+- API: cancel always fails open jobs, commit then return payload
+- Worker: do not revive cancelled jobs as `done`/`pending`
 
 ## Remaining
-- Deploy when ready
-- AI #2 re-rank ops still separate
+- Deploy frontend + API (+ worker if separate)
+- Spot-check: upload CV → Ləğv et → chooser returns immediately
 
 ## Relevant files
-- `frontend/components/trends.js`, `frontend/app/globals.css`, `frontend/lib/copy.js`
-- `frontend/app/{,en/,ru/}trends/page.js`
-- `api/app/trends.py`
+- `frontend/components/profile-review.js`, `frontend/lib/copy.js`
+- `api/app/cv_profile.py`, `api/tests/test_cv_profile.py`
+- `worker/worker/cv_queue.py`

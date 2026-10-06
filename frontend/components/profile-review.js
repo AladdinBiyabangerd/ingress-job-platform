@@ -148,6 +148,8 @@ export function ProfileReview({ locale }) {
   const [cvName, setCvName] = useState("");
   const fileRef = useRef(null);
   const pollLeft = useRef(0);
+  /** Bumped on cancel/reset so in-flight poll responses cannot re-open the progress UI. */
+  const pollEpoch = useRef(0);
 
   function loadRoles() {
     const lang = locale === "en" || locale === "ru" ? locale : "az";
@@ -223,28 +225,30 @@ export function ProfileReview({ locale }) {
   useEffect(() => {
     if (!polling || !allowed) return undefined;
     let cancelled = false;
+    const epoch = pollEpoch.current;
+    const stillCurrent = () => !cancelled && epoch === pollEpoch.current;
     const tick = async () => {
-      if (cancelled) return;
+      if (!stillCurrent()) return;
       if (pollLeft.current <= 0) {
         setPolling(false);
         try {
           const res = await fetch("/api/auth/cv-profile/cv/cancel", { method: "POST" });
           const data = await res.json().catch(() => null);
-          if (!cancelled && data) {
+          if (stillCurrent() && data) {
             setPayload(data);
             if (!data.exists) setEntry(null);
           }
         } catch {
           /* ignore — user can cancel manually */
         }
-        if (!cancelled) setError(t.profileReviewStalled);
+        if (stillCurrent()) setError(t.profileReviewStalled);
         return;
       }
       pollLeft.current -= 1;
       try {
         const res = await fetch("/api/auth/cv-profile", { cache: "no-store" });
         const data = await res.json().catch(() => null);
-        if (cancelled || !data) return;
+        if (!stillCurrent() || !data) return;
         setPayload(data);
         if (data.parse_status === "failed") {
           setPolling(false);
@@ -398,25 +402,44 @@ export function ProfileReview({ locale }) {
     setRolesPayload(null);
   }
 
+  function stopParseLocally({ keepEntry = false } = {}) {
+    pollEpoch.current += 1;
+    setPolling(false);
+    pollLeft.current = 0;
+    setUploading(false);
+    setPayload((prev) =>
+      prev
+        ? { ...prev, parse_status: "failed", needs_review: Boolean(prev.exists) }
+        : { exists: false, parse_status: "failed", status: "empty" },
+    );
+    if (!keepEntry) setEntry(null);
+  }
+
   async function cancelParse() {
     setError("");
     setNote("");
     setBusy(true);
-    setPolling(false);
-    pollLeft.current = 0;
+    const hadProfile = Boolean(payload?.exists);
+    // Optimistic: clear progress immediately so a late poll cannot stick the UI.
+    stopParseLocally({ keepEntry: hadProfile });
     try {
       const res = await fetch("/api/auth/cv-profile/cv/cancel", { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (!hadProfile) setEntry(null);
         setError(t.profileReviewFailed);
         return;
       }
       setPayload(data);
       if (!data.exists) {
         setEntry(null);
+      } else {
+        applyPayload(data, setters);
+        setEntry("form");
       }
-      setError(t.profileReviewFailed);
+      setNote(t.profileReviewCancelDone);
     } catch {
+      if (!hadProfile) setEntry(null);
       setError(t.profileReviewFailed);
     } finally {
       setBusy(false);
@@ -428,6 +451,7 @@ export function ProfileReview({ locale }) {
     setError("");
     setNote("");
     setBusy(true);
+    pollEpoch.current += 1;
     setPolling(false);
     pollLeft.current = 0;
     try {

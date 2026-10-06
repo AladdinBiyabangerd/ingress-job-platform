@@ -239,6 +239,34 @@ class CvProfileTests(unittest.TestCase):
         self.assertIn("cancelled", row["error"])
         self.assertIsNotNone(profile)
 
+    def test_cancel_processing_parse(self):
+        with sqlite3.connect(self.db) as conn:
+            from app.cv_queue import ensure_cv_queue_tables
+
+            ensure_cv_queue_tables(conn)
+            conn.execute(
+                """
+                INSERT INTO parse_cv_queue (
+                    user_id, cv_file_key, cv_name, application_id, status,
+                    attempts, error, created_at, started_at, finished_at
+                ) VALUES (?, ?, ?, NULL, 'processing', 1, '', ?, ?, '')
+                """,
+                (
+                    "person-cancel-proc",
+                    "cvs/y.pdf",
+                    "y.pdf",
+                    "2020-01-01T00:00:00+00:00",
+                    "2020-01-01T00:01:00+00:00",
+                ),
+            )
+            conn.commit()
+        with self._auth("job:candidate", "person-cancel-proc"):
+            res = self.client.post("/api/v1/profile/cv/cancel", headers=self.headers)
+        self.assertEqual(res.status_code, 200, res.text)
+        body = res.json()
+        self.assertFalse(body["exists"])
+        self.assertEqual(body["parse_status"], "failed")
+
     def test_employer_forbidden_and_guest_unauthorized(self):
         with self._auth("job:employer", "hr-1"):
             denied = self.client.get("/api/v1/profile", headers=self.headers)

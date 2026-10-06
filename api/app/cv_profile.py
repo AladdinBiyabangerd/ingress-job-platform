@@ -503,12 +503,9 @@ def cancel_open_parse(*, user_id: str) -> dict:
         conn = _connect()
         try:
             ensure_profile_tables(conn)
-            before = _profile_payload(conn, user_id=subject)
-            if before.get("parse_status") in PARSE_QUEUE_OPEN:
-                _fail_open_parse_jobs(conn, user_id=subject, error="cancelled by user")
-            after = _profile_payload(conn, user_id=subject)
+            _fail_open_parse_jobs(conn, user_id=subject, error="cancelled by user")
             conn.commit()
-            return after
+            return _profile_payload(conn, user_id=subject)
         finally:
             conn.close()
 

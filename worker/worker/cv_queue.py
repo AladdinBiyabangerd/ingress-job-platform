@@ -269,16 +269,43 @@ def _claim(conn, limit: int) -> list[sqlite3.Row]:
     return claimed
 
 
-def _finish(conn, queue_id: int, *, status: str, error: str = "") -> None:
+def _finish(conn, queue_id: int, *, status: str, error: str = "") -> int:
+    """Close or re-queue a claimed job. Returns updated row count.
+
+    Never overwrites a job the user already cancelled (status already failed).
+    """
     finished = _now() if status in {"done", "failed"} else ""
-    conn.execute(
-        """
-        UPDATE parse_cv_queue
-        SET status = ?, error = ?, finished_at = ?
-        WHERE id = ?
-        """,
-        (status, (error or "")[:1000], finished, queue_id),
-    )
+    if status in {"done", "pending"}:
+        cur = conn.execute(
+            """
+            UPDATE parse_cv_queue
+            SET status = ?, error = ?, finished_at = ?
+            WHERE id = ? AND status = 'processing'
+            """,
+            (status, (error or "")[:1000], finished, queue_id),
+        )
+    else:
+        cur = conn.execute(
+            """
+            UPDATE parse_cv_queue
+            SET status = ?, error = ?, finished_at = ?
+            WHERE id = ? AND status IN ('pending', 'processing')
+            """,
+            (status, (error or "")[:1000], finished, queue_id),
+        )
+    return int(cur.rowcount or 0)
+
+
+def _queue_status(conn, queue_id: int) -> str:
+    row = conn.execute(
+        "SELECT status FROM parse_cv_queue WHERE id = ?",
+        (queue_id,),
+    ).fetchone()
+    if row is None:
+        return ""
+    if isinstance(row, sqlite3.Row) or hasattr(row, "keys"):
+        return str(row["status"] or "")
+    return str(row[0] or "")
 
 
 def _process_one(conn, row: sqlite3.Row, *, root: Path | None) -> str:
@@ -288,6 +315,9 @@ def _process_one(conn, row: sqlite3.Row, *, root: Path | None) -> str:
         _finish(conn, int(row["id"]), status="failed", error="cv_missing")
         return "failed"
     profile = parse_bytes(data, filename=row["cv_name"] or stored, conn=conn)
+    if _queue_status(conn, int(row["id"])) != "processing":
+        # Cancelled (or otherwise closed) while parse_bytes was running.
+        return "failed"
     upsert_candidate_profile(
         conn,
         user_id=row["user_id"],
@@ -300,6 +330,8 @@ def _process_one(conn, row: sqlite3.Row, *, root: Path | None) -> str:
         _finish(conn, int(row["id"]), status="failed", error=err[:1000])
         return "failed"
     _finish(conn, int(row["id"]), status="done", error=err[:1000] if err else "")
+    if _queue_status(conn, int(row["id"])) != "done":
+        return "failed"
     try:
         from worker.embeddings import embed_profile
 
