@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
+import { buildAuthorizeQuery } from "../../../../lib/oidc-authorize";
 import {
   beginLoginCookies,
   hasSessionCookies,
@@ -51,23 +52,17 @@ export async function GET(request) {
 
   // Only a live post-login session (no guest lock) counts as already signed in.
   const alreadySignedIn = !signedOut(request) && hasSessionCookies(request);
-  const params = new URLSearchParams({
-    response_type: "code",
-    client_id: config.clientId,
-    redirect_uri: redirectUri,
-    scope: "openid offline_access profile:read job:employer job:candidate job:staff",
+  const params = buildAuthorizeQuery({
+    clientId: config.clientId,
+    redirectUri,
     state,
     nonce,
-    code_challenge: challenge,
-    code_challenge_method: "S256",
+    challenge,
+    intent,
+    returnToAbsolute: new URL(returnTo, `${config.origin}/`).toString(),
+    signedOut: signedOut(request),
+    alreadySignedIn,
   });
-  // Always prompt=login. After job logout, Academy must not silently reuse the
-  // portal session — that only stays when existing_account=1 (live job session
-  // adding employer/candidate). See ingress-academy portal/oidc/views.py.
-  params.set("prompt", "login");
-  if (intent) params.set("registration_intent", intent);
-  if (intent && alreadySignedIn) params.set("existing_account", "1");
-  params.set("return_to", new URL(returnTo, `${config.origin}/`).toString());
 
   const redirect = NextResponse.redirect(`${config.authorizeUrl}?${params.toString()}`, 302);
   // After logout, keep job_guest until callback succeeds.

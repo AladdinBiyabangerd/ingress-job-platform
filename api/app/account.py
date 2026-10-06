@@ -11,7 +11,7 @@ import urllib.request
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.auth_oidc import AuthError, VerifiedAccess, verify_access_token
+from app.auth_oidc import AuthError, VerifiedAccess, id_token_nonce_matches, verify_access_token
 from app.config import settings
 from app.profiles import (
     academy_name_for,
@@ -190,7 +190,7 @@ def _post_form(body: dict) -> dict:
     return payload
 
 
-def _tokens_from(payload: dict, *, require_refresh: bool) -> dict:
+def _tokens_from(payload: dict, *, require_refresh: bool, expected_nonce: str | None = None) -> dict:
     if _oauth_error(payload):
         _reject_grant()
     access = payload.get("access_token")
@@ -200,6 +200,8 @@ def _tokens_from(payload: dict, *, require_refresh: bool) -> dict:
         user = verify_access_token(access)
     except AuthError as exc:
         raise HTTPException(status_code=502, detail="Academy token qəbul edilmədi") from exc
+    if expected_nonce and not id_token_nonce_matches(payload.get("id_token"), expected_nonce):
+        raise HTTPException(status_code=502, detail="Academy token qəbul edilmədi")
     refresh = payload.get("refresh_token")
     if require_refresh and (not isinstance(refresh, str) or len(refresh) < 20):
         raise HTTPException(status_code=502, detail="Academy token mübadiləsi alınmadı")
@@ -268,7 +270,7 @@ def write_candidate_profile(body: CandidateIn, user: VerifiedAccess = Depends(cu
 def create_transaction(body: TransactionIn) -> None:
     if not _STATE.fullmatch(body.state) or not _VERIFIER.fullmatch(body.verifier):
         raise HTTPException(status_code=400, detail="Giriş sorğusu yanlışdır")
-    if not _STATE.fullmatch(body.nonce) and not re.fullmatch(r"^[A-Za-z0-9_-]{16,128}$", body.nonce):
+    if not _STATE.fullmatch(body.nonce):
         raise HTTPException(status_code=400, detail="Giriş sorğusu yanlışdır")
     if body.intent not in _INTENTS:
         raise HTTPException(status_code=400, detail="Giriş sorğusu yanlışdır")
@@ -300,7 +302,7 @@ def exchange(body: ExchangeIn) -> dict:
             "code_verifier": row["verifier"],
         }
     )
-    issued = _tokens_from(payload, require_refresh=False)
+    issued = _tokens_from(payload, require_refresh=False, expected_nonce=row["nonce"])
     issued["return_to"] = safe_return_to(row["return_to"])
     return issued
 

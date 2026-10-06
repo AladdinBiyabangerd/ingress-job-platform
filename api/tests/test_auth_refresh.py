@@ -58,7 +58,10 @@ class AuthRefreshTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = Path(self.tmp.name) / "accounts.sqlite"
-        self.patches = [patch("app.profiles.DATA_PATH", self.db)]
+        self.patches = [
+            patch("app.profiles.DATA_PATH", self.db),
+            patch("app.notifications.unread_count", return_value=0),
+        ]
         for item in self.patches:
             item.start()
         self.client = TestClient(app)
@@ -114,6 +117,71 @@ class AuthRefreshTests(unittest.TestCase):
         self.assertEqual(data["expires_in"], 900)
         self.assertTrue(data["me"]["authenticated"])
         self.assertIn("email", data["me"])
+
+    def test_exchange_rejects_id_token_nonce_mismatch(self):
+        from app.profiles import save_transaction
+
+        save_transaction(
+            state="s" * 22,
+            verifier="v" * 43,
+            nonce="expected-nonce-value-0123456789ab",
+            return_to="/",
+            intent="job_candidate",
+            redirect_uri="http://localhost:3010/api/auth/callback",
+        )
+        payload = {
+            "access_token": "access-new",
+            "id_token": "x.y.z",
+            "expires_in": 900,
+            "refresh_token": "r" * 40,
+        }
+        user = VerifiedAccess(subject="42", scopes=frozenset({"job:candidate"}))
+        with _urlopen(_FakeResponse(json.dumps(payload).encode())):
+            with patch("app.account.verify_access_token", return_value=user):
+                with patch("app.account.id_token_nonce_matches", return_value=False):
+                    response = self.client.post(
+                        "/api/v1/auth/exchange",
+                        json={
+                            "state": "s" * 22,
+                            "code": "auth-code-value",
+                            "redirect_uri": "http://localhost:3010/api/auth/callback",
+                        },
+                    )
+        self.assertEqual(response.status_code, 502)
+
+    def test_exchange_accepts_matching_nonce(self):
+        from app.profiles import save_transaction
+
+        save_transaction(
+            state="t" * 22,
+            verifier="v" * 43,
+            nonce="expected-nonce-value-0123456789ab",
+            return_to="/profile",
+            intent="job_candidate",
+            redirect_uri="http://localhost:3010/api/auth/callback",
+        )
+        payload = {
+            "access_token": "access-new",
+            "id_token": "x.y.z",
+            "expires_in": 900,
+            "refresh_token": "r" * 40,
+        }
+        user = VerifiedAccess(subject="42", scopes=frozenset({"job:candidate"}))
+        with _urlopen(_FakeResponse(json.dumps(payload).encode())):
+            with patch("app.account.verify_access_token", return_value=user):
+                with patch("app.account.id_token_nonce_matches", return_value=True):
+                    response = self.client.post(
+                        "/api/v1/auth/exchange",
+                        json={
+                            "state": "t" * 22,
+                            "code": "auth-code-value",
+                            "redirect_uri": "http://localhost:3010/api/auth/callback",
+                        },
+                    )
+        self.assertEqual(response.status_code, 200, response.text)
+        data = response.json()
+        self.assertEqual(data["access_token"], "access-new")
+        self.assertEqual(data["return_to"], "/profile")
 
 
 if __name__ == "__main__":

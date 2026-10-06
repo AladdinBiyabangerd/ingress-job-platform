@@ -33,7 +33,7 @@ def _jwks_client() -> PyJWKClient:
         _jwks = PyJWKClient(
             settings.oidc_jwks_url,
             cache_keys=True,
-            lifespan=300,
+            lifespan=3600,
             timeout=3,
             headers={"User-Agent": "ingress-job-api/0.1"},
         )
@@ -100,6 +100,14 @@ def _id_token_claims(token: str) -> dict | None:
         )
     except (InvalidTokenError, PyJWKClientError, TimeoutError):
         return None
+
+
+def id_token_nonce_matches(token: object, nonce: str) -> bool:
+    """True when the verified Academy id_token carries this authorize nonce."""
+    if not isinstance(token, str) or not nonce:
+        return False
+    claims = _id_token_claims(token)
+    return isinstance(claims, dict) and claims.get("nonce") == nonce
 
 
 def identity_from_id_token(token: str) -> tuple[str, str, str] | None:

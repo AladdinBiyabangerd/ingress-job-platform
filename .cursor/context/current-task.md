@@ -1,5 +1,14 @@
 # Current task
 
-Idle. Public API latency plan + optional profiling cache are done.
+## Completed
+- Job OIDC: `prompt=login` only after logout (`job_guest`); SSO reused otherwise.
+- Exchange checks Academy `id_token` nonce; JWKS cache 1h.
+- Academy: `openid` on job-web/interview-web allowed scopes; SSO test without prompt.
 
-Deferred (not this chat): persist job `language` in the worker; SQL for language/stack/salary/`when` filters.
+## Remaining
+- Deploy Academy so `job-web` rows pick up `openid` on next client sync.
+
+## Relevant files
+- `frontend/lib/oidc-authorize.js`, `frontend/app/api/auth/login/route.js`
+- `api/app/account.py`, `api/app/auth_oidc.py`
+- `ingress-academy/portal/oidc/{views,clients,tokens}.py`
