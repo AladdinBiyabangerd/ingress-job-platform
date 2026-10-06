@@ -122,16 +122,20 @@ Set on the web service if the private-host wiring is not applied:
 
 The browser only talks to the **web** public domain. Next.js (SSR + `/api/*` BFF)
 calls the API over Railway private DNS. If that hop fails, the shell still
-renders and job lists stay empty.
+renders and job lists stay empty. DevTools Network will **not** show
+`api.railway.internal` — only same-origin `/api/jobs` after the client retry
+(SSR errors or an empty first payload). If even `/api/jobs` is missing, you
+are on an old web deploy that skipped the client fetch.
 
 1. On **api**: set `PORT=8080` as a service variable (not only runtime). Start with
    `--host ::` (Dockerfile does this) so IPv6 private networking works.
 2. On **web**: set
    `JOB_API_BASE_URL=http://${{api.RAILWAY_PRIVATE_DOMAIN}}:${{api.PORT}}`
-   (same project + environment; `http`, not `https`).
+   (same project + environment; `http`, not `https`). Include **`:8080`** —
+   omitting the port talks to :80, not the API.
 3. Keep a public domain on **web** only. API may stay private.
 4. Redeploy **api** then **web**. In web logs, a failed BFF shows
-   `[api/jobs] upstream failed` with the resolved base URL.
+   `[api/jobs] upstream failed` or `[home] getJobs failed` with the resolved base URL.
 5. Quick check: open `https://<web-domain>/api/jobs` — JSON with `items` means
    private hop works; HTTP 502 with empty `items` means it does not.
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CATEGORY_ORDER, categoryLabel, languageLabel, text } from "../lib/copy";
-import { jobsListParams } from "../lib/api";
+import { jobsListParams } from "../lib/jobs-params";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
 import { useMediaQuery } from "../lib/use-media-query";
 import { JobCard } from "./job-card";
@@ -226,7 +226,8 @@ export function Home({
       skipFirstFetch.current = false;
       prevFilterKey.current = filterKey;
       prevTextKey.current = `${query}|${company}|${salaryMin}|${salaryMax}`;
-      return undefined;
+      // SSR failed: still hit the same-origin BFF so DevTools Network shows /api/jobs.
+      if (!error && jobs.length > 0) return undefined;
     }
     if (prevFilterKey.current !== filterKey) {
       prevFilterKey.current = filterKey;
@@ -282,6 +283,8 @@ export function Home({
     };
   }, [
     page,
+    error,
+    jobs.length,
     filterKey,
     query,
     company,

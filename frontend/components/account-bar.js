@@ -6,10 +6,12 @@ import { hrefFor, text } from "../lib/copy";
 import { clearMeCache, fetchMe } from "../lib/me-client";
 import { NotificationsBell } from "./notifications-bell";
 import { RegisterChoice } from "./register-choice";
+import { useInitialMe } from "./me-seed";
 
 export function AccountBar({ locale, returnTo, onMe }) {
   const t = text(locale);
-  const [me, setMe] = useState(null);
+  const initialMe = useInitialMe();
+  const [me, setMe] = useState(initialMe ?? null);
   const [ssoError, setSsoError] = useState(false);
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
@@ -19,6 +21,10 @@ export function AccountBar({ locale, returnTo, onMe }) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setSsoError(params.has("sso_error"));
+    if (initialMe != null) {
+      onMeRef.current?.(initialMe);
+      return undefined;
+    }
     let cancelled = false;
     fetchMe()
       .then((data) => {
@@ -34,7 +40,7 @@ export function AccountBar({ locale, returnTo, onMe }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialMe]);
 
   useEffect(() => {
     if (!open) return undefined;

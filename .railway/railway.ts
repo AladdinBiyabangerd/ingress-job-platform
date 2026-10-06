@@ -42,6 +42,7 @@ export default defineRailway(() => {
     start: "sh -c 'exec npx next start --hostname 0.0.0.0 --port ${PORT:-3010}'",
     env: {
       NODE_ENV: "production",
+      NODE_OPTIONS: "--dns-result-order=ipv6first",
       // Next server/BFF only (browser never hits private DNS).
       // api.js → http://$API_PRIVATE_HOST:$API_PORT
       API_PRIVATE_HOST: api.env.RAILWAY_PRIVATE_DOMAIN,

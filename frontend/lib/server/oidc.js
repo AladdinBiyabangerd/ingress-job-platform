@@ -7,7 +7,7 @@ const SAFE_RETURN = /^\/(?:(?:en|ru)(?:\/jobs\/\d+|\/post|\/company|\/admin|\/ap
 export const ACCESS_COOKIE = "job_at";
 export const REFRESH_COOKIE = "job_rt";
 export const STATE_COOKIE = "job_st";
-const GUEST_COOKIE = "job_guest";
+export const GUEST_COOKIE = "job_guest";
 
 const LEGACY_AUTH_COOKIES = [
   "job_access_token",

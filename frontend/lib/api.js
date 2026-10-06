@@ -1,17 +1,36 @@
+import { jobsListParams } from "./jobs-params.js";
+
+export { jobsListParams };
+
 const API_FETCH_TIMEOUT_MS = 5_000;
 
 /** Public catalog pages share this ISR window (seconds). */
 export const PUBLIC_REVALIDATE = 60;
 
-export function apiBase() {
-  const direct = process.env.JOB_API_BASE_URL;
-  if (direct) return direct.replace(/\/$/, "");
-  const host = (process.env.API_PRIVATE_HOST || "").trim();
-  if (host) {
-    const port = process.env.API_PORT || "8080";
-    return `http://${host}:${port}`;
+function env(name) {
+  return String((process.env && process.env[name]) || "").trim();
+}
+
+function originWithPort(raw, fallbackPort) {
+  try {
+    const parsed = new URL(raw.includes("://") ? raw : `http://${raw}`);
+    if (!parsed.port) parsed.port = fallbackPort;
+    return parsed.origin;
+  } catch {
+    return raw.replace(/\/$/, "");
   }
-  return process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:8010";
+}
+
+export function apiBase() {
+  const fallbackPort = env("API_PORT") || (env("NODE_ENV") === "production" ? "8080" : "8010");
+  const direct = env("JOB_API_BASE_URL");
+  if (direct) return originWithPort(direct, fallbackPort);
+  const host = env("API_PRIVATE_HOST");
+  if (host) {
+    const formatted = host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
+    return `http://${formatted}:${fallbackPort}`;
+  }
+  return env("NEXT_PUBLIC_API_BASE") || "http://127.0.0.1:8010";
 }
 
 function apiFetch(path, init = {}) {
@@ -20,52 +39,6 @@ function apiFetch(path, init = {}) {
     ...init,
     signal: init.signal ?? AbortSignal.timeout(API_FETCH_TIMEOUT_MS),
   });
-}
-
-/** Build query string for GET /api/v1/jobs (and the Next BFF). */
-export function jobsListParams({
-  page = 1,
-  perPage = 20,
-  q = "",
-  company = "",
-  remote = false,
-  relocation = false,
-  when = "any",
-  sort = "newest",
-  languages = [],
-  categories = [],
-  stacks = [],
-  salaryMin = "",
-  salaryMax = "",
-} = {}) {
-  const params = new URLSearchParams();
-  params.set("page", String(Math.max(1, Number(page) || 1)));
-  params.set("per_page", String(Math.max(1, Math.min(60, Number(perPage) || 20))));
-  const query = String(q || "").trim();
-  if (query) params.set("q", query);
-  const companyQ = String(company || "").trim();
-  if (companyQ) params.set("company", companyQ);
-  if (remote) params.set("remote", "true");
-  if (relocation) params.set("relocation", "true");
-  if (when && when !== "any") params.set("when", when);
-  if (sort && sort !== "newest") params.set("sort", sort);
-  for (const code of languages || []) {
-    const value = String(code || "").trim();
-    if (value) params.append("language", value);
-  }
-  for (const name of categories || []) {
-    const value = String(name || "").trim();
-    if (value) params.append("category", value);
-  }
-  for (const name of stacks || []) {
-    const value = String(name || "").trim();
-    if (value) params.append("stack", value);
-  }
-  const minRaw = String(salaryMin ?? "").trim();
-  const maxRaw = String(salaryMax ?? "").trim();
-  if (minRaw !== "" && Number.isFinite(Number(minRaw))) params.set("salary_min", String(Number(minRaw)));
-  if (maxRaw !== "" && Number.isFinite(Number(maxRaw))) params.set("salary_max", String(Number(maxRaw)));
-  return params;
 }
 
 export async function fetchJobs(options = {}) {

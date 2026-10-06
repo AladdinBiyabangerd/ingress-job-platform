@@ -1,17 +1,18 @@
 # Current task
 
 ## Goal
-Public job list SQL: correlated subquery-ləri çıxar, JOIN + index.
+Railway home: UI var, Network-də API yox, data yox.
 
-## Completed
-- `_LIST_SELECT_CORE` LEFT JOIN: `job_sources` agg (`MIN(id)`, `has_original`) + `crawl_sources`.
-- Count/facet sorğuları join etmir (cəm çoxalmasın).
-- Index: `jobs_public_list`, `job_sources_job` (API schema + worker).
+## Completed (code, not deployed)
+- Home SSR `force-dynamic`; empty/error olanda client `/api/jobs` çağırır (DevTools-da görünməlidir).
+- `JOB_API_BASE_URL` portsuz olsa `:8080` əlavə olunur (prod).
+- Node `--dns-result-order=ipv6first` (Dockerfile + instrumentation).
+- Web logs: `[home] getJobs failed` / `[api/jobs] upstream failed`.
 
 ## Remaining
-- Railway private-net env hələ dashboard-da (əvvəlki tapşırıq).
+- Web + api redeploy. Yoxla: `https://<web>/api/jobs` JSON `items`.
+- `JOB_API_BASE_URL=http://${{api.RAILWAY_PRIVATE_DOMAIN}}:8080` (port şərtdir).
 
 ## Relevant files
-- `api/app/sqlite_jobs.py`, `api/app/cabinet_store.py`
-- `worker/worker/db.py`
-- `api/tests/test_jobs_list_query.py`
+- `frontend/components/home.js`, `frontend/lib/api.js`, `frontend/app/api/jobs/route.js`
+- `frontend/app/page.js`, `frontend/instrumentation.js`, `frontend/Dockerfile`

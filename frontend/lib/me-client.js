@@ -26,6 +26,11 @@ function writeCache(data) {
   }
 }
 
+export function seedMeCache(data) {
+  if (!data || typeof data !== "object") return;
+  writeCache(data);
+}
+
 export function clearMeCache() {
   inflight = null;
   try {
@@ -35,7 +40,7 @@ export function clearMeCache() {
   }
 }
 
-/** One GET /api/auth/me per tab burst; reused across AccountBar and cabinet pages. */
+/** One GET /api/auth/me per tab burst; skipped when SSR already seeded the cache. */
 export function fetchMe() {
   const cached = readCache();
   if (cached) return Promise.resolve(cached);

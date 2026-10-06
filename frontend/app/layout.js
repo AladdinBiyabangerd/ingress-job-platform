@@ -1,6 +1,8 @@
 import { headers } from "next/headers";
 import "./globals.css";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import { MeSeed } from "../components/me-seed";
+import { getMe } from "../lib/server/me";
 import { SITE, homeMetadata, siteOrigin } from "../lib/seo";
 
 const sans = Plus_Jakarta_Sans({
@@ -51,9 +53,12 @@ export const viewport = {
 export default async function RootLayout({ children }) {
   const headerList = await headers();
   const locale = headerList.get("x-locale") || "az";
+  const me = await getMe();
   return (
     <html lang={locale} className={sans.className}>
-      <body>{children}</body>
+      <body>
+        <MeSeed me={me}>{children}</MeSeed>
+      </body>
     </html>
   );
 }

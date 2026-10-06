@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { fetchCompanies, fetchCompany, fetchJob, fetchJobs } from "../api";
+import { apiBase, fetchCompanies, fetchCompany, fetchJob, fetchJobs } from "../api";
 
 /** Dedupes job fetches within one RSC request (page + generateMetadata). */
 export const getJob = cache(async (id) => fetchJob(id));
@@ -12,3 +12,26 @@ export const getJobs = cache(async (paramsKey = "{}") => {
 
 export const getCompanies = cache(async (q, sort, page) => fetchCompanies({ q, sort, page }));
 export const getCompany = cache(async (slug, page) => fetchCompany(slug, { page }));
+
+export function emptyJobsPayload() {
+  return {
+    items: [],
+    total: 0,
+    pages: 1,
+    catalog_total: 0,
+    facets: { languages: [], categories: [], stacks: [] },
+  };
+}
+
+export async function loadHomeJobs() {
+  try {
+    const data = await getJobs("{}");
+    return { data, error: false };
+  } catch (err) {
+    console.error("[home] getJobs failed", {
+      base: apiBase(),
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return { data: emptyJobsPayload(), error: true };
+  }
+}

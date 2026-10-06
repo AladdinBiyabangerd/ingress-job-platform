@@ -9,8 +9,8 @@
  * account (no employer, no staff) cannot post. Guests see neither tab; company
  * sign-up stays in the "Register" menu, which links to /post after sign-in.
  *
- * `me` is null/undefined until the client has fetched /api/auth/me, so the
- * restricted tabs render hidden on the server and on the first client render.
+ * `me` is null/undefined until SSR getMe or the client BFF has run, so the
+ * restricted tabs stay hidden until identity is known.
  */
 export function canPostJobs(me) {
   return Boolean(me?.authenticated && (me.employer || me.staff));

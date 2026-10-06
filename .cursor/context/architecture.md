@@ -7,7 +7,7 @@ Job board (Ingress Job). Companies post jobs; candidates browse/apply. Hourly cr
 - Frontend: Next.js 15, React 19 (`frontend/`, port 3010)
 - API: FastAPI / Uvicorn (`api/`, port 8010)
 - Worker: Python crawler (`worker/`, hourly schedule)
-- Auth: Ingress Academy OIDC (no separate password)
+- Auth: Ingress Academy OIDC (no separate password). Account bar reads `me` from SSR `getMe()` in the root layout (guests skip FastAPI; access cookie → `GET /api/v1/me` once on the server). Client `/api/auth/me` BFF remains for token refresh, logout, and privacy delete
 - DB: SQLite locally if `DATABASE_URL` empty; Postgres when set (API + worker share it)
 - Locales: az / en / ru
 - Deploy: Docker / Railway / Nixpacks per service

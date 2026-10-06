@@ -8,6 +8,7 @@ import { clearMeCache } from "../lib/me-client";
 import { navTabs } from "../lib/roles";
 import { useMediaQuery } from "../lib/use-media-query";
 import { AccountBar } from "./account-bar";
+import { useInitialMe } from "./me-seed";
 
 const LOCALES = ["az", "en", "ru"];
 
@@ -181,7 +182,8 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
 
 export function Shell({ locale, mode, jobId, companySlug, children }) {
   const t = text(locale);
-  const [me, setMe] = useState(null);
+  const initialMe = useInitialMe();
+  const [me, setMe] = useState(initialMe ?? null);
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleRef = useRef(null);
   const compact = useMediaQuery("(max-width: 768px)");
