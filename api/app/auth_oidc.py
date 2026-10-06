@@ -47,10 +47,10 @@ def verify_access_token(token: str) -> VerifiedAccess:
     if not token or len(token) > 8192 or token.count(".") != 2:
         raise AuthError(401, "Hesab tələb olunur")
     issuer = settings.issuer()
-    audience = settings.oidc_audience.strip()
+    audiences = [part.strip() for part in settings.oidc_audience.split(",") if part.strip()]
     issuers = [value for value in (issuer, issuer.rstrip("/")) if value]
     issuers = list(dict.fromkeys(issuers))
-    if not issuers or not audience or not settings.oidc_jwks_url.strip():
+    if not issuers or not audiences or not settings.oidc_jwks_url.strip():
         raise AuthError(503, "OIDC konfiqurasiyası tam deyil")
     try:
         header = jwt.get_unverified_header(token)
@@ -64,13 +64,33 @@ def verify_access_token(token: str) -> VerifiedAccess:
             token,
             signing_key.key,
             algorithms=["RS256"],
-            audience=audience,
+            audience=audiences if len(audiences) > 1 else audiences[0],
             issuer=issuers,
             leeway=60,
             options={"require": ["aud", "exp", "iat", "iss", "sub"]},
         )
     except (InvalidTokenError, PyJWKClientError, TimeoutError) as exc:
-        _log.warning("access_token_rejected: %s: %s", type(exc).__name__, exc)
+        token_aud = None
+        try:
+            token_aud = jwt.decode(
+                token,
+                algorithms=["RS256"],
+                options={
+                    "verify_signature": False,
+                    "verify_aud": False,
+                    "verify_exp": False,
+                    "verify_iss": False,
+                },
+            ).get("aud")
+        except InvalidTokenError:
+            token_aud = None
+        _log.warning(
+            "access_token_rejected: %s: %s token_aud=%r expected=%r",
+            type(exc).__name__,
+            exc,
+            token_aud,
+            audiences,
+        )
         raise AuthError(401, "Hesab tələb olunur") from exc
 
     subject = claims.get("sub")
