@@ -586,7 +586,6 @@ input:focus, select:focus {
   .form-card, .filters, .board, .detail { min-width: 0; max-width: 100%; }
   h1, .card h2, .job-card h2, .posting, .meta, .lede, .job-company, .job-fact { overflow-wrap: anywhere; }
   .job-open { min-height: 44px; width: 100%; }
-  .hero-search-bar input { min-height: 44px; }
   .salary-bounds input { min-height: 44px; }
   h1 { font-size: 32px; }
   .detail { padding: 22px; }
@@ -3267,7 +3266,7 @@ textarea { min-height: 120px; resize: vertical; }
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: 8px 20px;
   padding: 12px 14px 12px 20px;
@@ -3320,41 +3319,12 @@ textarea { min-height: 120px; resize: vertical; }
   white-space: nowrap;
 }
 
-.hero-tools,
-.hero-search {
+.hero:has(.hero-tools) {
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
+}
+
+.hero-tools {
   min-width: 0;
-}
-
-.hero-search-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 2px 8px 2px 12px;
-  border-radius: 12px;
-  background: #ffffff;
-  color: #20242b;
-  box-shadow: 0 6px 16px rgba(9, 15, 40, 0.18);
-}
-
-.hero-search-bar .filter-icon {
-  color: #001FFF;
-}
-
-.hero-search-bar input[type="search"] {
-  min-width: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  padding: 8px 6px;
-  color: #20242b;
-  font-size: 16px;
-  box-shadow: none;
-}
-
-.hero-search-bar input[type="search"]:focus {
-  border: 0;
-  box-shadow: none;
 }
 
 .results {

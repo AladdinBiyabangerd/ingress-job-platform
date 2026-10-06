@@ -1,7 +1,7 @@
 /**
  * Compact page header shared by the job list and the companies directory:
  * a small title with a count pill, an optional one-line subtitle, and an
- * inline tools slot (search, sort). No hooks, so it renders the same on the
+ * inline tools slot (sort, window). No hooks, so it renders the same on the
  * server and the client.
  */
 export function PageHeader({ title, count, lede, className = "", children }) {

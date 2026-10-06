@@ -51,14 +51,6 @@ function FilterIcon({ name }) {
       </svg>
     );
   }
-  if (name === "search") {
-    return (
-      <svg {...props}>
-        <circle cx="7" cy="7" r="3.25" />
-        <path d="M9.6 9.6 13 13" />
-      </svg>
-    );
-  }
   if (name === "language") {
     return (
       <svg {...props}>
@@ -150,7 +142,6 @@ export function Home({
   error = false,
 }) {
   const t = text(locale);
-  const [query, setQuery] = useState("");
   const [company, setCompany] = useState("");
   const [languages, setLanguages] = useState([]);
   const [remote, setRemote] = useState(false);
@@ -178,13 +169,12 @@ export function Home({
   const closeRef = useRef(null);
   const resultsRef = useRef(null);
   const skipFirstFetch = useRef(true);
-  const prevTextKey = useRef(`${query}|${company}|${salaryMin}|${salaryMax}`);
+  const prevTextKey = useRef(`${company}|${salaryMin}|${salaryMax}`);
   const prevFilterKey = useRef("");
 
   const filterKey = useMemo(
     () =>
       JSON.stringify({
-        query,
         company,
         languages,
         remote,
@@ -196,7 +186,7 @@ export function Home({
         salaryMin,
         salaryMax,
       }),
-    [query, company, languages, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax],
+    [company, languages, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax],
   );
 
   const languageOptions = useMemo(
@@ -225,7 +215,7 @@ export function Home({
     if (skipFirstFetch.current) {
       skipFirstFetch.current = false;
       prevFilterKey.current = filterKey;
-      prevTextKey.current = `${query}|${company}|${salaryMin}|${salaryMax}`;
+      prevTextKey.current = `${company}|${salaryMin}|${salaryMax}`;
       // SSR failed: still hit the same-origin BFF so DevTools Network shows /api/jobs.
       if (!error && jobs.length > 0) return undefined;
     }
@@ -236,7 +226,7 @@ export function Home({
         return undefined;
       }
     }
-    const textKey = `${query}|${company}|${salaryMin}|${salaryMax}`;
+    const textKey = `${company}|${salaryMin}|${salaryMax}`;
     const debounceMs = textKey !== prevTextKey.current ? TEXT_DEBOUNCE_MS : 0;
     prevTextKey.current = textKey;
     const controller = new AbortController();
@@ -244,7 +234,6 @@ export function Home({
       const params = jobsListParams({
         page,
         perPage: PAGE_SIZE,
-        q: query,
         company,
         remote,
         relocation,
@@ -286,7 +275,6 @@ export function Home({
     error,
     jobs.length,
     filterKey,
-    query,
     company,
     languages,
     remote,
@@ -300,7 +288,6 @@ export function Home({
   ]);
 
   function clear() {
-    setQuery("");
     setCompany("");
     setLanguages([]);
     setRemote(false);
@@ -371,22 +358,7 @@ export function Home({
   return (
     <Shell locale={locale} mode="browse">
       <div className="home">
-      <PageHeader title={t.heading} count={t.count(catalogCount)} lede={t.lede}>
-        <form className="hero-search" role="search" onSubmit={(event) => event.preventDefault()}>
-          <label className="visually-hidden" htmlFor="job-search">{t.search}</label>
-          <div className="hero-search-bar">
-            <FilterIcon name="search" />
-            <input
-              id="job-search"
-              type="search"
-              value={query}
-              placeholder={t.searchPlaceholder}
-              autoComplete="off"
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </div>
-        </form>
-      </PageHeader>
+      <PageHeader title={t.heading} count={t.count(catalogCount)} lede={t.lede} />
       {loadError ? <p className="note">{t.loadError}</p> : null}
       <div className="board">
         <section className="results" ref={resultsRef}>
