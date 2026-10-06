@@ -57,9 +57,18 @@ export function AccountBar({ locale, returnTo, onMe }) {
     ? me.candidate_profile.display_name.trim()
     : "";
   const academyName = typeof me?.name === "string" ? me.name.trim() : "";
-  const displayName = profileName || academyName || t.account;
+  const email = typeof me?.email === "string"
+    ? me.email.trim()
+    : typeof me?.candidate_profile?.email === "string"
+      ? me.candidate_profile.email.trim()
+      : "";
+  // Never fall back to bare "Hesab" while signed in — that looks like a guest.
+  const displayName = profileName || academyName || email || role || t.accountSignedIn;
+  const identityHint = email && email !== displayName ? email : role && role !== displayName ? role : "";
   const canOpenProfile = Boolean(me?.employer || me?.candidate || me?.staff);
-  const showRegister = Boolean(me?.authenticated && !me.employer && !me.staff);
+  // Already a candidate: only offer employer upgrade, not a second "login as applicant".
+  const showEmployerUpgrade = Boolean(me?.authenticated && me.candidate && !me.employer && !me.staff);
+  const showRegister = Boolean(me?.authenticated && !me.candidate && !me.employer && !me.staff);
   const back = returnTo || hrefFor(locale);
 
   return (
@@ -85,7 +94,7 @@ export function AccountBar({ locale, returnTo, onMe }) {
               </span>
               <span className="account-trigger-text">
                 <span className="account-trigger-name">{displayName}</span>
-                {role ? <span className="account-trigger-role">{role}</span> : null}
+                {identityHint ? <span className="account-trigger-role">{identityHint}</span> : null}
               </span>
               <span className="account-chevron" aria-hidden="true">⌄</span>
             </button>
@@ -93,7 +102,7 @@ export function AccountBar({ locale, returnTo, onMe }) {
               <div className="account-dropdown" role="menu">
                 <div className="account-dropdown-head">
                   <strong>{displayName}</strong>
-                  {role ? <span>{role}</span> : null}
+                  {identityHint ? <span>{identityHint}</span> : null}
                 </div>
                 {canOpenProfile ? (
                   <a role="menuitem" href={hrefFor(locale, { mode: "profile" })} onClick={() => setOpen(false)}>
@@ -124,6 +133,14 @@ export function AccountBar({ locale, returnTo, onMe }) {
                   <a role="menuitem" href={hrefFor(locale, { mode: "admin" })} onClick={() => setOpen(false)}>
                     {t.admin}
                   </a>
+                ) : null}
+                {showEmployerUpgrade ? (
+                  <div className="account-dropdown-group" role="group" aria-label={t.registerEmployerUpgrade}>
+                    <p>{t.registerEmployerUpgrade}</p>
+                    <a href={loginHref({ intent: "job_employer", returnTo: hrefFor(locale, { mode: "post" }) })}>
+                      {t.registerPoster}
+                    </a>
+                  </div>
                 ) : null}
                 {showRegister ? (
                   <div className="account-dropdown-group" role="group" aria-label={t.registerAsk}>

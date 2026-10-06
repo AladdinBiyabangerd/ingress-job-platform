@@ -16,6 +16,7 @@ from app.config import settings
 from app.profiles import (
     academy_name_for,
     candidate_profile_for,
+    contact_email_for,
     profile_for,
     remember_academy_name,
     save_candidate_profile,
@@ -46,10 +47,12 @@ def current_user(authorization: str | None = Header(default=None)) -> VerifiedAc
 
 def account_payload(user: VerifiedAccess) -> dict:
     profile = profile_for(user.subject)
+    candidate_profile = candidate_profile_for(user.subject)
     employer = "job:employer" in user.scopes
     candidate = "job:candidate" in user.scopes
     staff = "job:staff" in user.scopes
     name = (user.name or "").strip() or academy_name_for(user.subject)
+    email = (candidate_profile.get("email") or "").strip() or contact_email_for(user.subject)
     return {
         "authenticated": True,
         "subject": user.subject,
@@ -58,8 +61,9 @@ def account_payload(user: VerifiedAccess) -> dict:
         "candidate": candidate,
         "staff": staff,
         "name": name,
+        "email": email,
         "company_profile": profile,
-        "candidate_profile": candidate_profile_for(user.subject),
+        "candidate_profile": candidate_profile,
         "needs_company_profile": employer and not staff and not profile["complete"],
     }
 

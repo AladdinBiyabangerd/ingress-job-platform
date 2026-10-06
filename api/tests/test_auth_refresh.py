@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import io
 import json
+import tempfile
 import unittest
 import urllib.error
 from contextlib import contextmanager
+from pathlib import Path
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -54,8 +56,18 @@ def _urlopen(result):
 
 class AuthRefreshTests(unittest.TestCase):
     def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = Path(self.tmp.name) / "accounts.sqlite"
+        self.patches = [patch("app.profiles.DATA_PATH", self.db)]
+        for item in self.patches:
+            item.start()
         self.client = TestClient(app)
         self.body = {"refresh_token": "r" * 40}
+
+    def tearDown(self):
+        for item in reversed(self.patches):
+            item.stop()
+        self.tmp.cleanup()
 
     def test_invalid_grant_returns_401(self):
         with _urlopen(_http_error(400, {"error": "invalid_grant", "error_description": "expired"})):
@@ -101,6 +113,7 @@ class AuthRefreshTests(unittest.TestCase):
         self.assertEqual(data["refresh_token"], "r" * 40)
         self.assertEqual(data["expires_in"], 900)
         self.assertTrue(data["me"]["authenticated"])
+        self.assertIn("email", data["me"])
 
 
 if __name__ == "__main__":
