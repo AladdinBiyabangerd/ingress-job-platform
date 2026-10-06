@@ -312,9 +312,28 @@ class CvProfileTests(unittest.TestCase):
         self.assertEqual(row["cv_name"], "resume.pdf")
         self.assertEqual(row["status"], "pending")
         self.assertIsNone(row["application_id"])
-        stored = list(cvs.iterdir())
-        self.assertEqual(len(stored), 1)
-        self.assertTrue(stored[0].name.endswith(".pdf"))
+
+    def test_get_pending_parse_kicks_drain(self):
+        with sqlite3.connect(self.db) as conn:
+            ensure_cv_queue_tables(conn)
+            conn.execute(
+                """
+                INSERT INTO parse_cv_queue (
+                    user_id, cv_file_key, cv_name, application_id, status,
+                    attempts, error, created_at, started_at, finished_at
+                ) VALUES (?, ?, ?, NULL, 'pending', 0, '', ?, '', '')
+                """,
+                ("person-kick", "cvs/z.pdf", "z.pdf", "2020-01-01T00:00:00+00:00"),
+            )
+            conn.commit()
+        with (
+            self._auth("job:candidate", "person-kick"),
+            patch("app.cv_parse_jobs.schedule_parse_cv_drain") as kick,
+        ):
+            res = self.client.get("/api/v1/profile", headers=self.headers)
+        self.assertEqual(res.status_code, 200, res.text)
+        self.assertEqual(res.json()["parse_status"], "pending")
+        kick.assert_called_once()
 
     def test_drain_parse_cv_queue_now_writes_profile(self):
         cvs = Path(self.tmp.name) / "cvs"

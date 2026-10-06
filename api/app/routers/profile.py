@@ -43,7 +43,12 @@ def _require_candidate(user: VerifiedAccess) -> None:
 @router.get("/profile")
 def get_profile(user: VerifiedAccess = Depends(current_user)) -> dict:
     _require_candidate(user)
-    return read_profile(user_id=user.subject)
+    payload = read_profile(user_id=user.subject)
+    if payload.get("parse_status") in ("pending", "processing"):
+        from app.cv_parse_jobs import schedule_parse_cv_drain
+
+        schedule_parse_cv_drain()
+    return payload
 
 
 @router.put("/profile")

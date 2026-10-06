@@ -60,3 +60,14 @@ class WantsReturningTest(unittest.TestCase):
             )
         )
 
+
+class CursorRowcountTests(unittest.TestCase):
+    def test_cursor_exposes_rowcount_like_sqlite(self):
+        from app.jobs_db import _Cursor
+
+        cur = _Cursor([], None, rowcount=1)
+        self.assertEqual(cur.rowcount, 1)
+        self.assertTrue(cur.rowcount)
+        empty = _Cursor([], None)
+        self.assertEqual(empty.rowcount, 0)
+

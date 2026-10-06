@@ -240,6 +240,14 @@ def upsert_candidate_profile(conn, *, user_id: str, cv_file_key: str, profile: d
     return int(cur.lastrowid)
 
 
+def _rowcount(cur) -> int:
+    """sqlite3 has rowcount; the Postgres adapter used to omit it (drain never claimed)."""
+    n = getattr(cur, "rowcount", None)
+    if n is None or int(n) < 0:
+        return 1
+    return int(n)
+
+
 def _claim(conn, limit: int) -> list[sqlite3.Row]:
     rows = list(
         conn.execute(
@@ -264,7 +272,7 @@ def _claim(conn, limit: int) -> list[sqlite3.Row]:
             """,
             (now, int(row["id"])),
         )
-        if cur.rowcount:
+        if _rowcount(cur):
             claimed.append(row)
     return claimed
 
@@ -293,7 +301,7 @@ def _finish(conn, queue_id: int, *, status: str, error: str = "") -> int:
             """,
             (status, (error or "")[:1000], finished, queue_id),
         )
-    return int(cur.rowcount or 0)
+    return _rowcount(cur)
 
 
 def _queue_status(conn, queue_id: int) -> str:

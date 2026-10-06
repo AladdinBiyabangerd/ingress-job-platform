@@ -197,5 +197,17 @@ class CvQueueTest(unittest.TestCase):
         self.assertEqual(row["cv_file_key"], "old.pdf")
 
 
+class RowcountHelperTests(unittest.TestCase):
+    def test_missing_rowcount_counts_as_affected(self):
+        from worker.cv_queue import _rowcount
+
+        class Bare:
+            pass
+
+        self.assertEqual(_rowcount(Bare()), 1)
+        self.assertEqual(_rowcount(type("C", (), {"rowcount": 0})()), 0)
+        self.assertEqual(_rowcount(type("C", (), {"rowcount": 1})()), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

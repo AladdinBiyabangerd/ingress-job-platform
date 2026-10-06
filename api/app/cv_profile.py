@@ -488,7 +488,10 @@ def _fail_open_parse_jobs(conn, *, user_id: str, error: str) -> int:
         """,
         ((error or "cancelled")[:1000], _now(), user_id),
     )
-    return int(cur.rowcount or 0)
+    n = getattr(cur, "rowcount", None)
+    if n is None or int(n) < 0:
+        return 1
+    return int(n)
 
 
 def cancel_open_parse(*, user_id: str) -> dict:

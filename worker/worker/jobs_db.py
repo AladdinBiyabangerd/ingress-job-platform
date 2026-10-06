@@ -184,10 +184,11 @@ class Row:
 
 
 class _Cursor:
-    def __init__(self, rows: list[Row], lastrowid: int | None) -> None:
+    def __init__(self, rows: list[Row], lastrowid: int | None, rowcount: int = 0) -> None:
         self._rows = rows
         self._index = 0
         self.lastrowid = lastrowid
+        self.rowcount = int(rowcount or 0)
 
     def fetchone(self) -> Row | None:
         if self._index >= len(self._rows):
@@ -237,7 +238,7 @@ class PostgresConnection:
                 returning=False,
             )
         if sql.lstrip().upper().startswith("PRAGMA"):
-            return _Cursor([], None)
+            return _Cursor([], None, rowcount=0)
         adapted = adapt_sql(sql)
         returning = _wants_returning(sql)
         if returning:
@@ -246,18 +247,20 @@ class PostgresConnection:
 
     def executemany(self, sql: str, seq) -> _Cursor:
         adapted = adapt_sql(sql)
+        n = 0
         try:
             with self._conn.cursor() as cur:
                 cur.executemany(adapted, list(seq))
+                n = int(cur.rowcount or 0)
         except Exception as exc:
             _reraise(exc)
-        return _Cursor([], None)
+        return _Cursor([], None, rowcount=n)
 
     def executescript(self, script: str) -> _Cursor:
         for statement in _split_script(script):
             self.execute(statement)
         self.commit()
-        return _Cursor([], None)
+        return _Cursor([], None, rowcount=0)
 
     def commit(self) -> None:
         self._conn.commit()
@@ -281,15 +284,16 @@ class PostgresConnection:
     def _run(self, sql: str, params: Any, *, returning: bool) -> _Cursor:
         try:
             cur = self._conn.execute(sql, params)
+            n = int(cur.rowcount or 0)
             if returning:
                 row = cur.fetchone()
                 last = int(row[0]) if row and row[0] is not None else None
-                return _Cursor([], last)
+                return _Cursor([], last, rowcount=n)
             if cur.description is None:
-                return _Cursor([], None)
+                return _Cursor([], None, rowcount=n)
             columns = [item.name for item in cur.description]
             rows = [Row(columns, tuple(item)) for item in cur.fetchall()]
-            return _Cursor(rows, None)
+            return _Cursor(rows, None, rowcount=n if n else len(rows))
         except Exception as exc:
             _reraise(exc)
         raise AssertionError("unreachable")

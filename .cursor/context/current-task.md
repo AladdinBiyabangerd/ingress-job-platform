@@ -1,19 +1,17 @@
 # Current task
 
 ## Goal
-Fix CV parse "Ləğv et" so stuck analysis UI actually clears.
+CV upload stuck on “Növbə / Təhlil gedir” — parse never left pending.
 
 ## Completed
-- Root cause: late poll response re-applied `pending` after cancel
-- Frontend: optimistic cancel + `pollEpoch` to ignore stale polls
-- API: cancel always fails open jobs, commit then return payload
-- Worker: do not revive cancelled jobs as `done`/`pending`
+- Cause: Postgres jobs-db cursor had no `rowcount`. Drain `_claim` crashed, jobs stayed `pending`.
+- Adapter now reports `rowcount` (api + worker). Claim/cancel treat missing rowcount as affected.
+- GET `/profile` while pending/processing re-kicks in-process drain (recovers stranded queue).
 
 ## Remaining
-- Deploy frontend + API (+ worker if separate)
-- Spot-check: upload CV → Ləğv et → chooser returns immediately
+- Deploy api + worker (same commit — API image installs worker from SHA).
+- After deploy, reopen `/profile/review` (poll GET will drain the stuck PDF).
 
 ## Relevant files
-- `frontend/components/profile-review.js`, `frontend/lib/copy.js`
-- `api/app/cv_profile.py`, `api/tests/test_cv_profile.py`
-- `worker/worker/cv_queue.py`
+- `api/app/jobs_db.py`, `worker/worker/jobs_db.py`, `worker/worker/cv_queue.py`
+- `api/app/routers/profile.py`, `api/app/cv_profile.py`
