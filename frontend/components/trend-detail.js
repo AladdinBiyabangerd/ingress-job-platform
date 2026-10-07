@@ -3,7 +3,6 @@
 import { hrefFor, text } from "../lib/copy";
 import { loginHref } from "../lib/auth-link";
 import { AcademyCourseLinks, SkillRow } from "./skill-gap-bits";
-import { PageHeader } from "./page-header";
 import { Shell } from "./shell";
 import { useInitialMe } from "./me-seed";
 
@@ -57,6 +56,57 @@ function jobMeta(t, job) {
     .join(" · ");
 }
 
+function YouBlock({ t, locale, authenticated, candidate, you, showYou, learnNext, companionsHave }) {
+  if (!authenticated || !candidate || !showYou) {
+    if (you && you.matching_consent === false) {
+      return (
+        <p className="hint">
+          {t.recommendationsConsent}{" "}
+          <a href={hrefFor(locale, { mode: "profile" })}>{t.recommendationsConsentLink}</a>
+        </p>
+      );
+    }
+    return (
+      <div className="trend-detail-callout">
+        <p className="lede">{t.trendsDetailGuest}</p>
+      </div>
+    );
+  }
+  return (
+    <>
+      <p className="hint trend-detail-status">
+        {you.have_focus ? t.trendsDetailHaveFocus : t.trendsDetailMissingFocus}
+      </p>
+      {learnNext.length ? (
+        <div className="skills-panel skills-panel-missing">
+          <h3>
+            {t.trendsDetailCompanionsLearn}
+            <span className="skills-panel-count">{learnNext.length}</span>
+          </h3>
+          <ul className="skills-rows">
+            {learnNext.map((item) => (
+              <SkillRow key={`learn-${item.skill_id || item.name}`} t={t} item={item} tone="missing" />
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {companionsHave.length ? (
+        <div className="skills-panel skills-panel-have">
+          <h3>
+            {t.trendsDetailCompanionsHave}
+            <span className="skills-panel-count">{companionsHave.length}</span>
+          </h3>
+          <ul className="skills-rows">
+            {companionsHave.map((item) => (
+              <SkillRow key={`have-${item.skill_id || item.name}`} t={t} item={item} tone="have" />
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 export function TrendDetailPage({ locale, data, error }) {
   const t = text(locale);
   const me = useInitialMe();
@@ -81,7 +131,7 @@ export function TrendDetailPage({ locale, data, error }) {
             </li>
           </ol>
         </nav>
-        <main className="trends-page trend-detail-page">
+        <main className="trend-detail-page">
           <p className="note">{t.trendsDetailNotFound}</p>
           <p className="hint">
             <a href={hrefFor(locale, { mode: "trends" })}>{t.trendsDetailBack}</a>
@@ -100,6 +150,7 @@ export function TrendDetailPage({ locale, data, error }) {
   const companionsHave = Array.isArray(you?.have) ? you.have : [];
   const showYou = Boolean(you && you.matching_consent !== false);
   const marketCourses = { academy_courses: data.academy_courses };
+  const showGuestCta = !authenticated || !candidate;
 
   return (
     <Shell locale={locale} mode="trends" skillId={skillId}>
@@ -117,131 +168,125 @@ export function TrendDetailPage({ locale, data, error }) {
         </ol>
       </nav>
 
-      <main className="trends-page trend-detail-page">
-        <PageHeader className="trends-hero" title={data.name} lede={t.trendsLede}>
-          <div className="trend-detail-stats">
-            {share !== null ? <span className="trends-share-value">{share}%</span> : null}
-            {growth ? (
-              <span className={`trends-growth trends-growth-${growth.direction}`}>{growth.label}</span>
-            ) : null}
-            {typeof data.ad_count === "number" ? (
-              <span className="hint">{t.trendsAdsCount(data.ad_count)}</span>
-            ) : null}
+      <main className="trend-detail-page">
+        <header className="detail-head trend-detail-head">
+          <a className="trend-back" href={hrefFor(locale, { mode: "trends" })}>
+            {t.trendsDetailBack}
+          </a>
+          <p className="recommendations-detail-kicker">{t.trendsDetailKicker}</p>
+          <h1>{data.name}</h1>
+          <p className="lede">{t.trendsLede}</p>
+        </header>
+
+        <div className="detail-layout trend-detail-layout">
+          <div className="detail-main">
+            <section className="trend-detail-section" aria-labelledby="trend-you-heading">
+              <h2 id="trend-you-heading">{t.trendsDetailYou}</h2>
+              <YouBlock
+                t={t}
+                locale={locale}
+                authenticated={authenticated}
+                candidate={candidate}
+                you={you}
+                showYou={showYou}
+                learnNext={learnNext}
+                companionsHave={companionsHave}
+              />
+            </section>
+
+            <section className="trend-detail-section" aria-labelledby="trend-jobs-heading">
+              <h2 id="trend-jobs-heading">
+                {t.trendsDetailJobs}
+                <span className="recommendations-panel-count">{jobs.length}</span>
+              </h2>
+              {!jobs.length ? (
+                <p className="hint">{t.trendsDetailJobsEmpty}</p>
+              ) : (
+                <ul className="reco-jobs trend-detail-jobs">
+                  {jobs.map((job) => {
+                    const meta = jobMeta(t, job);
+                    return (
+                      <li key={job.job_id} className="reco-job">
+                        <div className="reco-job-top">
+                          <div className="reco-job-body">
+                            <a className="reco-job-title" href={hrefFor(locale, { jobId: job.job_id })}>
+                              <strong>{job.title}</strong>
+                            </a>
+                            {meta ? <span className="hint">{meta}</span> : null}
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+
+            <p className="hint skills-footer">
+              <a href={hrefFor(locale, { mode: "recommendations" })}>{t.recommendationsOpen}</a>
+            </p>
           </div>
-        </PageHeader>
 
-        <div className="trends-meta">
-          <p className="hint trends-disclaimer">{data.disclaimer || t.trendsDisclaimer}</p>
-          {data.as_of ? <p className="hint trends-window">{t.trendsAsOf(data.as_of)}</p> : null}
-          {salary ? (
-            <p className="hint">
-              {[salary.median, salary.range, salary.sample].filter(Boolean).join(" · ")}
-            </p>
-          ) : null}
-          <AcademyCourseLinks item={marketCourses} />
+          <aside className="detail-aside" aria-label={t.keyFacts}>
+            <div className="facts-card">
+              <h2 className="facts-title">{t.keyFacts}</h2>
+              <dl className="facts">
+                {share !== null ? (
+                  <div>
+                    <dt>{t.trendsShare}</dt>
+                    <dd>{share}%</dd>
+                  </div>
+                ) : null}
+                {growth ? (
+                  <div>
+                    <dt>{t.trendsGrowth}</dt>
+                    <dd>
+                      <span className={`trends-growth trends-growth-${growth.direction}`}>
+                        {growth.label}
+                      </span>
+                    </dd>
+                  </div>
+                ) : null}
+                {typeof data.ad_count === "number" ? (
+                  <div>
+                    <dt>{t.trendsAds}</dt>
+                    <dd>{data.ad_count.toLocaleString("en-US")}</dd>
+                  </div>
+                ) : null}
+                {salary ? (
+                  <div>
+                    <dt>{t.trendsSalaryLabel}</dt>
+                    <dd>
+                      {salary.median}
+                      {salary.range ? <span className="fact-sub"> · {salary.range}</span> : null}
+                      {salary.sample ? <span className="fact-sub"> · {salary.sample}</span> : null}
+                    </dd>
+                  </div>
+                ) : null}
+                {data.as_of ? (
+                  <div>
+                    <dt>{t.trendsAsOfLabel}</dt>
+                    <dd>{data.as_of}</dd>
+                  </div>
+                ) : null}
+              </dl>
+
+              <p className="hint trends-disclaimer">{data.disclaimer || t.trendsDisclaimer}</p>
+
+              <div className="trend-detail-courses">
+                <AcademyCourseLinks item={marketCourses} />
+              </div>
+
+              {showGuestCta ? (
+                <div className="actions">
+                  <a className="btn primary" href={loginHref({ intent: "job_candidate", returnTo: detailHref })}>
+                    {t.trendsDetailGuestCta}
+                  </a>
+                </div>
+              ) : null}
+            </div>
+          </aside>
         </div>
-
-        <section className="trend-detail-block" aria-labelledby="trend-you-heading">
-          <h2 id="trend-you-heading">{t.trendsDetailYou}</h2>
-          {!authenticated || !candidate ? (
-            <div className="trend-detail-guest">
-              <p className="lede">{t.trendsDetailGuest}</p>
-              <a className="btn primary" href={loginHref({ intent: "job_candidate", returnTo: detailHref })}>
-                {t.trendsDetailGuestCta}
-              </a>
-            </div>
-          ) : you && you.matching_consent === false ? (
-            <p className="hint">
-              {t.recommendationsConsent}{" "}
-              <a href={hrefFor(locale, { mode: "profile" })}>{t.recommendationsConsentLink}</a>
-            </p>
-          ) : showYou ? (
-            <>
-              <p className="hint">
-                {you.have_focus ? t.trendsDetailHaveFocus : t.trendsDetailMissingFocus}
-              </p>
-              {learnNext.length ? (
-                <div className="skills-panel skills-panel-missing">
-                  <h3>
-                    {t.trendsDetailCompanionsLearn}
-                    <span className="skills-panel-count">{learnNext.length}</span>
-                  </h3>
-                  <ul className="skills-rows">
-                    {learnNext.map((item) => (
-                      <SkillRow
-                        key={`learn-${item.skill_id || item.name}`}
-                        t={t}
-                        item={item}
-                        tone="missing"
-                      />
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {companionsHave.length ? (
-                <div className="skills-panel skills-panel-have">
-                  <h3>
-                    {t.trendsDetailCompanionsHave}
-                    <span className="skills-panel-count">{companionsHave.length}</span>
-                  </h3>
-                  <ul className="skills-rows">
-                    {companionsHave.map((item) => (
-                      <SkillRow
-                        key={`have-${item.skill_id || item.name}`}
-                        t={t}
-                        item={item}
-                        tone="have"
-                      />
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <div className="trend-detail-guest">
-              <p className="lede">{t.trendsDetailGuest}</p>
-              <a className="btn primary" href={loginHref({ intent: "job_candidate", returnTo: detailHref })}>
-                {t.trendsDetailGuestCta}
-              </a>
-            </div>
-          )}
-        </section>
-
-        <section className="trend-detail-block" aria-labelledby="trend-jobs-heading">
-          <h2 id="trend-jobs-heading">
-            {t.trendsDetailJobs}
-            <span className="recommendations-panel-count">{jobs.length}</span>
-          </h2>
-          {!jobs.length ? (
-            <p className="hint">{t.trendsDetailJobsEmpty}</p>
-          ) : (
-            <ul className="reco-jobs trend-detail-jobs">
-              {jobs.map((job) => {
-                const meta = jobMeta(t, job);
-                return (
-                  <li key={job.job_id} className="reco-job">
-                    <div className="reco-job-top">
-                      <div className="reco-job-body">
-                        <a className="reco-job-title" href={hrefFor(locale, { jobId: job.job_id })}>
-                          <strong>{job.title}</strong>
-                        </a>
-                        {meta ? <span className="hint">{meta}</span> : null}
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        <p className="hint skills-footer">
-          <a href={hrefFor(locale, { mode: "trends" })}>{t.trendsDetailBack}</a>
-          {" · "}
-          <a href={hrefFor(locale, { mode: "recommendations" })}>{t.recommendationsOpen}</a>
-          {" · "}
-          <a href={hrefFor(locale, { mode: "skills" })}>{t.skillsOpen}</a>
-        </p>
       </main>
     </Shell>
   );

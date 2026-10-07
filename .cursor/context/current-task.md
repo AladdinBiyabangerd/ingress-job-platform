@@ -1,27 +1,24 @@
 # Current task
 
 ## Completed
-- Profile review densify (prior commit `6b868d9`)
-- Profile review → 3 tabs + softer UI:
-  - Tabs: Əsas | Təcrübə | Təhsil və dillər (`reviewTab` state)
-  - Basics: contact + links + basics; Experience: skills + work; More: education + languages + roles
-  - Softer page bg `#e9edf2` (not warm cream `#f6f5f1`); panels `#f4f6f8`
-  - Labels/headings weight 500–600 (was 700); softer focus ring
-  - State / CV upload / save logic unchanged
+- Profile review densify + tabs (local, uncommitted)
+- Trend detail UI rewrite (Academy / job-detail composition):
+  - Removed blue hero + nested metric chips
+  - Head: back pill → kicker → h1 → lede (Academy career-path pattern)
+  - Layout: main (you + jobs) + sticky facts aside (same as job detail)
+  - Mobile: facts aside `order: -1` so market numbers come first
+  - Guest CTA only in facts card (no duplicate primary)
+  - Also fixed earlier `.hero:has(.hero-tools)` mobile specificity bug on `/trends` list
 
 ## Current state
-- Implemented locally; not committed yet.
-- Files: `profile-review.js`, `globals.css`, `copy.js` (az/en/ru tab labels)
-
-## Decisions
-- Tab warn dots when low-confidence fields in that tab
-- Sticky save/confirm stays under all tabs
+- Local only; not committed. Verified localhost mobile + desktop.
 
 ## Remaining
-1. Visual check `/profile/review`
+1. User visual OK on `/trends/1`
 2. Commit when approved
 
 ## Relevant files
-- `frontend/components/profile-review.js`
+- `frontend/components/trend-detail.js`
 - `frontend/app/globals.css`
-- `frontend/lib/copy.js`
+- `frontend/lib/copy.js` (trendsDetailKicker, trendsAsOfLabel)
+- (prior uncommitted) `frontend/components/profile-review.js`

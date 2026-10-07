@@ -259,7 +259,7 @@ export async function markAllNotificationsRead() {
   return mutate("/api/v1/notifications/read");
 }
 
-/** Skill-gap for a picked role on /me/skills. Hits FastAPI, not the BFF. */
+/** Skill-gap for a picked role on /me/recommendations. Hits FastAPI, not the BFF. */
 export async function loadSkillGap(lang, role) {
   const name = typeof role === "string" ? role.trim() : "";
   if (!name) throw new Error("load");

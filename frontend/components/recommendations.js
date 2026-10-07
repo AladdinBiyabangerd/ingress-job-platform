@@ -257,6 +257,10 @@ export function Recommendations({
   const selectedScore =
     selected && typeof selected.score === "number" ? Math.round(selected.score * 100) : null;
   const coach = gap?.coach && typeof gap.coach === "object" ? gap.coach : null;
+  const mustLearn = Array.isArray(coach?.must_learn) ? coach.must_learn : [];
+  const alreadyStrong = Array.isArray(coach?.already_strong) ? coach.already_strong : [];
+  const transferable = Array.isArray(coach?.transferable) ? coach.transferable : [];
+  const hasCoach = Boolean(coach?.fit_summary);
   const missing = Array.isArray(gap?.missing) ? gap.missing : [];
   const have = Array.isArray(gap?.have) ? gap.have : [];
   const hasGap = missing.length > 0 || have.length > 0;
@@ -351,15 +355,42 @@ export function Recommendations({
                 </header>
               ) : null}
 
-              {selected && coach?.fit_summary ? (
-                <div className="recommendations-coach">
-                  <p className="recommendations-coach-summary">{coach.fit_summary}</p>
-                  <a
-                    className="recommendations-gap-link"
-                    href={hrefFor(locale, { mode: "skills" })}
-                  >
-                    {t.recommendationsCoachMore}
-                  </a>
+              {selected && hasCoach ? (
+                <div className="skills-coach">
+                  <h3>{t.skillsCoachTitle}</h3>
+                  <p className="lede skills-coach-summary">{coach.fit_summary}</p>
+                  {mustLearn.length ? (
+                    <div className="skills-coach-block">
+                      <h4>{t.skillsCoachMustLearn}</h4>
+                      <ul className="skills-coach-list">
+                        {mustLearn.map((item) => (
+                          <li key={`coach-learn-${item.skill}`}>
+                            <strong>{item.skill}</strong>
+                            {item.why ? <span className="hint"> — {item.why}</span> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {alreadyStrong.length ? (
+                    <div className="skills-coach-block">
+                      <h4>{t.skillsCoachStrong}</h4>
+                      <p className="hint">{alreadyStrong.join(" · ")}</p>
+                    </div>
+                  ) : null}
+                  {transferable.length ? (
+                    <div className="skills-coach-block">
+                      <h4>{t.skillsCoachTransferable}</h4>
+                      <ul className="skills-coach-list">
+                        {transferable.map((item) => (
+                          <li key={`xfer-${item.from}-${item.to}`}>
+                            <strong>{t.skillsCoachTransfer(item.from, item.to)}</strong>
+                            {item.note ? <span className="hint"> — {item.note}</span> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -438,8 +469,6 @@ export function Recommendations({
           </div>
 
           <p className="hint recommendations-footer">
-            <a href={hrefFor(locale, { mode: "skills" })}>{t.skillsOpen}</a>
-            {" · "}
             <a href={hrefFor(locale, { mode: "trends" })}>{t.trendsTitle}</a>
           </p>
         </div>

@@ -1,10 +1,5 @@
-import { MeSkills } from "../../../../components/me-skills";
-import { getSkillBundle } from "../../../../lib/server/skills";
-import { privatePageMetadata } from "../../../../lib/seo";
+import { redirect } from "next/navigation";
 
-export const metadata = privatePageMetadata;
-
-export default async function Page() {
-  const initial = await getSkillBundle("en");
-  return <MeSkills locale="en" initialRoles={initial.roles} initialGap={initial.gap} />;
+export default function Page() {
+  redirect("/en/me/recommendations");
 }

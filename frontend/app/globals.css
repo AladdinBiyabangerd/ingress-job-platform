@@ -2215,7 +2215,7 @@ body:has(.profile-review-page) {
   background: #f3f7fb;
 }
 
-/* /me/recommendations — master/detail like /me/skills */
+/* /me/recommendations — master/detail roles + gap + jobs */
 .wrap:has(.recommendations-page) {
   padding-top: 20px;
   padding-bottom: 40px;
@@ -2370,40 +2370,6 @@ body:has(.profile-review-page) {
 
 .recommendations-detail-head .hint {
   margin: 4px 0 0;
-}
-
-.recommendations-gap-link {
-  font-size: 0.86rem;
-  font-weight: 700;
-  color: #001FFF;
-  text-decoration: none;
-}
-
-.recommendations-gap-link:hover {
-  text-decoration: underline;
-}
-
-.recommendations-coach {
-  display: grid;
-  gap: 8px;
-  padding: 12px 0 4px;
-  border-top: 1px solid #e8eaef;
-}
-
-.recommendations-coach-summary {
-  margin: 0;
-  font-size: 0.92rem;
-  line-height: 1.45;
-  color: #20242b;
-}
-
-.recommendations-coach-learn {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 4px;
-  font-size: 0.88rem;
 }
 
 .recommendations-role-skills .role-skill-parts {
@@ -2600,159 +2566,7 @@ body:has(.profile-review-page) {
   font-weight: 700;
 }
 
-/* /me/skills — master/detail gap analysis */
-.wrap:has(.skills-page) {
-  padding-top: 20px;
-  padding-bottom: 40px;
-}
-
-.skills-page {
-  display: grid;
-  gap: 18px;
-}
-
-.skills-head h1 {
-  margin: 0;
-  font-size: 1.45rem;
-  letter-spacing: -0.02em;
-}
-
-.skills-head .lede {
-  margin: 6px 0 0;
-  font-size: 0.95rem;
-  max-width: 48ch;
-  color: #3a404a;
-}
-
-.skills-disclaimer {
-  margin: 6px 0 0;
-  max-width: 52ch;
-}
-
-.skills-layout {
-  display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-
-.skills-roles,
-.skills-detail {
-  display: grid;
-  gap: 10px;
-  min-width: 0;
-}
-
-.skills-roles h2,
-.skills-detail h2,
-.skills-panel h3 {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.3;
-}
-
-.skills-role-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 6px;
-}
-
-.skills-role-pick {
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e0e3e8;
-  border-radius: 12px;
-  background: #ffffff;
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
-}
-
-.skills-role-pick:hover {
-  border-color: #b8c4d8;
-  background: #f8faff;
-}
-
-.skills-role-pick.on {
-  border-color: #001FFF;
-  background: #f0f3ff;
-  box-shadow: inset 3px 0 0 #001FFF;
-}
-
-.skills-role-score {
-  display: grid;
-  place-items: center;
-  min-height: 40px;
-  border-radius: 10px;
-  background: #eef0f4;
-  color: #20242b;
-  font-size: 0.88rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-
-.skills-role-pick.on .skills-role-score {
-  background: #001FFF;
-  color: #ffffff;
-}
-
-.skills-role-body {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.skills-role-body strong {
-  font-size: 0.92rem;
-  line-height: 1.25;
-}
-
-.skills-role-body .hint {
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.35;
-}
-
-.skills-detail {
-  padding: 16px;
-  border: 1px solid #e0e3e8;
-  border-radius: 14px;
-  background: #ffffff;
-}
-
-.skills-detail-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #eef0f3;
-}
-
-.skills-detail-kicker {
-  margin: 0 0 2px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #656b75;
-}
-
-.skills-detail-head h2 {
-  font-size: 1.2rem;
-  letter-spacing: -0.02em;
-}
-
+/* Skill gap panels / coach (used on /me/recommendations + trends) */
 .skills-career-link {
   font-size: 0.86rem;
   font-weight: 700;
@@ -2821,7 +2635,9 @@ body:has(.profile-review-page) {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin: 0;
   font-size: 0.88rem;
+  line-height: 1.3;
 }
 
 .skills-panel-count {
@@ -2986,26 +2802,8 @@ body:has(.profile-review-page) {
 }
 
 @media (max-width: 860px) {
-  .skills-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .skills-role-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .skills-panels {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 560px) {
-  .skills-role-list {
-    grid-template-columns: 1fr;
-  }
-
-  .skills-detail {
-    padding: 12px;
   }
 }
 
@@ -3154,35 +2952,143 @@ body:has(.profile-review-page) {
   color: #001fff;
 }
 
-.trend-detail-page .trend-detail-stats {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
+/* Trend detail: Academy/job-detail composition — head + main + facts aside */
+.trend-detail-page {
+  display: grid;
+  gap: 0;
+  min-width: 0;
 }
 
-.trend-detail-page .trend-detail-block {
+.trend-detail-head {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.trend-detail-head h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: #20242b;
+}
+
+.trend-detail-head .lede {
+  margin: 0;
+  max-width: 40rem;
+  color: #656b75;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.trend-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  padding: 6px 14px 6px 11px;
+  border-radius: 999px;
+  background: #eaf1ff;
+  color: #001fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.trend-back:hover,
+.trend-back:focus-visible {
+  background: #dce8ff;
+  outline: none;
+}
+
+.trend-detail-layout {
+  margin-top: 4px;
+}
+
+.trend-detail-section {
   display: grid;
   gap: 12px;
-  margin: 20px 0 0;
+  margin: 0 0 24px;
+  min-width: 0;
 }
 
-.trend-detail-page .trend-detail-block h2 {
+.trend-detail-callout {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(9, 47, 132, 0.08);
+  background: #f7f8fa;
+}
+
+.trend-detail-callout .lede {
+  margin: 0;
+  max-width: 36rem;
+  color: #5c6570;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.trend-detail-page .facts dd .fact-sub {
+  display: block;
+  margin-top: 2px;
+}
+
+.trend-detail-section h2 {
   margin: 0;
   display: flex;
   align-items: baseline;
   gap: 8px;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #20242b;
 }
 
-.trend-detail-page .trend-detail-guest {
-  display: grid;
-  gap: 12px;
-  justify-items: start;
-}
-
-.trend-detail-page .trend-detail-jobs {
+.trend-detail-status {
   margin: 0;
+}
+
+.trend-detail-jobs {
+  margin: 0;
+}
+
+/* Trend jobs reuse reco-job markup without a score column */
+.trend-detail-jobs .reco-job-top {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.trend-detail-page .facts-card .trends-disclaimer {
+  margin: 14px 0 0;
+}
+
+.trend-detail-courses {
+  margin-top: 14px;
+}
+
+.trend-detail-page .facts-card .actions {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.trend-detail-page .facts-card .actions .btn {
+  width: 100%;
+}
+
+@media (max-width: 899px) {
+  /* Market facts first on small screens — the numbers are the page’s point */
+  .trend-detail-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .trend-detail-layout .detail-aside {
+    order: -1;
+  }
+
+  .trend-detail-head h1 {
+    font-size: 24px;
+  }
 }
 
 .trends-card-top {
@@ -3573,11 +3479,13 @@ body:has(.profile-review-page) {
 }
 
 .hero:has(.hero-tools) {
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
+  /* max-content: tools take what they need; avoid crushing the title column */
+  grid-template-columns: minmax(0, 1fr) minmax(0, max-content);
 }
 
 .hero-tools {
   min-width: 0;
+  justify-self: end;
 }
 
 .results {
@@ -3872,11 +3780,18 @@ span.pager-btn {
 }
 
 @media (max-width: 760px) {
-  .hero {
+  /* Must match or beat .hero:has(.hero-tools) specificity or the title column
+     collapses (~16px) and h1 wraps letter-by-letter via overflow-wrap. */
+  .hero,
+  .hero:has(.hero-tools) {
     grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     padding: 10px 12px;
     border-radius: 14px;
+  }
+
+  .hero-tools {
+    justify-self: stretch;
   }
 
   .hero h1 {
