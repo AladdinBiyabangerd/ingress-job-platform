@@ -9,11 +9,10 @@
   - Detail SSR skips jobs payload (`jobs_limit=0`)
 
 ## Current state
-- Local only; not committed.
+- Committed and pushed: `925c4e7` on `main`.
 
 ## Remaining
-1. Visual OK (logged-in with companions + jobs page pager)
-2. Commit when approved
+- None for this task (visual check on deploy optional)
 
 ## Relevant files
 - `frontend/components/trend-detail.js`
