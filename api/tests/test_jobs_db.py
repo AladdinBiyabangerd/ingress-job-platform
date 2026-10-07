@@ -24,6 +24,20 @@ class JobsDbSqlTests(unittest.TestCase):
         )
         self.assertEqual(translate_sql("SELECT '100%'"), "SELECT '100%'")
 
+    def test_postgres_casts_are_not_named_placeholders(self):
+        self.assertEqual(
+            translate_sql("SELECT embedding::text FROM embeddings WHERE entity_type = ?"),
+            "SELECT embedding::text FROM embeddings WHERE entity_type = %s",
+        )
+        self.assertEqual(
+            translate_sql("INSERT INTO embeddings (embedding) VALUES (?::vector)"),
+            "INSERT INTO embeddings (embedding) VALUES (%s::vector)",
+        )
+        self.assertEqual(
+            translate_sql("SELECT id FROM jobs WHERE id = :id AND title::text = :title"),
+            "SELECT id FROM jobs WHERE id = %(id)s AND title::text = %(title)s",
+        )
+
     def test_postgres_ddl_and_aggregate(self):
         adapted = adapt_sql(
             "CREATE TABLE jobs (id INTEGER PRIMARY KEY, title TEXT); "

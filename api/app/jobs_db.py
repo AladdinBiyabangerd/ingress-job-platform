@@ -98,6 +98,11 @@ def translate_sql(sql: str) -> str:
             out.append("%s")
             i += 1
             continue
+        # Leave Postgres casts (::type) alone; only rewrite :name binds.
+        if ch == ":" and i + 1 < n and sql[i + 1] == ":":
+            out.append("::")
+            i += 2
+            continue
         if ch == ":" and i + 1 < n and (sql[i + 1].isalpha() or sql[i + 1] == "_"):
             j = i + 1
             while j < n and (sql[j].isalnum() or sql[j] == "_"):
