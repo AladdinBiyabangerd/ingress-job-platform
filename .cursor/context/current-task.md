@@ -1,28 +1,26 @@
 # Current task
 
 ## Completed
-- Profile review densify layout:
-  - Removed two `profile-review-col` wrappers
-  - Panels use area classes: `review-panel-contact|links|basics|skills|work`
-  - Education + languages + roles → `profile-review-side`
-  - CSS 3-zone grid (contact|links|basics → skills full → work|side)
-  - Medium ≤1100px 2-col; mobile ≤760px 1-col
-  - Work grid 4-col; wrap max-width 1320px; tighter padding/gaps
-  - Textarea rows: about 3, job summary 2
-  - State / CV upload logic unchanged
+- Trends detail + Recommendations gaps (`recommendations_enrichment` plan)
+  - Shared `skill-gap-bits.js` (AcademyCourseLinks / CareerPathLink / SkillRow)
+  - `GET /api/v1/trends/{skill_id}`: market, often_with, academy_courses, jobs (5–10), optional `you`
+  - Clickable TrendCard → `/trends/[skillId]` (az/en/ru); guest CTA + OIDC safe-return
+  - `GET /me/matches?role=`: signature skill filter + soft boost; limit 10
+  - Recommendations: full market-ranked gap + academy/career path; no coach.slice(0,3); role-scoped jobs + SSR gap
 
 ## Current state
-- Densify implemented in `frontend/components/profile-review.js` + `frontend/app/globals.css`.
-- Plan file was not in workspace (`.cursor/plans/…`); executed from user-confirmed plan summary.
+- Done; ready for optional manual UI smoke (`/trends` → detail, `/me/recommendations` role switch).
 
 ## Decisions
-- Desktop areas: `contact links basics` / `skills skills skills` / `work work side`
-- Medium breakpoint 1100px (not 900) so 3-col has room before collapsing
+- No hardcoded 3-skill checklist as primary learn signal.
+- Trend `you` from profile × often_with (dynamic); guest gets market+jobs+login CTA.
+- Shared academy/gap UI extracted once for me-skills, trends detail, recommendations.
 
 ## Remaining
-1. Visual check `/profile/review` at desktop / tablet / mobile
-2. Optional: git commit if approved
+- None for this plan.
 
 ## Relevant files
-- `frontend/components/profile-review.js`
-- `frontend/app/globals.css`
+- `api/app/trends.py`, `api/app/routers/trends.py`, `api/app/matching.py`, `api/app/routers/me.py`
+- `frontend/components/skill-gap-bits.js`, `trend-detail.js`, `trends.js`, `recommendations.js`, `me-skills.js`
+- `frontend/lib/server/trends.js`, `frontend/lib/server/recommendations.js`, `frontend/lib/copy.js`
+- `frontend/app/trends/[skillId]/page.js` (+ en/ru)

@@ -7,6 +7,11 @@ export const metadata = privatePageMetadata;
 export default async function Page() {
   const initial = await getRecommendationBundle("en");
   return (
-    <Recommendations locale="en" initialRoles={initial.roles} initialMatches={initial.matches} />
+    <Recommendations
+      locale="en"
+      initialRoles={initial.roles}
+      initialMatches={initial.matches}
+      initialGap={initial.gap}
+    />
   );
 }

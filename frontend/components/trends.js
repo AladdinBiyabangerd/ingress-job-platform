@@ -82,7 +82,7 @@ function companionsOf(item) {
     .filter(Boolean);
 }
 
-function TrendCard({ t, item, index }) {
+function TrendCard({ t, locale, item, index }) {
   const share = pct(item.share);
   const growth = growthParts(item.growth_wow);
   const salary = salaryParts(t, item.salary);
@@ -93,57 +93,71 @@ function TrendCard({ t, item, index }) {
     typeof item.ad_count === "number" ? t.trendsAdsCount(item.ad_count) : null,
     salary ? salary.median : null,
   ].filter(Boolean);
+  const href =
+    item.skill_id != null
+      ? hrefFor(locale, { mode: "trend", skillId: item.skill_id })
+      : null;
+
+  const body = (
+    <div className="trends-card-top">
+      <span className="trends-rank" aria-hidden="true">
+        {rank}
+      </span>
+      <div className="trends-card-main">
+        <div className="trends-card-title">
+          <h2>{item.name}</h2>
+          {growth ? (
+            <span className={`trends-growth trends-growth-${growth.direction}`}>
+              {growth.label}
+            </span>
+          ) : null}
+          {share !== null ? <span className="trends-share-value">{share}%</span> : null}
+        </div>
+
+        {share !== null ? (
+          <div
+            className="trends-share-track"
+            role="meter"
+            aria-label={t.trendsShare}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={share}
+          >
+            <span className="trends-share-fill" style={{ width: `${barWidth}%` }} />
+          </div>
+        ) : null}
+
+        {meta.length || salary?.range || salary?.sample ? (
+          <p className="trends-meta-line">
+            {meta.join(" · ")}
+            {salary?.range ? ` · ${salary.range}` : ""}
+            {salary?.sample ? ` · ${salary.sample}` : ""}
+          </p>
+        ) : null}
+
+        {companions.length ? (
+          <ul className="tech-chips trends-companion-chips" aria-label={t.trendsOftenWith}>
+            {companions.map((row) => (
+              <li key={row.name} className="tech-chip">
+                {row.name}
+                <span className="trends-companion-pct">{row.share}%</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    </div>
+  );
 
   return (
     <li className="trends-card">
-      <div className="trends-card-top">
-        <span className="trends-rank" aria-hidden="true">
-          {rank}
-        </span>
-        <div className="trends-card-main">
-          <div className="trends-card-title">
-            <h2>{item.name}</h2>
-            {growth ? (
-              <span className={`trends-growth trends-growth-${growth.direction}`}>
-                {growth.label}
-              </span>
-            ) : null}
-            {share !== null ? <span className="trends-share-value">{share}%</span> : null}
-          </div>
-
-          {share !== null ? (
-            <div
-              className="trends-share-track"
-              role="meter"
-              aria-label={t.trendsShare}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={share}
-            >
-              <span className="trends-share-fill" style={{ width: `${barWidth}%` }} />
-            </div>
-          ) : null}
-
-          {meta.length || salary?.range || salary?.sample ? (
-            <p className="trends-meta-line">
-              {meta.join(" · ")}
-              {salary?.range ? ` · ${salary.range}` : ""}
-              {salary?.sample ? ` · ${salary.sample}` : ""}
-            </p>
-          ) : null}
-
-          {companions.length ? (
-            <ul className="tech-chips trends-companion-chips" aria-label={t.trendsOftenWith}>
-              {companions.map((row) => (
-                <li key={row.name} className="tech-chip">
-                  {row.name}
-                  <span className="trends-companion-pct">{row.share}%</span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-      </div>
+      {href ? (
+        <a className="trends-card-link" href={href}>
+          {body}
+        </a>
+      ) : (
+        body
+      )}
     </li>
   );
 }
@@ -237,6 +251,7 @@ export function TrendsPage({ locale, data, error, page = 1, windowDays = DEFAULT
                 <TrendCard
                   key={item.skill_id || item.name}
                   t={t}
+                  locale={locale}
                   item={item}
                   index={offset + index}
                 />

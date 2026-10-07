@@ -116,6 +116,17 @@ export const copy = {
     trendsWindowUnit: "gün",
     trendsWindowApply: "Göstər",
     trendsDisclaimer: "Trendlər yalnız Ingress Job-un izlədiyi elanlar əsasında hesablanır, bütün bazarı əks etdirmir.",
+    trendsDetailBack: "Trendlərə qayıt",
+    trendsDetailJobs: "Bu bacarığı tələb edən elanlar",
+    trendsDetailJobsEmpty: "Bu bacarıq üçün açıq elan tapılmadı.",
+    trendsDetailYou: "Siz və bu trend",
+    trendsDetailHaveFocus: "Bu bacarıq profilinizdə var.",
+    trendsDetailMissingFocus: "Bu bacarıq hələ profilinizdə yoxdur.",
+    trendsDetailCompanionsHave: "Birlikdə tələb olunanlardan sizdə var",
+    trendsDetailCompanionsLearn: "Ora çatmaq üçün öyrənin",
+    trendsDetailGuest: "Profilinizlə müqayisə üçün namizəd kimi daxil olun.",
+    trendsDetailGuestCta: "Daxil ol / qeydiyyat",
+    trendsDetailNotFound: "Bu bacarıq üçün trend tapılmadı.",
     companiesTitle: "Şirkətlər",
     companiesLede: "Şirkətlər üzrə elanlar, texnologiyalar və müraciətlər",
     companiesSearch: "Şirkət axtar",
@@ -367,6 +378,9 @@ export const copy = {
     profileReviewStepQueue: "Növbə",
     profileReviewStepParse: "Təhlil",
     profileReviewBasics: "Əsas məlumat",
+    profileReviewTabBasics: "Əsas",
+    profileReviewTabExperience: "Təcrübə",
+    profileReviewTabMore: "Təhsil və dillər",
     profileReviewCheck: "CV-dən zəif oxundu — yoxlayın",
     profileReviewHeadline: "Başlıq",
     profileReviewAbout: "Haqqında",
@@ -436,7 +450,7 @@ export const copy = {
     recommendationsOpen: "Tövsiyələr",
     recommendationsTitle: "Tövsiyələr",
     recommendationsLede: "Rol seçin — uyğun elanlar və bacarıq uyğunluğunuz.",
-    recommendationsDisclaimer: "Skor qayda əsaslıdır; AI yenidən sıralama hələ yoxdur.",
+    recommendationsDisclaimer: "Skor qayda əsaslıdır; mövcud olduqda AI yenidən sıralama və izah əlavə oluna bilər.",
     recommendationsGate: "Tövsiyələr namizəd hesabı tələb edir.",
     recommendationsConsent: "Tövsiyələr üçün CV təhlili / matching razılığını aktiv edin.",
     recommendationsConsentLink: "Məxfilik ayarları",
@@ -639,6 +653,17 @@ export const copy = {
     trendsWindowUnit: "days",
     trendsWindowApply: "Show",
     trendsDisclaimer: "Trends reflect only listings Ingress Job tracks — not the whole market.",
+    trendsDetailBack: "Back to trends",
+    trendsDetailJobs: "Jobs that require this skill",
+    trendsDetailJobsEmpty: "No open jobs found for this skill.",
+    trendsDetailYou: "You vs this trend",
+    trendsDetailHaveFocus: "This skill is on your profile.",
+    trendsDetailMissingFocus: "This skill is not on your profile yet.",
+    trendsDetailCompanionsHave: "Companion skills you already have",
+    trendsDetailCompanionsLearn: "Learn to reach this demand",
+    trendsDetailGuest: "Sign in as a candidate to compare with your profile.",
+    trendsDetailGuestCta: "Sign in / register",
+    trendsDetailNotFound: "No trend found for this skill.",
     companiesTitle: "Companies",
     companiesLede: "Jobs, tech and applications by company",
     companiesSearch: "Search companies",
@@ -890,6 +915,9 @@ export const copy = {
     profileReviewStepQueue: "Queue",
     profileReviewStepParse: "Extract",
     profileReviewBasics: "Basics",
+    profileReviewTabBasics: "Basics",
+    profileReviewTabExperience: "Experience",
+    profileReviewTabMore: "Education & languages",
     profileReviewCheck: "Low confidence from CV — review",
     profileReviewHeadline: "Headline",
     profileReviewAbout: "About",
@@ -960,7 +988,7 @@ export const copy = {
     recommendationsOpen: "Recommendations",
     recommendationsTitle: "Recommendations",
     recommendationsLede: "Pick a role — matching jobs and how your skills fit.",
-    recommendationsDisclaimer: "Scores are rules-based; AI re-ranking is not on yet.",
+    recommendationsDisclaimer: "Scores are rules-based; AI re-ranking and explanations may apply when enabled.",
     recommendationsGate: "Recommendations require a candidate account.",
     recommendationsConsent: "Turn on matching consent to see recommendations.",
     recommendationsConsentLink: "Privacy settings",
@@ -1163,6 +1191,17 @@ export const copy = {
     trendsWindowUnit: "дн.",
     trendsWindowApply: "Показать",
     trendsDisclaimer: "Тренды считаются только по вакансиям, которые отслеживает Ingress Job, а не по всему рынку.",
+    trendsDetailBack: "Назад к трендам",
+    trendsDetailJobs: "Вакансии, где требуется этот навык",
+    trendsDetailJobsEmpty: "Открытых вакансий с этим навыком нет.",
+    trendsDetailYou: "Вы и этот тренд",
+    trendsDetailHaveFocus: "Этот навык есть в вашем профиле.",
+    trendsDetailMissingFocus: "Этого навыка пока нет в вашем профиле.",
+    trendsDetailCompanionsHave: "Сопутствующие навыки, которые у вас есть",
+    trendsDetailCompanionsLearn: "Чему учиться, чтобы соответствовать спросу",
+    trendsDetailGuest: "Войдите как кандидат, чтобы сравнить с профилем.",
+    trendsDetailGuestCta: "Войти / регистрация",
+    trendsDetailNotFound: "Тренд для этого навыка не найден.",
     companiesTitle: "Компании",
     companiesLede: "Вакансии, технологии и отклики по компаниям",
     companiesSearch: "Поиск компании",
@@ -1414,6 +1453,9 @@ export const copy = {
     profileReviewStepQueue: "Очередь",
     profileReviewStepParse: "Разбор",
     profileReviewBasics: "Основное",
+    profileReviewTabBasics: "Основное",
+    profileReviewTabExperience: "Опыт",
+    profileReviewTabMore: "Образование и языки",
     profileReviewCheck: "Слабо прочитано из CV — проверьте",
     profileReviewHeadline: "Заголовок",
     profileReviewAbout: "О себе",
@@ -1485,7 +1527,7 @@ export const copy = {
     recommendationsOpen: "Рекомендации",
     recommendationsTitle: "Рекомендации",
     recommendationsLede: "Выберите роль — подходящие вакансии и совпадение навыков.",
-    recommendationsDisclaimer: "Скор правилный; AI-переранжирование пока выключено.",
+    recommendationsDisclaimer: "Скор правилный; при включении может добавляться AI-переранжирование и пояснения.",
     recommendationsGate: "Рекомендации доступны только кандидатам.",
     recommendationsConsent: "Включите согласие на matching, чтобы видеть рекомендации.",
     recommendationsConsentLink: "Настройки конфиденциальности",
@@ -1626,12 +1668,15 @@ export function languageLabel(locale, code) {
 }
 
 
-export function hrefFor(locale, { mode = "browse", jobId, companySlug } = {}) {
+export function hrefFor(locale, { mode = "browse", jobId, companySlug, skillId } = {}) {
   const base = locale === "az" ? "" : `/${locale}`;
   if (jobId) return `${base}/jobs/${jobId}`;
   if (companySlug) return `${base}/companies/${encodeURIComponent(companySlug)}`;
   if (mode === "companies") return `${base}/companies`;
-  if (mode === "trends") return `${base}/trends`;
+  if (skillId != null && String(skillId).trim() !== "") {
+    return `${base}/trends/${encodeURIComponent(String(skillId).trim())}`;
+  }
+  if (mode === "trends" || mode === "trend") return `${base}/trends`;
   if (mode === "post") return `${base}/post`;
   if (mode === "company") return `${base}/company`;
   if (mode === "admin") return `${base}/admin`;

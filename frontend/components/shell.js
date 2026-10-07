@@ -180,14 +180,14 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
   );
 }
 
-export function Shell({ locale, mode, jobId, companySlug, children }) {
+export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
   const t = text(locale);
   const initialMe = useInitialMe();
   const [me, setMe] = useState(initialMe ?? null);
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleRef = useRef(null);
   const compact = useMediaQuery("(max-width: 768px)");
-  const returnTo = hrefFor(locale, { mode, jobId, companySlug });
+  const returnTo = hrefFor(locale, { mode, jobId, companySlug, skillId });
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   useEffect(() => {

@@ -103,3 +103,23 @@ export async function fetchTrends({
   if (!res.ok) throw new Error(`trends ${res.status}`);
   return res.json();
 }
+
+export async function fetchTrendDetail(
+  skillId,
+  { category = "", region = "", windowDays = 7, jobsLimit = 10, lang = "az", access = "" } = {},
+) {
+  const id = Number.parseInt(String(skillId ?? ""), 10);
+  if (!Number.isFinite(id) || id <= 0) return null;
+  const params = new URLSearchParams();
+  if (category) params.set("category", category);
+  if (region) params.set("region", region);
+  if (windowDays) params.set("window_days", String(windowDays));
+  if (jobsLimit) params.set("jobs_limit", String(jobsLimit));
+  if (lang) params.set("lang", lang);
+  const headers = { Accept: "application/json" };
+  if (access) headers.Authorization = `Bearer ${access}`;
+  const res = await apiFetch(`/api/v1/trends/${id}?${params.toString()}`, { headers });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`trend ${res.status}`);
+  return res.json();
+}

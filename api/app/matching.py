@@ -19,7 +19,13 @@ from app.role_suggestions import (
     _candidate_skills,
     _matching_granted,
     _pick_locale,
+    resolve_taxonomy_role,
 )
+
+# Soft boost when a job hits role signature skills (role= filter).
+ROLE_HIT_BOOST = 0.025
+ROLE_HIT_BOOST_CAP = 0.2
+ROLE_SIGNATURE_TOP = 40
 
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 50
@@ -498,12 +504,70 @@ def score_job(
     }
 
 
+def _role_signature_skill_ids(conn, role: str | None) -> set[int]:
+    """Signature skill IDs for an optional role= filter on matches."""
+    tax = resolve_taxonomy_role(conn, role)
+    if tax is None:
+        return set()
+    role_id = int(tax.get("id") or 0)
+    if role_id <= 0:
+        return set()
+    try:
+        rows = conn.execute(
+            """
+            SELECT skill_id
+            FROM role_skill_weight
+            WHERE role_id = ?
+            ORDER BY weight DESC
+            LIMIT ?
+            """,
+            (role_id, ROLE_SIGNATURE_TOP),
+        ).fetchall()
+    except Exception:
+        return set()
+    out: set[int] = set()
+    for row in rows:
+        sid = int(_row_get(row, "skill_id", 0) or 0)
+        if sid > 0:
+            out.add(sid)
+    return out
+
+
+def _apply_role_scope(
+    item: dict[str, Any],
+    *,
+    job_skills: list[tuple[int, str]],
+    role_skill_ids: set[int],
+) -> dict[str, Any] | None:
+    """Drop jobs with zero role-signature overlap; soft-boost hits."""
+    if not role_skill_ids:
+        return item
+    job_ids = {int(sid) for sid, _name in job_skills}
+    hits = len(job_ids & role_skill_ids)
+    if hits <= 0:
+        return None
+    boost = min(ROLE_HIT_BOOST_CAP, ROLE_HIT_BOOST * hits)
+    try:
+        score = float(item.get("score") or 0.0)
+    except (TypeError, ValueError):
+        score = 0.0
+    item["score"] = round(min(1.0, score + boost), 4)
+    comps = item.get("components") if isinstance(item.get("components"), dict) else {}
+    comps = dict(comps)
+    comps["role_hits"] = hits
+    comps["role_boost"] = boost
+    item["components"] = comps
+    item["role_skill_hits"] = hits
+    return item
+
+
 def matches_payload(
     conn,
     *,
     user_id: str,
     limit: int | None = None,
     lang: str | None = None,
+    role: str | None = None,
 ) -> dict:
     ensure_profile_tables(conn)
     ensure_match_tables(conn)
@@ -515,6 +579,7 @@ def matches_payload(
     raw_skills = profile.get("skills") if isinstance(profile.get("skills"), list) else []
     skill_count = len(raw_skills)
     matching = _matching_granted(conn, user_id)
+    role_name = (role or "").strip() or None
 
     base = {
         "matches": [],
@@ -524,6 +589,7 @@ def matches_payload(
         "skill_count": skill_count,
         "ai_rerank": False,
         "ai_llm_rerank": False,
+        "role": role_name or "",
     }
     if not matching:
         return base
@@ -540,18 +606,23 @@ def matches_payload(
     candidate_langs = _candidate_languages(profile)
     feedback = _load_feedback(conn, user_id)
     jobs, skills_by_job = _load_match_catalog(conn)
+    role_skill_ids = _role_signature_skill_ids(conn, role_name) if role_name else set()
 
     scored: list[dict[str, Any]] = []
     for job in jobs:
+        job_skills = skills_by_job.get(job["id"], [])
         item = score_job(
             job=job,
-            job_skills=skills_by_job.get(job["id"], []),
+            job_skills=job_skills,
             candidate=candidate,
             candidate_seniority=candidate_seniority,
             candidate_langs=candidate_langs,
             prefs=prefs,
             lang=locale,
         )
+        if item is None:
+            continue
+        item = _apply_role_scope(item, job_skills=job_skills, role_skill_ids=role_skill_ids)
         if item is None:
             continue
         fb = feedback.get(job["id"])
@@ -696,14 +767,22 @@ def _apply_semantic_rerank(
     return applied
 
 
-def list_matches(*, user_id: str, limit: int | None = None, lang: str | None = None) -> dict:
+def list_matches(
+    *,
+    user_id: str,
+    limit: int | None = None,
+    lang: str | None = None,
+    role: str | None = None,
+) -> dict:
     from app.cabinet_store import _LOCK, _connect
 
     subject = (user_id or "").strip()
     with _LOCK:
         conn = _connect()
         try:
-            return matches_payload(conn, user_id=subject, limit=limit, lang=lang)
+            return matches_payload(
+                conn, user_id=subject, limit=limit, lang=lang, role=role
+            )
         finally:
             conn.close()
 

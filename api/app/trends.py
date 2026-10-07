@@ -806,3 +806,294 @@ def trend_metrics_for_skills(
             "ad_count": ad_count,
         }
     return out
+
+
+DEFAULT_DETAIL_JOBS = 10
+MAX_DETAIL_JOBS = 10
+MIN_DETAIL_JOBS = 5
+
+
+def clamp_detail_jobs(value: int | None) -> int:
+    if value is None:
+        return DEFAULT_DETAIL_JOBS
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_DETAIL_JOBS
+    return max(MIN_DETAIL_JOBS, min(MAX_DETAIL_JOBS, n))
+
+
+def _jobs_for_skill(conn, *, skill_id: int, limit: int) -> list[dict]:
+    """Published jobs that require this skill, newest first."""
+    chosen = clamp_detail_jobs(limit)
+    try:
+        rows = conn.execute(
+            """
+            SELECT
+                j.id, j.title, j.company, j.city,
+                COALESCE(j.remote, 0) AS remote,
+                COALESCE(j.relocation, 0) AS relocation,
+                COALESCE(j.language, '') AS language,
+                COALESCE(j.category, '') AS category,
+                COALESCE(j.salary, '') AS salary,
+                COALESCE(j.created_at, '') AS created_at
+            FROM jobs j
+            JOIN job_skill js ON js.job_id = j.id
+            WHERE js.skill_id = ?
+              AND j.status = 'published'
+              AND COALESCE(j.hidden, 0) = 0
+              AND (j.merged_into IS NULL OR j.merged_into = 0)
+            ORDER BY j.created_at DESC, j.id DESC
+            LIMIT ?
+            """,
+            (skill_id, chosen),
+        ).fetchall()
+    except Exception:
+        return []
+    out: list[dict] = []
+    for row in rows:
+        out.append(
+            {
+                "job_id": int(_row_get(row, "id", 0)),
+                "title": str(_row_get(row, "title", 1) or ""),
+                "company": str(_row_get(row, "company", 2) or ""),
+                "city": str(_row_get(row, "city", 3) or ""),
+                "remote": bool(int(_row_get(row, "remote", 4) or 0)),
+                "relocation": bool(int(_row_get(row, "relocation", 5) or 0)),
+                "language": str(_row_get(row, "language", 6) or ""),
+                "category": str(_row_get(row, "category", 7) or ""),
+                "salary": str(_row_get(row, "salary", 8) or ""),
+                "created_at": str(_row_get(row, "created_at", 9) or ""),
+            }
+        )
+    return out
+
+
+def _you_vs_trend(
+    conn,
+    *,
+    user_id: str,
+    skill_id: int,
+    skill_name: str,
+    companions: list[dict],
+    academy_courses: list[str],
+) -> dict | None:
+    """Personalized have/missing vs focus skill + often_with companions."""
+    from app.cv_profile import _profile_payload, ensure_profile_tables
+    from app.role_suggestions import (
+        _build_skill_lookup,
+        _candidate_skills,
+        _matching_granted,
+    )
+
+    subject = (user_id or "").strip()
+    if not subject:
+        return None
+    ensure_profile_tables(conn)
+    matching = _matching_granted(conn, subject)
+    if not matching:
+        return {
+            "matching_consent": False,
+            "have_focus": False,
+            "have": [],
+            "missing": [],
+            "learn_next": [],
+        }
+
+    profile_payload = _profile_payload(conn, user_id=subject)
+    profile = profile_payload.get("profile") if isinstance(profile_payload.get("profile"), dict) else {}
+    lookup = _build_skill_lookup(conn)
+    candidate = _candidate_skills(profile, lookup)
+    have_focus = skill_id in candidate
+
+    companion_ids = [
+        int(row.get("skill_id") or 0)
+        for row in companions
+        if int(row.get("skill_id") or 0) > 0
+    ]
+    metrics = trend_metrics_for_skills(conn, skill_ids=companion_ids) if companion_ids else {}
+    companion_meta = _skill_meta(conn, companion_ids)
+
+    have: list[dict] = []
+    missing: list[dict] = []
+    for row in companions:
+        cid = int(row.get("skill_id") or 0)
+        if cid <= 0:
+            continue
+        info = companion_meta.get(cid) or {}
+        name = str(row.get("name") or info.get("name") or "").strip()
+        if not name:
+            continue
+        metric = metrics.get(cid) or {}
+        item = {
+            "skill_id": cid,
+            "name": name,
+            "share": float(row.get("share")) if isinstance(row.get("share"), (int, float)) else metric.get("share"),
+            "growth": metric.get("growth"),
+            "co_ad_count": int(row.get("co_ad_count") or 0) or None,
+            "academy_courses": list(info.get("academy_courses") or []),
+            "often_with": {
+                "base_name": skill_name,
+                "share": float(row.get("share")) if isinstance(row.get("share"), (int, float)) else None,
+            },
+        }
+        if cid in candidate:
+            have.append(item)
+        else:
+            missing.append(item)
+
+    learn_next = list(missing)
+    if not have_focus:
+        learn_next = [
+            {
+                "skill_id": skill_id,
+                "name": skill_name,
+                "share": None,
+                "growth": None,
+                "academy_courses": list(academy_courses or []),
+                "focus": True,
+            },
+            *learn_next,
+        ]
+
+    return {
+        "matching_consent": True,
+        "have_focus": have_focus,
+        "have": have,
+        "missing": missing,
+        "learn_next": learn_next,
+    }
+
+
+def trend_detail_payload(
+    conn,
+    *,
+    skill_id: int,
+    category: str | None = None,
+    region: str | None = None,
+    window_days: int | None = None,
+    jobs_limit: int | None = None,
+    lang: str | None = None,
+    user_id: str | None = None,
+) -> dict | None:
+    """Single-skill market detail + jobs + optional you-vs-trend."""
+    ensure_trend_tables(conn)
+    sid = int(skill_id or 0)
+    if sid <= 0:
+        return None
+    locale = _pick_locale(lang)
+    chosen_window = clamp_window(window_days)
+    cat = (category or "").strip()
+    reg = (region or "").strip()
+    as_of = _as_of_day(conn)
+    cur_start, cur_end = _window_bounds(as_of, chosen_window)
+    prior_end = as_of - timedelta(days=chosen_window)
+    prior_start, prior_end_s = _window_bounds(prior_end, chosen_window)
+
+    meta = _skill_meta(conn, [sid])
+    info = meta.get(sid)
+    if not info or not str(info.get("name") or "").strip():
+        return None
+    name = str(info.get("name") or "").strip()
+    academy_courses = list(info.get("academy_courses") or [])
+
+    current, prior = _skill_counts_windows(
+        conn,
+        cur_start=cur_start,
+        cur_end=cur_end,
+        prior_start=prior_start,
+        prior_end=prior_end_s,
+        category=cat,
+        region=reg,
+    )
+    denom, prior_denom = _category_job_counts_windows(
+        conn,
+        cur_start=cur_start,
+        cur_end=cur_end,
+        prior_start=prior_start,
+        prior_end=prior_end_s,
+        category=cat,
+        region=reg,
+    )
+    ad_count = int(current.get(sid) or 0)
+    share = round(ad_count / denom, 4) if denom > 0 else 0.0
+    prior_ads = int(prior.get(sid) or 0)
+    prior_share = (prior_ads / prior_denom) if prior_denom > 0 else 0.0
+    salaries = _skill_salaries(
+        conn,
+        start=cur_start,
+        end=cur_end,
+        category=cat,
+        region=reg,
+        skill_ids=[sid],
+    )
+    often_with = companions_for_skills(
+        conn,
+        base_skill_ids=[sid],
+        skill_counts=current,
+        start=cur_start,
+        end=cur_end,
+        category=cat,
+        pair_limit=MAX_PAIR_LIMIT,
+    ).get(sid) or []
+
+    jobs = _jobs_for_skill(conn, skill_id=sid, limit=jobs_limit)
+    payload = {
+        "skill_id": sid,
+        "name": name,
+        "ad_count": ad_count,
+        "share": share,
+        "growth_wow": growth_wow(share, prior_share, ad_count=ad_count),
+        "category_hint": str(info.get("category_hint") or ""),
+        "academy_courses": academy_courses,
+        "salary": salaries.get(sid),
+        "often_with": often_with,
+        "jobs": jobs,
+        "as_of": as_of.isoformat(),
+        "window_days": chosen_window,
+        "category": cat,
+        "region": reg,
+        "job_count": denom,
+        "disclaimer": DISCLAIMER[locale],
+        "source_note": SOURCE_NOTE[locale],
+        "you": None,
+    }
+    if user_id:
+        payload["you"] = _you_vs_trend(
+            conn,
+            user_id=user_id,
+            skill_id=sid,
+            skill_name=name,
+            companions=often_with,
+            academy_courses=academy_courses,
+        )
+    return payload
+
+
+def get_trend_detail(
+    *,
+    skill_id: int,
+    category: str | None = None,
+    region: str | None = None,
+    window_days: int | None = None,
+    jobs_limit: int | None = None,
+    lang: str | None = None,
+    user_id: str | None = None,
+) -> dict | None:
+    from app.cabinet_store import _LOCK, _connect
+
+    with _LOCK:
+        conn = _connect()
+        try:
+            return trend_detail_payload(
+                conn,
+                skill_id=skill_id,
+                category=category,
+                region=region,
+                window_days=window_days,
+                jobs_limit=jobs_limit,
+                lang=lang,
+                user_id=user_id,
+            )
+        finally:
+            conn.close()

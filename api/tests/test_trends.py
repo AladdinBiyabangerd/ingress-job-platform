@@ -432,6 +432,82 @@ class TrendsTests(unittest.TestCase):
         self.assertEqual(often["base_name"], "Java")
         self.assertAlmostEqual(often["share"], 4 / MIN_PAIR_BASE_ADS, places=3)
 
+    def test_trend_detail_jobs_and_you(self):
+        ids = self._skill_ids()
+        java_id = ids["Java"]
+        for i in range(MIN_PAIR_BASE_ADS):
+            job_id = self._insert_job(title=f"DetailJob{i}", day="2026-10-05", category="Backend")
+            with sqlite3.connect(self.db) as conn:
+                conn.execute(
+                    "INSERT INTO job_skill (job_id, skill_id, source) VALUES (?, ?, 'tech_stack')",
+                    (job_id, java_id),
+                )
+                conn.commit()
+        with sqlite3.connect(self.db) as conn:
+            ensure_trend_tables(conn)
+            conn.execute(
+                """
+                INSERT INTO skill_trend_daily (
+                    day, skill_id, category, region, remote, relocation, ad_count
+                ) VALUES ('2026-10-05', ?, 'Backend', '', 1, 0, ?)
+                """,
+                (java_id, MIN_PAIR_BASE_ADS),
+            )
+            conn.execute(
+                """
+                INSERT INTO skill_pair_daily (
+                    day, base_skill_id, pair_skill_id, category, co_ad_count
+                ) VALUES ('2026-10-05', ?, ?, 'Backend', 5)
+                """,
+                (java_id, ids["Kafka"]),
+            )
+            conn.commit()
+
+        public = self.client.get(f"/api/v1/trends/{java_id}?lang=en&window_days=7")
+        self.assertEqual(public.status_code, 200, public.text)
+        body = public.json()
+        self.assertEqual(body["skill_id"], java_id)
+        self.assertEqual(body["name"], "Java")
+        self.assertGreaterEqual(len(body["jobs"]), 5)
+        self.assertLessEqual(len(body["jobs"]), 10)
+        self.assertIsNone(body.get("you"))
+        self.assertTrue(any(row["name"] == "Kafka" for row in body.get("often_with") or []))
+
+        missing = self.client.get("/api/v1/trends/999999?lang=en")
+        self.assertEqual(missing.status_code, 404)
+
+        subject = "trend-you"
+        with sqlite3.connect(self.db) as conn:
+            ensure_cv_queue_tables(conn)
+            conn.execute(
+                """
+                INSERT INTO candidate_profile (
+                    user_id, cv_file_key, data, headline, seniority, total_years,
+                    status, parse_method, confidence, visibility, updated_at
+                ) VALUES (?, ?, ?, 'Backend', 'middle', 5, 'confirmed', 'rules', 0.9, 'anonymous', ?)
+                """,
+                (
+                    subject,
+                    "cvs/trend.pdf",
+                    json.dumps(PROFILE, ensure_ascii=False),
+                    "2026-10-05T12:00:00+00:00",
+                ),
+            )
+            conn.commit()
+        self._grant_matching(subject)
+        with self._auth("job:candidate", subject):
+            personalized = self.client.get(
+                f"/api/v1/trends/{java_id}?lang=en&window_days=7",
+                headers=self.headers,
+            )
+        self.assertEqual(personalized.status_code, 200, personalized.text)
+        you = personalized.json().get("you")
+        self.assertIsNotNone(you)
+        self.assertTrue(you["matching_consent"])
+        self.assertTrue(you["have_focus"])
+        learn_names = [item["name"] for item in you.get("learn_next") or []]
+        self.assertIn("Kafka", learn_names)
+
 
 if __name__ == "__main__":
     unittest.main()

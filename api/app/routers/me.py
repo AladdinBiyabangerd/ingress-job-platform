@@ -46,11 +46,12 @@ def get_roles(
 def get_matches(
     limit: int | None = Query(default=None, ge=1, le=MATCH_MAX_LIMIT),
     lang: str | None = Query(default=None, max_length=8),
+    role: str | None = Query(default=None, max_length=120),
     user: VerifiedAccess = Depends(current_user),
 ) -> dict:
-    """Structured job matches (plan §6.2). AI #2 re-rank off on SQLite."""
+    """Structured job matches (plan §6.2). Optional role= scopes to signature skills."""
     _require_candidate(user)
-    return list_matches(user_id=user.subject, limit=limit, lang=lang)
+    return list_matches(user_id=user.subject, limit=limit, lang=lang, role=role)
 
 
 @router.post("/matches/{job_id}/feedback")

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
 import { loadSkillGap } from "../lib/server/refresh";
+import { CareerPathLink, SkillRow } from "./skill-gap-bits";
 import { Pager } from "./pager";
 import { RegisterChoice } from "./register-choice";
 import { RoleSkillParts } from "./role-skill-parts";
@@ -12,7 +13,7 @@ import { Shell } from "./shell";
 import { useInitialMe } from "./me-seed";
 
 const REASONS = ["location", "seniority", "technology", "salary"];
-const MATCHES_FETCH_LIMIT = 50;
+const MATCHES_FETCH_LIMIT = 10;
 
 function countSkills(items) {
   if (!Array.isArray(items)) return 0;
@@ -104,19 +105,28 @@ function MatchJob({ t, locale, job, busy, onFeedback }) {
   );
 }
 
-export function Recommendations({ locale, initialRoles = null, initialMatches = null }) {
+export function Recommendations({
+  locale,
+  initialRoles = null,
+  initialMatches = null,
+  initialGap = null,
+}) {
   const t = text(locale);
   const lang = locale === "en" || locale === "ru" ? locale : "az";
   const initialMe = useInitialMe();
   const seededCatalog = initialRoles != null && initialMatches != null;
+  const initialTopRole = initialRoles?.roles?.[0]?.canonical_name || "";
+  const seededInitialGap = initialGap != null;
+  const ssrGapPending = useRef(seededInitialGap);
+  const ssrMatchesPending = useRef(seededCatalog);
   const [me, setMe] = useState(() => {
     if (initialMe && typeof initialMe === "object") return initialMe.authenticated ? initialMe : null;
     return undefined;
   });
   const [roles, setRoles] = useState(initialRoles);
   const [matches, setMatches] = useState(initialMatches);
-  const [activeRole, setActiveRole] = useState(initialRoles?.roles?.[0]?.canonical_name || "");
-  const [gap, setGap] = useState(null);
+  const [activeRole, setActiveRole] = useState(initialTopRole);
+  const [gap, setGap] = useState(initialGap);
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
@@ -143,26 +153,16 @@ export function Recommendations({ locale, initialRoles = null, initialMatches = 
     if (!me || !(me.candidate || me.staff)) return undefined;
     if (seededCatalog) return undefined;
     let cancelled = false;
-    Promise.all([
-      fetch(`/api/auth/me/roles?lang=${lang}`, { cache: "no-store" }).then((res) =>
-        res.ok ? res.json() : null,
-      ),
-      fetch(`/api/auth/me/matches?lang=${lang}&limit=${MATCHES_FETCH_LIMIT}`, {
-        cache: "no-store",
-      }).then((res) => (res.ok ? res.json() : null)),
-    ])
-      .then(([rolesPayload, matchesPayload]) => {
+    fetch(`/api/auth/me/roles?lang=${lang}`, { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((rolesPayload) => {
         if (cancelled) return;
         setRoles(rolesPayload);
-        setMatches(matchesPayload);
         const topRole = rolesPayload?.roles?.[0]?.canonical_name || "";
         setActiveRole(topRole);
       })
       .catch(() => {
-        if (!cancelled) {
-          setRoles(null);
-          setMatches(null);
-        }
+        if (!cancelled) setRoles(null);
       });
     return () => {
       cancelled = true;
@@ -171,21 +171,44 @@ export function Recommendations({ locale, initialRoles = null, initialMatches = 
 
   useEffect(() => {
     if (!me || !(me.candidate || me.staff) || !activeRole) {
-      setGap(null);
+      if (!ssrGapPending.current) setGap(null);
+      if (!ssrMatchesPending.current) setMatches(null);
       return undefined;
     }
+    if (
+      ssrGapPending.current &&
+      ssrMatchesPending.current &&
+      activeRole === initialTopRole
+    ) {
+      ssrGapPending.current = false;
+      ssrMatchesPending.current = false;
+      return undefined;
+    }
+    ssrGapPending.current = false;
+    ssrMatchesPending.current = false;
     let cancelled = false;
-    loadSkillGap(lang, activeRole)
-      .then((data) => {
-        if (!cancelled) setGap(data);
+    const roleQs = `&role=${encodeURIComponent(activeRole)}`;
+    Promise.all([
+      loadSkillGap(lang, activeRole),
+      fetch(`/api/auth/me/matches?lang=${lang}&limit=${MATCHES_FETCH_LIMIT}${roleQs}`, {
+        cache: "no-store",
+      }).then((res) => (res.ok ? res.json() : null)),
+    ])
+      .then(([gapPayload, matchesPayload]) => {
+        if (cancelled) return;
+        setGap(gapPayload);
+        setMatches(matchesPayload);
       })
       .catch(() => {
-        if (!cancelled) setGap(null);
+        if (!cancelled) {
+          setGap(null);
+          setMatches(null);
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, [me, lang, activeRole]);
+  }, [me, lang, activeRole, initialTopRole]);
 
   const jobList = Array.isArray(matches?.matches) ? matches.matches : [];
   const { pageItems, currentPage, totalPages, pageSize, total, goToPage } = usePagination(
@@ -234,7 +257,9 @@ export function Recommendations({ locale, initialRoles = null, initialMatches = 
   const selectedScore =
     selected && typeof selected.score === "number" ? Math.round(selected.score * 100) : null;
   const coach = gap?.coach && typeof gap.coach === "object" ? gap.coach : null;
-  const coachLearn = Array.isArray(coach?.must_learn) ? coach.must_learn.slice(0, 3) : [];
+  const missing = Array.isArray(gap?.missing) ? gap.missing : [];
+  const have = Array.isArray(gap?.have) ? gap.have : [];
+  const hasGap = missing.length > 0 || have.length > 0;
 
   return (
     <Shell locale={locale} mode="recommendations">
@@ -322,28 +347,13 @@ export function Recommendations({ locale, initialRoles = null, initialMatches = 
                         .join(" · ")}
                     </p>
                   </div>
-                  <a
-                    className="recommendations-gap-link"
-                    href={hrefFor(locale, { mode: "skills" })}
-                  >
-                    {t.recommendationsGapLink}
-                  </a>
+                  <CareerPathLink t={t} pathId={gap?.academy_career_path} />
                 </header>
               ) : null}
 
               {selected && coach?.fit_summary ? (
                 <div className="recommendations-coach">
                   <p className="recommendations-coach-summary">{coach.fit_summary}</p>
-                  {coachLearn.length ? (
-                    <ul className="recommendations-coach-learn">
-                      {coachLearn.map((item) => (
-                        <li key={`reco-coach-${item.skill}`}>
-                          <strong>{item.skill}</strong>
-                          {item.why ? <span className="hint"> — {item.why}</span> : null}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
                   <a
                     className="recommendations-gap-link"
                     href={hrefFor(locale, { mode: "skills" })}
@@ -354,9 +364,42 @@ export function Recommendations({ locale, initialRoles = null, initialMatches = 
               ) : null}
 
               {selected ? (
-                <div className="recommendations-role-skills">
-                  <RoleSkillParts t={t} have={selected.have} missing={selected.missing} />
-                </div>
+                !hasGap ? (
+                  <p className="hint">{t.recommendationsGapEmpty}</p>
+                ) : (
+                  <div className="skills-panels recommendations-gap-panels">
+                    <div className="skills-panel skills-panel-missing">
+                      <h3>
+                        {t.recommendationsGapLearn}
+                        <span className="skills-panel-count">{missing.length}</span>
+                      </h3>
+                      {!missing.length ? (
+                        <p className="hint">{t.skillsMissingEmpty}</p>
+                      ) : (
+                        <ul className="skills-rows">
+                          {missing.map((item) => (
+                            <SkillRow key={`missing-${item.name}`} t={t} item={item} tone="missing" />
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <div className="skills-panel skills-panel-have">
+                      <h3>
+                        {t.skillsHave}
+                        <span className="skills-panel-count">{have.length}</span>
+                      </h3>
+                      {!have.length ? (
+                        <p className="hint">{t.skillsHaveEmpty}</p>
+                      ) : (
+                        <ul className="skills-rows">
+                          {have.map((item) => (
+                            <SkillRow key={`have-${item.name}`} t={t} item={item} tone="have" />
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                )
               ) : null}
 
               <div className="recommendations-jobs">

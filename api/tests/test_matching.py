@@ -343,6 +343,52 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual(res.json()["role"], "Java Developer")
         self.assertEqual([x["name"] for x in res.json()["have"]], ["Java"])
 
+    def test_matches_role_scopes_to_signature_skills(self):
+        subject = "match-role"
+        self._seed_profile(subject)
+        java_id = self._insert_job(title="Java Developer", skills=["Java", "Spring"])
+        # Profile overlap (Kafka) but outside role signature — drop when role=.
+        kafka_id = self._insert_job(title="Kafka Engineer", skills=["Kafka"])
+        ids = self._skill_ids()
+        with sqlite3.connect(self.db) as conn:
+            conn.execute(
+                """
+                INSERT INTO role_taxonomy (canonical_name, category, synonyms, updated_at)
+                VALUES ('Java Developer', 'Backend', '[]', '2026-10-05T12:00:00+00:00')
+                """
+            )
+            role_id = conn.execute(
+                "SELECT id FROM role_taxonomy WHERE canonical_name = 'Java Developer'"
+            ).fetchone()[0]
+            for name, weight in (("Java", 1.0), ("Spring", 0.8)):
+                conn.execute(
+                    "INSERT INTO role_skill_weight (role_id, skill_id, weight) VALUES (?, ?, ?)",
+                    (role_id, ids[name], weight),
+                )
+            conn.commit()
+        self._grant_matching(subject)
+        with self._auth("job:candidate", subject):
+            plain = self.client.get(
+                "/api/v1/me/matches?lang=en&limit=10", headers=self.headers
+            )
+            scoped = self.client.get(
+                "/api/v1/me/matches?lang=en&limit=10&role=Java%20Developer",
+                headers=self.headers,
+            )
+        self.assertEqual(plain.status_code, 200, plain.text)
+        self.assertEqual(scoped.status_code, 200, scoped.text)
+        plain_ids = {item["job_id"] for item in plain.json()["matches"]}
+        scoped_body = scoped.json()
+        scoped_ids = {item["job_id"] for item in scoped_body["matches"]}
+        self.assertEqual(scoped_body.get("role"), "Java Developer")
+        self.assertIn(java_id, plain_ids)
+        self.assertIn(kafka_id, plain_ids)
+        self.assertIn(java_id, scoped_ids)
+        self.assertNotIn(kafka_id, scoped_ids)
+        top = scoped_body["matches"][0]
+        self.assertEqual(top["job_id"], java_id)
+        self.assertGreaterEqual(int(top.get("role_skill_hits") or 0), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

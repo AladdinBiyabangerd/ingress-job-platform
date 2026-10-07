@@ -3053,6 +3053,48 @@ textarea { min-height: 120px; resize: vertical; }
   box-shadow: 0 1px 0 rgba(32, 36, 43, 0.03), 0 8px 20px rgba(9, 47, 132, 0.04);
 }
 
+.trends-card-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.trends-card-link:hover .trends-card-title h2,
+.trends-card-link:focus-visible .trends-card-title h2 {
+  color: #001fff;
+}
+
+.trend-detail-page .trend-detail-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.trend-detail-page .trend-detail-block {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0 0;
+}
+
+.trend-detail-page .trend-detail-block h2 {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 1.15rem;
+}
+
+.trend-detail-page .trend-detail-guest {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.trend-detail-page .trend-detail-jobs {
+  margin: 0;
+}
+
 .trends-card-top {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
