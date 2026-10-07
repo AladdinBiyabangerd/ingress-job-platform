@@ -24,7 +24,8 @@ function emptyAdmin() {
 }
 
 /**
- * Moderation queue, applications, crawled ads, and AI flags for /admin.
+ * Moderation queue + applications for /admin first paint.
+ * Crawled ads and AI flags load on tab open (CollectedAdmin / AdminAiFlags).
  * Skips FastAPI for guests and non-staff. Deduped within one RSC request.
  */
 export const getAdmin = cache(async () => {
@@ -34,19 +35,12 @@ export const getAdmin = cache(async () => {
   }
   const access = await sessionAccess();
   if (!access) return emptyAdmin();
-  const [jobs, applications, crawled, ai] = await Promise.all([
-    loadJson(access, "/api/v1/admin/jobs"),
-    loadJson(access, "/api/v1/admin/applications"),
-    loadJson(access, "/api/v1/admin/crawled"),
-    loadJson(access, "/api/v1/admin/ai-flags"),
-  ]);
+  // Default tab only. Applications, crawled, and AI flags load after paint / on tab.
+  const jobs = await loadJson(access, "/api/v1/admin/jobs");
   return {
     jobs: jobs && Array.isArray(jobs.items) ? jobs.items : null,
-    applications: applications && Array.isArray(applications.items) ? applications.items : null,
-    crawled: crawled && Array.isArray(crawled.items) ? crawled.items : null,
-    aiFlags:
-      ai && ai.flags && typeof ai.flags === "object"
-        ? { flags: ai.flags, key_configured: Boolean(ai.key_configured) }
-        : null,
+    applications: null,
+    crawled: null,
+    aiFlags: null,
   };
 });

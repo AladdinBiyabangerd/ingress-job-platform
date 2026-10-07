@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { text } from "../lib/copy";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
-import { crawledMerge, crawledPatchJob, crawledVisibility, refreshCrawled } from "../lib/server/refresh";
+import {
+  crawledMerge,
+  crawledPatchJob,
+  crawledVisibility,
+  fetchCrawledJob,
+  refreshCrawled,
+} from "../lib/server/refresh";
 import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
@@ -37,6 +43,7 @@ export function CollectedAdmin({ locale, initialItems = null }) {
   const [keepId, setKeepId] = useState(null);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function load() {
     setItems(await refreshCrawled());
@@ -202,11 +209,18 @@ export function CollectedAdmin({ locale, initialItems = null }) {
               <button
                 type="button"
                 className="btn primary"
+                disabled={busy}
                 onClick={() => {
-                  setEditing(job.id);
-                  setForm(fromJob(locale, job));
                   setError("");
                   setNote("");
+                  setBusy(true);
+                  fetchCrawledJob(job.id)
+                    .then((full) => {
+                      setEditing(job.id);
+                      setForm(fromJob(locale, full));
+                    })
+                    .catch(() => setError(t.loadError))
+                    .finally(() => setBusy(false));
                 }}
               >
                 {t.adEdit}

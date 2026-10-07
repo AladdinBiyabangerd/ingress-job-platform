@@ -4,7 +4,14 @@ import { useEffect, useState } from "react";
 import { applyFormFromJob, applyFormPayload, applyFormReady } from "../lib/apply-form";
 import { hrefFor, languageLabel, text } from "../lib/copy";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
-import { adminActJob, adminPatchJob, adminRejectJob, refreshAdminQueue } from "../lib/server/refresh";
+import {
+  adminActJob,
+  adminPatchJob,
+  adminRejectJob,
+  fetchAdminJob,
+  refreshAdminApplications,
+  refreshAdminQueue,
+} from "../lib/server/refresh";
 import { AdminAiFlags } from "./admin-ai-flags";
 import { ApplicationList } from "./application-list";
 import { ApplyFormFields } from "./apply-form-fields";
@@ -80,13 +87,18 @@ export function Admin({
   useEffect(() => {
     if (seededList) return undefined;
     let cancelled = false;
-    load().catch(() => {
+    const boot = seededJobs
+      ? refreshAdminApplications().then((apps) => {
+          if (!cancelled) setApplications(apps);
+        })
+      : load();
+    boot.catch(() => {
       if (!cancelled) setError(t.loadError);
     });
     return () => {
       cancelled = true;
     };
-  }, [seededList, t.loadError]);
+  }, [seededList, seededJobs, t.loadError]);
 
   const { pageItems, currentPage, totalPages, pageSize, total, goToPage } = usePagination(items, LIST_PAGE_SIZE);
 
@@ -349,7 +361,11 @@ export function Admin({
                   {job.job_type ? <span>{typeLabel(t, job.job_type)}</span> : null}
                   {job.salary ? <span>{job.salary}</span> : null}
                 </div>
-                <p className="admin-body">{job.text}</p>
+                {job.text ? (
+                  <p className="admin-body">
+                    {job.text.length > 280 ? `${job.text.slice(0, 280)}…` : job.text}
+                  </p>
+                ) : null}
                 {job.reject_reason ? <p className="note">{t.rejectReason}: {job.reject_reason}</p> : null}
                 <div className="ad-actions">
                   {job.status !== "closed" ? (
@@ -357,11 +373,18 @@ export function Admin({
                       type="button"
                       className="btn primary"
                       onClick={() => {
-                        setEditing(job.id);
-                        setForm(fromJob(locale, job));
                         setError("");
                         setNote("");
+                        setBusy(true);
+                        fetchAdminJob(job.id)
+                          .then((full) => {
+                            setEditing(job.id);
+                            setForm(fromJob(locale, full));
+                          })
+                          .catch(() => setError(t.loadError))
+                          .finally(() => setBusy(false));
                       }}
+                      disabled={busy}
                     >
                       {t.adEdit}
                     </button>

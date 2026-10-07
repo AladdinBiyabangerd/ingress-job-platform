@@ -16,12 +16,13 @@ from app.cabinet_store import (
     CabinetError,
     approve_ad,
     create_sourced_ad,
+    get_moderation,
     list_moderation,
     reject_ad,
     staff_close_ad,
     staff_update_ad,
 )
-from app.crawled_admin import list_crawled, merge_crawled, set_crawled_hidden, update_crawled
+from app.crawled_admin import get_crawled, list_crawled, merge_crawled, set_crawled_hidden, update_crawled
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
@@ -163,6 +164,11 @@ def read_queue(_user: VerifiedAccess = Depends(require_staff)) -> dict:
     return {"items": list_moderation()}
 
 
+@router.get("/jobs/{job_id}")
+def read_job(job_id: int, _user: VerifiedAccess = Depends(require_staff)) -> dict:
+    return _run(lambda: get_moderation(job_id))
+
+
 @router.post("/jobs", status_code=201)
 def manual_ad(body: ManualIn, user: VerifiedAccess = Depends(require_staff)) -> dict:
     fields = _attach_form(_fields(body), body, missing="default")
@@ -212,6 +218,11 @@ def close(job_id: int, _user: VerifiedAccess = Depends(require_staff)) -> dict:
 @router.get("/crawled")
 def read_crawled(_user: VerifiedAccess = Depends(require_staff)) -> dict:
     return {"items": list_crawled()}
+
+
+@router.get("/crawled/{job_id}")
+def read_one_crawled(job_id: int, _user: VerifiedAccess = Depends(require_staff)) -> dict:
+    return _run(lambda: get_crawled(job_id))
 
 
 @router.patch("/crawled/{job_id}")

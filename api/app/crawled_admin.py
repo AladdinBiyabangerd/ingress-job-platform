@@ -6,7 +6,18 @@ import sqlite3
 
 from app.cabinet_store import CabinetError, _LOCK, _connect, _now
 
-_LIST = """
+# List responses keep a short body; edit loads the full row via get_crawled.
+_TEXT_PREVIEW = 400
+
+_SOURCE_JOIN = """
+LEFT JOIN (
+    SELECT job_id, source_name
+    FROM job_sources
+    WHERE id IN (SELECT MIN(id) FROM job_sources GROUP BY job_id)
+) js ON js.job_id = j.id
+"""
+
+_LIST = f"""
 SELECT
     j.id,
     j.title,
@@ -22,17 +33,31 @@ SELECT
     COALESCE(j.updated_at, '') AS updated_at,
     COALESCE(j.hidden, 0) AS hidden,
     j.merged_into,
-    COALESCE(
-        (
-            SELECT js.source_name
-            FROM job_sources js
-            WHERE js.job_id = j.id
-            ORDER BY js.id
-            LIMIT 1
-        ),
-        ''
-    ) AS source_name
+    COALESCE(js.source_name, '') AS source_name
 FROM jobs j
+{_SOURCE_JOIN}
+WHERE COALESCE(j.owner_subject, '') = ''
+"""
+
+_LIST_PREVIEW = f"""
+SELECT
+    j.id,
+    j.title,
+    j.company,
+    j.city,
+    COALESCE(j.remote, 0) AS remote,
+    substr(j.text, 1, {_TEXT_PREVIEW}) AS text,
+    COALESCE(j.language, '') AS language,
+    COALESCE(j.salary, '') AS salary,
+    COALESCE(j.job_type, '') AS job_type,
+    j.status,
+    j.created_at,
+    COALESCE(j.updated_at, '') AS updated_at,
+    COALESCE(j.hidden, 0) AS hidden,
+    j.merged_into,
+    COALESCE(js.source_name, '') AS source_name
+FROM jobs j
+{_SOURCE_JOIN}
 WHERE COALESCE(j.owner_subject, '') = ''
 """
 
@@ -66,11 +91,22 @@ def list_crawled() -> list[dict]:
     conn = _connect()
     try:
         rows = conn.execute(
-            f"{_LIST} ORDER BY COALESCE(j.hidden, 0), j.id DESC"
+            f"{_LIST_PREVIEW} ORDER BY COALESCE(j.hidden, 0), j.id DESC"
         ).fetchall()
     finally:
         conn.close()
     return [_public(row) for row in rows]
+
+
+def get_crawled(job_id: int) -> dict:
+    conn = _connect()
+    try:
+        row = _one(conn, job_id)
+    finally:
+        conn.close()
+    if row is None:
+        raise CabinetError(404, "Elan tapılmadı")
+    return _public(row)
 
 
 def update_crawled(job_id: int, fields: dict) -> dict:

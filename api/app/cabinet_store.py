@@ -643,14 +643,23 @@ def _cabinet_row(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
     ).fetchone()
 
 
+_TEXT_PREVIEW = 400
+
+
 def list_moderation() -> list[dict]:
-    """Pending company ads first, then published, closed, and rejected."""
+    """Pending company ads first, then published, closed, and rejected.
+
+    List rows carry a short body only; edit loads the full ad via get_moderation.
+    """
     conn = _connect()
     try:
         rows = conn.execute(
-            """
-            SELECT id, title, company, city, remote, text, language, salary,
-                   job_type, status, created_at, updated_at, reject_reason, apply_form, owner_subject
+            f"""
+            SELECT id, title, company, city, remote,
+                   substr(text, 1, {_TEXT_PREVIEW}) AS text,
+                   language, salary,
+                   job_type, status, created_at, updated_at, reject_reason,
+                   '' AS apply_form, owner_subject
             FROM jobs
             WHERE owner_subject != ''
             ORDER BY
@@ -667,6 +676,17 @@ def list_moderation() -> list[dict]:
     finally:
         conn.close()
     return [_owner(row) for row in rows]
+
+
+def get_moderation(job_id: int) -> dict:
+    conn = _connect()
+    try:
+        row = _cabinet_row(conn, job_id)
+    finally:
+        conn.close()
+    if row is None:
+        raise CabinetError(404, "Elan tapılmadı")
+    return _owner(row)
 
 
 def approve_ad(job_id: int) -> dict:

@@ -1,29 +1,29 @@
 # Current task
 
 ## Completed
-- Profile review form enriched (option A): About, city/country, links, work location+summary, education, languages.
-- Backend `summary` field on candidate profile JSON; CV parse stores About/Summary section; AI #1 schema/merge includes summary.
-- Embeddings text includes summary snippet.
-- Locales az/en/ru + CSS grids for new sections.
-- Tests: `api/tests/test_cv_profile.py`, `worker/tests/test_cv_parse.py`, `worker/tests/test_cv_ai_fallback.py`.
+- Admin first-paint speedup: SSR loads only moderation queue (`/admin/jobs`).
+- Applications, crawled, AI flags load after paint / on tab open.
+- Crawled + moderation list APIs return text preview (400 chars); full body via GET by id on edit.
+- Crawled `source_name` via join instead of per-row subquery.
 
 ## Current state
-- UI `/profile/review` saves/loads the richer fields via existing GET/PUT `/api/v1/profile`.
-- No DB migration — fields live in `candidate_profile.data` JSON.
+- Admin first-paint / list-preview changes ready to deploy.
+- Profile-review enrichment already committed earlier on this branch.
 
 ## Decisions
-- Field name in JSON is `summary` (CV section name); UI label is About / Haqqında / О себе. `about` accepted as alias on save.
-- Languages: fixed common codes (az/en/ru/tr/de/fr) + CEFR/native levels.
+- List endpoints stay unpaginated for now; payload size cut via text preview + lazy SSR tabs.
+- Edit always fetches `GET /api/v1/admin/jobs/{id}` or `.../crawled/{id}` so form/full text stay correct.
 
 ## Remaining
-1. Deploy API + web; smoke-test `/profile/review` with CV upload and manual fill.
-2. Optional later: desired roles / remote prefs / salary on the same form.
+1. Smoke-test `/admin` after deploy (queue open, edit job, collected tab, applications badge).
+2. Optional later: server-side pagination for crawled/applications if lists grow further.
 
 ## Relevant files
-- `frontend/components/profile-review.js`
-- `frontend/lib/copy.js`
-- `frontend/app/globals.css`
-- `api/app/cv_profile.py`
-- `api/app/embeddings.py`
-- `worker/worker/cv_parse/pipeline.py`
-- `worker/worker/cv_parse/ai_fallback.py`
+- `frontend/lib/server/admin.js`
+- `frontend/lib/server/refresh.js`
+- `frontend/components/admin.js`
+- `frontend/components/collected-admin.js`
+- `api/app/crawled_admin.py`
+- `api/app/cabinet_store.py`
+- `api/app/routers/admin.py`
+- `api/tests/test_admin.py`

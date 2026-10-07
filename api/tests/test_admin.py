@@ -78,6 +78,13 @@ class AdminTests(unittest.TestCase):
             self.assertEqual(items[0]["id"], ad_id)
             self.assertEqual(items[0]["status"], "pending")
             self.assertNotIn("source_url", queue.text)
+            detail = self.client.get(
+                f"/api/v1/admin/jobs/{ad_id}",
+                headers={"Authorization": "Bearer test"},
+            )
+            self.assertEqual(detail.status_code, 200, detail.text)
+            self.assertEqual(detail.json()["id"], ad_id)
+            self.assertIn("form", detail.json())
 
             edited = self.client.patch(
                 f"/api/v1/admin/jobs/{ad_id}",
@@ -233,6 +240,14 @@ class AdminTests(unittest.TestCase):
             self.assertEqual([item["id"] for item in listed.json()["items"]], [ids[1], ids[0]])
             self.assertNotIn("source_url", listed.text)
             self.assertNotIn("secret.example", listed.text)
+            one = self.client.get(
+                f"/api/v1/admin/crawled/{ids[0]}",
+                headers={"Authorization": "Bearer test"},
+            )
+            self.assertEqual(one.status_code, 200, one.text)
+            self.assertEqual(one.json()["id"], ids[0])
+            self.assertEqual(one.json()["text"], "Toplanmis metn")
+            self.assertNotIn("source_url", one.text)
             edited = self.client.patch(
                 f"/api/v1/admin/crawled/{ids[0]}",
                 headers={"Authorization": "Bearer test"},

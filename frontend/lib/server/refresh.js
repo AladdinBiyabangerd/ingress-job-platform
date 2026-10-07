@@ -80,9 +80,33 @@ export async function refreshAdminQueue() {
   };
 }
 
+/** Applications list only (admin badge / tab after first paint). */
+export async function refreshAdminApplications() {
+  try {
+    const applications = await loadJson("/api/v1/admin/applications");
+    return Array.isArray(applications.items) ? applications.items : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Full moderation ad for edit (list rows only carry a text preview). */
+export async function fetchAdminJob(id) {
+  const jobId = numericId(id);
+  if (!jobId) throw new Error("load");
+  return loadJson(`/api/v1/admin/jobs/${jobId}`);
+}
+
 /** Crawled ads after hide/show/edit/merge. Hits FastAPI, not the BFF. */
 export async function refreshCrawled() {
   return itemsOf(await loadJson("/api/v1/admin/crawled"));
+}
+
+/** Full crawled ad for edit (list rows only carry a text preview). */
+export async function fetchCrawledJob(id) {
+  const jobId = numericId(id);
+  if (!jobId) throw new Error("load");
+  return loadJson(`/api/v1/admin/crawled/${jobId}`);
 }
 
 /** PUT AI flags on FastAPI and return the saved payload (no BFF). */
