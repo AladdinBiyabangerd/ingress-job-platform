@@ -808,9 +808,9 @@ def trend_metrics_for_skills(
     return out
 
 
-DEFAULT_DETAIL_JOBS = 10
-MAX_DETAIL_JOBS = 10
-MIN_DETAIL_JOBS = 5
+DEFAULT_DETAIL_JOBS = 20
+MAX_DETAIL_JOBS = 50
+MIN_DETAIL_JOBS = 0
 
 
 def clamp_detail_jobs(value: int | None) -> int:
@@ -823,12 +823,40 @@ def clamp_detail_jobs(value: int | None) -> int:
     return max(MIN_DETAIL_JOBS, min(MAX_DETAIL_JOBS, n))
 
 
-def _jobs_for_skill(conn, *, skill_id: int, limit: int) -> list[dict]:
-    """Published jobs that require this skill, newest first."""
+def clamp_jobs_page(value: int | None) -> int:
+    if value is None:
+        return 1
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return 1
+    return max(1, n)
+
+
+def _jobs_for_skill(
+    conn, *, skill_id: int, limit: int, offset: int = 0
+) -> tuple[list[dict], int]:
+    """Published jobs that require this skill, newest first. Returns (page, total)."""
     chosen = clamp_detail_jobs(limit)
+    start = max(0, int(offset or 0))
+    where = """
+            FROM jobs j
+            JOIN job_skill js ON js.job_id = j.id
+            WHERE js.skill_id = ?
+              AND j.status = 'published'
+              AND COALESCE(j.hidden, 0) = 0
+              AND (j.merged_into IS NULL OR j.merged_into = 0)
+    """
+    try:
+        total_row = conn.execute(f"SELECT COUNT(*) AS n {where}", (skill_id,)).fetchone()
+        total = int(_row_get(total_row, "n", 0) or 0) if total_row is not None else 0
+    except Exception:
+        return [], 0
+    if chosen <= 0 or total <= 0:
+        return [], total
     try:
         rows = conn.execute(
-            """
+            f"""
             SELECT
                 j.id, j.title, j.company, j.city,
                 COALESCE(j.remote, 0) AS remote,
@@ -837,19 +865,14 @@ def _jobs_for_skill(conn, *, skill_id: int, limit: int) -> list[dict]:
                 COALESCE(j.category, '') AS category,
                 COALESCE(j.salary, '') AS salary,
                 COALESCE(j.created_at, '') AS created_at
-            FROM jobs j
-            JOIN job_skill js ON js.job_id = j.id
-            WHERE js.skill_id = ?
-              AND j.status = 'published'
-              AND COALESCE(j.hidden, 0) = 0
-              AND (j.merged_into IS NULL OR j.merged_into = 0)
+            {where}
             ORDER BY j.created_at DESC, j.id DESC
-            LIMIT ?
+            LIMIT ? OFFSET ?
             """,
-            (skill_id, chosen),
+            (skill_id, chosen, start),
         ).fetchall()
     except Exception:
-        return []
+        return [], total
     out: list[dict] = []
     for row in rows:
         out.append(
@@ -866,7 +889,7 @@ def _jobs_for_skill(conn, *, skill_id: int, limit: int) -> list[dict]:
                 "created_at": str(_row_get(row, "created_at", 9) or ""),
             }
         )
-    return out
+    return out, total
 
 
 def _you_vs_trend(
@@ -973,6 +996,7 @@ def trend_detail_payload(
     region: str | None = None,
     window_days: int | None = None,
     jobs_limit: int | None = None,
+    jobs_page: int | None = None,
     lang: str | None = None,
     user_id: str | None = None,
 ) -> dict | None:
@@ -1037,7 +1061,16 @@ def trend_detail_payload(
         pair_limit=MAX_PAIR_LIMIT,
     ).get(sid) or []
 
-    jobs = _jobs_for_skill(conn, skill_id=sid, limit=jobs_limit)
+    per_page = clamp_detail_jobs(jobs_limit)
+    page = clamp_jobs_page(jobs_page)
+    offset = (page - 1) * per_page if per_page > 0 else 0
+    jobs, jobs_total = _jobs_for_skill(conn, skill_id=sid, limit=per_page, offset=offset)
+    if per_page > 0 and jobs_total > 0:
+        max_page = max(1, (jobs_total + per_page - 1) // per_page)
+        if page > max_page:
+            page = max_page
+            offset = (page - 1) * per_page
+            jobs, jobs_total = _jobs_for_skill(conn, skill_id=sid, limit=per_page, offset=offset)
     payload = {
         "skill_id": sid,
         "name": name,
@@ -1049,6 +1082,9 @@ def trend_detail_payload(
         "salary": salaries.get(sid),
         "often_with": often_with,
         "jobs": jobs,
+        "jobs_total": jobs_total,
+        "jobs_page": page,
+        "jobs_per_page": per_page,
         "as_of": as_of.isoformat(),
         "window_days": chosen_window,
         "category": cat,
@@ -1077,6 +1113,7 @@ def get_trend_detail(
     region: str | None = None,
     window_days: int | None = None,
     jobs_limit: int | None = None,
+    jobs_page: int | None = None,
     lang: str | None = None,
     user_id: str | None = None,
 ) -> dict | None:
@@ -1092,6 +1129,7 @@ def get_trend_detail(
                 region=region,
                 window_days=window_days,
                 jobs_limit=jobs_limit,
+                jobs_page=jobs_page,
                 lang=lang,
                 user_id=user_id,
             )

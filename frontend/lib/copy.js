@@ -118,6 +118,7 @@ export const copy = {
     trendsDetailKicker: "Bacarıq trendi",
     trendsDetailBack: "Trendlərə qayıt",
     trendsDetailJobs: "Bu bacarığı tələb edən elanlar",
+    trendsDetailJobsBack: "Trendə qayıt",
     trendsDetailJobsEmpty: "Bu bacarıq üçün açıq elan tapılmadı.",
     trendsDetailYou: "Siz və bu trend",
     trendsDetailHaveFocus: "Bu bacarıq profilinizdə var.",
@@ -654,6 +655,7 @@ export const copy = {
     trendsDetailKicker: "Skill trend",
     trendsDetailBack: "Back to trends",
     trendsDetailJobs: "Jobs that require this skill",
+    trendsDetailJobsBack: "Back to trend",
     trendsDetailJobsEmpty: "No open jobs found for this skill.",
     trendsDetailYou: "You vs this trend",
     trendsDetailHaveFocus: "This skill is on your profile.",
@@ -1191,6 +1193,7 @@ export const copy = {
     trendsDetailKicker: "Тренд навыка",
     trendsDetailBack: "Назад к трендам",
     trendsDetailJobs: "Вакансии, где требуется этот навык",
+    trendsDetailJobsBack: "К тренду",
     trendsDetailJobsEmpty: "Открытых вакансий с этим навыком нет.",
     trendsDetailYou: "Вы и этот тренд",
     trendsDetailHaveFocus: "Этот навык есть в вашем профиле.",
@@ -1671,7 +1674,9 @@ export function hrefFor(locale, { mode = "browse", jobId, companySlug, skillId }
   if (companySlug) return `${base}/companies/${encodeURIComponent(companySlug)}`;
   if (mode === "companies") return `${base}/companies`;
   if (skillId != null && String(skillId).trim() !== "") {
-    return `${base}/trends/${encodeURIComponent(String(skillId).trim())}`;
+    const skillPath = `${base}/trends/${encodeURIComponent(String(skillId).trim())}`;
+    if (mode === "trendJobs") return `${skillPath}/jobs`;
+    return skillPath;
   }
   if (mode === "trends" || mode === "trend") return `${base}/trends`;
   if (mode === "post") return `${base}/post`;

@@ -469,7 +469,9 @@ class TrendsTests(unittest.TestCase):
         self.assertEqual(body["skill_id"], java_id)
         self.assertEqual(body["name"], "Java")
         self.assertGreaterEqual(len(body["jobs"]), 5)
-        self.assertLessEqual(len(body["jobs"]), 10)
+        self.assertLessEqual(len(body["jobs"]), body.get("jobs_per_page") or 20)
+        self.assertGreaterEqual(int(body.get("jobs_total") or 0), len(body["jobs"]))
+        self.assertEqual(int(body.get("jobs_page") or 0), 1)
         self.assertIsNone(body.get("you"))
         self.assertTrue(any(row["name"] == "Kafka" for row in body.get("often_with") or []))
 

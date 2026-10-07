@@ -4,17 +4,21 @@
 - Profile review densify + tabs (local, uncommitted)
 - Trend detail layout:
   - Static hero/you copy removed; back right of breadcrumbs
-  - Jobs list collapsed until button click
-  - No user companions → click opens two-col (jobs left, facts right)
-  - With companions → stacked layout (facts → companions → jobs on click)
+  - Companions (learn/have) → two-col: companions left, facts right
+  - Jobs button → `/trends/{id}/jobs` with server pagination (20/page)
+  - Detail SSR skips jobs payload (`jobs_limit=0`)
 
 ## Current state
-- Local only; not committed. Verified guest `/trends/1`: closed by default, open → split.
+- Local only; not committed.
 
 ## Remaining
-1. User visual OK (esp. logged-in with companions)
+1. Visual OK (logged-in with companions + jobs page pager)
 2. Commit when approved
 
 ## Relevant files
 - `frontend/components/trend-detail.js`
+- `frontend/components/trend-jobs.js`
+- `frontend/app/{,en/,ru/}trends/[skillId]/jobs/page.js`
 - `frontend/app/globals.css`
+- `frontend/lib/{api,copy,server/trends}.js`
+- `api/app/trends.py`, `api/app/routers/trends.py`

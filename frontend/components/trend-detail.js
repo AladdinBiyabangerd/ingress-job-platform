@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { loginHref } from "../lib/auth-link";
 import { AcademyCourseLinks, SkillRow } from "./skill-gap-bits";
@@ -50,13 +49,6 @@ function salaryParts(t, salary) {
   };
 }
 
-function jobMeta(t, job) {
-  return [job.company, job.city, job.remote ? t.placeRemote : null, job.salary]
-    .map((part) => String(part || "").trim())
-    .filter(Boolean)
-    .join(" · ");
-}
-
 function YouBlock({ t, locale, authenticated, candidate, you, showYou, learnNext, companionsHave }) {
   if (!authenticated || !candidate || !showYou) {
     if (you && you.matching_consent === false) {
@@ -102,43 +94,7 @@ function YouBlock({ t, locale, authenticated, candidate, you, showYou, learnNext
   );
 }
 
-function JobsList({ t, locale, jobs }) {
-  if (!jobs.length) {
-    return <p className="hint">{t.trendsDetailJobsEmpty}</p>;
-  }
-  return (
-    <ul className="reco-jobs trend-detail-jobs">
-      {jobs.map((job) => {
-        const meta = jobMeta(t, job);
-        return (
-          <li key={job.job_id} className="reco-job">
-            <div className="reco-job-top">
-              <div className="reco-job-body">
-                <a className="reco-job-title" href={hrefFor(locale, { jobId: job.job_id })}>
-                  <strong>{job.title}</strong>
-                </a>
-                {meta ? <span className="hint">{meta}</span> : null}
-              </div>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-function FactsCard({
-  t,
-  share,
-  growth,
-  data,
-  salary,
-  marketCourses,
-  showGuestCta,
-  detailHref,
-  jobsOpen,
-  onToggleJobs,
-}) {
+function FactsCard({ t, share, growth, data, salary, marketCourses, showGuestCta, detailHref, jobsHref }) {
   return (
     <div className="facts-card">
       <h2 className="facts-title">{t.keyFacts}</h2>
@@ -188,15 +144,9 @@ function FactsCard({
       </div>
 
       <div className="actions">
-        <button
-          type="button"
-          className="btn primary"
-          aria-expanded={jobsOpen}
-          aria-controls="trend-jobs"
-          onClick={onToggleJobs}
-        >
+        <a className="btn primary" href={jobsHref}>
           {t.trendsDetailJobs}
-        </button>
+        </a>
         {showGuestCta ? (
           <a className="btn" href={loginHref({ intent: "job_candidate", returnTo: detailHref })}>
             {t.trendsDetailGuestCta}
@@ -214,7 +164,7 @@ export function TrendDetailPage({ locale, data, error }) {
   const candidate = Boolean(me?.candidate || me?.staff);
   const skillId = data?.skill_id;
   const detailHref = skillId != null ? hrefFor(locale, { mode: "trend", skillId }) : hrefFor(locale, { mode: "trends" });
-  const [jobsOpen, setJobsOpen] = useState(false);
+  const jobsHref = skillId != null ? hrefFor(locale, { mode: "trendJobs", skillId }) : detailHref;
 
   if (error || !data) {
     return (
@@ -245,7 +195,6 @@ export function TrendDetailPage({ locale, data, error }) {
   const share = pct(data.share);
   const growth = growthParts(data.growth_wow);
   const salary = salaryParts(t, data.salary);
-  const jobs = Array.isArray(data.jobs) ? data.jobs : [];
   const you = data.you && typeof data.you === "object" ? data.you : null;
   const learnNext = Array.isArray(you?.learn_next) ? you.learn_next : [];
   const companionsHave = Array.isArray(you?.have) ? you.have : [];
@@ -256,7 +205,6 @@ export function TrendDetailPage({ locale, data, error }) {
   const showCompanions =
     authenticated && candidate && showYou && (learnNext.length > 0 || companionsHave.length > 0);
   const showYouSection = showConsentHint || showCompanions;
-  const splitLayout = !showCompanions;
 
   const facts = (
     <FactsCard
@@ -268,22 +216,24 @@ export function TrendDetailPage({ locale, data, error }) {
       marketCourses={marketCourses}
       showGuestCta={showGuestCta}
       detailHref={detailHref}
-      jobsOpen={jobsOpen}
-      onToggleJobs={() => setJobsOpen((open) => !open)}
+      jobsHref={jobsHref}
     />
   );
 
-  const jobsSection = jobsOpen ? (
-    <section className="trend-detail-section" id="trend-jobs" aria-labelledby="trend-jobs-heading">
-      <h2 id="trend-jobs-heading">
-        {t.trendsDetailJobs}
-        <span className="recommendations-panel-count">{jobs.length}</span>
-      </h2>
-      <JobsList t={t} locale={locale} jobs={jobs} />
+  const youSection = showYouSection ? (
+    <section className="trend-detail-section">
+      <YouBlock
+        t={t}
+        locale={locale}
+        authenticated={authenticated}
+        candidate={candidate}
+        you={you}
+        showYou={showYou}
+        learnNext={learnNext}
+        companionsHave={companionsHave}
+      />
     </section>
-  ) : (
-    <div id="trend-jobs" hidden />
-  );
+  ) : null;
 
   return (
     <Shell locale={locale} mode="trends" skillId={skillId}>
@@ -308,30 +258,12 @@ export function TrendDetailPage({ locale, data, error }) {
 
       <main
         className={
-          splitLayout && jobsOpen
-            ? "trend-detail-page trend-detail-page-split"
-            : "trend-detail-page"
+          showCompanions ? "trend-detail-page trend-detail-page-split" : "trend-detail-page"
         }
       >
-        {splitLayout && jobsOpen ? (
+        {showCompanions ? (
           <div className="detail-layout trend-detail-layout">
-            <div className="detail-main">
-              {showConsentHint ? (
-                <section className="trend-detail-section">
-                  <YouBlock
-                    t={t}
-                    locale={locale}
-                    authenticated={authenticated}
-                    candidate={candidate}
-                    you={you}
-                    showYou={showYou}
-                    learnNext={learnNext}
-                    companionsHave={companionsHave}
-                  />
-                </section>
-              ) : null}
-              {jobsSection}
-            </div>
+            <div className="detail-main">{youSection}</div>
             <aside className="detail-aside" aria-label={t.keyFacts}>
               {facts}
             </aside>
@@ -339,21 +271,7 @@ export function TrendDetailPage({ locale, data, error }) {
         ) : (
           <>
             {facts}
-            {showYouSection ? (
-              <section className="trend-detail-section">
-                <YouBlock
-                  t={t}
-                  locale={locale}
-                  authenticated={authenticated}
-                  candidate={candidate}
-                  you={you}
-                  showYou={showYou}
-                  learnNext={learnNext}
-                  companionsHave={companionsHave}
-                />
-              </section>
-            ) : null}
-            {jobsSection}
+            {youSection}
           </>
         )}
 

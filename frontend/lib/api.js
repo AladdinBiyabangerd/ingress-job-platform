@@ -106,7 +106,15 @@ export async function fetchTrends({
 
 export async function fetchTrendDetail(
   skillId,
-  { category = "", region = "", windowDays = 7, jobsLimit = 10, lang = "az", access = "" } = {},
+  {
+    category = "",
+    region = "",
+    windowDays = 7,
+    jobsLimit = 20,
+    jobsPage = 1,
+    lang = "az",
+    access = "",
+  } = {},
 ) {
   const id = Number.parseInt(String(skillId ?? ""), 10);
   if (!Number.isFinite(id) || id <= 0) return null;
@@ -114,7 +122,8 @@ export async function fetchTrendDetail(
   if (category) params.set("category", category);
   if (region) params.set("region", region);
   if (windowDays) params.set("window_days", String(windowDays));
-  if (jobsLimit) params.set("jobs_limit", String(jobsLimit));
+  if (jobsLimit != null) params.set("jobs_limit", String(jobsLimit));
+  if (jobsPage) params.set("jobs_page", String(jobsPage));
   if (lang) params.set("lang", lang);
   const headers = { Accept: "application/json" };
   if (access) headers.Authorization = `Bearer ${access}`;

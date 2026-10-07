@@ -3053,9 +3053,15 @@ body:has(.profile-review-page) {
     gap: 24px;
   }
 
+  /* Facts first on narrow screens; companions follow */
   .trend-detail-page-split .detail-aside {
     order: -1;
   }
+}
+
+.trend-detail-page-split .detail-main .trend-detail-section {
+  display: grid;
+  gap: 16px;
 }
 
 .trends-card-top {
