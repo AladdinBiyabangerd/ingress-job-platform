@@ -227,6 +227,7 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
   const [uploading, setUploading] = useState(false);
   const [polling, setPolling] = useState(() => seedParseOpen);
   const [cvName, setCvName] = useState("");
+  const [reviewTab, setReviewTab] = useState("basics");
   const fileRef = useRef(null);
   const pollLeft = useRef(seedParseOpen ? POLL_MAX : 0);
   /** Bumped on cancel/reset so in-flight poll responses cannot re-open the progress UI. */
@@ -775,424 +776,471 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
                 ) : null}
               </div>
 
+              <div className="profile-review-tabs" role="tablist" aria-label={t.profileReviewTitle}>
+                {[
+                  { id: "basics", label: t.profileReviewTabBasics, warn: warn("contact") || warn("headline") || warn("seniority") || warn("total_years") },
+                  { id: "experience", label: t.profileReviewTabExperience, warn: warn("skills") || warn("work_history") },
+                  { id: "more", label: t.profileReviewTabMore, warn: false },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    id={`profile-review-tab-${tab.id}`}
+                    aria-selected={reviewTab === tab.id}
+                    aria-controls={`profile-review-panel-${tab.id}`}
+                    className={reviewTab === tab.id ? "on" : undefined}
+                    onClick={() => setReviewTab(tab.id)}
+                  >
+                    {tab.label}
+                    {tab.warn ? <span className="profile-review-tab-warn" aria-hidden="true" /> : null}
+                  </button>
+                ))}
+              </div>
+
               <div className="profile-review-layout">
-                <section className={`review-panel review-panel-contact${warn("contact") ? " field-warn" : ""}`}>
-                  <header className="review-panel-head">
-                    <h2>{t.profileReviewContact}</h2>
-                    <FieldMark show={warn("contact")} label={t.profileReviewCheck} />
-                  </header>
-                  <div className="profile-grid profile-grid-contact">
-                    <label>
-                      {t.profileReviewFullName}
-                      <input
-                        value={fullName}
-                        maxLength={120}
-                        onChange={(event) => setFullName(event.target.value)}
-                      />
-                    </label>
-                    <label>
-                      {t.applyEmail}
-                      <input
-                        type="email"
-                        value={email}
-                        maxLength={120}
-                        onChange={(event) => setEmail(event.target.value)}
-                      />
-                    </label>
-                    <label>
-                      {t.applyPhone}
-                      <input
-                        type="tel"
-                        value={phone}
-                        maxLength={40}
-                        onChange={(event) => setPhone(event.target.value)}
-                      />
-                    </label>
-                    <label>
-                      {t.profileReviewCity}
-                      <input
-                        value={city}
-                        maxLength={120}
-                        onChange={(event) => setCity(event.target.value)}
-                      />
-                    </label>
-                    <label>
-                      {t.profileReviewCountry}
-                      <input
-                        value={country}
-                        maxLength={120}
-                        onChange={(event) => setCountry(event.target.value)}
-                      />
-                    </label>
-                  </div>
-                </section>
+                {reviewTab === "basics" ? (
+                  <div
+                    className="profile-review-pane profile-review-pane-basics"
+                    role="tabpanel"
+                    id="profile-review-panel-basics"
+                    aria-labelledby="profile-review-tab-basics"
+                  >
+                    <section className={`review-panel review-panel-contact${warn("contact") ? " field-warn" : ""}`}>
+                      <header className="review-panel-head">
+                        <h2>{t.profileReviewContact}</h2>
+                        <FieldMark show={warn("contact")} label={t.profileReviewCheck} />
+                      </header>
+                      <div className="profile-grid profile-grid-contact">
+                        <label>
+                          {t.profileReviewFullName}
+                          <input
+                            value={fullName}
+                            maxLength={120}
+                            onChange={(event) => setFullName(event.target.value)}
+                          />
+                        </label>
+                        <label>
+                          {t.applyEmail}
+                          <input
+                            type="email"
+                            value={email}
+                            maxLength={120}
+                            onChange={(event) => setEmail(event.target.value)}
+                          />
+                        </label>
+                        <label>
+                          {t.applyPhone}
+                          <input
+                            type="tel"
+                            value={phone}
+                            maxLength={40}
+                            onChange={(event) => setPhone(event.target.value)}
+                          />
+                        </label>
+                        <label>
+                          {t.profileReviewCity}
+                          <input
+                            value={city}
+                            maxLength={120}
+                            onChange={(event) => setCity(event.target.value)}
+                          />
+                        </label>
+                        <label>
+                          {t.profileReviewCountry}
+                          <input
+                            value={country}
+                            maxLength={120}
+                            onChange={(event) => setCountry(event.target.value)}
+                          />
+                        </label>
+                      </div>
+                    </section>
 
-                <section className="review-panel review-panel-links">
-                  <header className="review-panel-head">
-                    <h2>{t.profileReviewLinks}</h2>
-                  </header>
-                  <div className="profile-grid profile-grid-links">
-                    <label>
-                      {t.profileReviewLinkedin}
-                      <input
-                        type="url"
-                        value={linkedin}
-                        maxLength={300}
-                        placeholder="https://linkedin.com/in/…"
-                        onChange={(event) => setLinkedin(event.target.value)}
-                      />
-                    </label>
-                    <label>
-                      {t.profileReviewGithub}
-                      <input
-                        type="url"
-                        value={github}
-                        maxLength={300}
-                        placeholder="https://github.com/…"
-                        onChange={(event) => setGithub(event.target.value)}
-                      />
-                    </label>
-                    <label className="profile-span">
-                      {t.profileReviewPortfolio}
-                      <input
-                        type="url"
-                        value={portfolio}
-                        maxLength={300}
-                        placeholder="https://"
-                        onChange={(event) => setPortfolio(event.target.value)}
-                      />
-                    </label>
-                  </div>
-                </section>
+                    <section className="review-panel review-panel-links">
+                      <header className="review-panel-head">
+                        <h2>{t.profileReviewLinks}</h2>
+                      </header>
+                      <div className="profile-grid profile-grid-links">
+                        <label>
+                          {t.profileReviewLinkedin}
+                          <input
+                            type="url"
+                            value={linkedin}
+                            maxLength={300}
+                            placeholder="https://linkedin.com/in/…"
+                            onChange={(event) => setLinkedin(event.target.value)}
+                          />
+                        </label>
+                        <label>
+                          {t.profileReviewGithub}
+                          <input
+                            type="url"
+                            value={github}
+                            maxLength={300}
+                            placeholder="https://github.com/…"
+                            onChange={(event) => setGithub(event.target.value)}
+                          />
+                        </label>
+                        <label className="profile-span">
+                          {t.profileReviewPortfolio}
+                          <input
+                            type="url"
+                            value={portfolio}
+                            maxLength={300}
+                            placeholder="https://"
+                            onChange={(event) => setPortfolio(event.target.value)}
+                          />
+                        </label>
+                      </div>
+                    </section>
 
-                <section className="review-panel review-panel-basics">
-                  <header className="review-panel-head">
-                    <h2>{t.profileReviewBasics}</h2>
-                  </header>
-                  <div className="profile-grid profile-grid-basics">
-                    <label className={`profile-span${warn("headline") ? " field-warn" : ""}`}>
-                      {t.profileReviewHeadline}
-                      <FieldMark show={warn("headline")} label={t.profileReviewCheck} />
-                      <input
-                        value={headline}
-                        maxLength={200}
-                        onChange={(event) => setHeadline(event.target.value)}
-                      />
-                    </label>
-                    <label className="profile-span">
-                      {t.profileReviewAbout}
-                      <textarea
-                        value={summary}
-                        maxLength={2000}
-                        rows={3}
-                        placeholder={t.profileReviewAboutHint}
-                        onChange={(event) => setSummary(event.target.value)}
-                      />
-                    </label>
-                    <label className={warn("seniority") ? "field-warn" : undefined}>
-                      {t.profileReviewSeniority}
-                      <FieldMark show={warn("seniority")} label={t.profileReviewCheck} />
-                      <select value={seniority} onChange={(event) => setSeniority(event.target.value)}>
-                        {SENIORITY.map((value) => (
-                          <option key={value || "empty"} value={value}>
-                            {value || "—"}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className={warn("total_years") ? "field-warn" : undefined}>
-                      {t.profileReviewYears}
-                      <FieldMark show={warn("total_years")} label={t.profileReviewCheck} />
-                      <input
-                        type="number"
-                        min="0"
-                        max="60"
-                        step="0.1"
-                        value={totalYears}
-                        onChange={(event) => setTotalYears(event.target.value)}
-                      />
-                    </label>
+                    <section className="review-panel review-panel-basics">
+                      <header className="review-panel-head">
+                        <h2>{t.profileReviewBasics}</h2>
+                      </header>
+                      <div className="profile-grid profile-grid-basics">
+                        <label className={`profile-span${warn("headline") ? " field-warn" : ""}`}>
+                          {t.profileReviewHeadline}
+                          <FieldMark show={warn("headline")} label={t.profileReviewCheck} />
+                          <input
+                            value={headline}
+                            maxLength={200}
+                            onChange={(event) => setHeadline(event.target.value)}
+                          />
+                        </label>
+                        <label className="profile-span">
+                          {t.profileReviewAbout}
+                          <textarea
+                            value={summary}
+                            maxLength={2000}
+                            rows={4}
+                            placeholder={t.profileReviewAboutHint}
+                            onChange={(event) => setSummary(event.target.value)}
+                          />
+                        </label>
+                        <label className={warn("seniority") ? "field-warn" : undefined}>
+                          {t.profileReviewSeniority}
+                          <FieldMark show={warn("seniority")} label={t.profileReviewCheck} />
+                          <select value={seniority} onChange={(event) => setSeniority(event.target.value)}>
+                            {SENIORITY.map((value) => (
+                              <option key={value || "empty"} value={value}>
+                                {value || "—"}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className={warn("total_years") ? "field-warn" : undefined}>
+                          {t.profileReviewYears}
+                          <FieldMark show={warn("total_years")} label={t.profileReviewCheck} />
+                          <input
+                            type="number"
+                            min="0"
+                            max="60"
+                            step="0.1"
+                            value={totalYears}
+                            onChange={(event) => setTotalYears(event.target.value)}
+                          />
+                        </label>
+                      </div>
+                    </section>
                   </div>
-                </section>
+                ) : null}
 
-                <section className={`review-panel review-panel-skills${warn("skills") ? " field-warn" : ""}`}>
-                  <header className="review-panel-head">
-                    <h2>{t.profileReviewSkills}</h2>
-                    <FieldMark show={warn("skills")} label={t.profileReviewCheck} />
-                  </header>
-                  <div className="skill-chip-box">
-                    {skills.length ? (
-                      <div className="skill-chip-cloud" role="list">
-                        {skills.map((skill, index) => (
-                          <div key={`${skill.name}-${index}`} className="skill-pill" role="listitem">
-                            <button
-                              type="button"
-                              className="skill-pill-main"
-                              title={t.profileReviewSkillEdit}
-                              onClick={() => {
-                                setSkillDraft(skill.name);
-                                setSkillYearsDraft(skill.years || "");
-                                removeSkill(index);
-                              }}
-                            >
-                              <span className="skill-pill-name">{skill.name}</span>
-                              {skill.years ? (
-                                <span className="skill-pill-years">
-                                  {skill.years} {t.profileReviewSkillYears}
-                                </span>
-                              ) : null}
-                            </button>
-                            <button
-                              type="button"
-                              className="skill-pill-remove"
-                              onClick={() => removeSkill(index)}
-                              aria-label={t.profileReviewRemove}
-                            >
-                              ×
+                {reviewTab === "experience" ? (
+                  <div
+                    className="profile-review-pane profile-review-pane-experience"
+                    role="tabpanel"
+                    id="profile-review-panel-experience"
+                    aria-labelledby="profile-review-tab-experience"
+                  >
+                    <section className={`review-panel review-panel-skills${warn("skills") ? " field-warn" : ""}`}>
+                      <header className="review-panel-head">
+                        <h2>{t.profileReviewSkills}</h2>
+                        <FieldMark show={warn("skills")} label={t.profileReviewCheck} />
+                      </header>
+                      <div className="skill-chip-box">
+                        {skills.length ? (
+                          <div className="skill-chip-cloud" role="list">
+                            {skills.map((skill, index) => (
+                              <div key={`${skill.name}-${index}`} className="skill-pill" role="listitem">
+                                <button
+                                  type="button"
+                                  className="skill-pill-main"
+                                  title={t.profileReviewSkillEdit}
+                                  onClick={() => {
+                                    setSkillDraft(skill.name);
+                                    setSkillYearsDraft(skill.years || "");
+                                    removeSkill(index);
+                                  }}
+                                >
+                                  <span className="skill-pill-name">{skill.name}</span>
+                                  {skill.years ? (
+                                    <span className="skill-pill-years">
+                                      {skill.years} {t.profileReviewSkillYears}
+                                    </span>
+                                  ) : null}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="skill-pill-remove"
+                                  onClick={() => removeSkill(index)}
+                                  aria-label={t.profileReviewRemove}
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="hint">{t.profileReviewSkillsEmpty}</p>
+                        )}
+                        <div className="skill-add-row">
+                          <input
+                            value={skillDraft}
+                            maxLength={60}
+                            placeholder={t.profileReviewSkillName}
+                            onChange={(event) => setSkillDraft(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") addSkill(event);
+                            }}
+                          />
+                          <input
+                            type="number"
+                            min="0"
+                            max="60"
+                            step="0.5"
+                            value={skillYearsDraft}
+                            placeholder={t.profileReviewSkillYears}
+                            onChange={(event) => setSkillYearsDraft(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") addSkill(event);
+                            }}
+                          />
+                          <button type="button" className="btn" onClick={addSkill}>
+                            {t.profileReviewSkillAdd}
+                          </button>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className={`review-panel review-panel-work${warn("work_history") ? " field-warn" : ""}`}>
+                      <header className="review-panel-head">
+                        <h2>{t.profileReviewWork}</h2>
+                        <FieldMark show={warn("work_history")} label={t.profileReviewCheck} />
+                      </header>
+                      {work.length === 0 ? <p className="hint">{t.profileReviewWorkEmpty}</p> : null}
+                      {work.map((job, index) => (
+                        <div key={`job-${index}`} className="work-block">
+                          <div className="work-block-head">
+                            <span className="hint">{t.profileReviewWorkItem(index + 1)}</span>
+                            <button type="button" className="btn ghost small" onClick={() => removeWork(index)}>
+                              {t.profileReviewRemove}
                             </button>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="hint">{t.profileReviewSkillsEmpty}</p>
-                    )}
-                    <div className="skill-add-row">
-                      <input
-                        value={skillDraft}
-                        maxLength={60}
-                        placeholder={t.profileReviewSkillName}
-                        onChange={(event) => setSkillDraft(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") addSkill(event);
-                        }}
-                      />
-                      <input
-                        type="number"
-                        min="0"
-                        max="60"
-                        step="0.5"
-                        value={skillYearsDraft}
-                        placeholder={t.profileReviewSkillYears}
-                        onChange={(event) => setSkillYearsDraft(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") addSkill(event);
-                        }}
-                      />
-                      <button type="button" className="btn" onClick={addSkill}>
-                        {t.profileReviewSkillAdd}
+                          <div className="profile-grid profile-grid-work">
+                            <label>
+                              {t.profileReviewJobTitle}
+                              <input
+                                value={job.title}
+                                maxLength={120}
+                                onChange={(event) => updateWork(index, { title: event.target.value })}
+                              />
+                            </label>
+                            <label>
+                              {t.profileReviewCompany}
+                              <input
+                                value={job.company}
+                                maxLength={120}
+                                onChange={(event) => updateWork(index, { company: event.target.value })}
+                              />
+                            </label>
+                            <label>
+                              {t.profileReviewStart}
+                              <input
+                                value={job.start}
+                                maxLength={20}
+                                placeholder="2021-03"
+                                onChange={(event) => updateWork(index, { start: event.target.value })}
+                              />
+                            </label>
+                            <label>
+                              {t.profileReviewEnd}
+                              <input
+                                value={job.end || ""}
+                                maxLength={20}
+                                placeholder={t.profileReviewPresent}
+                                onChange={(event) => updateWork(index, { end: event.target.value })}
+                              />
+                            </label>
+                            <label className="profile-span">
+                              {t.profileReviewLocation}
+                              <input
+                                value={job.location || ""}
+                                maxLength={120}
+                                onChange={(event) => updateWork(index, { location: event.target.value })}
+                              />
+                            </label>
+                            <label className="profile-span">
+                              {t.profileReviewJobSummary}
+                              <textarea
+                                value={job.summary || ""}
+                                maxLength={2000}
+                                rows={2}
+                                onChange={(event) => updateWork(index, { summary: event.target.value })}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                      <button type="button" className="btn ghost" onClick={addWork}>
+                        {t.profileReviewWorkAdd}
                       </button>
-                    </div>
+                    </section>
                   </div>
-                </section>
+                ) : null}
 
-                <section className={`review-panel review-panel-work${warn("work_history") ? " field-warn" : ""}`}>
-                  <header className="review-panel-head">
-                    <h2>{t.profileReviewWork}</h2>
-                    <FieldMark show={warn("work_history")} label={t.profileReviewCheck} />
-                  </header>
-                  {work.length === 0 ? <p className="hint">{t.profileReviewWorkEmpty}</p> : null}
-                  {work.map((job, index) => (
-                    <div key={`job-${index}`} className="work-block">
-                      <div className="work-block-head">
-                        <span className="hint">{t.profileReviewWorkItem(index + 1)}</span>
-                        <button type="button" className="btn ghost small" onClick={() => removeWork(index)}>
-                          {t.profileReviewRemove}
-                        </button>
-                      </div>
-                      <div className="profile-grid profile-grid-work">
-                        <label>
-                          {t.profileReviewJobTitle}
-                          <input
-                            value={job.title}
-                            maxLength={120}
-                            onChange={(event) => updateWork(index, { title: event.target.value })}
-                          />
-                        </label>
-                        <label>
-                          {t.profileReviewCompany}
-                          <input
-                            value={job.company}
-                            maxLength={120}
-                            onChange={(event) => updateWork(index, { company: event.target.value })}
-                          />
-                        </label>
-                        <label>
-                          {t.profileReviewStart}
-                          <input
-                            value={job.start}
-                            maxLength={20}
-                            placeholder="2021-03"
-                            onChange={(event) => updateWork(index, { start: event.target.value })}
-                          />
-                        </label>
-                        <label>
-                          {t.profileReviewEnd}
-                          <input
-                            value={job.end || ""}
-                            maxLength={20}
-                            placeholder={t.profileReviewPresent}
-                            onChange={(event) => updateWork(index, { end: event.target.value })}
-                          />
-                        </label>
-                        <label className="profile-span">
-                          {t.profileReviewLocation}
-                          <input
-                            value={job.location || ""}
-                            maxLength={120}
-                            onChange={(event) => updateWork(index, { location: event.target.value })}
-                          />
-                        </label>
-                        <label className="profile-span">
-                          {t.profileReviewJobSummary}
-                          <textarea
-                            value={job.summary || ""}
-                            maxLength={2000}
-                            rows={2}
-                            onChange={(event) => updateWork(index, { summary: event.target.value })}
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  ))}
-                  <button type="button" className="btn ghost" onClick={addWork}>
-                    {t.profileReviewWorkAdd}
-                  </button>
-                </section>
+                {reviewTab === "more" ? (
+                  <div
+                    className="profile-review-pane profile-review-pane-more"
+                    role="tabpanel"
+                    id="profile-review-panel-more"
+                    aria-labelledby="profile-review-tab-more"
+                  >
+                    <section className="review-panel">
+                      <header className="review-panel-head">
+                        <h2>{t.profileReviewEducation}</h2>
+                      </header>
+                      {education.length === 0 ? <p className="hint">{t.profileReviewEducationEmpty}</p> : null}
+                      {education.map((item, index) => (
+                        <div key={`edu-${index}`} className="work-block">
+                          <div className="work-block-head">
+                            <span className="hint">{t.profileReviewEducationItem(index + 1)}</span>
+                            <button type="button" className="btn ghost small" onClick={() => removeEducation(index)}>
+                              {t.profileReviewRemove}
+                            </button>
+                          </div>
+                          <div className="profile-grid profile-grid-work">
+                            <label>
+                              {t.profileReviewDegree}
+                              <input
+                                value={item.degree}
+                                maxLength={120}
+                                onChange={(event) => updateEducation(index, { degree: event.target.value })}
+                              />
+                            </label>
+                            <label>
+                              {t.profileReviewField}
+                              <input
+                                value={item.field}
+                                maxLength={120}
+                                onChange={(event) => updateEducation(index, { field: event.target.value })}
+                              />
+                            </label>
+                            <label>
+                              {t.profileReviewSchool}
+                              <input
+                                value={item.school}
+                                maxLength={120}
+                                onChange={(event) => updateEducation(index, { school: event.target.value })}
+                              />
+                            </label>
+                            <label>
+                              {t.profileReviewEduYear}
+                              <input
+                                type="number"
+                                min="1950"
+                                max="2100"
+                                value={item.year}
+                                onChange={(event) => updateEducation(index, { year: event.target.value })}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                      <button type="button" className="btn ghost" onClick={addEducation}>
+                        {t.profileReviewEducationAdd}
+                      </button>
+                    </section>
 
-                <div className="profile-review-side">
-                  <section className="review-panel">
-                    <header className="review-panel-head">
-                      <h2>{t.profileReviewEducation}</h2>
-                    </header>
-                    {education.length === 0 ? <p className="hint">{t.profileReviewEducationEmpty}</p> : null}
-                    {education.map((item, index) => (
-                      <div key={`edu-${index}`} className="work-block">
-                        <div className="work-block-head">
-                          <span className="hint">{t.profileReviewEducationItem(index + 1)}</span>
-                          <button type="button" className="btn ghost small" onClick={() => removeEducation(index)}>
+                    <section className="review-panel">
+                      <header className="review-panel-head">
+                        <h2>{t.profileReviewLanguages}</h2>
+                      </header>
+                      {languages.length === 0 ? <p className="hint">{t.profileReviewLanguagesEmpty}</p> : null}
+                      {languages.map((item, index) => (
+                        <div key={`lang-${index}`} className="profile-grid profile-grid-lang">
+                          <label>
+                            {t.profileReviewLangCode}
+                            <select value={item.code} onChange={(event) => updateLanguage(index, { code: event.target.value })}>
+                              <option value="">—</option>
+                              {LANG_CODES.map((code) => (
+                                <option key={code} value={code}>
+                                  {t.profileReviewLangLabel(code)}
+                                </option>
+                              ))}
+                              {item.code && !LANG_CODES.includes(item.code) ? (
+                                <option value={item.code}>{item.code}</option>
+                              ) : null}
+                            </select>
+                          </label>
+                          <label>
+                            {t.profileReviewLangLevel}
+                            <select
+                              value={item.level}
+                              onChange={(event) => updateLanguage(index, { level: event.target.value })}
+                            >
+                              {LANG_LEVELS.map((level) => (
+                                <option key={level || "empty"} value={level}>
+                                  {level === "native" ? t.profileReviewLangNative : level || "—"}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <button type="button" className="btn ghost small" onClick={() => removeLanguage(index)}>
                             {t.profileReviewRemove}
                           </button>
                         </div>
-                        <div className="profile-grid profile-grid-work">
-                          <label>
-                            {t.profileReviewDegree}
-                            <input
-                              value={item.degree}
-                              maxLength={120}
-                              onChange={(event) => updateEducation(index, { degree: event.target.value })}
-                            />
-                          </label>
-                          <label>
-                            {t.profileReviewField}
-                            <input
-                              value={item.field}
-                              maxLength={120}
-                              onChange={(event) => updateEducation(index, { field: event.target.value })}
-                            />
-                          </label>
-                          <label>
-                            {t.profileReviewSchool}
-                            <input
-                              value={item.school}
-                              maxLength={120}
-                              onChange={(event) => updateEducation(index, { school: event.target.value })}
-                            />
-                          </label>
-                          <label>
-                            {t.profileReviewEduYear}
-                            <input
-                              type="number"
-                              min="1950"
-                              max="2100"
-                              value={item.year}
-                              onChange={(event) => updateEducation(index, { year: event.target.value })}
-                            />
-                          </label>
-                        </div>
-                      </div>
-                    ))}
-                    <button type="button" className="btn ghost" onClick={addEducation}>
-                      {t.profileReviewEducationAdd}
-                    </button>
-                  </section>
-
-                  <section className="review-panel">
-                    <header className="review-panel-head">
-                      <h2>{t.profileReviewLanguages}</h2>
-                    </header>
-                    {languages.length === 0 ? <p className="hint">{t.profileReviewLanguagesEmpty}</p> : null}
-                    {languages.map((item, index) => (
-                      <div key={`lang-${index}`} className="profile-grid profile-grid-lang">
-                        <label>
-                          {t.profileReviewLangCode}
-                          <select value={item.code} onChange={(event) => updateLanguage(index, { code: event.target.value })}>
-                            <option value="">—</option>
-                            {LANG_CODES.map((code) => (
-                              <option key={code} value={code}>
-                                {t.profileReviewLangLabel(code)}
-                              </option>
-                            ))}
-                            {item.code && !LANG_CODES.includes(item.code) ? (
-                              <option value={item.code}>{item.code}</option>
-                            ) : null}
-                          </select>
-                        </label>
-                        <label>
-                          {t.profileReviewLangLevel}
-                          <select
-                            value={item.level}
-                            onChange={(event) => updateLanguage(index, { level: event.target.value })}
-                          >
-                            {LANG_LEVELS.map((level) => (
-                              <option key={level || "empty"} value={level}>
-                                {level === "native" ? t.profileReviewLangNative : level || "—"}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <button type="button" className="btn ghost small" onClick={() => removeLanguage(index)}>
-                          {t.profileReviewRemove}
-                        </button>
-                      </div>
-                    ))}
-                    <button type="button" className="btn ghost" onClick={addLanguage}>
-                      {t.profileReviewLanguageAdd}
-                    </button>
-                  </section>
-
-                  {rolesPayload ? (
-                    <section className="review-panel review-panel-muted">
-                      <header className="review-panel-head">
-                        <h2>{t.profileReviewRolesTitle}</h2>
-                      </header>
-                      {!rolesPayload.matching_consent ? (
-                        <p className="hint">
-                          {t.profileReviewRolesConsent}{" "}
-                          <a href={hrefFor(locale, { mode: "profile" })}>{t.profileReviewRolesConsentLink}</a>
-                        </p>
-                      ) : !rolesPayload.roles?.length ? (
-                        <p className="hint">{t.profileReviewRolesEmpty}</p>
-                      ) : (
-                        <ul className="role-suggest-list">
-                          {rolesPayload.roles.map((role) => (
-                            <li key={role.canonical_name} className="role-suggest-item">
-                              <div className="role-suggest-head">
-                                <strong>{role.canonical_name}</strong>
-                                <span className="hint">
-                                  {role.category}
-                                  {typeof role.score === "number"
-                                    ? ` · ${t.profileReviewRolesScore(role.score)}`
-                                    : ""}
-                                </span>
-                              </div>
-                              <RoleSkillParts t={t} have={role.have} missing={role.missing} />
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                      ))}
+                      <button type="button" className="btn ghost" onClick={addLanguage}>
+                        {t.profileReviewLanguageAdd}
+                      </button>
                     </section>
-                  ) : null}
-                </div>
+
+                    {rolesPayload ? (
+                      <section className="review-panel review-panel-muted">
+                        <header className="review-panel-head">
+                          <h2>{t.profileReviewRolesTitle}</h2>
+                        </header>
+                        {!rolesPayload.matching_consent ? (
+                          <p className="hint">
+                            {t.profileReviewRolesConsent}{" "}
+                            <a href={hrefFor(locale, { mode: "profile" })}>{t.profileReviewRolesConsentLink}</a>
+                          </p>
+                        ) : !rolesPayload.roles?.length ? (
+                          <p className="hint">{t.profileReviewRolesEmpty}</p>
+                        ) : (
+                          <ul className="role-suggest-list">
+                            {rolesPayload.roles.map((role) => (
+                              <li key={role.canonical_name} className="role-suggest-item">
+                                <div className="role-suggest-head">
+                                  <strong>{role.canonical_name}</strong>
+                                  <span className="hint">
+                                    {role.category}
+                                    {typeof role.score === "number"
+                                      ? ` · ${t.profileReviewRolesScore(role.score)}`
+                                      : ""}
+                                  </span>
+                                </div>
+                                <RoleSkillParts t={t} have={role.have} missing={role.missing} />
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </section>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
 
               <div className="profile-review-actions">

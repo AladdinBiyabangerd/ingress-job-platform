@@ -1480,15 +1480,20 @@ textarea { min-height: 120px; resize: vertical; }
   border-top: 1px solid #e8eaee;
 }
 
+body:has(.profile-review-page) {
+  background: #e9edf2;
+}
+
 .wrap:has(.profile-review-page) {
-  max-width: 1320px;
+  max-width: 960px;
 }
 
 .profile-review-page {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
   max-width: none;
+  color: #2a3038;
 }
 
 .profile-review-page .cabinet-head {
@@ -1500,18 +1505,22 @@ textarea { min-height: 120px; resize: vertical; }
 }
 
 .profile-review-page .cabinet-head h1 {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
+  font-weight: 600;
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .profile-review-page .cabinet-head .lede {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
+  font-weight: 400;
   max-width: 56ch;
   margin: 4px 0 0;
+  color: #5c6570;
 }
 
 .profile-review-page .profile-grid {
-  gap: 6px 10px;
+  gap: 8px 12px;
 }
 
 .profile-review-page .profile-grid-contact {
@@ -1519,7 +1528,7 @@ textarea { min-height: 120px; resize: vertical; }
 }
 
 .profile-review-page .profile-grid-links {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .profile-review-page .profile-grid-basics {
@@ -1558,15 +1567,15 @@ textarea { min-height: 120px; resize: vertical; }
   display: grid;
   gap: 10px;
   width: 100%;
-  background: #ffffff;
-  border: 1px solid #dfe1e5;
-  border-radius: 14px;
+  background: #f4f6f8;
+  border: 1px solid #d5dce4;
+  border-radius: 12px;
   padding: 14px 16px;
 }
 
 .profile-review-form {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
   background: transparent;
   border: 0;
@@ -1574,35 +1583,85 @@ textarea { min-height: 120px; resize: vertical; }
   padding: 0;
 }
 
-.profile-review-layout {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-areas:
-    "contact links basics"
-    "skills skills skills"
-    "work work side";
-  gap: 10px;
-  align-items: start;
+.profile-review-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  background: #dde3ea;
+  border: 1px solid #cfd6df;
+  border-radius: 12px;
 }
 
-.review-panel-contact { grid-area: contact; }
-.review-panel-links { grid-area: links; }
-.review-panel-basics { grid-area: basics; }
-.review-panel-skills { grid-area: skills; }
-.review-panel-work { grid-area: work; }
+.profile-review-tabs button {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #4a5560;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
 
-.profile-review-side {
-  grid-area: side;
+.profile-review-tabs button.on {
+  background: #f4f6f8;
+  color: #1f2933;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(32, 36, 43, 0.06);
+}
+
+.profile-review-tabs button:hover:not(.on),
+.profile-review-tabs button:focus-visible:not(.on) {
+  background: rgba(244, 246, 248, 0.55);
+  outline: none;
+}
+
+.profile-review-tab-warn {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #5b7cfa;
+  flex: 0 0 auto;
+}
+
+.profile-review-layout {
+  display: grid;
+  gap: 10px;
+  align-items: start;
+  min-width: 0;
+}
+
+.profile-review-pane {
   display: grid;
   gap: 10px;
   min-width: 0;
-  align-content: start;
 }
 
-.profile-review-layout > .review-panel,
-.profile-review-side > .review-panel {
-  background: #ffffff;
-  border: 1px solid #dfe1e5;
+.profile-review-pane-basics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.profile-review-pane-basics .review-panel-basics {
+  grid-column: 1 / -1;
+}
+
+.profile-review-pane-experience,
+.profile-review-pane-more {
+  grid-template-columns: 1fr;
+}
+
+.profile-review-layout .review-panel,
+.profile-review-pane .review-panel {
+  background: #f4f6f8;
+  border: 1px solid #d5dce4;
   border-radius: 12px;
   padding: 12px 14px;
   min-width: 0;
@@ -1612,8 +1671,10 @@ textarea { min-height: 120px; resize: vertical; }
 .profile-review-source h2,
 .review-panel h2 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
+  font-weight: 600;
   letter-spacing: -0.01em;
+  color: #2a3038;
 }
 
 .profile-review-options {
@@ -1797,27 +1858,31 @@ textarea { min-height: 120px; resize: vertical; }
   display: grid;
   gap: 4px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
+  color: #5c6570;
 }
 
 .profile-review-form input,
 .profile-review-form select,
 .profile-review-form textarea {
-  background: #ffffff;
-  border: 1px solid #dfe1e5;
+  background: #eef1f5;
+  border: 1px solid #cfd6df;
   border-radius: 10px;
   padding: 8px 10px;
   outline: none;
   width: 100%;
   font: inherit;
   font-size: 0.92rem;
+  font-weight: 400;
+  color: #2a3038;
 }
 
 .profile-review-form input:focus,
 .profile-review-form select:focus,
 .profile-review-form textarea:focus {
-  border-color: #001FFF;
-  box-shadow: 0 0 0 2px #eaefff;
+  border-color: #6b86f0;
+  box-shadow: 0 0 0 2px rgba(107, 134, 240, 0.18);
+  background: #f7f8fa;
 }
 
 .review-panel {
@@ -1842,8 +1907,8 @@ textarea { min-height: 120px; resize: vertical; }
   gap: 6px 10px;
   align-items: center;
   padding: 6px 10px;
-  background: #ffffff;
-  border: 1px solid #dfe1e5;
+  background: #f4f6f8;
+  border: 1px solid #d5dce4;
   border-radius: 10px;
 }
 
@@ -1887,6 +1952,31 @@ textarea { min-height: 120px; resize: vertical; }
 .review-panel.field-warn .work-block {
   border-color: #d7dde5;
   background: #fafbfc;
+}
+
+.profile-review-page .skill-chip-box {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #d5dce4;
+  border-radius: 10px;
+  background: #eef1f5;
+}
+
+.profile-review-page .skill-pill {
+  border-color: #cfd6df;
+  background: #f4f6f8;
+}
+
+.profile-review-page .skill-pill-name {
+  font-weight: 500;
+}
+
+.profile-review-page .skill-pill-main:hover,
+.profile-review-page .skill-pill-main:focus-visible,
+.profile-review-page .skill-pill-remove:hover,
+.profile-review-page .skill-pill-remove:focus-visible {
+  background: #e8ecf2;
 }
 
 .skill-chip-box {
@@ -1971,6 +2061,11 @@ textarea { min-height: 120px; resize: vertical; }
   outline: none;
 }
 
+.profile-review-page .work-block {
+  border-color: #d5dce4;
+  background: #eef1f5;
+}
+
 .work-block {
   display: grid;
   gap: 6px;
@@ -1992,12 +2087,12 @@ textarea { min-height: 120px; resize: vertical; }
   flex-wrap: wrap;
   gap: 8px;
   padding: 8px 10px;
-  border: 1px solid #dfe1e5;
+  border: 1px solid #d5dce4;
   border-radius: 10px;
   position: sticky;
   bottom: 8px;
-  background: #ffffff;
-  box-shadow: 0 -4px 16px rgba(32, 36, 43, 0.04);
+  background: #f4f6f8;
+  box-shadow: 0 -4px 16px rgba(32, 36, 43, 0.05);
 }
 
 .profile-review-actions .btn {
@@ -2005,14 +2100,9 @@ textarea { min-height: 120px; resize: vertical; }
   font-size: 0.9rem;
 }
 
-@media (max-width: 1100px) {
-  .profile-review-layout {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-areas:
-      "contact links"
-      "basics basics"
-      "skills skills"
-      "work side";
+@media (max-width: 900px) {
+  .profile-review-pane-basics {
+    grid-template-columns: 1fr;
   }
 
   .profile-review-page .review-panel-work .profile-grid-work {
@@ -2028,6 +2118,7 @@ textarea { min-height: 120px; resize: vertical; }
 .profile-review-page .skill-add-row .btn {
   padding: 8px 10px;
   font-size: 0.88rem;
+  font-weight: 500;
 }
 
 .profile-review-page .role-suggest-item {
@@ -2038,26 +2129,25 @@ textarea { min-height: 120px; resize: vertical; }
 .profile-review-page .btn.small {
   padding: 4px 8px;
   font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.profile-review-page .review-panel-muted {
+  background: #eef1f5;
 }
 
 @media (max-width: 760px) {
-  .profile-review-layout {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "contact"
-      "links"
-      "basics"
-      "skills"
-      "work"
-      "side";
-  }
-
   .profile-review-page .profile-grid-contact,
   .profile-review-page .profile-grid-links,
   .profile-review-page .profile-grid-basics,
   .profile-review-page .profile-grid-work,
   .profile-review-page .profile-grid-lang {
     grid-template-columns: 1fr;
+  }
+
+  .profile-review-tabs button {
+    font-size: 0.84rem;
+    padding: 8px 8px;
   }
 
   .profile-review-options {

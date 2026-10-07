@@ -1,26 +1,27 @@
 # Current task
 
 ## Completed
-- Trends detail + Recommendations gaps (`recommendations_enrichment` plan)
-  - Shared `skill-gap-bits.js` (AcademyCourseLinks / CareerPathLink / SkillRow)
-  - `GET /api/v1/trends/{skill_id}`: market, often_with, academy_courses, jobs (5–10), optional `you`
-  - Clickable TrendCard → `/trends/[skillId]` (az/en/ru); guest CTA + OIDC safe-return
-  - `GET /me/matches?role=`: signature skill filter + soft boost; limit 10
-  - Recommendations: full market-ranked gap + academy/career path; no coach.slice(0,3); role-scoped jobs + SSR gap
+- Profile review densify (prior commit `6b868d9`)
+- Profile review → 3 tabs + softer UI:
+  - Tabs: Əsas | Təcrübə | Təhsil və dillər (`reviewTab` state)
+  - Basics: contact + links + basics; Experience: skills + work; More: education + languages + roles
+  - Softer page bg `#e9edf2` (not warm cream `#f6f5f1`); panels `#f4f6f8`
+  - Labels/headings weight 500–600 (was 700); softer focus ring
+  - State / CV upload / save logic unchanged
 
 ## Current state
-- Done; ready for optional manual UI smoke (`/trends` → detail, `/me/recommendations` role switch).
+- Implemented locally; not committed yet.
+- Files: `profile-review.js`, `globals.css`, `copy.js` (az/en/ru tab labels)
 
 ## Decisions
-- No hardcoded 3-skill checklist as primary learn signal.
-- Trend `you` from profile × often_with (dynamic); guest gets market+jobs+login CTA.
-- Shared academy/gap UI extracted once for me-skills, trends detail, recommendations.
+- Tab warn dots when low-confidence fields in that tab
+- Sticky save/confirm stays under all tabs
 
 ## Remaining
-- None for this plan.
+1. Visual check `/profile/review`
+2. Commit when approved
 
 ## Relevant files
-- `api/app/trends.py`, `api/app/routers/trends.py`, `api/app/matching.py`, `api/app/routers/me.py`
-- `frontend/components/skill-gap-bits.js`, `trend-detail.js`, `trends.js`, `recommendations.js`, `me-skills.js`
-- `frontend/lib/server/trends.js`, `frontend/lib/server/recommendations.js`, `frontend/lib/copy.js`
-- `frontend/app/trends/[skillId]/page.js` (+ en/ru)
+- `frontend/components/profile-review.js`
+- `frontend/app/globals.css`
+- `frontend/lib/copy.js`
