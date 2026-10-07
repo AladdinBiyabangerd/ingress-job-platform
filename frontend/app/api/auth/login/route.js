@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
-import { buildAuthorizeQuery } from "../../../../lib/oidc-authorize";
+import { buildAuthorizeQuery, buildJobAccountLoginUrl } from "../../../../lib/oidc-authorize";
 import {
   beginLoginCookies,
   hasSessionCookies,
@@ -52,6 +52,7 @@ export async function GET(request) {
 
   // Only a live post-login session (no guest lock) counts as already signed in.
   const alreadySignedIn = !signedOut(request) && hasSessionCookies(request);
+  const returnToAbsolute = new URL(returnTo, `${config.origin}/`).toString();
   const params = buildAuthorizeQuery({
     clientId: config.clientId,
     redirectUri,
@@ -59,12 +60,20 @@ export async function GET(request) {
     nonce,
     challenge,
     intent,
-    returnToAbsolute: new URL(returnTo, `${config.origin}/`).toString(),
+    returnToAbsolute,
     signedOut: signedOut(request),
     alreadySignedIn,
   });
 
-  const redirect = NextResponse.redirect(`${config.authorizeUrl}?${params.toString()}`, 302);
+  // Prefer Academy job-account (SSO / account screen) over raw authorize.
+  const loginUrl = buildJobAccountLoginUrl({
+    jobAccountUrl: config.jobAccountUrl,
+    authorizeUrl: config.authorizeUrl,
+    authorizeParams: params,
+    intent,
+    returnToAbsolute,
+  });
+  const redirect = NextResponse.redirect(loginUrl, 302);
   // After logout, keep job_guest until callback succeeds.
   if (signedOut(request)) {
     return noStore(beginLoginCookies(redirect, state, request));

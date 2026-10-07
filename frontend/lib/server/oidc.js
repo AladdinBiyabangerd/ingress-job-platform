@@ -40,6 +40,8 @@ export function oidcConfig(request) {
     origin,
     clientId: process.env.JOB_OIDC_CLIENT_ID || "job-web",
     authorizeUrl: process.env.JOB_OIDC_AUTHORIZE_URL || new URL("portal/oauth/authorize", issuer).toString(),
+    jobAccountUrl:
+      process.env.JOB_OIDC_JOB_ACCOUNT_URL || new URL("portal/job-account/", issuer).toString(),
     apiBase: apiBase(),
   };
 }

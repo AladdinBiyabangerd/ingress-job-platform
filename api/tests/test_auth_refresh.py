@@ -134,6 +134,34 @@ class AuthRefreshTests(unittest.TestCase):
         self.assertEqual(form.get("grant_type"), ["refresh_token"])
         self.assertEqual(form.get("client_id"), ["job-web"])
 
+    def test_refresh_upserts_name_from_access_token(self):
+        from app.profiles import academy_name_for
+
+        payload = {
+            "access_token": "access-named",
+            "expires_in": 900,
+            "refresh_token": "r" * 40,
+        }
+        named = VerifiedAccess(
+            subject="42",
+            scopes=frozenset({"job:candidate"}),
+            name="Aysel Məmmədova",
+        )
+        with _urlopen(_FakeResponse(json.dumps(payload).encode())):
+            with patch("app.account.verify_access_token", return_value=named):
+                response = self.client.post("/api/v1/auth/refresh", json=self.body)
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["me"]["name"], "Aysel Məmmədova")
+        self.assertEqual(academy_name_for("42"), "Aysel Məmmədova")
+
+        # Later access token without name claim still reads remembered identity.
+        unnamed = VerifiedAccess(subject="42", scopes=frozenset({"job:candidate"}))
+        with _urlopen(_FakeResponse(json.dumps(payload).encode())):
+            with patch("app.account.verify_access_token", return_value=unnamed):
+                again = self.client.post("/api/v1/auth/refresh", json=self.body)
+        self.assertEqual(again.status_code, 200, again.text)
+        self.assertEqual(again.json()["me"]["name"], "Aysel Məmmədova")
+
     def test_exchange_rejects_id_token_nonce_mismatch(self):
         from app.profiles import save_transaction
 

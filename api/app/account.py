@@ -46,11 +46,19 @@ def current_user(authorization: str | None = Header(default=None)) -> VerifiedAc
         raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
 
 
+def _remember_access_identity(user: VerifiedAccess) -> None:
+    """Persist display name from the access token so /me survives refresh without id_token."""
+    name = (user.name or "").strip()
+    if name:
+        remember_academy_name(user.subject, name)
+
+
 def account_payload(user: VerifiedAccess, *, lang: str | None = None) -> dict:
     from app.cabinet_store import _LOCK, _connect
     from app.consents import consents_payload
     from app.notifications import unread_count_on
 
+    _remember_access_identity(user)
     fields = account_fields_for(user.subject)
     profile = fields["company_profile"]
     candidate_profile = fields["candidate_profile"]
@@ -248,6 +256,7 @@ def _tokens_from(payload: dict, *, require_refresh: bool, expected_nonce: str | 
         refresh_expires = int(refresh_expires)
     except (TypeError, ValueError) as exc:
         raise HTTPException(status_code=502, detail="Academy token mübadiləsi alınmadı") from exc
+    _remember_access_identity(user)
     _remember_login_identity(payload.get("id_token"), user.subject)
     issued = {
         "access_token": access,

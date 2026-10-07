@@ -32,3 +32,19 @@ export function buildAuthorizeQuery({
   if (returnToAbsolute) params.set("return_to", returnToAbsolute);
   return params;
 }
+
+/** Academy job-account entry: SSO / account picker, then authorize via `next`. */
+export function buildJobAccountLoginUrl({
+  jobAccountUrl,
+  authorizeUrl,
+  authorizeParams,
+  intent = "",
+  returnToAbsolute = "",
+}) {
+  const authorize = `${authorizeUrl}?${authorizeParams.toString()}`;
+  const url = new URL(jobAccountUrl);
+  url.searchParams.set("next", authorize);
+  if (intent) url.searchParams.set("registration_intent", intent);
+  if (returnToAbsolute) url.searchParams.set("return_to", returnToAbsolute);
+  return url.toString();
+}

@@ -116,7 +116,8 @@ Set on the web service if the private-host wiring is not applied:
 | `NEXT_PUBLIC_APP_URL` | Same fallback as `APP_URL`. |
 | `JOB_OIDC_ISSUER` | Academy issuer. Unset locally keeps `http://127.0.0.1:8000/`. |
 | `JOB_OIDC_CLIENT_ID` | Default `job-web`. |
-| `JOB_OIDC_AUTHORIZE_URL` | Academy authorize URL. |
+| `JOB_OIDC_AUTHORIZE_URL` | Academy authorize URL (used as `next=` target). |
+| `JOB_OIDC_JOB_ACCOUNT_URL` | Academy job-account entry. Default `{issuer}portal/job-account/`. Login redirects here, not bare authorize. |
 | `JOB_OIDC_LOGOUT_URL` | Ignored. Job logout stays on the public site and does not call Academy. |
 
 ### Private network checklist (empty UI = web cannot reach API)
