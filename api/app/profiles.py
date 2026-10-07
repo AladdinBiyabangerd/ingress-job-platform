@@ -1,7 +1,8 @@
-"""Company profile fields required before an employer can post.
+"""Company and candidate contact profiles on the job site.
 
-Candidate display name, phone, and email stay in this same job-site database.
-They are not written to Academy.
+Mac default: api/data/accounts.sqlite. When DATABASE_URL is set (Railway), the
+same Postgres database as jobs — so profiles survive API redeploys. Not written
+to Academy.
 """
 
 from __future__ import annotations
@@ -25,68 +26,78 @@ EMAIL_MAX = 120
 _PHONE_RE = re.compile(r"^[0-9+\-() ]{5,40}$")
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
+_SCHEMA_STATEMENTS = (
+    """
+    CREATE TABLE IF NOT EXISTS company_profiles (
+        subject TEXT PRIMARY KEY,
+        company_name TEXT NOT NULL,
+        city TEXT NOT NULL,
+        about TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS candidate_profiles (
+        subject TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS contact_emails (
+        subject TEXT PRIMARY KEY,
+        email TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS academy_identities (
+        subject TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS oidc_transactions (
+        state TEXT PRIMARY KEY,
+        verifier TEXT NOT NULL,
+        nonce TEXT NOT NULL,
+        return_to TEXT NOT NULL,
+        intent TEXT NOT NULL,
+        redirect_uri TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    )
+    """,
+)
 
-def _connect() -> sqlite3.Connection:
+
+def _apply_schema(conn) -> None:
+    for statement in _SCHEMA_STATEMENTS:
+        conn.execute(statement)
+    conn.commit()
+
+
+def _connect():
+    """Postgres when DATABASE_URL is set; otherwise accounts.sqlite."""
+    from app.jobs_db import connect, postgres_enabled, schema_cache_key
+
+    if postgres_enabled():
+        key = schema_cache_key()
+        conn = connect()
+        if key not in _ACCOUNTS_ENSURED:
+            _apply_schema(conn)
+            _ACCOUNTS_ENSURED.add(key)
+        return conn
+
     DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DATA_PATH)
     conn.row_factory = sqlite3.Row
     key = str(DATA_PATH)
-    if key in _ACCOUNTS_ENSURED:
-        return conn
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS company_profiles (
-            subject TEXT PRIMARY KEY,
-            company_name TEXT NOT NULL,
-            city TEXT NOT NULL,
-            about TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-        """
-    )
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS candidate_profiles (
-            subject TEXT PRIMARY KEY,
-            display_name TEXT NOT NULL,
-            phone TEXT NOT NULL,
-            email TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-        """
-    )
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS contact_emails (
-            subject TEXT PRIMARY KEY,
-            email TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-        """
-    )
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS academy_identities (
-            subject TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-        """
-    )
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS oidc_transactions (
-            state TEXT PRIMARY KEY,
-            verifier TEXT NOT NULL,
-            nonce TEXT NOT NULL,
-            return_to TEXT NOT NULL,
-            intent TEXT NOT NULL,
-            redirect_uri TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        )
-        """
-    )
-    _ACCOUNTS_ENSURED.add(key)
+    if key not in _ACCOUNTS_ENSURED:
+        _apply_schema(conn)
+        _ACCOUNTS_ENSURED.add(key)
     return conn
 
 

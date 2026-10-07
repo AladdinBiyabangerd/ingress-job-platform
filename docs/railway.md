@@ -36,8 +36,10 @@ Leave `DATABASE_URL` unset on the Mac. The API and the worker then keep sharing
 `worker/data/jobs.sqlite`, or `JOBS_DB_PATH` when that variable is set.
 `JOBS_DB_PATH` is ignored when `DATABASE_URL` is set.
 
-Company and candidate profiles stay in the API file `api/data/accounts.sqlite`.
-That file is not the jobs database.
+Company and candidate contact profiles (`company_profiles`, `candidate_profiles`,
+`contact_emails`, `academy_identities`, `oidc_transactions`) live in the same
+Postgres database as jobs when `DATABASE_URL` is set. Locally, with
+`DATABASE_URL` unset, they stay in `api/data/accounts.sqlite`.
 
 ## Apply once, then push
 
@@ -79,7 +81,7 @@ that file is applied; set them yourself only if you use another bucket):
 | `OTEL_TRACES_SAMPLER_ARG` | Optional sample ratio from 0 to 1. Default `1.0` only if an endpoint is set. |
 | `OTEL_SDK_DISABLED` | Set true to force traces off. |
 | `DATABASE_URL` | Shared Postgres URL for the jobs database. Wired from the `postgres` service onto the API and the worker. Unset locally keeps sqlite. |
-| `JOBS_DB_PATH` | Optional sqlite path, used only when `DATABASE_URL` is unset. Unset locally uses `worker/data/jobs.sqlite`. Do not set this on Railway. |
+| `JOBS_DB_PATH` | Optional sqlite path, used only when `DATABASE_URL` is unset. Unset locally uses `worker/data/jobs.sqlite`. Do not set this on Railway. Contact profiles use `api/data/accounts.sqlite` when `DATABASE_URL` is unset. |
 | `CORS_ORIGINS` | Optional comma-separated browser origins. Localhost 3010 is always allowed. |
 | `EMAIL_HOST` | Academy SMTP host. Unset means no mail is sent; in-site notifications are still saved. |
 | `EMAIL_PORT` | Academy SMTP port. Default 587. |
