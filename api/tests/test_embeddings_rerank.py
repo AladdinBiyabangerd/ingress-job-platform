@@ -14,7 +14,15 @@ from app.embeddings import (
     profile_embed_text,
     vector_literal,
 )
-from app.matching import W_SEMANTIC, W_STRUCT, _apply_semantic_rerank, rerank_enabled
+from app.match_llm_rerank import W_BLENDED, W_RELEVANCE, apply_llm_rerank
+from app.matching import (
+    FEEDBACK_DOWN_FACTOR,
+    W_SEMANTIC,
+    W_STRUCT,
+    _apply_feedback_demotion,
+    _apply_semantic_rerank,
+    rerank_enabled,
+)
 
 
 class CosineBlendTests(unittest.TestCase):
@@ -47,22 +55,64 @@ class CosineBlendTests(unittest.TestCase):
             category="Backend",
             skills=["Java", "Spring"],
             text="Build APIs",
+            remote=True,
+            relocation=False,
         )
         self.assertIn("Java", job)
         self.assertIn("Backend", job)
+        self.assertIn("Remote", job)
+        self.assertNotIn("Relocation", job)
         profile = profile_embed_text(
             {
                 "headline": "Backend",
                 "seniority": "senior",
                 "contact": {"email": "secret@example.com", "full_name": "Aysel"},
                 "skills": [{"name": "Java"}],
-                "work_history": [{"title": "Engineer", "company": "HiddenCo", "skills": ["Kafka"]}],
+                "soft_skills": ["communication", "teamwork"],
+                "work_history": [
+                    {
+                        "title": "Engineer",
+                        "company": "HiddenCo",
+                        "summary": "Built Kafka pipelines for payments.",
+                        "skills": ["Kafka"],
+                    }
+                ],
+                "languages": [{"code": "en", "level": "C1"}],
+                "preferences": {"remote": True, "relocation": False},
             }
         )
         self.assertIn("Java", profile)
         self.assertIn("Engineer", profile)
+        self.assertIn("Built Kafka pipelines", profile)
+        self.assertIn("Languages: en:C1", profile)
+        self.assertIn("Preferences: remote, no relocation", profile)
         self.assertNotIn("secret@example.com", profile)
         self.assertNotIn("Aysel", profile)
+        self.assertNotIn("communication", profile)
+        self.assertNotIn("HiddenCo", profile)
+
+    def test_job_embed_snippet_up_to_800(self):
+        body = "x" * 900
+        job = job_embed_text(title="T", text=body)
+        # title + newline + 800-char snippet
+        self.assertIn("x" * 800, job)
+        self.assertNotIn("x" * 801, job)
+
+    def test_profile_work_capped_at_three_with_summary(self):
+        profile = profile_embed_text(
+            {
+                "skills": [{"name": "Java"}],
+                "work_history": [
+                    {"title": f"Role{i}", "summary": f"Did work {i} " + ("y" * 200)}
+                    for i in range(5)
+                ],
+            }
+        )
+        self.assertIn("Role0:", profile)
+        self.assertIn("Role2:", profile)
+        self.assertNotIn("Role3:", profile)
+        # summary truncated to 120 chars per role
+        self.assertNotIn("y" * 121, profile)
 
     def test_blend_weights(self):
         struct = 0.8
@@ -174,6 +224,99 @@ class EmbedGatewayTests(unittest.TestCase):
         api.assert_called_once()
 
 
+class LlmRerankTests(unittest.TestCase):
+    def test_flag_off_noop(self):
+        pool = [{"job_id": 1, "score": 0.8, "components": {}, "have": ["Java"], "missing": []}]
+        with patch.dict(os.environ, {"AI_LLM_RERANK_ENABLED": "0"}, clear=False):
+            ok = apply_llm_rerank(
+                None,
+                matches=pool,
+                profile={"seniority": "senior", "skills": [{"name": "Java"}]},
+                profile_version="v1",
+            )
+        self.assertFalse(ok)
+        self.assertEqual(pool[0]["score"], 0.8)
+        self.assertNotIn("ai_llm_rerank", pool[0])
+
+    def test_blend_formula(self):
+        from app.ai_gateway.gateway import GatewayResult
+
+        pool = [
+            {
+                "job_id": 1,
+                "score": 0.8,
+                "title": "Java Dev",
+                "company": "Acme",
+                "have": ["Java"],
+                "missing": ["Kafka"],
+                "components": {},
+            },
+            {
+                "job_id": 2,
+                "score": 0.6,
+                "title": "PM",
+                "company": "Beta",
+                "have": [],
+                "missing": ["Jira"],
+                "components": {},
+            },
+        ]
+        fake = GatewayResult(
+            ok=True,
+            data={
+                "scores": [
+                    {"job_id": 1, "relevance": 5, "note": "Strong Java overlap"},
+                    {"job_id": 2, "relevance": 1, "note": "No skill overlap"},
+                ]
+            },
+        )
+        with patch.dict(os.environ, {"AI_LLM_RERANK_ENABLED": "1"}, clear=False):
+            with patch("app.match_llm_rerank.complete_json", return_value=fake):
+                ok = apply_llm_rerank(
+                    None,
+                    matches=pool,
+                    profile={"seniority": "senior", "skills": [{"name": "Java"}], "total_years": 5},
+                    profile_version="v1",
+                )
+        self.assertTrue(ok)
+        # 0.55*0.8 + 0.45*(5/5) = 0.44 + 0.45 = 0.89
+        self.assertEqual(pool[0]["score"], round(W_BLENDED * 0.8 + W_RELEVANCE * 1.0, 4))
+        self.assertEqual(pool[0]["components"]["llm_relevance"], 5)
+        self.assertTrue(pool[0]["ai_llm_rerank"])
+        # 0.55*0.6 + 0.45*(1/5) = 0.33 + 0.09 = 0.42
+        self.assertEqual(pool[1]["score"], round(W_BLENDED * 0.6 + W_RELEVANCE * 0.2, 4))
+
+    def test_soft_fail_keeps_scores(self):
+        from app.ai_gateway.gateway import GatewayResult
+
+        pool = [{"job_id": 1, "score": 0.77, "have": ["Java"], "missing": [], "components": {}}]
+        with patch.dict(os.environ, {"AI_LLM_RERANK_ENABLED": "1"}, clear=False):
+            with patch(
+                "app.match_llm_rerank.complete_json",
+                return_value=GatewayResult(ok=False, error="ai_provider_error"),
+            ):
+                ok = apply_llm_rerank(
+                    None,
+                    matches=pool,
+                    profile={"skills": [{"name": "Java"}]},
+                    profile_version="v1",
+                )
+        self.assertFalse(ok)
+        self.assertEqual(pool[0]["score"], 0.77)
+
+    def test_feedback_demotion(self):
+        pool = [
+            {"job_id": 1, "score": 1.0, "feedback": {"vote": "down", "reason": "technology"}, "components": {}},
+            {"job_id": 2, "score": 0.8, "feedback": {"vote": "up", "reason": ""}, "components": {}},
+            {"job_id": 3, "score": 0.5, "feedback": None, "components": {}},
+        ]
+        _apply_feedback_demotion(pool)
+        self.assertEqual(pool[0]["score"], round(1.0 * FEEDBACK_DOWN_FACTOR, 4))
+        self.assertEqual(pool[0]["components"]["feedback_demotion"], FEEDBACK_DOWN_FACTOR)
+        self.assertEqual(pool[1]["score"], 0.8)
+        self.assertEqual(pool[2]["score"], 0.5)
+
+
 class MatchWhyTests(unittest.TestCase):
     def test_append_why_soft_fail(self):
         from app.match_why import append_why_sentences
@@ -201,7 +344,7 @@ class MatchWhyTests(unittest.TestCase):
 
     def test_append_why_applies(self):
         from app.ai_gateway.gateway import GatewayResult
-        from app.match_why import append_why_sentences
+        from app.match_why import PROMPT_VERSION, append_why_sentences, _build_user
 
         matches = [
             {
@@ -210,24 +353,48 @@ class MatchWhyTests(unittest.TestCase):
                 "company": "Acme",
                 "explanation": "2/3 skills match: Java, Spring",
                 "have": ["Java", "Spring"],
-                "missing": ["Kafka"],
+                "missing": ["Kafka", "Redis", "Kubernetes"],
                 "remote": True,
                 "relocation": False,
                 "job_seniority": "senior",
-                "components": {"skills": 0.8, "semantic": 0.6},
+                "components": {
+                    "skills": 0.8,
+                    "semantic": 0.6,
+                    "llm_relevance": 4,
+                    "llm_note": "Java Spring overlap",
+                },
             }
         ]
+        candidate = {
+            "seniority": "senior",
+            "total_years": 6,
+            "preferences": {"remote": True, "relocation": False},
+        }
+        user = _build_user(
+            lang="en",
+            profile_version="2026-10-05",
+            match=matches[0],
+            candidate=candidate,
+        )
+        self.assertEqual(PROMPT_VERSION, "match-why-v2")
+        self.assertIn("CandidateSeniority: senior", user)
+        self.assertIn("CandidateYears: 6", user)
+        self.assertIn("MissingSkillsTop3: Kafka, Redis, Kubernetes", user)
+        self.assertIn("LlmNote: Java Spring overlap", user)
+
         fake = GatewayResult(ok=True, data={"why": "Strong overlap on Java and Spring for a senior backend role."})
         with patch.dict(os.environ, {"AI_MATCH_WHY_ENABLED": "1"}, clear=False):
-            with patch("app.match_why.complete_json", return_value=fake):
+            with patch("app.match_why.complete_json", return_value=fake) as api:
                 append_why_sentences(
                     None,
                     matches=matches,
                     lang="en",
                     profile_version="2026-10-05",
+                    candidate=candidate,
                 )
         self.assertTrue(matches[0].get("ai_why"))
         self.assertIn("Strong overlap", matches[0]["explanation"])
+        self.assertEqual(api.call_args.kwargs["prompt_version"], "match-why-v2")
 
 
 if __name__ == "__main__":

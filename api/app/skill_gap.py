@@ -199,6 +199,8 @@ def skill_gap_payload(
         "top": chosen_top,
         "source": "role_skill_weight",
         "explanation": "",
+        "coach": None,
+        "ai_coach": False,
     }
     if not matching:
         return base
@@ -301,6 +303,26 @@ def skill_gap_payload(
         [x["name"] for x in have],
         [x["name"] for x in missing],
     )
+
+    try:
+        from app.role_coach import build_role_coach
+
+        coach = build_role_coach(
+            conn,
+            role_name=str(base["role"] or ""),
+            have=have,
+            missing=missing,
+            profile=profile,
+            lang=locale,
+        )
+    except Exception:
+        coach = None
+    if coach:
+        base["coach"] = coach
+        base["ai_coach"] = True
+        src = str(base.get("source") or "role_skill_weight")
+        if "+role_coach" not in src:
+            base["source"] = f"{src}+role_coach"
     return base
 
 

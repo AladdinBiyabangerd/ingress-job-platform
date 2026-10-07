@@ -1,7 +1,8 @@
 """AI #1: LLM parse fallback when rules confidence is low (plan §5.1).
 
-Flow: rules parse → if confidence < threshold → PII mask via ai_gateway →
-structured JSON → dictionary + in-text skill filter. Soft-fails to rules.
+Flow: rules parse → if confidence < threshold (or thin dictionary skills) →
+PII mask via ai_gateway → structured JSON → dictionary + in-text skill filter.
+Soft-fails to rules.
 """
 
 from __future__ import annotations
@@ -19,18 +20,44 @@ from worker.ai_gateway import complete_json
 from worker.techstack import find_stack
 
 LOW_CONFIDENCE = 0.55
-PROMPT_VERSION = "cv-parse-ai1-v1"
+THIN_SKILLS_THRESHOLD = 3
+# Drop skills at or below this LLM confidence.
+SKILL_CONF_DROP = 0.35
+# Mid-band: keep but dampen years (aligned with role/match years_factor scale).
+SKILL_CONF_WEAK = 0.55
+SKILL_YEARS_WEAK_FACTOR = 0.5
+PROMPT_VERSION = "cv-parse-ai1-v2"
 PURPOSE = "cv_parse"
 
-_SYSTEM = (
-    "Extract a structured CV profile from the redacted resume text. "
-    "Use only facts present in the text. Do not invent employers, titles, "
-    "skills, or dates. Skills must appear in the text. "
-    "PII placeholders like [NAME]/ [EMAIL], [PHONE], [URL], [ADDRESS], [CITY] "
-    "are redacted — leave contact fields empty. "
-    "Dates as YYYY-MM or null. end null means current role. "
-    "seniority one of: intern, junior, middle, senior, lead, principal, staff, or empty."
-)
+_SYSTEM = """You are a CV extractor. Extract structured facts ONLY from the redacted resume text.
+
+Rules:
+- Use only facts present in the text. Do not invent employers, titles, skills, dates, or years.
+- Add a skill only when the text contains clear evidence it was used or claimed.
+- For every skill: evidence = short quote from the text (≤80 characters); confidence ∈ [0,1].
+- "Familiar with", "exposed to", "basic knowledge of" → confidence ≤ 0.4.
+- Soft skills (communication, teamwork, leadership, etc.) go ONLY in soft_skills — never in skills.
+- seniority: one of intern, junior, middle, senior, lead, principal, staff, or empty.
+- total_years and skill years: estimate from work history dates only; do not invent.
+- PII placeholders ([NAME], [EMAIL], [PHONE], [URL], [ADDRESS], [CITY]) are redacted — leave contact empty.
+- Dates as YYYY-MM or null. end null means current role.
+
+Negative example (do NOT do this):
+Title "Backend Engineer" alone must NOT invent Kafka, Kubernetes, or Redis.
+
+Few-shot 1:
+Text: "Senior Java Developer at Acme (2019-01–present). Built Spring Boot APIs; Kafka for events."
+→ skills: [{name:"Java", years:5, evidence:"Senior Java Developer", confidence:0.95},
+  {name:"Spring", years:5, evidence:"Built Spring Boot APIs", confidence:0.9},
+  {name:"Kafka", years:null, evidence:"Kafka for events", confidence:0.85}]
+  seniority: senior, soft_skills: []
+
+Few-shot 2:
+Text: "Junior analyst. Familiar with Python. Strong communication skills."
+→ skills: [{name:"Python", years:null, evidence:"Familiar with Python", confidence:0.35}]
+  soft_skills: ["communication"]
+  Do NOT invent SQL or Excel from the title alone.
+"""
 
 _SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -74,9 +101,15 @@ _SCHEMA: dict[str, Any] = {
                     "name": {"type": "string"},
                     "years": {"type": ["number", "null"]},
                     "level": {"type": "string"},
+                    "evidence": {"type": "string"},
+                    "confidence": {"type": ["number", "null"]},
                 },
-                "required": ["name", "years", "level"],
+                "required": ["name", "years", "level", "evidence", "confidence"],
             },
+        },
+        "soft_skills": {
+            "type": "array",
+            "items": {"type": "string"},
         },
         "languages": {
             "type": "array",
@@ -112,6 +145,7 @@ _SCHEMA: dict[str, Any] = {
         "total_years",
         "work_history",
         "skills",
+        "soft_skills",
         "languages",
         "education",
     ],
@@ -132,13 +166,37 @@ def low_confidence_threshold() -> float:
         return LOW_CONFIDENCE
 
 
+def dictionary_skill_count(profile: dict) -> int:
+    """Count skills that resolve to the packaged dictionary (matching input quality)."""
+    raw = profile.get("skills") if isinstance(profile.get("skills"), list) else []
+    aliases = _skill_aliases()
+    seen: set[str] = set()
+    for item in raw:
+        if isinstance(item, str):
+            name_in = item.strip()
+        elif isinstance(item, dict):
+            name_in = str(item.get("name") or "").strip()
+        else:
+            continue
+        if not name_in:
+            continue
+        canonical = aliases.get(name_in.lower())
+        if not canonical:
+            found = find_stack(name_in)
+            if len(found) == 1:
+                canonical = found[0]
+        if canonical and canonical not in seen:
+            seen.add(canonical)
+    return len(seen)
+
+
 def maybe_ai_fallback(
     profile: dict,
     text: str,
     *,
     conn: sqlite3.Connection | None = None,
 ) -> dict:
-    """If rules confidence is low, try LLM enrichment. Never raises."""
+    """If rules confidence is low (or skills are thin), try LLM enrichment. Never raises."""
     meta = profile.setdefault("parse_meta", {})
     if not isinstance(meta, dict):
         meta = {}
@@ -150,7 +208,8 @@ def maybe_ai_fallback(
     except (TypeError, ValueError):
         conf = 0.0
 
-    if conf >= low_confidence_threshold():
+    thin = dictionary_skill_count(profile) < THIN_SKILLS_THRESHOLD
+    if conf >= low_confidence_threshold() and not thin:
         return profile
     if not (text or "").strip():
         return profile
@@ -158,6 +217,9 @@ def maybe_ai_fallback(
         meta["ai_fallback"] = "skipped"
         meta["ai_error"] = "ai_disabled"
         return profile
+
+    if thin and conf >= low_confidence_threshold():
+        meta["ai_force_reason"] = "thin_skills"
 
     contact = profile.get("contact") if isinstance(profile.get("contact"), dict) else {}
     result = complete_json(
@@ -182,6 +244,8 @@ def maybe_ai_fallback(
     out_meta["ai_fallback"] = "applied"
     out_meta["prompt_version"] = PROMPT_VERSION
     out_meta["ai_cached"] = result.cached
+    if thin and conf >= low_confidence_threshold():
+        out_meta["ai_force_reason"] = "thin_skills"
     if result.prompt_tokens or result.completion_tokens:
         out_meta["ai_tokens"] = {
             "prompt": result.prompt_tokens,
@@ -229,6 +293,10 @@ def _merge(rules: dict, llm: dict, text: str) -> dict:
     if skills:
         out["skills"] = _merge_skills(rules_skills, skills)
 
+    soft = _filter_soft_skills(llm.get("soft_skills"))
+    if soft:
+        out["soft_skills"] = soft
+
     languages = _filter_languages(llm.get("languages"))
     if languages:
         out["languages"] = languages
@@ -241,7 +309,12 @@ def _merge(rules: dict, llm: dict, text: str) -> dict:
 
 
 def filter_skills(raw: object, text: str) -> list[dict]:
-    """Keep dictionary skills that also appear in the original CV text."""
+    """Keep dictionary skills that also appear in the original CV text.
+
+    Drops LLM confidence ≤ 0.35. Mid-band (≤ 0.55) keeps the skill but
+    dampens years so role/match years_factor weighs them less.
+    Soft skills must not appear here (LLM schema separates soft_skills).
+    """
     if not isinstance(raw, list):
         return []
     aliases = _skill_aliases()
@@ -253,13 +326,21 @@ def filter_skills(raw: object, text: str) -> list[dict]:
     for item in raw:
         if isinstance(item, str):
             name_in, years, level = item, None, ""
+            evidence, conf = "", None
         elif isinstance(item, dict):
             name_in = str(item.get("name") or "").strip()
             years = item.get("years")
             level = str(item.get("level") or "").strip()[:40]
+            evidence = str(item.get("evidence") or "").strip()[:80]
+            conf_raw = item.get("confidence")
+            conf = None
+            if isinstance(conf_raw, (int, float)):
+                conf = max(0.0, min(1.0, float(conf_raw)))
         else:
             continue
         if not name_in:
+            continue
+        if conf is not None and conf <= SKILL_CONF_DROP:
             continue
         canonical = aliases.get(name_in.lower())
         if not canonical:
@@ -278,14 +359,38 @@ def filter_skills(raw: object, text: str) -> list[dict]:
         years_f = None
         if isinstance(years, (int, float)) and 0 <= float(years) <= 60:
             years_f = round(float(years), 1)
-        out.append(
-            {
-                "name": canonical,
-                "years": years_f,
-                "level": level,
-                "source": "cv",
-            }
-        )
+            if conf is not None and conf <= SKILL_CONF_WEAK:
+                years_f = round(years_f * SKILL_YEARS_WEAK_FACTOR, 1)
+        row: dict[str, Any] = {
+            "name": canonical,
+            "years": years_f,
+            "level": level,
+            "source": "cv",
+        }
+        if evidence:
+            row["evidence"] = evidence
+        if conf is not None:
+            row["confidence"] = conf
+        out.append(row)
+    return out
+
+
+def _filter_soft_skills(raw: object) -> list[str]:
+    if not isinstance(raw, list):
+        return []
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in raw:
+        name = str(item or "").strip()[:60]
+        if not name:
+            continue
+        key = name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(name)
+        if len(out) >= 12:
+            break
     return out
 
 
@@ -316,6 +421,10 @@ def _merge_skills(rules: list, llm: list[dict]) -> list[dict]:
                 base["years"] = item["years"]
             if not base.get("level") and item.get("level"):
                 base["level"] = item["level"]
+            if item.get("evidence") and not base.get("evidence"):
+                base["evidence"] = item["evidence"]
+            if item.get("confidence") is not None and base.get("confidence") is None:
+                base["confidence"] = item["confidence"]
         else:
             by_name[name] = item
     return list(by_name.values())
@@ -338,7 +447,16 @@ def _filter_work(raw: object, text: str) -> list[dict]:
         skills = [
             s["name"]
             for s in filter_skills(
-                [{"name": str(x), "years": None, "level": ""} for x in skill_names],
+                [
+                    {
+                        "name": str(x),
+                        "years": None,
+                        "level": "",
+                        "evidence": "",
+                        "confidence": 0.8,
+                    }
+                    for x in skill_names
+                ],
                 text,
             )
         ]

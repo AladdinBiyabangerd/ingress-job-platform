@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
+import { loadSkillGap } from "../lib/server/refresh";
 import { Pager } from "./pager";
 import { RegisterChoice } from "./register-choice";
 import { RoleSkillParts } from "./role-skill-parts";
@@ -115,6 +116,7 @@ export function Recommendations({ locale, initialRoles = null, initialMatches = 
   const [roles, setRoles] = useState(initialRoles);
   const [matches, setMatches] = useState(initialMatches);
   const [activeRole, setActiveRole] = useState(initialRoles?.roles?.[0]?.canonical_name || "");
+  const [gap, setGap] = useState(null);
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
@@ -167,6 +169,24 @@ export function Recommendations({ locale, initialRoles = null, initialMatches = 
     };
   }, [me, lang, seededCatalog]);
 
+  useEffect(() => {
+    if (!me || !(me.candidate || me.staff) || !activeRole) {
+      setGap(null);
+      return undefined;
+    }
+    let cancelled = false;
+    loadSkillGap(lang, activeRole)
+      .then((data) => {
+        if (!cancelled) setGap(data);
+      })
+      .catch(() => {
+        if (!cancelled) setGap(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [me, lang, activeRole]);
+
   const jobList = Array.isArray(matches?.matches) ? matches.matches : [];
   const { pageItems, currentPage, totalPages, pageSize, total, goToPage } = usePagination(
     jobList,
@@ -213,6 +233,8 @@ export function Recommendations({ locale, initialRoles = null, initialMatches = 
   const selected = roleList.find((role) => role.canonical_name === activeRole) || null;
   const selectedScore =
     selected && typeof selected.score === "number" ? Math.round(selected.score * 100) : null;
+  const coach = gap?.coach && typeof gap.coach === "object" ? gap.coach : null;
+  const coachLearn = Array.isArray(coach?.must_learn) ? coach.must_learn.slice(0, 3) : [];
 
   return (
     <Shell locale={locale} mode="recommendations">
@@ -307,6 +329,28 @@ export function Recommendations({ locale, initialRoles = null, initialMatches = 
                     {t.recommendationsGapLink}
                   </a>
                 </header>
+              ) : null}
+
+              {selected && coach?.fit_summary ? (
+                <div className="recommendations-coach">
+                  <p className="recommendations-coach-summary">{coach.fit_summary}</p>
+                  {coachLearn.length ? (
+                    <ul className="recommendations-coach-learn">
+                      {coachLearn.map((item) => (
+                        <li key={`reco-coach-${item.skill}`}>
+                          <strong>{item.skill}</strong>
+                          {item.why ? <span className="hint"> — {item.why}</span> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <a
+                    className="recommendations-gap-link"
+                    href={hrefFor(locale, { mode: "skills" })}
+                  >
+                    {t.recommendationsCoachMore}
+                  </a>
+                </div>
               ) : null}
 
               {selected ? (

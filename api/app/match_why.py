@@ -12,15 +12,17 @@ from app.ai_flags import feature_on
 from app.ai_gateway import complete_json
 
 PURPOSE = "match_why"
-PROMPT_VERSION = "match-why-v1"
+PROMPT_VERSION = "match-why-v2"
 DEFAULT_TOP = 5
 
 _LANG_NAME = {"az": "Azerbaijani", "en": "English", "ru": "Russian"}
 
 _SYSTEM = (
-    "Write one short sentence explaining why this job fits the candidate. "
-    "Use only the facts in the user context. Do not invent employers, salaries, "
-    "skills, or locations. Do not include names, email, phone, or URLs. "
+    "Write exactly one sentence (≤30 words) explaining why this job fits the candidate. "
+    "Must name 1–2 concrete overlapping skills from HaveSkills. "
+    "Ban clichés: do not write “great fit”, “perfect”, “ideal”, or vague praise. "
+    "Use only facts in the user context. Do not invent skills, employers, or salaries. "
+    "No names, email, phone, or URLs. "
     "Write in the language named in the context."
 )
 
@@ -48,28 +50,48 @@ def _build_user(
     lang: str,
     profile_version: str,
     match: dict,
+    candidate: dict | None = None,
 ) -> str:
     locale = _pick_locale(lang)
     have = match.get("have") if isinstance(match.get("have"), list) else []
     missing = match.get("missing") if isinstance(match.get("missing"), list) else []
     comps = match.get("components") if isinstance(match.get("components"), dict) else {}
-    return "\n".join(
-        [
-            f"Language: {_LANG_NAME[locale]}",
-            f"ProfileVersion: {profile_version}",
-            f"JobId: {match.get('job_id')}",
-            f"Title: {str(match.get('title') or '').strip()}",
-            f"Company: {str(match.get('company') or '').strip()}",
-            f"JobSeniority: {str(match.get('job_seniority') or '').strip() or '(none)'}",
-            f"Remote: {'yes' if match.get('remote') else 'no'}",
-            f"Relocation: {'yes' if match.get('relocation') else 'no'}",
-            "HaveSkills: " + (", ".join(str(x) for x in have[:12]) if have else "(none)"),
-            "MissingSkills: " + (", ".join(str(x) for x in missing[:12]) if missing else "(none)"),
-            f"SkillScore: {comps.get('skills', '')}",
-            f"SemanticScore: {comps.get('semantic', '')}",
-            "Write one sentence in the JSON why field.",
-        ]
-    )
+    cand = candidate if isinstance(candidate, dict) else {}
+    prefs = cand.get("preferences") if isinstance(cand.get("preferences"), dict) else {}
+    pref_bits: list[str] = []
+    if prefs.get("remote") is True:
+        pref_bits.append("remote")
+    elif prefs.get("remote") is False:
+        pref_bits.append("on-site")
+    if prefs.get("relocation") is True:
+        pref_bits.append("open_relocation")
+    elif prefs.get("relocation") is False:
+        pref_bits.append("no_relocation")
+    years = cand.get("total_years")
+    years_s = str(years) if isinstance(years, (int, float)) else ""
+    llm_note = str(comps.get("llm_note") or "").strip()
+    lines = [
+        f"Language: {_LANG_NAME[locale]}",
+        f"ProfileVersion: {profile_version}",
+        f"CandidateSeniority: {str(cand.get('seniority') or '').strip() or '(none)'}",
+        f"CandidateYears: {years_s or '(unknown)'}",
+        f"CandidatePrefs: {', '.join(pref_bits) if pref_bits else '(none)'}",
+        f"JobId: {match.get('job_id')}",
+        f"Title: {str(match.get('title') or '').strip()}",
+        f"Company: {str(match.get('company') or '').strip()}",
+        f"JobSeniority: {str(match.get('job_seniority') or '').strip() or '(none)'}",
+        f"Remote: {'yes' if match.get('remote') else 'no'}",
+        f"Relocation: {'yes' if match.get('relocation') else 'no'}",
+        "HaveSkills: " + (", ".join(str(x) for x in have[:12]) if have else "(none)"),
+        "MissingSkillsTop3: "
+        + (", ".join(str(x) for x in missing[:3]) if missing else "(none)"),
+        f"SkillScore: {comps.get('skills', '')}",
+        f"SemanticScore: {comps.get('semantic', '')}",
+        f"LlmRelevance: {comps.get('llm_relevance', '')}",
+        f"LlmNote: {llm_note or '(none)'}",
+        "Write one sentence in the JSON why field.",
+    ]
+    return "\n".join(lines)
 
 
 def append_why_sentences(
@@ -79,6 +101,7 @@ def append_why_sentences(
     lang: str,
     profile_version: str,
     top_n: int = DEFAULT_TOP,
+    candidate: dict | None = None,
 ) -> None:
     """Mutate matches[:top_n] explanations in place when AI succeeds."""
     if not why_enabled(conn) or not matches:
@@ -92,7 +115,12 @@ def append_why_sentences(
             purpose=PURPOSE,
             prompt_version=PROMPT_VERSION,
             system=_SYSTEM,
-            user=_build_user(lang=lang, profile_version=version, match=item),
+            user=_build_user(
+                lang=lang,
+                profile_version=version,
+                match=item,
+                candidate=candidate,
+            ),
             schema=_SCHEMA,
             schema_name="match_why",
             known_pii=None,

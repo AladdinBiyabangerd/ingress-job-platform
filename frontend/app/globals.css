@@ -2248,6 +2248,29 @@ textarea { min-height: 120px; resize: vertical; }
   text-decoration: underline;
 }
 
+.recommendations-coach {
+  display: grid;
+  gap: 8px;
+  padding: 12px 0 4px;
+  border-top: 1px solid #e8eaef;
+}
+
+.recommendations-coach-summary {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #20242b;
+}
+
+.recommendations-coach-learn {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 0.88rem;
+}
+
 .recommendations-role-skills .role-skill-parts {
   margin: 0;
 }
@@ -2604,6 +2627,46 @@ textarea { min-height: 120px; resize: vertical; }
 
 .skills-career-link:hover {
   text-decoration: underline;
+}
+
+.skills-coach {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid #e8eaef;
+}
+
+.skills-coach h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.skills-coach-summary {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.skills-coach-block {
+  display: grid;
+  gap: 4px;
+}
+
+.skills-coach-block h4 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #656b75;
+}
+
+.skills-coach-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 0.9rem;
 }
 
 .skills-panels {

@@ -1,8 +1,9 @@
 """Job ↔ candidate matching (plan §6.2 / §6.3).
 
 Structured score is always computed. On Postgres + pgvector + embeddings,
-AI #2 re-ranks the top pool: final = 0.7·struct + 0.3·cosine.
-SQLite / missing vectors → structured only (ai_rerank false).
+AI #2 blends cosine: 0.7·struct + 0.3·cosine. Optional LLM re-rank on top-10:
+0.55·blended + 0.45·(relevance/5). Down-voted jobs are demoted (×0.4).
+SQLite / missing vectors → structured only (ai_rerank false); LLM may still run.
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ W_FRESHNESS = 0.05
 
 W_STRUCT = 0.7
 W_SEMANTIC = 0.3
+FEEDBACK_DOWN_FACTOR = 0.4
 
 FEEDBACK_VOTES = ("up", "down")
 FEEDBACK_REASONS = ("", "location", "seniority", "technology", "salary")
@@ -521,6 +523,7 @@ def matches_payload(
         "matching_consent": matching,
         "skill_count": skill_count,
         "ai_rerank": False,
+        "ai_llm_rerank": False,
     }
     if not matching:
         return base
@@ -565,22 +568,63 @@ def matches_payload(
     if used_rerank:
         pool.sort(key=lambda row: (-row["score"], -row["job_id"]))
         base["ai_rerank"] = True
+
+    profile_version = str(profile_payload.get("updated_at") or "")[:80] or "v0"
+    used_llm = False
+    try:
+        from app.match_llm_rerank import apply_llm_rerank
+
+        used_llm = apply_llm_rerank(
+            conn,
+            matches=pool,
+            profile=profile,
+            profile_version=profile_version,
+        )
+    except Exception:
+        used_llm = False
+    if used_llm:
+        pool.sort(key=lambda row: (-row["score"], -row["job_id"]))
+        base["ai_llm_rerank"] = True
+
+    _apply_feedback_demotion(pool)
+    pool.sort(key=lambda row: (-row["score"], -row["job_id"]))
     matches = pool[:chosen_limit]
-    if used_rerank:
+    if used_rerank or used_llm:
         try:
             from app.match_why import append_why_sentences
 
-            profile_version = str(profile_payload.get("updated_at") or "")[:80]
             append_why_sentences(
                 conn,
                 matches=matches,
                 lang=locale,
-                profile_version=profile_version or "v0",
+                profile_version=profile_version,
+                candidate=profile,
             )
         except Exception:
             pass
     base["matches"] = matches
     return base
+
+
+def _apply_feedback_demotion(pool: list[dict]) -> None:
+    """Down-voted jobs stay listed but score *= FEEDBACK_DOWN_FACTOR."""
+    for item in pool:
+        if not isinstance(item, dict):
+            continue
+        fb = item.get("feedback")
+        if not isinstance(fb, dict):
+            continue
+        if str(fb.get("vote") or "").strip().lower() != "down":
+            continue
+        try:
+            score = float(item.get("score") or 0.0)
+        except (TypeError, ValueError):
+            continue
+        item["score"] = round(score * FEEDBACK_DOWN_FACTOR, 4)
+        comps = item.get("components") if isinstance(item.get("components"), dict) else {}
+        comps = dict(comps)
+        comps["feedback_demotion"] = FEEDBACK_DOWN_FACTOR
+        item["components"] = comps
 
 
 def _apply_semantic_rerank(

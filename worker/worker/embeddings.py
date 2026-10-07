@@ -40,6 +40,8 @@ def job_embed_text(
     category: str = "",
     skills: list[str] | None = None,
     text: str = "",
+    remote: bool | None = None,
+    relocation: bool | None = None,
 ) -> str:
     parts: list[str] = []
     title_s = (title or "").strip()
@@ -51,18 +53,29 @@ def job_embed_text(
     names = [str(s).strip() for s in (skills or []) if str(s).strip()]
     if names:
         parts.append("Skills: " + ", ".join(names[:40]))
-    snippet = re.sub(r"\s+", " ", (text or "").strip())[:500]
+    flags: list[str] = []
+    if remote:
+        flags.append("Remote")
+    if relocation:
+        flags.append("Relocation")
+    if flags:
+        parts.append("Work: " + ", ".join(flags))
+    snippet = re.sub(r"\s+", " ", (text or "").strip())[:800]
     if snippet:
         parts.append(snippet)
     return "\n".join(parts)
 
 
 def profile_embed_text(profile: dict | None) -> str:
+    """PII-free profile text for embeddings. Soft skills omitted (matching noise)."""
     data = profile if isinstance(profile, dict) else {}
     parts: list[str] = []
     headline = str(data.get("headline") or "").strip()
     if headline:
         parts.append(headline)
+    summary = re.sub(r"\s+", " ", str(data.get("summary") or "").strip())[:600]
+    if summary:
+        parts.append(summary)
     seniority = str(data.get("seniority") or "").strip()
     if seniority:
         parts.append(f"Seniority: {seniority}")
@@ -84,18 +97,46 @@ def profile_embed_text(profile: dict | None) -> str:
             break
     if skill_names:
         parts.append("Skills: " + ", ".join(skill_names))
+    # ≤2–3 recent roles × 120-char work summary (not soft-skill noise).
     work = data.get("work_history") if isinstance(data.get("work_history"), list) else []
-    for item in work[:8]:
+    for item in work[:3]:
         if not isinstance(item, dict):
             continue
         title = str(item.get("title") or "").strip()
-        w_skills = item.get("skills") if isinstance(item.get("skills"), list) else []
-        w_names = [str(s).strip() for s in w_skills if str(s).strip()][:12]
-        bit = title
-        if w_names:
-            bit = f"{title}: {', '.join(w_names)}" if title else ", ".join(w_names)
-        if bit:
+        w_sum = re.sub(r"\s+", " ", str(item.get("summary") or "").strip())[:120]
+        if title and w_sum:
+            parts.append(f"{title}: {w_sum}")
+        elif title:
+            w_skills = item.get("skills") if isinstance(item.get("skills"), list) else []
+            w_names = [str(s).strip() for s in w_skills if str(s).strip()][:8]
+            bit = f"{title}: {', '.join(w_names)}" if w_names else title
             parts.append(bit)
+        elif w_sum:
+            parts.append(w_sum)
+    langs = data.get("languages") if isinstance(data.get("languages"), list) else []
+    lang_bits: list[str] = []
+    for item in langs[:8]:
+        if isinstance(item, dict):
+            code = str(item.get("code") or "").strip()
+            level = str(item.get("level") or "").strip()
+            if code:
+                lang_bits.append(f"{code}:{level}" if level else code)
+        elif isinstance(item, str) and item.strip():
+            lang_bits.append(item.strip())
+    if lang_bits:
+        parts.append("Languages: " + ", ".join(lang_bits))
+    prefs = data.get("preferences") if isinstance(data.get("preferences"), dict) else {}
+    pref_bits: list[str] = []
+    if prefs.get("remote") is True:
+        pref_bits.append("remote")
+    elif prefs.get("remote") is False:
+        pref_bits.append("on-site")
+    if prefs.get("relocation") is True:
+        pref_bits.append("open to relocation")
+    elif prefs.get("relocation") is False:
+        pref_bits.append("no relocation")
+    if pref_bits:
+        parts.append("Preferences: " + ", ".join(pref_bits))
     return "\n".join(parts)
 
 
@@ -275,7 +316,8 @@ def embed_job(conn, job_id: int) -> bool:
         return False
     row = conn.execute(
         """
-        SELECT id, title, category, text, status, COALESCE(hidden, 0) AS hidden, merged_into
+        SELECT id, title, category, text, status, COALESCE(hidden, 0) AS hidden, merged_into,
+               COALESCE(remote, 0) AS remote, COALESCE(relocation, 0) AS relocation
         FROM jobs WHERE id = ?
         """,
         (int(job_id),),
@@ -290,8 +332,17 @@ def embed_job(conn, job_id: int) -> bool:
     title = str(row["title"] if hasattr(row, "keys") else row[1] or "")
     category = str(row["category"] if hasattr(row, "keys") else row[2] or "")
     text = str(row["text"] if hasattr(row, "keys") else row[3] or "")
+    remote = bool(int(row["remote"] if hasattr(row, "keys") else row[7] or 0))
+    relocation = bool(int(row["relocation"] if hasattr(row, "keys") else row[8] or 0))
     skills = _skill_names_for_job(conn, int(job_id))
-    embed_text = job_embed_text(title=title, category=category, skills=skills, text=text)
+    embed_text = job_embed_text(
+        title=title,
+        category=category,
+        skills=skills,
+        text=text,
+        remote=remote,
+        relocation=relocation,
+    )
     if not embed_text.strip():
         return False
     model = embedding_model()
@@ -333,7 +384,8 @@ def embed_stale_jobs(conn, *, limit: int = 40) -> dict[str, Any]:
     # Candidates: published, not hidden, not merged. Prefer newest first.
     rows = conn.execute(
         """
-        SELECT id, title, category, text, tech_stack
+        SELECT id, title, category, text, tech_stack,
+               COALESCE(remote, 0) AS remote, COALESCE(relocation, 0) AS relocation
         FROM jobs
         WHERE status = 'published'
           AND COALESCE(hidden, 0) = 0
@@ -359,8 +411,17 @@ def embed_stale_jobs(conn, *, limit: int = 40) -> dict[str, Any]:
         title = str(row["title"] if hasattr(row, "keys") else row[1] or "")
         category = str(row["category"] if hasattr(row, "keys") else row[2] or "")
         text = str(row["text"] if hasattr(row, "keys") else row[3] or "")
+        remote = bool(int(row["remote"] if hasattr(row, "keys") else row[5] or 0))
+        relocation = bool(int(row["relocation"] if hasattr(row, "keys") else row[6] or 0))
         skills = _skill_names_for_job(conn, job_id)
-        embed_text = job_embed_text(title=title, category=category, skills=skills, text=text)
+        embed_text = job_embed_text(
+            title=title,
+            category=category,
+            skills=skills,
+            text=text,
+            remote=remote,
+            relocation=relocation,
+        )
         if not embed_text.strip():
             stats["skipped"] += 1
             continue

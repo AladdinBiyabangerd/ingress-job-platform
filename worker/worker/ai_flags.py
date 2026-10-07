@@ -21,7 +21,9 @@ FEATURES = (
     "job_tidy",
     "embeddings",
     "rerank",
+    "llm_rerank",
     "match_why",
+    "role_coach",
     "digest_intro",
 )
 
@@ -29,7 +31,9 @@ FEATURE_ENV = {
     "gateway": "AI_GATEWAY_ENABLED",
     "cv_fallback": "CV_AI_FALLBACK_ENABLED",
     "rerank": "AI_RERANK_ENABLED",
+    "llm_rerank": "AI_LLM_RERANK_ENABLED",
     "match_why": "AI_MATCH_WHY_ENABLED",
+    "role_coach": "AI_ROLE_COACH_ENABLED",
     "digest_intro": "DIGEST_AI_INTRO_ENABLED",
 }
 

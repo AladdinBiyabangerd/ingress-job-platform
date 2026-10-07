@@ -394,19 +394,34 @@ class AdminAiFlagTests(unittest.TestCase):
                 self.assertTrue(body["key_configured"])
                 self.assertTrue(body["flags"]["gateway"])
                 self.assertTrue(body["flags"]["rerank"])
+                self.assertIn("llm_rerank", body["flags"])
+                self.assertIn("role_coach", body["flags"])
+                self.assertTrue(body["flags"]["llm_rerank"])
+                self.assertTrue(body["flags"]["role_coach"])
 
                 saved = self.client.put(
                     "/api/v1/admin/ai-flags",
                     headers=headers,
-                    json={"flags": {"rerank": False, "digest_intro": False}},
+                    json={
+                        "flags": {
+                            "rerank": False,
+                            "digest_intro": False,
+                            "llm_rerank": False,
+                            "role_coach": False,
+                        }
+                    },
                 )
                 self.assertEqual(saved.status_code, 200, saved.text)
                 self.assertFalse(saved.json()["flags"]["rerank"])
                 self.assertFalse(saved.json()["flags"]["digest_intro"])
+                self.assertFalse(saved.json()["flags"]["llm_rerank"])
+                self.assertFalse(saved.json()["flags"]["role_coach"])
                 self.assertTrue(saved.json()["flags"]["gateway"])
 
                 again = self.client.get("/api/v1/admin/ai-flags", headers=headers)
                 self.assertFalse(again.json()["flags"]["rerank"])
+                self.assertFalse(again.json()["flags"]["llm_rerank"])
+                self.assertFalse(again.json()["flags"]["role_coach"])
 
                 bad = self.client.put(
                     "/api/v1/admin/ai-flags",

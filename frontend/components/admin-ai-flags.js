@@ -10,7 +10,9 @@ const FLOWS = [
   ["job_tidy", "adminAiTidy"],
   ["embeddings", "adminAiEmbeddings"],
   ["rerank", "adminAiRerank"],
+  ["llm_rerank", "adminAiLlmRerank"],
   ["match_why", "adminAiWhy"],
+  ["role_coach", "adminAiRoleCoach"],
   ["digest_intro", "adminAiDigest"],
 ];
 
