@@ -2,7 +2,8 @@
 
 Plan §12: consent(user_id, kind, granted, version, ts, ip, ua)
 Plan §13.1: GET/PUT /api/consents
-Copy source: docs/cv-ai/consent-copy-v1.json (stub pending legal review).
+Copy ships next to this module (api Docker context has no repo-root docs/).
+Canonical edit source remains docs/cv-ai/consent-copy-v1.json — keep in sync.
 """
 
 from __future__ import annotations
@@ -17,7 +18,10 @@ CONSENT_KINDS = ("matching", "emails", "recruiter_visibility")
 VISIBILITY_LEVELS = ("hidden", "anonymous", "public")
 LOCALES = ("az", "en", "ru")
 
-COPY_PATH = Path(__file__).resolve().parents[2] / "docs" / "cv-ai" / "consent-copy-v1.json"
+_MODULE_DIR = Path(__file__).resolve().parent
+_PACKAGED_COPY = _MODULE_DIR / "consent-copy-v1.json"
+_REPO_COPY = _MODULE_DIR.parents[1] / "docs" / "cv-ai" / "consent-copy-v1.json"
+COPY_PATH = _PACKAGED_COPY if _PACKAGED_COPY.is_file() else _REPO_COPY
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS consent (
