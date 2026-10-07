@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import {
-  ACCESS_COOKIE,
-  clampAge,
+  authCookieEntries,
   clearAuthCookiesOn,
   companyPath,
   noStore,
   oidcConfig,
   readCookie,
-  REFRESH_COOKIE,
   safeReturnTo,
   setAuthCookies,
   signedOut,
@@ -59,19 +57,9 @@ export async function GET(request) {
   let dest = safeReturnTo(data.return_to);
   if (data.me && data.me.needs_company_profile) dest = companyPath(dest);
 
-  const entries = [
-    [ACCESS_COOKIE, data.access_token, clampAge(data.expires_in, 900, 3600)],
-  ];
-  if (data.refresh_token) {
-    entries.push([
-      REFRESH_COOKIE,
-      data.refresh_token,
-      clampAge(data.refresh_expires_in, 3600, 365 * 24 * 60 * 60),
-    ]);
-  }
   return noStore(setAuthCookies(
     NextResponse.redirect(new URL(dest, config.origin), 307),
-    entries,
+    authCookieEntries(data),
     request,
   ));
 }

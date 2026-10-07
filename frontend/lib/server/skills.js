@@ -1,8 +1,6 @@
 import { cache } from "react";
-import { cookies } from "next/headers";
 import { apiBase } from "../api";
-import { ACCESS_COOKIE } from "./oidc";
-import { getMe } from "./me";
+import { getMe, sessionAccess } from "./me";
 
 const TIMEOUT_MS = 10_000;
 
@@ -34,8 +32,7 @@ export const getSkillBundle = cache(async (lang = "az") => {
   if (!me?.authenticated || !(me.candidate || me.staff)) {
     return { roles: null, gap: null };
   }
-  const store = await cookies();
-  const access = store.get(ACCESS_COOKIE)?.value;
+  const access = await sessionAccess();
   if (!access) return { roles: null, gap: null };
   const locale = localeLang(lang);
   const qs = `lang=${encodeURIComponent(locale)}`;

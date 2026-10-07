@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     oidc_audience: str = "http://127.0.0.1:8010"
     oidc_jwks_url: str = "http://127.0.0.1:8000/portal/oauth/jwks.json"
     oidc_client_id: str = "job-web"
+    # Same value as Academy OIDC_JOB_CLIENT_SECRET. Never expose to the frontend.
+    oidc_client_secret: str = ""
     oidc_authorize_url: str = "http://127.0.0.1:8000/portal/oauth/authorize"
     oidc_token_url: str = "http://127.0.0.1:8000/portal/oauth/token"
     oidc_redirect_uris: str = (

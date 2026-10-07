@@ -92,7 +92,8 @@ that file is applied; set them yourself only if you use another bucket):
 | `OIDC_ISSUER` | Same name the API already uses. |
 | `OIDC_AUDIENCE` | Same name the API already uses. |
 | `OIDC_JWKS_URL` | Same name the API already uses. |
-| `OIDC_CLIENT_ID` | Same name the API already uses. |
+| `OIDC_CLIENT_ID` | Same name the API already uses (`job-web`). |
+| `OIDC_CLIENT_SECRET` | Same value as Academy `OIDC_JOB_CLIENT_SECRET`. API-only — never on the web service. Set before redeploying Academy (start runs `sync_oidc_job_client` and fails closed if missing). |
 | `OIDC_AUTHORIZE_URL` | Same name the API already uses. |
 | `OIDC_TOKEN_URL` | Same name the API already uses. |
 | `OIDC_REDIRECT_URIS` | Include the deployed web callback. |

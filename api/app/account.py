@@ -177,8 +177,19 @@ def _reject_grant(exc: BaseException | None = None) -> HTTPException:
     raise error
 
 
+def _client_secret() -> str:
+    secret = (settings.oidc_client_secret or "").strip()
+    if not secret:
+        raise HTTPException(
+            status_code=503,
+            detail="OIDC client secret konfiqurasiya edilməyib",
+        )
+    return secret
+
+
 def _post_form(body: dict) -> dict:
-    data = urllib.parse.urlencode(body).encode()
+    payload = {**body, "client_secret": _client_secret()}
+    data = urllib.parse.urlencode(payload).encode()
     request = urllib.request.Request(
         settings.oidc_token_url,
         data=data,

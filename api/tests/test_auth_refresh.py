@@ -7,6 +7,7 @@ import json
 import tempfile
 import unittest
 import urllib.error
+import urllib.parse
 from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
@@ -61,6 +62,7 @@ class AuthRefreshTests(unittest.TestCase):
         self.patches = [
             patch("app.profiles.DATA_PATH", self.db),
             patch("app.notifications.unread_count", return_value=0),
+            patch("app.account.settings.oidc_client_secret", "test-job-oidc-secret"),
         ]
         for item in self.patches:
             item.start()
@@ -71,6 +73,10 @@ class AuthRefreshTests(unittest.TestCase):
         for item in reversed(self.patches):
             item.stop()
         self.tmp.cleanup()
+
+    def _posted_form(self, mocked) -> dict:
+        request = mocked.call_args.args[0]
+        return urllib.parse.parse_qs(request.data.decode())
 
     def test_invalid_grant_returns_401(self):
         with _urlopen(_http_error(400, {"error": "invalid_grant", "error_description": "expired"})):
@@ -99,6 +105,12 @@ class AuthRefreshTests(unittest.TestCase):
             response = self.client.post("/api/v1/auth/refresh", json=self.body)
         self.assertEqual(response.status_code, 502)
 
+    def test_missing_client_secret_returns_503(self):
+        with patch("app.account.settings.oidc_client_secret", ""):
+            response = self.client.post("/api/v1/auth/refresh", json=self.body)
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("secret", response.json()["detail"].lower())
+
     def test_successful_refresh_returns_tokens(self):
         payload = {
             "access_token": "access-new",
@@ -107,7 +119,7 @@ class AuthRefreshTests(unittest.TestCase):
             "refresh_expires_in": 3600,
         }
         user = VerifiedAccess(subject="42", scopes=frozenset({"job:candidate"}))
-        with _urlopen(_FakeResponse(json.dumps(payload).encode())):
+        with _urlopen(_FakeResponse(json.dumps(payload).encode())) as mocked:
             with patch("app.account.verify_access_token", return_value=user):
                 response = self.client.post("/api/v1/auth/refresh", json=self.body)
         self.assertEqual(response.status_code, 200, response.text)
@@ -117,6 +129,10 @@ class AuthRefreshTests(unittest.TestCase):
         self.assertEqual(data["expires_in"], 900)
         self.assertTrue(data["me"]["authenticated"])
         self.assertIn("email", data["me"])
+        form = self._posted_form(mocked)
+        self.assertEqual(form.get("client_secret"), ["test-job-oidc-secret"])
+        self.assertEqual(form.get("grant_type"), ["refresh_token"])
+        self.assertEqual(form.get("client_id"), ["job-web"])
 
     def test_exchange_rejects_id_token_nonce_mismatch(self):
         from app.profiles import save_transaction
@@ -167,7 +183,7 @@ class AuthRefreshTests(unittest.TestCase):
             "refresh_token": "r" * 40,
         }
         user = VerifiedAccess(subject="42", scopes=frozenset({"job:candidate"}))
-        with _urlopen(_FakeResponse(json.dumps(payload).encode())):
+        with _urlopen(_FakeResponse(json.dumps(payload).encode())) as mocked:
             with patch("app.account.verify_access_token", return_value=user):
                 with patch("app.account.id_token_nonce_status", return_value="ok"):
                     response = self.client.post(
@@ -182,6 +198,10 @@ class AuthRefreshTests(unittest.TestCase):
         data = response.json()
         self.assertEqual(data["access_token"], "access-new")
         self.assertEqual(data["return_to"], "/profile")
+        form = self._posted_form(mocked)
+        self.assertEqual(form.get("client_secret"), ["test-job-oidc-secret"])
+        self.assertEqual(form.get("grant_type"), ["authorization_code"])
+        self.assertEqual(form.get("code"), ["auth-code-value"])
 
     def test_exchange_allows_unverified_id_token(self):
         from app.profiles import save_transaction

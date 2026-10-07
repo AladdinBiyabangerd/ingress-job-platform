@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { apiBase } from "../api";
+import { ensureSessionLogic, sessionEntriesFromTokens } from "./ensure-session-logic";
 
 const SAFE_RETURN = /^\/(?:(?:en|ru)(?:\/jobs\/\d+|\/post|\/company|\/admin|\/applications|\/profile(?:\/review)?|\/me\/recommendations|\/settings\/emails|\/notifications)?|jobs\/\d+|post|company|admin|applications|profile(?:\/review)?|me\/recommendations|settings\/emails|notifications)?$/;
 
 /** Current auth cookies. Legacy names are expired on every auth response but never trusted. */
 export const ACCESS_COOKIE = "job_at";
 export const REFRESH_COOKIE = "job_rt";
+export const EXP_COOKIE = "job_exp";
 export const STATE_COOKIE = "job_st";
 export const GUEST_COOKIE = "job_guest";
 
@@ -135,6 +137,7 @@ function allAuthCookieNames(request) {
   const names = new Set([
     ACCESS_COOKIE,
     REFRESH_COOKIE,
+    EXP_COOKIE,
     STATE_COOKIE,
     ...LEGACY_AUTH_COOKIES,
   ]);
@@ -223,8 +226,82 @@ export function hasSessionCookies(request) {
 }
 
 function clearSessionCookies(request) {
-  return [ACCESS_COOKIE, REFRESH_COOKIE, ...LEGACY_AUTH_COOKIES]
+  return [ACCESS_COOKIE, REFRESH_COOKIE, EXP_COOKIE, ...LEGACY_AUTH_COOKIES]
     .flatMap((name) => expireVariants(name, request, false));
+}
+
+function readSessionValue(source, name) {
+  if (source && typeof source.headers?.get === "function") {
+    return readCookie(source, name);
+  }
+  const raw = source?.get?.(name);
+  if (raw == null) return null;
+  return typeof raw === "string" ? raw : (raw.value ?? null);
+}
+
+function clearSessionEntries() {
+  return [
+    [ACCESS_COOKIE, "", 0],
+    [REFRESH_COOKIE, "", 0],
+    [EXP_COOKIE, "", 0],
+    [GUEST_COOKIE, "1", 86400],
+  ];
+}
+
+export function authCookieEntries(data) {
+  return sessionEntriesFromTokens(data, { clampAge });
+}
+
+export function entriesToSetCookies(entries) {
+  return (entries || []).map(([name, value, maxAge]) => cookie(name, value, maxAge));
+}
+
+/** Write ensureSession cookieEntries via Next.js `cookies()` store (RSC / Server Action). */
+export function applyCookieEntries(store, entries) {
+  if (!entries?.length) return;
+  const secure = cookieSecure();
+  for (const [name, value, maxAge] of entries) {
+    store.set({
+      name,
+      value: value || "",
+      httpOnly: true,
+      path: "/",
+      sameSite: "lax",
+      maxAge,
+      secure,
+      ...(maxAge <= 0 ? { expires: new Date(0) } : {}),
+    });
+  }
+}
+
+/**
+ * One session path for Route Handlers, RSC, and Server Actions.
+ * @returns {{ access: string|null, cookieEntries: Array, setCookies: string[], guest: boolean }}
+ */
+export async function ensureSession(source, { force = false } = {}) {
+  const isRequest = Boolean(source && typeof source.headers?.get === "function");
+  const base = isRequest ? oidcConfig(source).apiBase : apiBase();
+  const result = await ensureSessionLogic({
+    getCookie: (name) => readSessionValue(source, name),
+    fetchFn: fetch,
+    apiBaseUrl: base,
+    force,
+    clampAge,
+    clearEntries: clearSessionEntries,
+  });
+  let setCookies = entriesToSetCookies(result.cookieEntries);
+  if (isRequest && result.cookieEntries.some(([name, , maxAge]) => name === GUEST_COOKIE || maxAge === 0)) {
+    // Full clear on refresh rejection: expire domain variants like logout.
+    if (!result.access && result.cookieEntries.some(([n]) => n === GUEST_COOKIE)) {
+      setCookies = clearAuthCookies(source);
+    }
+  }
+  return {
+    access: result.access,
+    cookieEntries: result.cookieEntries,
+    setCookies,
+    guest: Boolean(result.guest),
+  };
 }
 
 export async function authorizedApi(request, path, init = {}) {
@@ -250,54 +327,30 @@ export async function authorizedApi(request, path, init = {}) {
     };
   }
 
-  const access = readCookie(request, ACCESS_COOKIE);
-  if (access) {
-    try {
-      const upstream = await call(access);
-      if (upstream.status !== 401) return { upstream, setCookies: [] };
-    } catch {
-      return { upstream: new Response(null, { status: 503 }), setCookies: [] };
-    }
+  let session = await ensureSession(request);
+  const setCookies = [...session.setCookies];
+  if (!session.access) {
+    return { upstream: new Response(null, { status: 401 }), setCookies };
   }
+  // If we already rotated refresh this request, do not force-refresh again
+  // with the stale request cookie (Academy revokes the family on reuse).
+  const rotated = session.cookieEntries.some(([name]) => name === ACCESS_COOKIE);
 
-  const refresh = readCookie(request, REFRESH_COOKIE);
-  if (!refresh) {
-    return {
-      upstream: new Response(null, { status: 401 }),
-      setCookies: access ? clearAuthCookies(request) : [],
-    };
-  }
-
-  let refreshed;
   try {
-    refreshed = await fetch(`${config.apiBase}/api/v1/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ refresh_token: refresh }),
-      cache: "no-store",
-    });
-  } catch {
-    return { upstream: new Response(null, { status: 503 }), setCookies: [] };
-  }
-  if (!refreshed.ok) {
-    // 401 = refresh token rejected (invalid_grant). 5xx = Academy/upstream
-    // blip — keep cookies so a temporary outage does not force re-login.
-    if (refreshed.status === 401) {
-      return { upstream: new Response(null, { status: 401 }), setCookies: clearAuthCookies(request) };
+    let upstream = await call(session.access);
+    if (upstream.status === 401) {
+      if (rotated) {
+        setCookies.push(...clearAuthCookies(request));
+        return { upstream: new Response(null, { status: 401 }), setCookies };
+      }
+      session = await ensureSession(request, { force: true });
+      setCookies.push(...session.setCookies);
+      if (!session.access) {
+        return { upstream: new Response(null, { status: 401 }), setCookies };
+      }
+      upstream = await call(session.access);
     }
-    return { upstream: new Response(null, { status: 503 }), setCookies: [] };
-  }
-  const data = await refreshed.json();
-  const setCookies = [cookie(ACCESS_COOKIE, data.access_token, clampAge(data.expires_in, 900, 3600))];
-  if (data.refresh_token) {
-    setCookies.push(cookie(
-      REFRESH_COOKIE,
-      data.refresh_token,
-      clampAge(data.refresh_expires_in, 3600, 365 * 24 * 60 * 60),
-    ));
-  }
-  try {
-    return { upstream: await call(data.access_token), setCookies };
+    return { upstream, setCookies };
   } catch {
     return { upstream: new Response(null, { status: 503 }), setCookies };
   }

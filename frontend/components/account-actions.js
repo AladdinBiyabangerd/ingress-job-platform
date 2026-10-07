@@ -5,6 +5,7 @@ import { loginHref } from "../lib/auth-link";
 import { applyFormFromJob } from "../lib/apply-form";
 import { text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
+import { applyToJob, saveConsents } from "../lib/server/refresh";
 import { ApplicationList, appStatusLabel } from "./application-list";
 import { ConsentFields, grantsFromPayload } from "./consent-fields";
 
@@ -86,8 +87,21 @@ export function AccountActions({ locale, jobId, returnTo, onsite, hasOriginal, f
   const current = mine.find((item) => item.job_id === jobId);
 
   async function openLink(kind) {
+    if (kind === "apply") {
+      const res = await applyToJob(jobId);
+      if (res.status === 401 || res.status === 403) {
+        window.location.href = loginHref({ intent: "job_candidate", returnTo });
+        return;
+      }
+      if (res.ok && typeof res.data.url === "string" && res.data.url) {
+        window.location.href = res.data.url;
+        return;
+      }
+      setOpen(true);
+      return;
+    }
     const res = await fetch(`/api/auth/jobs/${jobId}/${kind}`, {
-      method: kind === "apply" ? "POST" : "GET",
+      method: "GET",
       cache: "no-store",
     });
     if (res.status === 401 || res.status === 403) {
@@ -145,7 +159,7 @@ export function AccountActions({ locale, jobId, returnTo, onsite, hasOriginal, f
       );
     }
     if (spec.cv.enabled && file) body.set("cv", file);
-    const res = await fetch(`/api/auth/jobs/${jobId}/apply`, { method: "POST", body });
+    const res = await applyToJob(jobId, body);
     setBusy(false);
     if (res.status === 401 || res.status === 403) {
       window.location.href = loginHref({ intent: "job_candidate", returnTo });
@@ -160,11 +174,7 @@ export function AccountActions({ locale, jobId, returnTo, onsite, hasOriginal, f
       return;
     }
     if (showConsents && consentPayload) {
-      await fetch(`/api/auth/consents?lang=${encodeURIComponent(locale)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(grants),
-      }).catch(() => {});
+      await saveConsents(locale, grants).catch(() => {});
     }
     setMessage("");
     setPhoneEdited(false);

@@ -1,17 +1,14 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { apiBase } from "../api";
 import { adPayload } from "./ad";
-import { ACCESS_COOKIE, GUEST_COOKIE } from "./oidc";
+import { sessionAccess } from "./me";
 
 const TIMEOUT_MS = 10_000;
 const ID_OK = /^\d+$/;
 
 async function bearer() {
-  const store = await cookies();
-  if (store.get(GUEST_COOKIE)?.value) throw new Error("load");
-  const access = store.get(ACCESS_COOKIE)?.value;
+  const access = await sessionAccess();
   if (!access) throw new Error("load");
   return access;
 }
@@ -334,5 +331,70 @@ export async function uploadCvProfile(formData) {
     return { ok: res.ok, status: res.status, data: data && typeof data === "object" ? data : {} };
   } catch {
     return { ok: false, status: 401, data: {} };
+  }
+}
+
+/** PUT consents (+ optional visibility). Hits FastAPI, not the BFF. */
+export async function saveConsents(lang, payload) {
+  const source = payload && typeof payload === "object" ? payload : {};
+  const qs = new URLSearchParams({ lang: localeLang(lang) });
+  return mutate(`/api/v1/consents?${qs}`, {
+    method: "PUT",
+    body: {
+      matching: Boolean(source.matching),
+      emails: Boolean(source.emails),
+      recruiter_visibility: Boolean(source.recruiter_visibility),
+      visibility: typeof source.visibility === "string" ? source.visibility : undefined,
+    },
+  });
+}
+
+/** Apply to a job (optional multipart FormData). Hits FastAPI, not the BFF. */
+export async function applyToJob(jobId, formData) {
+  const id = numericId(jobId);
+  if (!id) return { ok: false, status: 404, data: {} };
+  try {
+    const access = await bearer();
+    const init = {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${access}`,
+        Accept: "application/json",
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(30_000),
+    };
+    if (formData instanceof FormData) init.body = formData;
+    const res = await fetch(`${apiBase()}/api/v1/jobs/${id}/apply`, init);
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data: data && typeof data === "object" ? data : {} };
+  } catch {
+    return { ok: false, status: 401, data: {} };
+  }
+}
+
+/** Download personal data zip as base64. Hits FastAPI, not the BFF. */
+export async function exportMyData() {
+  try {
+    const access = await bearer();
+    const res = await fetch(`${apiBase()}/api/v1/me/export`, {
+      headers: {
+        Authorization: `Bearer ${access}`,
+        Accept: "application/zip",
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (!res.ok) return { ok: false, status: res.status };
+    const buffer = Buffer.from(await res.arrayBuffer());
+    return {
+      ok: true,
+      status: 200,
+      base64: buffer.toString("base64"),
+      contentType: res.headers.get("Content-Type") || "application/zip",
+      filename: "ingress-job-export.zip",
+    };
+  } catch {
+    return { ok: false, status: 401 };
   }
 }

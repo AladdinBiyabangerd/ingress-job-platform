@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { clearMeCache, fetchMe } from "../lib/me-client";
-import { saveCompanyProfile } from "../lib/server/refresh";
+import { exportMyData, saveCompanyProfile, saveConsents } from "../lib/server/refresh";
 import { ConsentFields, grantsFromPayload } from "./consent-fields";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
@@ -154,12 +154,8 @@ export function ProfileForm({ locale }) {
     event.preventDefault();
     setPrivacyError("");
     setPrivacyNote("");
-    const res = await fetch(`/api/auth/consents?lang=${encodeURIComponent(locale)}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...grants, visibility }),
-    });
-    const payload = await res.json().catch(() => ({}));
+    const res = await saveConsents(locale, { ...grants, visibility });
+    const payload = res.data || {};
     if (!res.ok) {
       setPrivacyError(t.privacyError);
       return;
@@ -170,21 +166,24 @@ export function ProfileForm({ locale }) {
     setPrivacyNote(t.privacySaved);
   }
 
-  async function exportMyData() {
+  async function downloadExport() {
     setPrivacyError("");
     setPrivacyNote("");
     setPrivacyBusy("export");
     try {
-      const res = await fetch("/api/auth/me/export", { cache: "no-store" });
-      if (!res.ok) {
+      const res = await exportMyData();
+      if (!res.ok || !res.base64) {
         setPrivacyError(t.privacyExportError);
         return;
       }
-      const blob = await res.blob();
+      const binary = atob(res.base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: res.contentType || "application/zip" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "ingress-job-export.zip";
+      link.download = res.filename || "ingress-job-export.zip";
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -336,7 +335,7 @@ export function ProfileForm({ locale }) {
                             type="button"
                             className="btn"
                             disabled={Boolean(privacyBusy)}
-                            onClick={exportMyData}
+                            onClick={downloadExport}
                           >
                             {right.label}
                           </button>

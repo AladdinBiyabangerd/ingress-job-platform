@@ -1,8 +1,6 @@
 import { cache } from "react";
-import { cookies } from "next/headers";
 import { apiBase } from "../api";
-import { ACCESS_COOKIE } from "./oidc";
-import { getMe } from "./me";
+import { getMe, sessionAccess } from "./me";
 
 const TIMEOUT_MS = 10_000;
 
@@ -30,8 +28,7 @@ export const getNotifications = cache(async () => {
   if (!me?.authenticated) {
     return { items: null, unread: null };
   }
-  const store = await cookies();
-  const access = store.get(ACCESS_COOKIE)?.value;
+  const access = await sessionAccess();
   if (!access) return { items: null, unread: null };
   const data = await loadJson(access, "/api/v1/notifications");
   if (!data || !Array.isArray(data.items)) return { items: null, unread: null };

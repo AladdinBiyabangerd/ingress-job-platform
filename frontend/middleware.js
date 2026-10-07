@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiBase } from "./lib/api";
-import { ACCESS_COOKIE, publicOrigin } from "./lib/server/oidc";
+import { appendCookies, ensureSession, publicOrigin } from "./lib/server/oidc";
 
 const COMPANY = new Set(["/company", "/en/company", "/ru/company"]);
 
@@ -16,10 +16,11 @@ function localeOf(pathname) {
   return "az";
 }
 
-function pass(request, locale) {
+function pass(request, locale, setCookies = []) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-locale", locale);
-  return NextResponse.next({ request: { headers: requestHeaders } });
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  return setCookies.length ? appendCookies(response, setCookies) : response;
 }
 
 export async function middleware(request) {
@@ -33,23 +34,24 @@ export async function middleware(request) {
     return pass(request, locale);
   }
   if (request.cookies.get("job_guest")?.value) return pass(request, locale);
-  const access = request.cookies.get(ACCESS_COOKIE)?.value;
-  if (!access) return pass(request, locale);
+  const session = await ensureSession(request);
+  if (!session.access) return pass(request, locale, session.setCookies);
   try {
     const me = await fetch(`${apiBase()}/api/v1/me`, {
-      headers: { Authorization: `Bearer ${access}`, Accept: "application/json" },
+      headers: { Authorization: `Bearer ${session.access}`, Accept: "application/json" },
       cache: "no-store",
     });
-    if (!me.ok) return pass(request, locale);
+    if (!me.ok) return pass(request, locale, session.setCookies);
     const data = await me.json();
     if (data.needs_company_profile) {
       const prefix = locale === "az" ? "" : `/${locale}`;
-      return NextResponse.redirect(new URL(`${prefix}/company`, publicOrigin(request)));
+      const redirect = NextResponse.redirect(new URL(`${prefix}/company`, publicOrigin(request)));
+      return session.setCookies.length ? appendCookies(redirect, session.setCookies) : redirect;
     }
   } catch {
-    return pass(request, locale);
+    return pass(request, locale, session.setCookies);
   }
-  return pass(request, locale);
+  return pass(request, locale, session.setCookies);
 }
 
 export const config = {
