@@ -17,7 +17,8 @@ function fieldsFrom(me, profile) {
 }
 
 function loginHref(locale) {
-  return `/api/auth/login?intent=job_employer&returnTo=${encodeURIComponent(hrefFor(locale, { mode: "company" }))}`;
+  // Plain login — do not pass job_employer intent (staff revoke must stick).
+  return `/api/auth/login?returnTo=${encodeURIComponent(hrefFor(locale, { mode: "company" }))}`;
 }
 
 export function CompanyForm({ locale, initialMe, initialProfile = null }) {

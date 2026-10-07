@@ -8,23 +8,24 @@
 - Local deploy sync: matching secrets in Academy + Job `.env`; Academy `portal.0129` migrated; `sync_oidc_job_client` updated `job-web`.
 - Academy start (Dockerfile + Nixpacks) runs `sync_oidc_job_client` after migrate (with interview sync).
 - BFF write migration: apply, consents PUT, data export → FastAPI server actions (`applyToJob`, `saveConsents`, `exportMyData`).
+- **Fix: staff-deactivated Job role re-granted on login**
+  - Root cause: OIDC `registration_intent` → `apply_registration_intent` re-added `JOB_EMPLOYER`; `/company` login also sent `intent=job_employer`.
+  - Academy: `JobRoleStaffBlock` + migration `0130`; staff revoke blocks intent restore; staff grant clears block.
+  - Job: company session login without employer intent.
+  - Tests: `test_job_oidc`, `test_staff_users` (38 OK).
 
 ## Remaining
-- Production Railway: set matching `OIDC_JOB_CLIENT_SECRET` (Academy) + `OIDC_CLIENT_SECRET` (Job api), push/redeploy Academy + Job API (CLI not logged in on this machine).
-- Remaining client BFF: privacy delete, match feedback, CV download; unseeded GET fallbacks (skills roles, email-prefs, recommendations).
+- Deploy Academy (migrate `0130`) + Job frontend; for already-revoked users, staff must toggle Job Employer off once more so the block row is created.
+- Production Railway: matching `OIDC_JOB_CLIENT_SECRET` / `OIDC_CLIENT_SECRET` if not done.
+- Remaining client BFF: privacy delete, match feedback, CV download; unseeded GET fallbacks.
 
 ## Decisions
-- `job-web` is confidential; `interview-web` stays public PKCE.
-- PKCE kept as defense-in-depth alongside `client_secret`.
-- One session path (`ensureSession`); refresh is not limited to `/api/auth/me` BFF.
-- Guest lock / legacy cookie expire behavior unchanged.
-- Export zip returns base64 from the server action (no BFF hop).
+- Staff revoke of Job groups survives OIDC intent; public “become employer” cannot undo staff revoke until staff re-grants.
+- Company page login is session restore only (no `registration_intent`).
 
 ## Relevant files
-- `ingress-academy/portal/oidc/{models,views,clients,tokens}.py`
-- `ingress-academy/{Dockerfile,nixpacks.toml,DEPLOY.md}`
-- `api/app/{config,account}.py`
-- `frontend/lib/server/{oidc,ensure-session-logic,me,refresh}.js`
-- `frontend/components/{account-actions,profile-form}.js`
-- `frontend/middleware.js`
-- `frontend/app/api/auth/callback/route.js`
+- `ingress-academy/portal/{job_access,models,views}.py`
+- `ingress-academy/portal/migrations/0130_jobrolestaffblock.py`
+- `ingress-academy/portal/tests/{test_job_oidc,test_staff_users}.py`
+- `frontend/lib/server/company.js`
+- `frontend/components/company-form.js`

@@ -5,7 +5,9 @@ import { getMe } from "./me";
 const EMPTY_PROFILE = { company_name: "", city: "", about: "", complete: false };
 
 export function companyLoginPath(locale) {
-  return `/api/auth/login?intent=job_employer&returnTo=${encodeURIComponent(hrefFor(locale, { mode: "company" }))}`;
+  // No registration_intent: session restore must not re-grant JOB_EMPLOYER after
+  // staff revoked it. Become-employer CTAs elsewhere still send job_employer.
+  return `/api/auth/login?returnTo=${encodeURIComponent(hrefFor(locale, { mode: "company" }))}`;
 }
 
 export function isGuestMe(me) {
