@@ -1496,27 +1496,13 @@ body:has(.profile-review-page) {
   color: #2a3038;
 }
 
-.profile-review-page .cabinet-head {
+.profile-review-page .cabinet-head,
+.profile-review-page .profile-review-toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px 14px;
-}
-
-.profile-review-page .cabinet-head h1 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
-.profile-review-page .cabinet-head .lede {
-  font-size: 0.9rem;
-  font-weight: 400;
-  max-width: 56ch;
-  margin: 4px 0 0;
-  color: #5c6570;
 }
 
 .profile-review-page .profile-grid {
@@ -1725,6 +1711,12 @@ body:has(.profile-review-page) {
   grid-template-columns: 1fr;
 }
 
+.profile-review-source-compact {
+  grid-template-columns: 1fr;
+  justify-items: start;
+  padding: 10px 12px;
+}
+
 .profile-review-source-copy {
   display: grid;
   gap: 2px;
@@ -1910,6 +1902,10 @@ body:has(.profile-review-page) {
   background: #f4f6f8;
   border: 1px solid #d5dce4;
   border-radius: 10px;
+}
+
+.profile-review-meta .profile-review-reupload {
+  margin-left: auto;
 }
 
 .profile-review-status {
@@ -2952,40 +2948,28 @@ body:has(.profile-review-page) {
   color: #001fff;
 }
 
-/* Trend detail: Academy/job-detail composition — head + main + facts aside */
-.trend-detail-page {
-  display: grid;
-  gap: 0;
+/* Trend detail: breadcrumbs + back, then facts, then jobs */
+.trend-detail-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin: 0 0 18px;
+}
+
+.trend-detail-top .breadcrumbs {
+  margin: 0;
   min-width: 0;
-}
-
-.trend-detail-head {
-  display: grid;
-  gap: 8px;
-  justify-items: start;
-}
-
-.trend-detail-head h1 {
-  margin: 0;
-  font-size: 28px;
-  line-height: 1.15;
-  letter-spacing: -0.03em;
-  color: #20242b;
-}
-
-.trend-detail-head .lede {
-  margin: 0;
-  max-width: 40rem;
-  color: #656b75;
-  font-size: 15px;
-  line-height: 1.45;
+  flex: 1 1 auto;
 }
 
 .trend-back {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin: 0 0 4px;
+  margin: 0;
+  flex: 0 0 auto;
   padding: 6px 14px 6px 11px;
   border-radius: 999px;
   background: #eaf1ff;
@@ -3001,30 +2985,21 @@ body:has(.profile-review-page) {
   outline: none;
 }
 
+.trend-detail-page {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
 .trend-detail-layout {
-  margin-top: 4px;
+  margin: 0;
 }
 
 .trend-detail-section {
   display: grid;
   gap: 12px;
-  margin: 0 0 24px;
-  min-width: 0;
-}
-
-.trend-detail-callout {
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(9, 47, 132, 0.08);
-  background: #f7f8fa;
-}
-
-.trend-detail-callout .lede {
   margin: 0;
-  max-width: 36rem;
-  color: #5c6570;
-  font-size: 14px;
-  line-height: 1.45;
+  min-width: 0;
 }
 
 .trend-detail-page .facts dd .fact-sub {
@@ -3041,10 +3016,6 @@ body:has(.profile-review-page) {
   font-weight: 600;
   letter-spacing: -0.02em;
   color: #20242b;
-}
-
-.trend-detail-status {
-  margin: 0;
 }
 
 .trend-detail-jobs {
@@ -3068,6 +3039,7 @@ body:has(.profile-review-page) {
   margin-top: 16px;
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
 .trend-detail-page .facts-card .actions .btn {
@@ -3075,19 +3047,14 @@ body:has(.profile-review-page) {
 }
 
 @media (max-width: 899px) {
-  /* Market facts first on small screens — the numbers are the page’s point */
-  .trend-detail-layout {
+  .trend-detail-page-split .trend-detail-layout {
     display: flex;
     flex-direction: column;
     gap: 24px;
   }
 
-  .trend-detail-layout .detail-aside {
+  .trend-detail-page-split .detail-aside {
     order: -1;
-  }
-
-  .trend-detail-head h1 {
-    font-size: 24px;
   }
 }
 
@@ -3490,12 +3457,6 @@ body:has(.profile-review-page) {
 
 .results {
   min-width: 0;
-}
-
-.home .count {
-  margin: 2px 0 0;
-  color: #092F84;
-  font-size: 14px;
 }
 
 .job-list {
@@ -4103,8 +4064,6 @@ span.pager-btn {
   border-color: #ffffff;
 }
 
-.companies-count { margin: 0 0 12px; color: #092F84; font-size: 14px; }
-
 .company-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -4553,7 +4512,7 @@ span.pager-btn {
 .results-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   min-width: 0;
 }

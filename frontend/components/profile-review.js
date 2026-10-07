@@ -671,11 +671,7 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
     <Shell locale={locale} mode="profileReview">
       {me === undefined ? null : allowed ? (
         <div className="cabinet profile-review-page">
-          <div className="cabinet-head">
-            <div>
-              <h1>{t.profileReviewTitle}</h1>
-              <p className="lede">{t.profileReviewLede}</p>
-            </div>
+          <div className="cabinet-head profile-review-toolbar">
             <a className="btn ghost" href={hrefFor(locale, { mode: "profile" })}>
               {t.profileReviewBack}
             </a>
@@ -717,42 +713,34 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
             </section>
           ) : null}
 
-          {(entry === "upload" || showForm || isParsing) && !showChooser ? (
-            <section className={`profile-review-source${isParsing ? " is-parsing" : ""}`}>
-              {isParsing ? (
-                <ParseProgress
-                  t={t}
-                  uploading={uploading}
-                  parseStatus={payload?.parse_status}
-                  fileName={cvName}
-                  onCancel={cancelParse}
-                  cancelBusy={busy}
-                />
-              ) : (
-                <>
-                  <div className="profile-review-source-copy">
-                    <h2>{t.profileReviewUploadTitle}</h2>
-                    <p className="hint">
-                      {cvName ? t.profileReviewUploadedName(cvName) : t.profileReviewUploadHint}
-                    </p>
-                  </div>
-                  <div className="profile-review-source-actions">
-                    <button
-                      type="button"
-                      className="btn primary"
-                      disabled={uploading || busy}
-                      onClick={() => fileRef.current?.click()}
-                    >
-                      {showForm ? t.profileReviewReuploadCta : t.profileReviewUploadCta}
-                    </button>
-                    {!showForm ? (
-                      <button type="button" className="btn ghost" onClick={startManual} disabled={uploading}>
-                        {t.profileReviewOptionManual}
-                      </button>
-                    ) : null}
-                  </div>
-                </>
-              )}
+          {isParsing && !showChooser ? (
+            <section className="profile-review-source is-parsing">
+              <ParseProgress
+                t={t}
+                uploading={uploading}
+                parseStatus={payload?.parse_status}
+                fileName={cvName}
+                onCancel={cancelParse}
+                cancelBusy={busy}
+              />
+            </section>
+          ) : null}
+
+          {entry === "upload" && !showForm && !isParsing && !showChooser ? (
+            <section className="profile-review-source profile-review-source-compact">
+              <div className="profile-review-source-actions">
+                <button
+                  type="button"
+                  className="btn primary"
+                  disabled={uploading || busy}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  {t.profileReviewUploadCta}
+                </button>
+                <button type="button" className="btn ghost" onClick={startManual} disabled={uploading}>
+                  {t.profileReviewOptionManual}
+                </button>
+              </div>
             </section>
           ) : null}
 
@@ -774,6 +762,14 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
                 {entry === "manual" && !payload?.exists ? (
                   <span className="hint">{t.profileReviewManualBadge}</span>
                 ) : null}
+                <button
+                  type="button"
+                  className="btn ghost small profile-review-reupload"
+                  disabled={uploading || busy || isParsing}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  {t.profileReviewReuploadCta}
+                </button>
               </div>
 
               <div className="profile-review-tabs" role="tablist" aria-label={t.profileReviewTitle}>

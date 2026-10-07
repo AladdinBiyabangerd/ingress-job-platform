@@ -123,7 +123,6 @@ export function CompaniesPage({ locale, data, error, q, sort }) {
       <PageHeader
         className="companies-hero"
         title={t.companiesTitle}
-        count={data ? t.companiesCount(data.companies) : null}
         lede={t.companiesLede}
       >
         <form className="companies-tools" role="search" method="get" action={hrefFor(locale, { mode: "companies" })}>
@@ -146,11 +145,6 @@ export function CompaniesPage({ locale, data, error, q, sort }) {
         </form>
       </PageHeader>
       {error ? <p className="note">{t.loadError}</p> : null}
-      {!error ? (
-        <p className="count companies-count" aria-live="polite">
-          {t.companiesCount(data?.total || 0)}
-        </p>
-      ) : null}
       {!error && items.length === 0 ? (
         <div className="companies-empty">
           <p>{q ? t.companiesEmpty : t.companiesEmptyAll}</p>

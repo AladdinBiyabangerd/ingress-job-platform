@@ -7,7 +7,6 @@ import { lockBodyScroll, trapTab } from "../lib/focus-trap";
 import { useMediaQuery } from "../lib/use-media-query";
 import { JobCard } from "./job-card";
 import { Shell } from "./shell";
-import { PageHeader } from "./page-header";
 
 const PAGE_SIZE = 20;
 const TEXT_DEBOUNCE_MS = 300;
@@ -136,7 +135,6 @@ export function Home({
   locale,
   jobs = [],
   total = 0,
-  catalogTotal = 0,
   pages = 1,
   facets = EMPTY_FACETS,
   error = false,
@@ -157,7 +155,6 @@ export function Home({
   const [items, setItems] = useState(jobs);
   const [resultTotal, setResultTotal] = useState(total);
   const [resultPages, setResultPages] = useState(Math.max(1, pages));
-  const [catalogCount, setCatalogCount] = useState(catalogTotal || total);
   const [facetData, setFacetData] = useState(facets?.languages ? facets : EMPTY_FACETS);
   const [loadError, setLoadError] = useState(Boolean(error));
   const [loading, setLoading] = useState(false);
@@ -256,7 +253,6 @@ export function Home({
           setItems(Array.isArray(data.items) ? data.items : []);
           setResultTotal(Number(data.total) || 0);
           setResultPages(Math.max(1, Number(data.pages) || 1));
-          setCatalogCount(Number(data.catalog_total) || 0);
           if (data.facets && typeof data.facets === "object") setFacetData(data.facets);
           setLoadError(false);
         })
@@ -358,12 +354,10 @@ export function Home({
   return (
     <Shell locale={locale} mode="browse">
       <div className="home">
-      <PageHeader title={t.heading} count={t.count(catalogCount)} lede={t.lede} />
       {loadError ? <p className="note">{t.loadError}</p> : null}
       <div className="board">
         <section className="results" ref={resultsRef}>
           <div className="results-bar">
-            <p className="count">{loading ? t.count(resultTotal) : t.count(resultTotal)}</p>
             <button
               ref={toggleRef}
               type="button"

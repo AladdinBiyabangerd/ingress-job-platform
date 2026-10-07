@@ -19,7 +19,6 @@ export default async function Page() {
         locale="ru"
         jobs={data.items}
         total={data.total}
-        catalogTotal={data.catalog_total}
         pages={data.pages}
         facets={data.facets}
         error={error}
