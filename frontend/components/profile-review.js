@@ -776,292 +776,290 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
               </div>
 
               <div className="profile-review-layout">
-                <div className="profile-review-col">
-                  <section className={`review-panel${warn("contact") ? " field-warn" : ""}`}>
-                    <header className="review-panel-head">
-                      <h2>{t.profileReviewContact}</h2>
-                      <FieldMark show={warn("contact")} label={t.profileReviewCheck} />
-                    </header>
-                    <div className="profile-grid profile-grid-contact">
-                      <label>
-                        {t.profileReviewFullName}
-                        <input
-                          value={fullName}
-                          maxLength={120}
-                          onChange={(event) => setFullName(event.target.value)}
-                        />
-                      </label>
-                      <label>
-                        {t.applyEmail}
-                        <input
-                          type="email"
-                          value={email}
-                          maxLength={120}
-                          onChange={(event) => setEmail(event.target.value)}
-                        />
-                      </label>
-                      <label>
-                        {t.applyPhone}
-                        <input
-                          type="tel"
-                          value={phone}
-                          maxLength={40}
-                          onChange={(event) => setPhone(event.target.value)}
-                        />
-                      </label>
-                      <label>
-                        {t.profileReviewCity}
-                        <input
-                          value={city}
-                          maxLength={120}
-                          onChange={(event) => setCity(event.target.value)}
-                        />
-                      </label>
-                      <label>
-                        {t.profileReviewCountry}
-                        <input
-                          value={country}
-                          maxLength={120}
-                          onChange={(event) => setCountry(event.target.value)}
-                        />
-                      </label>
-                    </div>
-                  </section>
+                <section className={`review-panel review-panel-contact${warn("contact") ? " field-warn" : ""}`}>
+                  <header className="review-panel-head">
+                    <h2>{t.profileReviewContact}</h2>
+                    <FieldMark show={warn("contact")} label={t.profileReviewCheck} />
+                  </header>
+                  <div className="profile-grid profile-grid-contact">
+                    <label>
+                      {t.profileReviewFullName}
+                      <input
+                        value={fullName}
+                        maxLength={120}
+                        onChange={(event) => setFullName(event.target.value)}
+                      />
+                    </label>
+                    <label>
+                      {t.applyEmail}
+                      <input
+                        type="email"
+                        value={email}
+                        maxLength={120}
+                        onChange={(event) => setEmail(event.target.value)}
+                      />
+                    </label>
+                    <label>
+                      {t.applyPhone}
+                      <input
+                        type="tel"
+                        value={phone}
+                        maxLength={40}
+                        onChange={(event) => setPhone(event.target.value)}
+                      />
+                    </label>
+                    <label>
+                      {t.profileReviewCity}
+                      <input
+                        value={city}
+                        maxLength={120}
+                        onChange={(event) => setCity(event.target.value)}
+                      />
+                    </label>
+                    <label>
+                      {t.profileReviewCountry}
+                      <input
+                        value={country}
+                        maxLength={120}
+                        onChange={(event) => setCountry(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                </section>
 
-                  <section className="review-panel">
-                    <header className="review-panel-head">
-                      <h2>{t.profileReviewLinks}</h2>
-                    </header>
-                    <div className="profile-grid profile-grid-links">
-                      <label>
-                        {t.profileReviewLinkedin}
-                        <input
-                          type="url"
-                          value={linkedin}
-                          maxLength={300}
-                          placeholder="https://linkedin.com/in/…"
-                          onChange={(event) => setLinkedin(event.target.value)}
-                        />
-                      </label>
-                      <label>
-                        {t.profileReviewGithub}
-                        <input
-                          type="url"
-                          value={github}
-                          maxLength={300}
-                          placeholder="https://github.com/…"
-                          onChange={(event) => setGithub(event.target.value)}
-                        />
-                      </label>
-                      <label className="profile-span">
-                        {t.profileReviewPortfolio}
-                        <input
-                          type="url"
-                          value={portfolio}
-                          maxLength={300}
-                          placeholder="https://"
-                          onChange={(event) => setPortfolio(event.target.value)}
-                        />
-                      </label>
-                    </div>
-                  </section>
+                <section className="review-panel review-panel-links">
+                  <header className="review-panel-head">
+                    <h2>{t.profileReviewLinks}</h2>
+                  </header>
+                  <div className="profile-grid profile-grid-links">
+                    <label>
+                      {t.profileReviewLinkedin}
+                      <input
+                        type="url"
+                        value={linkedin}
+                        maxLength={300}
+                        placeholder="https://linkedin.com/in/…"
+                        onChange={(event) => setLinkedin(event.target.value)}
+                      />
+                    </label>
+                    <label>
+                      {t.profileReviewGithub}
+                      <input
+                        type="url"
+                        value={github}
+                        maxLength={300}
+                        placeholder="https://github.com/…"
+                        onChange={(event) => setGithub(event.target.value)}
+                      />
+                    </label>
+                    <label className="profile-span">
+                      {t.profileReviewPortfolio}
+                      <input
+                        type="url"
+                        value={portfolio}
+                        maxLength={300}
+                        placeholder="https://"
+                        onChange={(event) => setPortfolio(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                </section>
 
-                  <section className="review-panel">
-                    <header className="review-panel-head">
-                      <h2>{t.profileReviewBasics}</h2>
-                    </header>
-                    <div className="profile-grid profile-grid-basics">
-                      <label className={`profile-span${warn("headline") ? " field-warn" : ""}`}>
-                        {t.profileReviewHeadline}
-                        <FieldMark show={warn("headline")} label={t.profileReviewCheck} />
-                        <input
-                          value={headline}
-                          maxLength={200}
-                          onChange={(event) => setHeadline(event.target.value)}
-                        />
-                      </label>
-                      <label className="profile-span">
-                        {t.profileReviewAbout}
-                        <textarea
-                          value={summary}
-                          maxLength={2000}
-                          rows={4}
-                          placeholder={t.profileReviewAboutHint}
-                          onChange={(event) => setSummary(event.target.value)}
-                        />
-                      </label>
-                      <label className={warn("seniority") ? "field-warn" : undefined}>
-                        {t.profileReviewSeniority}
-                        <FieldMark show={warn("seniority")} label={t.profileReviewCheck} />
-                        <select value={seniority} onChange={(event) => setSeniority(event.target.value)}>
-                          {SENIORITY.map((value) => (
-                            <option key={value || "empty"} value={value}>
-                              {value || "—"}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className={warn("total_years") ? "field-warn" : undefined}>
-                        {t.profileReviewYears}
-                        <FieldMark show={warn("total_years")} label={t.profileReviewCheck} />
-                        <input
-                          type="number"
-                          min="0"
-                          max="60"
-                          step="0.1"
-                          value={totalYears}
-                          onChange={(event) => setTotalYears(event.target.value)}
-                        />
-                      </label>
-                    </div>
-                  </section>
+                <section className="review-panel review-panel-basics">
+                  <header className="review-panel-head">
+                    <h2>{t.profileReviewBasics}</h2>
+                  </header>
+                  <div className="profile-grid profile-grid-basics">
+                    <label className={`profile-span${warn("headline") ? " field-warn" : ""}`}>
+                      {t.profileReviewHeadline}
+                      <FieldMark show={warn("headline")} label={t.profileReviewCheck} />
+                      <input
+                        value={headline}
+                        maxLength={200}
+                        onChange={(event) => setHeadline(event.target.value)}
+                      />
+                    </label>
+                    <label className="profile-span">
+                      {t.profileReviewAbout}
+                      <textarea
+                        value={summary}
+                        maxLength={2000}
+                        rows={3}
+                        placeholder={t.profileReviewAboutHint}
+                        onChange={(event) => setSummary(event.target.value)}
+                      />
+                    </label>
+                    <label className={warn("seniority") ? "field-warn" : undefined}>
+                      {t.profileReviewSeniority}
+                      <FieldMark show={warn("seniority")} label={t.profileReviewCheck} />
+                      <select value={seniority} onChange={(event) => setSeniority(event.target.value)}>
+                        {SENIORITY.map((value) => (
+                          <option key={value || "empty"} value={value}>
+                            {value || "—"}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className={warn("total_years") ? "field-warn" : undefined}>
+                      {t.profileReviewYears}
+                      <FieldMark show={warn("total_years")} label={t.profileReviewCheck} />
+                      <input
+                        type="number"
+                        min="0"
+                        max="60"
+                        step="0.1"
+                        value={totalYears}
+                        onChange={(event) => setTotalYears(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                </section>
 
-                  <section className={`review-panel${warn("skills") ? " field-warn" : ""}`}>
-                    <header className="review-panel-head">
-                      <h2>{t.profileReviewSkills}</h2>
-                      <FieldMark show={warn("skills")} label={t.profileReviewCheck} />
-                    </header>
-                    <div className="skill-chip-box">
-                      {skills.length ? (
-                        <div className="skill-chip-cloud" role="list">
-                          {skills.map((skill, index) => (
-                            <div key={`${skill.name}-${index}`} className="skill-pill" role="listitem">
-                              <button
-                                type="button"
-                                className="skill-pill-main"
-                                title={t.profileReviewSkillEdit}
-                                onClick={() => {
-                                  setSkillDraft(skill.name);
-                                  setSkillYearsDraft(skill.years || "");
-                                  removeSkill(index);
-                                }}
-                              >
-                                <span className="skill-pill-name">{skill.name}</span>
-                                {skill.years ? (
-                                  <span className="skill-pill-years">
-                                    {skill.years} {t.profileReviewSkillYears}
-                                  </span>
-                                ) : null}
-                              </button>
-                              <button
-                                type="button"
-                                className="skill-pill-remove"
-                                onClick={() => removeSkill(index)}
-                                aria-label={t.profileReviewRemove}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="hint">{t.profileReviewSkillsEmpty}</p>
-                      )}
-                      <div className="skill-add-row">
-                        <input
-                          value={skillDraft}
-                          maxLength={60}
-                          placeholder={t.profileReviewSkillName}
-                          onChange={(event) => setSkillDraft(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") addSkill(event);
-                          }}
-                        />
-                        <input
-                          type="number"
-                          min="0"
-                          max="60"
-                          step="0.5"
-                          value={skillYearsDraft}
-                          placeholder={t.profileReviewSkillYears}
-                          onChange={(event) => setSkillYearsDraft(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") addSkill(event);
-                          }}
-                        />
-                        <button type="button" className="btn" onClick={addSkill}>
-                          {t.profileReviewSkillAdd}
+                <section className={`review-panel review-panel-skills${warn("skills") ? " field-warn" : ""}`}>
+                  <header className="review-panel-head">
+                    <h2>{t.profileReviewSkills}</h2>
+                    <FieldMark show={warn("skills")} label={t.profileReviewCheck} />
+                  </header>
+                  <div className="skill-chip-box">
+                    {skills.length ? (
+                      <div className="skill-chip-cloud" role="list">
+                        {skills.map((skill, index) => (
+                          <div key={`${skill.name}-${index}`} className="skill-pill" role="listitem">
+                            <button
+                              type="button"
+                              className="skill-pill-main"
+                              title={t.profileReviewSkillEdit}
+                              onClick={() => {
+                                setSkillDraft(skill.name);
+                                setSkillYearsDraft(skill.years || "");
+                                removeSkill(index);
+                              }}
+                            >
+                              <span className="skill-pill-name">{skill.name}</span>
+                              {skill.years ? (
+                                <span className="skill-pill-years">
+                                  {skill.years} {t.profileReviewSkillYears}
+                                </span>
+                              ) : null}
+                            </button>
+                            <button
+                              type="button"
+                              className="skill-pill-remove"
+                              onClick={() => removeSkill(index)}
+                              aria-label={t.profileReviewRemove}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="hint">{t.profileReviewSkillsEmpty}</p>
+                    )}
+                    <div className="skill-add-row">
+                      <input
+                        value={skillDraft}
+                        maxLength={60}
+                        placeholder={t.profileReviewSkillName}
+                        onChange={(event) => setSkillDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") addSkill(event);
+                        }}
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max="60"
+                        step="0.5"
+                        value={skillYearsDraft}
+                        placeholder={t.profileReviewSkillYears}
+                        onChange={(event) => setSkillYearsDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") addSkill(event);
+                        }}
+                      />
+                      <button type="button" className="btn" onClick={addSkill}>
+                        {t.profileReviewSkillAdd}
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+                <section className={`review-panel review-panel-work${warn("work_history") ? " field-warn" : ""}`}>
+                  <header className="review-panel-head">
+                    <h2>{t.profileReviewWork}</h2>
+                    <FieldMark show={warn("work_history")} label={t.profileReviewCheck} />
+                  </header>
+                  {work.length === 0 ? <p className="hint">{t.profileReviewWorkEmpty}</p> : null}
+                  {work.map((job, index) => (
+                    <div key={`job-${index}`} className="work-block">
+                      <div className="work-block-head">
+                        <span className="hint">{t.profileReviewWorkItem(index + 1)}</span>
+                        <button type="button" className="btn ghost small" onClick={() => removeWork(index)}>
+                          {t.profileReviewRemove}
                         </button>
                       </div>
-                    </div>
-                  </section>
-                </div>
-
-                <div className="profile-review-col">
-                  <section className={`review-panel${warn("work_history") ? " field-warn" : ""}`}>
-                    <header className="review-panel-head">
-                      <h2>{t.profileReviewWork}</h2>
-                      <FieldMark show={warn("work_history")} label={t.profileReviewCheck} />
-                    </header>
-                    {work.length === 0 ? <p className="hint">{t.profileReviewWorkEmpty}</p> : null}
-                    {work.map((job, index) => (
-                      <div key={`job-${index}`} className="work-block">
-                        <div className="work-block-head">
-                          <span className="hint">{t.profileReviewWorkItem(index + 1)}</span>
-                          <button type="button" className="btn ghost small" onClick={() => removeWork(index)}>
-                            {t.profileReviewRemove}
-                          </button>
-                        </div>
-                        <div className="profile-grid profile-grid-work">
-                          <label>
-                            {t.profileReviewJobTitle}
-                            <input
-                              value={job.title}
-                              maxLength={120}
-                              onChange={(event) => updateWork(index, { title: event.target.value })}
-                            />
-                          </label>
-                          <label>
-                            {t.profileReviewCompany}
-                            <input
-                              value={job.company}
-                              maxLength={120}
-                              onChange={(event) => updateWork(index, { company: event.target.value })}
-                            />
-                          </label>
-                          <label>
-                            {t.profileReviewStart}
-                            <input
-                              value={job.start}
-                              maxLength={20}
-                              placeholder="2021-03"
-                              onChange={(event) => updateWork(index, { start: event.target.value })}
-                            />
-                          </label>
-                          <label>
-                            {t.profileReviewEnd}
-                            <input
-                              value={job.end || ""}
-                              maxLength={20}
-                              placeholder={t.profileReviewPresent}
-                              onChange={(event) => updateWork(index, { end: event.target.value })}
-                            />
-                          </label>
-                          <label className="profile-span">
-                            {t.profileReviewLocation}
-                            <input
-                              value={job.location || ""}
-                              maxLength={120}
-                              onChange={(event) => updateWork(index, { location: event.target.value })}
-                            />
-                          </label>
-                          <label className="profile-span">
-                            {t.profileReviewJobSummary}
-                            <textarea
-                              value={job.summary || ""}
-                              maxLength={2000}
-                              rows={3}
-                              onChange={(event) => updateWork(index, { summary: event.target.value })}
-                            />
-                          </label>
-                        </div>
+                      <div className="profile-grid profile-grid-work">
+                        <label>
+                          {t.profileReviewJobTitle}
+                          <input
+                            value={job.title}
+                            maxLength={120}
+                            onChange={(event) => updateWork(index, { title: event.target.value })}
+                          />
+                        </label>
+                        <label>
+                          {t.profileReviewCompany}
+                          <input
+                            value={job.company}
+                            maxLength={120}
+                            onChange={(event) => updateWork(index, { company: event.target.value })}
+                          />
+                        </label>
+                        <label>
+                          {t.profileReviewStart}
+                          <input
+                            value={job.start}
+                            maxLength={20}
+                            placeholder="2021-03"
+                            onChange={(event) => updateWork(index, { start: event.target.value })}
+                          />
+                        </label>
+                        <label>
+                          {t.profileReviewEnd}
+                          <input
+                            value={job.end || ""}
+                            maxLength={20}
+                            placeholder={t.profileReviewPresent}
+                            onChange={(event) => updateWork(index, { end: event.target.value })}
+                          />
+                        </label>
+                        <label className="profile-span">
+                          {t.profileReviewLocation}
+                          <input
+                            value={job.location || ""}
+                            maxLength={120}
+                            onChange={(event) => updateWork(index, { location: event.target.value })}
+                          />
+                        </label>
+                        <label className="profile-span">
+                          {t.profileReviewJobSummary}
+                          <textarea
+                            value={job.summary || ""}
+                            maxLength={2000}
+                            rows={2}
+                            onChange={(event) => updateWork(index, { summary: event.target.value })}
+                          />
+                        </label>
                       </div>
-                    ))}
-                    <button type="button" className="btn ghost" onClick={addWork}>
-                      {t.profileReviewWorkAdd}
-                    </button>
-                  </section>
+                    </div>
+                  ))}
+                  <button type="button" className="btn ghost" onClick={addWork}>
+                    {t.profileReviewWorkAdd}
+                  </button>
+                </section>
 
+                <div className="profile-review-side">
                   <section className="review-panel">
                     <header className="review-panel-head">
                       <h2>{t.profileReviewEducation}</h2>

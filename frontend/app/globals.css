@@ -1480,9 +1480,13 @@ textarea { min-height: 120px; resize: vertical; }
   border-top: 1px solid #e8eaee;
 }
 
+.wrap:has(.profile-review-page) {
+  max-width: 1320px;
+}
+
 .profile-review-page {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
   max-width: none;
 }
@@ -1492,7 +1496,7 @@ textarea { min-height: 120px; resize: vertical; }
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px 16px;
+  gap: 8px 14px;
 }
 
 .profile-review-page .cabinet-head h1 {
@@ -1507,7 +1511,7 @@ textarea { min-height: 120px; resize: vertical; }
 }
 
 .profile-review-page .profile-grid {
-  gap: 8px 12px;
+  gap: 6px 10px;
 }
 
 .profile-review-page .profile-grid-contact {
@@ -1515,7 +1519,7 @@ textarea { min-height: 120px; resize: vertical; }
 }
 
 .profile-review-page .profile-grid-links {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .profile-review-page .profile-grid-basics {
@@ -1526,10 +1530,18 @@ textarea { min-height: 120px; resize: vertical; }
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.profile-review-page .review-panel-work .profile-grid-work {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.profile-review-page .review-panel-work .profile-grid-work .profile-span {
+  grid-column: 1 / -1;
+}
+
 .profile-review-page .profile-grid-lang {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   align-items: end;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .profile-review-flash {
@@ -1554,7 +1566,7 @@ textarea { min-height: 120px; resize: vertical; }
 
 .profile-review-form {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
   background: transparent;
   border: 0;
@@ -1564,22 +1576,36 @@ textarea { min-height: 120px; resize: vertical; }
 
 .profile-review-layout {
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas:
+    "contact links basics"
+    "skills skills skills"
+    "work work side";
+  gap: 10px;
   align-items: start;
 }
 
-.profile-review-col {
+.review-panel-contact { grid-area: contact; }
+.review-panel-links { grid-area: links; }
+.review-panel-basics { grid-area: basics; }
+.review-panel-skills { grid-area: skills; }
+.review-panel-work { grid-area: work; }
+
+.profile-review-side {
+  grid-area: side;
   display: grid;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
+  align-content: start;
 }
 
-.profile-review-col .review-panel {
+.profile-review-layout > .review-panel,
+.profile-review-side > .review-panel {
   background: #ffffff;
   border: 1px solid #dfe1e5;
-  border-radius: 14px;
-  padding: 14px 16px;
+  border-radius: 12px;
+  padding: 12px 14px;
+  min-width: 0;
 }
 
 .profile-review-chooser h2,
@@ -1796,13 +1822,13 @@ textarea { min-height: 120px; resize: vertical; }
 
 .review-panel {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .review-panel-head {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 8px;
+  gap: 4px 8px;
   align-items: center;
 }
 
@@ -1815,10 +1841,10 @@ textarea { min-height: 120px; resize: vertical; }
   flex-wrap: wrap;
   gap: 6px 10px;
   align-items: center;
-  padding: 8px 12px;
+  padding: 6px 10px;
   background: #ffffff;
   border: 1px solid #dfe1e5;
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .profile-review-status {
@@ -1855,8 +1881,7 @@ textarea { min-height: 120px; resize: vertical; }
 
 .review-panel.field-warn {
   border-left: 2px solid #001FFF;
-  padding-left: 10px;
-  margin-left: -2px;
+  padding-left: 12px;
 }
 
 .review-panel.field-warn .work-block {
@@ -1866,10 +1891,10 @@ textarea { min-height: 120px; resize: vertical; }
 
 .skill-chip-box {
   display: grid;
-  gap: 10px;
-  padding: 10px;
+  gap: 8px;
+  padding: 8px;
   border: 1px solid #e8eaee;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #fafbfc;
 }
 
@@ -1948,8 +1973,8 @@ textarea { min-height: 120px; resize: vertical; }
 
 .work-block {
   display: grid;
-  gap: 8px;
-  padding: 10px;
+  gap: 6px;
+  padding: 8px;
   border: 1px solid #e8eaee;
   border-radius: 10px;
   background: #fafbfc;
@@ -1966,9 +1991,9 @@ textarea { min-height: 120px; resize: vertical; }
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid #dfe1e5;
-  border-radius: 12px;
+  border-radius: 10px;
   position: sticky;
   bottom: 8px;
   background: #ffffff;
@@ -1980,17 +2005,18 @@ textarea { min-height: 120px; resize: vertical; }
   font-size: 0.9rem;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .profile-review-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "contact links"
+      "basics basics"
+      "skills skills"
+      "work side";
   }
 
-  .profile-review-page .profile-grid-contact,
-  .profile-review-page .profile-grid-links,
-  .profile-review-page .profile-grid-basics,
-  .profile-review-page .profile-grid-work,
-  .profile-review-page .profile-grid-lang {
-    grid-template-columns: 1fr;
+  .profile-review-page .review-panel-work .profile-grid-work {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -2015,6 +2041,25 @@ textarea { min-height: 120px; resize: vertical; }
 }
 
 @media (max-width: 760px) {
+  .profile-review-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "contact"
+      "links"
+      "basics"
+      "skills"
+      "work"
+      "side";
+  }
+
+  .profile-review-page .profile-grid-contact,
+  .profile-review-page .profile-grid-links,
+  .profile-review-page .profile-grid-basics,
+  .profile-review-page .profile-grid-work,
+  .profile-review-page .profile-grid-lang {
+    grid-template-columns: 1fr;
+  }
+
   .profile-review-options {
     grid-template-columns: 1fr;
   }
