@@ -43,24 +43,27 @@ describe("buildAuthorizeQuery", () => {
 });
 
 describe("buildJobAccountLoginUrl", () => {
-  it("wraps authorize in Academy job-account next=", () => {
+  it("uses relative authorize path in next= (matches Academy job-account)", () => {
     const authorizeParams = params({
       intent: "job_candidate",
-      returnToAbsolute: "http://localhost:3010/",
+      returnToAbsolute: "https://web-production-dba98.up.railway.app/",
     });
     const href = buildJobAccountLoginUrl({
-      jobAccountUrl: "http://127.0.0.1:8000/portal/job-account/",
-      authorizeUrl: "http://127.0.0.1:8000/portal/oauth/authorize",
+      jobAccountUrl: "https://ingress.academy/portal/job-account/",
+      authorizeUrl: "https://ingress.academy/portal/oauth/authorize",
       authorizeParams,
       intent: "job_candidate",
-      returnToAbsolute: "http://localhost:3010/",
+      returnToAbsolute: "https://web-production-dba98.up.railway.app/",
     });
     const url = new URL(href);
+    assert.equal(url.origin, "https://ingress.academy");
     assert.equal(url.pathname, "/portal/job-account/");
     assert.equal(url.searchParams.get("registration_intent"), "job_candidate");
-    assert.equal(url.searchParams.get("return_to"), "http://localhost:3010/");
+    assert.equal(url.searchParams.get("return_to"), "https://web-production-dba98.up.railway.app/");
     const next = url.searchParams.get("next");
-    assert.ok(next.startsWith("http://127.0.0.1:8000/portal/oauth/authorize?"));
+    assert.ok(next.startsWith("/portal/oauth/authorize?"));
+    assert.equal(next.includes("https://ingress.academy"), false);
     assert.match(next, /registration_intent=job_candidate/);
+    assert.match(next, /client_id=job-web/);
   });
 });

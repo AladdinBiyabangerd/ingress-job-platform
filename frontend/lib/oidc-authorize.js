@@ -33,7 +33,23 @@ export function buildAuthorizeQuery({
   return params;
 }
 
-/** Academy job-account entry: SSO / account picker, then authorize via `next`. */
+/** Relative authorize path for job-account `next=` (Academy expects same-origin path). */
+export function authorizeNextPath(authorizeUrl, authorizeParams) {
+  let path = "/portal/oauth/authorize";
+  try {
+    path = new URL(authorizeUrl, "http://local.invalid").pathname || path;
+  } catch {
+    // keep default
+  }
+  if (!path.startsWith("/")) path = `/${path}`;
+  return `${path}?${authorizeParams.toString()}`;
+}
+
+/**
+ * Academy job-account entry: if portal session exists, show signed-in account
+ * and continue into Job; otherwise the normal login/register screen.
+ * `next` must be a relative authorize path (not an absolute URL).
+ */
 export function buildJobAccountLoginUrl({
   jobAccountUrl,
   authorizeUrl,
@@ -41,9 +57,8 @@ export function buildJobAccountLoginUrl({
   intent = "",
   returnToAbsolute = "",
 }) {
-  const authorize = `${authorizeUrl}?${authorizeParams.toString()}`;
   const url = new URL(jobAccountUrl);
-  url.searchParams.set("next", authorize);
+  url.searchParams.set("next", authorizeNextPath(authorizeUrl, authorizeParams));
   if (intent) url.searchParams.set("registration_intent", intent);
   if (returnToAbsolute) url.searchParams.set("return_to", returnToAbsolute);
   return url.toString();

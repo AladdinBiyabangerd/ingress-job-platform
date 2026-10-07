@@ -5,11 +5,11 @@
 - Diagnosed “Namizəd” after hard refresh: `/me` name = access-token `name` OR `academy_identities`; identity remembered from id_token on exchange; refresh often has no id_token / no name claim → empty name → account bar falls back to role label `Namizəd`.
 - Diagnosed login UX: Job redirected straight to `/portal/oauth/authorize`; desired flow is Academy `/portal/job-account/?next=<authorize…>&registration_intent=…&return_to=…`.
 - **Name after refresh:** `_remember_access_identity` UPSERTs access-token `name` into `academy_identities` from `_tokens_from` (exchange/refresh) and `account_payload` (`/me`).
-- **Login via job-account:** `/api/auth/login` redirects to `{issuer}portal/job-account/?next=<authorize…>&…` via `buildJobAccountLoginUrl` (`JOB_OIDC_JOB_ACCOUNT_URL` optional override).
+- **Login via job-account:** `/api/auth/login` → Academy `portal/job-account/?next=/portal/oauth/authorize?…` (relative `next`, matching production Academy URL). Absolute `next` broke SSO “artıq giriş var” screen.
 
 ## Current state
-- Cookie fix shipped (`339bdb0`).
-- Name UPSERT + job-account login implemented in working tree; need API + web redeploy and verify.
+- Name UPSERT + job-account login on `main` (`8e50b5b`); relative-`next` fix pending push.
+- Redeploy web after relative-`next` lands; verify portal session → job-account signed-in → Job.
 
 ## Decisions
 - Cookie mutation: middleware / Route Handlers / Server Actions only — never RSC.
