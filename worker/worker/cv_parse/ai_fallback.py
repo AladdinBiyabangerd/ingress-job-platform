@@ -37,6 +37,7 @@ _SCHEMA: dict[str, Any] = {
     "additionalProperties": False,
     "properties": {
         "headline": {"type": "string"},
+        "summary": {"type": "string"},
         "seniority": {"type": "string"},
         "total_years": {"type": ["number", "null"]},
         "work_history": {
@@ -106,6 +107,7 @@ _SCHEMA: dict[str, Any] = {
     },
     "required": [
         "headline",
+        "summary",
         "seniority",
         "total_years",
         "work_history",
@@ -203,6 +205,11 @@ def _merge(rules: dict, llm: dict, text: str) -> dict:
     headline = str(llm.get("headline") or "").strip()[:120]
     if headline and not _has_placeholder(headline):
         out["headline"] = headline
+
+    summary = str(llm.get("summary") or "").strip()[:2000]
+    if summary and not _has_placeholder(summary):
+        if not str(out.get("summary") or "").strip() or len(summary) > len(str(out.get("summary") or "")):
+            out["summary"] = summary
 
     seniority = str(llm.get("seniority") or "").strip().lower()
     if seniority in {"intern", "junior", "middle", "senior", "lead", "principal", "staff"}:

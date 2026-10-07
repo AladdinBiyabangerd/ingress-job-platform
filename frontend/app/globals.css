@@ -1511,7 +1511,11 @@ textarea { min-height: 120px; resize: vertical; }
 }
 
 .profile-review-page .profile-grid-contact {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.profile-review-page .profile-grid-links {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .profile-review-page .profile-grid-basics {
@@ -1520,6 +1524,12 @@ textarea { min-height: 120px; resize: vertical; }
 
 .profile-review-page .profile-grid-work {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.profile-review-page .profile-grid-lang {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  margin-bottom: 8px;
 }
 
 .profile-review-flash {
@@ -1975,8 +1985,11 @@ textarea { min-height: 120px; resize: vertical; }
     grid-template-columns: 1fr;
   }
 
+  .profile-review-page .profile-grid-contact,
+  .profile-review-page .profile-grid-links,
   .profile-review-page .profile-grid-basics,
-  .profile-review-page .profile-grid-work {
+  .profile-review-page .profile-grid-work,
+  .profile-review-page .profile-grid-lang {
     grid-template-columns: 1fr;
   }
 }

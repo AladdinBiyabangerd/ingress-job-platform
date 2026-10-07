@@ -88,6 +88,7 @@ def _empty_profile() -> dict:
         "contact": {"full_name": "", "email": "", "phone": "", "city": "", "country": ""},
         "links": {"linkedin_url": "", "github": "", "portfolio": "", "other": []},
         "headline": "",
+        "summary": "",
         "seniority": "",
         "total_years": None,
         "work_history": [],
@@ -243,6 +244,9 @@ def normalize_profile_data(raw: object, *, base: dict | None = None) -> dict:
 
     if "headline" in incoming:
         data["headline"] = _as_str(incoming.get("headline"), max_len=HEADLINE_MAX)
+    if "summary" in incoming or "about" in incoming:
+        raw_summary = incoming.get("summary") if "summary" in incoming else incoming.get("about")
+        data["summary"] = _as_str(raw_summary, max_len=SUMMARY_MAX)
     if "seniority" in incoming:
         seniority = _as_str(incoming.get("seniority"), max_len=40).lower()
         data["seniority"] = seniority if seniority in SENIORITY_VALUES else data.get("seniority") or ""
@@ -326,6 +330,7 @@ def normalize_profile_data(raw: object, *, base: dict | None = None) -> dict:
 
     # Keep top-level mirrors in sync with columns the UI edits.
     data["headline"] = _as_str(data.get("headline"), max_len=HEADLINE_MAX)
+    data["summary"] = _as_str(data.get("summary"), max_len=SUMMARY_MAX)
     data["seniority"] = _as_str(data.get("seniority"), max_len=40)
     return data
 

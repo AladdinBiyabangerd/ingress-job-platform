@@ -74,6 +74,7 @@ class AiFallbackTest(unittest.TestCase):
         self.assertLess(rules["parse_meta"]["confidence"], 0.55)
         llm = {
             "headline": "Java Developer",
+            "summary": "Java developer with Spring experience.",
             "seniority": "middle",
             "total_years": 4,
             "work_history": [

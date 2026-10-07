@@ -17,6 +17,8 @@ import { Shell } from "./shell";
 import { useInitialMe } from "./me-seed";
 
 const SENIORITY = ["", "intern", "junior", "middle", "senior", "lead", "principal", "staff"];
+const LANG_LEVELS = ["", "A1", "A2", "B1", "B2", "C1", "C2", "native"];
+const LANG_CODES = ["az", "en", "ru", "tr", "de", "fr"];
 const CV_ACCEPT =
   ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const POLL_MS = 2000;
@@ -35,11 +37,21 @@ function emptyWork() {
   };
 }
 
+function emptyEdu() {
+  return { degree: "", field: "", school: "", year: "" };
+}
+
+function emptyLang() {
+  return { code: "", level: "" };
+}
+
 function snapshotFromPayload(data) {
   const profile = data?.profile || {};
   const contact = profile.contact || {};
+  const links = profile.links || {};
   return {
     headline: data?.headline || profile.headline || "",
+    summary: profile.summary || "",
     seniority: data?.seniority || profile.seniority || "",
     totalYears:
       data?.total_years != null
@@ -50,6 +62,11 @@ function snapshotFromPayload(data) {
     fullName: contact.full_name || "",
     email: contact.email || "",
     phone: contact.phone || "",
+    city: contact.city || "",
+    country: contact.country || "",
+    linkedin: links.linkedin_url || "",
+    github: links.github || "",
+    portfolio: links.portfolio || "",
     skills: Array.isArray(profile.skills)
       ? profile.skills.map((item) => ({
           name: item?.name || "",
@@ -70,6 +87,20 @@ function snapshotFromPayload(data) {
           employment_type: item?.employment_type || "",
         }))
       : [],
+    education: Array.isArray(profile.education)
+      ? profile.education.map((item) => ({
+          degree: item?.degree || "",
+          field: item?.field || "",
+          school: item?.school || "",
+          year: item?.year != null ? String(item.year) : "",
+        }))
+      : [],
+    languages: Array.isArray(profile.languages)
+      ? profile.languages.map((item) => ({
+          code: item?.code || "",
+          level: item?.level || "",
+        }))
+      : [],
     lowFields: Array.isArray(data?.low_confidence_fields) ? data.low_confidence_fields : [],
   };
 }
@@ -77,13 +108,21 @@ function snapshotFromPayload(data) {
 function applyPayload(data, setters) {
   const snap = snapshotFromPayload(data);
   setters.setHeadline(snap.headline);
+  setters.setSummary(snap.summary);
   setters.setSeniority(snap.seniority);
   setters.setTotalYears(snap.totalYears);
   setters.setFullName(snap.fullName);
   setters.setEmail(snap.email);
   setters.setPhone(snap.phone);
+  setters.setCity(snap.city);
+  setters.setCountry(snap.country);
+  setters.setLinkedin(snap.linkedin);
+  setters.setGithub(snap.github);
+  setters.setPortfolio(snap.portfolio);
   setters.setSkills(snap.skills);
   setters.setWork(snap.work);
+  setters.setEducation(snap.education);
+  setters.setLanguages(snap.languages);
   setters.setLowFields(snap.lowFields);
 }
 
@@ -163,13 +202,21 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
   const [payload, setPayload] = useState(() => (seededProfile ? initialProfile : null));
   const [entry, setEntry] = useState(() => (seededProfile ? entryFromPayload(initialProfile) : null));
   const [headline, setHeadline] = useState(() => seedSnap?.headline || "");
+  const [summary, setSummary] = useState(() => seedSnap?.summary || "");
   const [seniority, setSeniority] = useState(() => seedSnap?.seniority || "");
   const [totalYears, setTotalYears] = useState(() => seedSnap?.totalYears || "");
   const [fullName, setFullName] = useState(() => seedSnap?.fullName || "");
   const [email, setEmail] = useState(() => seedSnap?.email || "");
   const [phone, setPhone] = useState(() => seedSnap?.phone || "");
+  const [city, setCity] = useState(() => seedSnap?.city || "");
+  const [country, setCountry] = useState(() => seedSnap?.country || "");
+  const [linkedin, setLinkedin] = useState(() => seedSnap?.linkedin || "");
+  const [github, setGithub] = useState(() => seedSnap?.github || "");
+  const [portfolio, setPortfolio] = useState(() => seedSnap?.portfolio || "");
   const [skills, setSkills] = useState(() => seedSnap?.skills || []);
   const [work, setWork] = useState(() => seedSnap?.work || []);
+  const [education, setEducation] = useState(() => seedSnap?.education || []);
+  const [languages, setLanguages] = useState(() => seedSnap?.languages || []);
   const [skillDraft, setSkillDraft] = useState("");
   const [skillYearsDraft, setSkillYearsDraft] = useState("");
   const [lowFields, setLowFields] = useState(() => seedSnap?.lowFields || []);
@@ -195,13 +242,21 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
 
   const setters = {
     setHeadline,
+    setSummary,
     setSeniority,
     setTotalYears,
     setFullName,
     setEmail,
     setPhone,
+    setCity,
+    setCountry,
+    setLinkedin,
+    setGithub,
+    setPortfolio,
     setSkills,
     setWork,
+    setEducation,
+    setLanguages,
     setLowFields,
   };
 
@@ -326,8 +381,14 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
       seniority,
       total_years: Number.isFinite(yearsValue) ? yearsValue : null,
       profile: {
-        contact: { full_name: fullName, email, phone },
+        contact: { full_name: fullName, email, phone, city, country },
+        links: {
+          linkedin_url: linkedin.trim(),
+          github: github.trim(),
+          portfolio: portfolio.trim(),
+        },
         headline,
+        summary,
         seniority,
         total_years: Number.isFinite(yearsValue) ? yearsValue : null,
         skills: skills
@@ -349,6 +410,20 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
             summary: item.summary || "",
             skills: item.skills || [],
             employment_type: item.employment_type || "",
+          })),
+        education: education
+          .filter((item) => item.degree.trim() || item.field.trim() || item.school.trim() || item.year.trim())
+          .map((item) => ({
+            degree: item.degree,
+            field: item.field,
+            school: item.school,
+            year: item.year.trim() === "" ? null : Number(item.year),
+          })),
+        languages: languages
+          .filter((item) => item.code.trim())
+          .map((item) => ({
+            code: item.code.trim().toLowerCase(),
+            level: item.level || "",
           })),
       },
     };
@@ -410,25 +485,41 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
     setNote("");
     setEntry("manual");
     setHeadline("");
+    setSummary("");
     setSeniority("");
     setTotalYears("");
     setFullName("");
     setEmail("");
     setPhone("");
+    setCity("");
+    setCountry("");
+    setLinkedin("");
+    setGithub("");
+    setPortfolio("");
     setSkills([]);
     setWork([emptyWork()]);
+    setEducation([]);
+    setLanguages([]);
     setLowFields([]);
   }
 
   function clearLocalForm() {
     setHeadline("");
+    setSummary("");
     setSeniority("");
     setTotalYears("");
     setFullName("");
     setEmail("");
     setPhone("");
+    setCity("");
+    setCountry("");
+    setLinkedin("");
+    setGithub("");
+    setPortfolio("");
     setSkills([]);
     setWork([]);
+    setEducation([]);
+    setLanguages([]);
     setSkillDraft("");
     setSkillYearsDraft("");
     setLowFields([]);
@@ -542,6 +633,30 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
 
   function removeWork(index) {
     setWork((current) => current.filter((_, i) => i !== index));
+  }
+
+  function updateEducation(index, patch) {
+    setEducation((current) => current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  }
+
+  function addEducation() {
+    setEducation((current) => [...current, emptyEdu()]);
+  }
+
+  function removeEducation(index) {
+    setEducation((current) => current.filter((_, i) => i !== index));
+  }
+
+  function updateLanguage(index, patch) {
+    setLanguages((current) => current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  }
+
+  function addLanguage() {
+    setLanguages((current) => [...current, emptyLang()]);
+  }
+
+  function removeLanguage(index) {
+    setLanguages((current) => current.filter((_, i) => i !== index));
   }
 
   const statusLabel =
@@ -694,6 +809,60 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
                           onChange={(event) => setPhone(event.target.value)}
                         />
                       </label>
+                      <label>
+                        {t.profileReviewCity}
+                        <input
+                          value={city}
+                          maxLength={120}
+                          onChange={(event) => setCity(event.target.value)}
+                        />
+                      </label>
+                      <label>
+                        {t.profileReviewCountry}
+                        <input
+                          value={country}
+                          maxLength={120}
+                          onChange={(event) => setCountry(event.target.value)}
+                        />
+                      </label>
+                    </div>
+                  </section>
+
+                  <section className="review-panel">
+                    <header className="review-panel-head">
+                      <h2>{t.profileReviewLinks}</h2>
+                    </header>
+                    <div className="profile-grid profile-grid-links">
+                      <label>
+                        {t.profileReviewLinkedin}
+                        <input
+                          type="url"
+                          value={linkedin}
+                          maxLength={300}
+                          placeholder="https://linkedin.com/in/…"
+                          onChange={(event) => setLinkedin(event.target.value)}
+                        />
+                      </label>
+                      <label>
+                        {t.profileReviewGithub}
+                        <input
+                          type="url"
+                          value={github}
+                          maxLength={300}
+                          placeholder="https://github.com/…"
+                          onChange={(event) => setGithub(event.target.value)}
+                        />
+                      </label>
+                      <label className="profile-span">
+                        {t.profileReviewPortfolio}
+                        <input
+                          type="url"
+                          value={portfolio}
+                          maxLength={300}
+                          placeholder="https://"
+                          onChange={(event) => setPortfolio(event.target.value)}
+                        />
+                      </label>
                     </div>
                   </section>
 
@@ -709,6 +878,16 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
                           value={headline}
                           maxLength={200}
                           onChange={(event) => setHeadline(event.target.value)}
+                        />
+                      </label>
+                      <label className="profile-span">
+                        {t.profileReviewAbout}
+                        <textarea
+                          value={summary}
+                          maxLength={2000}
+                          rows={4}
+                          placeholder={t.profileReviewAboutHint}
+                          onChange={(event) => setSummary(event.target.value)}
                         />
                       </label>
                       <label className={warn("seniority") ? "field-warn" : undefined}>
@@ -858,11 +1037,128 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
                               onChange={(event) => updateWork(index, { end: event.target.value })}
                             />
                           </label>
+                          <label className="profile-span">
+                            {t.profileReviewLocation}
+                            <input
+                              value={job.location || ""}
+                              maxLength={120}
+                              onChange={(event) => updateWork(index, { location: event.target.value })}
+                            />
+                          </label>
+                          <label className="profile-span">
+                            {t.profileReviewJobSummary}
+                            <textarea
+                              value={job.summary || ""}
+                              maxLength={2000}
+                              rows={3}
+                              onChange={(event) => updateWork(index, { summary: event.target.value })}
+                            />
+                          </label>
                         </div>
                       </div>
                     ))}
                     <button type="button" className="btn ghost" onClick={addWork}>
                       {t.profileReviewWorkAdd}
+                    </button>
+                  </section>
+
+                  <section className="review-panel">
+                    <header className="review-panel-head">
+                      <h2>{t.profileReviewEducation}</h2>
+                    </header>
+                    {education.length === 0 ? <p className="hint">{t.profileReviewEducationEmpty}</p> : null}
+                    {education.map((item, index) => (
+                      <div key={`edu-${index}`} className="work-block">
+                        <div className="work-block-head">
+                          <span className="hint">{t.profileReviewEducationItem(index + 1)}</span>
+                          <button type="button" className="btn ghost small" onClick={() => removeEducation(index)}>
+                            {t.profileReviewRemove}
+                          </button>
+                        </div>
+                        <div className="profile-grid profile-grid-work">
+                          <label>
+                            {t.profileReviewDegree}
+                            <input
+                              value={item.degree}
+                              maxLength={120}
+                              onChange={(event) => updateEducation(index, { degree: event.target.value })}
+                            />
+                          </label>
+                          <label>
+                            {t.profileReviewField}
+                            <input
+                              value={item.field}
+                              maxLength={120}
+                              onChange={(event) => updateEducation(index, { field: event.target.value })}
+                            />
+                          </label>
+                          <label>
+                            {t.profileReviewSchool}
+                            <input
+                              value={item.school}
+                              maxLength={120}
+                              onChange={(event) => updateEducation(index, { school: event.target.value })}
+                            />
+                          </label>
+                          <label>
+                            {t.profileReviewEduYear}
+                            <input
+                              type="number"
+                              min="1950"
+                              max="2100"
+                              value={item.year}
+                              onChange={(event) => updateEducation(index, { year: event.target.value })}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" className="btn ghost" onClick={addEducation}>
+                      {t.profileReviewEducationAdd}
+                    </button>
+                  </section>
+
+                  <section className="review-panel">
+                    <header className="review-panel-head">
+                      <h2>{t.profileReviewLanguages}</h2>
+                    </header>
+                    {languages.length === 0 ? <p className="hint">{t.profileReviewLanguagesEmpty}</p> : null}
+                    {languages.map((item, index) => (
+                      <div key={`lang-${index}`} className="profile-grid profile-grid-lang">
+                        <label>
+                          {t.profileReviewLangCode}
+                          <select value={item.code} onChange={(event) => updateLanguage(index, { code: event.target.value })}>
+                            <option value="">—</option>
+                            {LANG_CODES.map((code) => (
+                              <option key={code} value={code}>
+                                {t.profileReviewLangLabel(code)}
+                              </option>
+                            ))}
+                            {item.code && !LANG_CODES.includes(item.code) ? (
+                              <option value={item.code}>{item.code}</option>
+                            ) : null}
+                          </select>
+                        </label>
+                        <label>
+                          {t.profileReviewLangLevel}
+                          <select
+                            value={item.level}
+                            onChange={(event) => updateLanguage(index, { level: event.target.value })}
+                          >
+                            {LANG_LEVELS.map((level) => (
+                              <option key={level || "empty"} value={level}>
+                                {level === "native" ? t.profileReviewLangNative : level || "—"}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <button type="button" className="btn ghost small" onClick={() => removeLanguage(index)}>
+                          {t.profileReviewRemove}
+                        </button>
+                      </div>
+                    ))}
+                    <button type="button" className="btn ghost" onClick={addLanguage}>
+                      {t.profileReviewLanguageAdd}
                     </button>
                   </section>
 

@@ -1,24 +1,29 @@
 # Current task
 
 ## Completed
-- Contact/company profiles were wiped on every API redeploy: they lived only in ephemeral `api/data/accounts.sqlite`.
-- Moved accounts tables to jobs DB when `DATABASE_URL` is set (same pattern as cabinet/jobs): Postgres on Railway, `accounts.sqlite` locally.
+- Profile review form enriched (option A): About, city/country, links, work location+summary, education, languages.
+- Backend `summary` field on candidate profile JSON; CV parse stores About/Summary section; AI #1 schema/merge includes summary.
+- Embeddings text includes summary snippet.
+- Locales az/en/ru + CSS grids for new sections.
+- Tests: `api/tests/test_cv_profile.py`, `worker/tests/test_cv_parse.py`, `worker/tests/test_cv_ai_fallback.py`.
 
 ## Current state
-- `api/app/profiles.py` uses `jobs_db.connect()` when postgres enabled; schema ensure keyed by `schema_cache_key()`.
-- `jobs_db._NO_ID_TABLES` includes account tables (TEXT PKs).
-- Docs: `docs/railway.md`, `.cursor/context/architecture.md`.
+- UI `/profile/review` saves/loads the richer fields via existing GET/PUT `/api/v1/profile`.
+- No DB migration — fields live in `candidate_profile.data` JSON.
 
 ## Decisions
-- Same DB as jobs when Postgres — not a separate volume (Railway volume is one-service-only).
-- Keep local `accounts.sqlite` when `DATABASE_URL` unset so existing tests (`patch DATA_PATH`) stay valid.
+- Field name in JSON is `summary` (CV section name); UI label is About / Haqqında / О себе. `about` accepted as alias on save.
+- Languages: fixed common codes (az/en/ru/tr/de/fr) + CEFR/native levels.
 
 ## Remaining
-1. Redeploy API; verify Görünən ad / Telefon / E-poçt survive restart.
-2. Optional one-time copy from old container sqlite if any production rows still matter (usually empty after wipe).
+1. Deploy API + web; smoke-test `/profile/review` with CV upload and manual fill.
+2. Optional later: desired roles / remote prefs / salary on the same form.
 
 ## Relevant files
-- `api/app/profiles.py`
-- `api/app/jobs_db.py` (`_NO_ID_TABLES`)
-- `docs/railway.md`
-- `api/tests/test_candidate_profile.py`
+- `frontend/components/profile-review.js`
+- `frontend/lib/copy.js`
+- `frontend/app/globals.css`
+- `api/app/cv_profile.py`
+- `api/app/embeddings.py`
+- `worker/worker/cv_parse/pipeline.py`
+- `worker/worker/cv_parse/ai_fallback.py`

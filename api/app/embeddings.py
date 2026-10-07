@@ -98,6 +98,9 @@ def profile_embed_text(profile: dict | None) -> str:
     headline = str(data.get("headline") or "").strip()
     if headline:
         parts.append(headline)
+    summary = re.sub(r"\s+", " ", str(data.get("summary") or "").strip())[:600]
+    if summary:
+        parts.append(summary)
     seniority = str(data.get("seniority") or "").strip()
     if seniority:
         parts.append(f"Seniority: {seniority}")

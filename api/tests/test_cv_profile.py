@@ -20,8 +20,16 @@ def user(scopes: str, subject: str) -> VerifiedAccess:
 
 
 SAMPLE = {
-    "contact": {"full_name": "Aysel", "email": "aysel@example.com", "phone": "", "city": "", "country": ""},
+    "contact": {
+        "full_name": "Aysel",
+        "email": "aysel@example.com",
+        "phone": "",
+        "city": "Baku",
+        "country": "AZ",
+    },
+    "links": {"linkedin_url": "https://linkedin.com/in/aysel", "github": "", "portfolio": "", "other": []},
     "headline": "Backend Developer",
+    "summary": "Backend engineer focused on APIs and data pipelines.",
     "seniority": "middle",
     "total_years": 5.5,
     "work_history": [
@@ -30,8 +38,8 @@ SAMPLE = {
             "company": "Acme",
             "start": "2021-03",
             "end": None,
-            "location": "",
-            "summary": "",
+            "location": "Baku",
+            "summary": "Built services",
             "skills": ["Java"],
         }
     ],
@@ -122,9 +130,64 @@ class CvProfileTests(unittest.TestCase):
         self.assertEqual(body["status"], "draft")
         self.assertEqual(body["headline"], "Backend Developer")
         self.assertEqual(body["profile"]["skills"][0]["name"], "Java")
+        self.assertEqual(body["profile"]["summary"], SAMPLE["summary"])
+        self.assertEqual(body["profile"]["contact"]["city"], "Baku")
+        self.assertEqual(body["profile"]["education"][0]["school"], "ADA")
         self.assertTrue(body["low_confidence"])
         self.assertIn("headline", body["low_confidence_fields"])
         self.assertIn("skills", body["low_confidence_fields"])
+
+    def test_put_saves_about_education_links(self):
+        self._seed_draft("person-rich")
+        with self._auth("job:candidate", "person-rich"):
+            saved = self.client.put(
+                "/api/v1/profile",
+                headers=self.headers,
+                json={
+                    "profile": {
+                        "summary": "Full-stack engineer who likes clean APIs.",
+                        "contact": {
+                            "full_name": "Aysel",
+                            "email": "aysel@example.com",
+                            "phone": "",
+                            "city": "Ganja",
+                            "country": "AZ",
+                        },
+                        "links": {
+                            "linkedin_url": "https://linkedin.com/in/aysel",
+                            "github": "https://github.com/aysel",
+                            "portfolio": "https://aysel.dev",
+                        },
+                        "education": [
+                            {"degree": "MSc", "field": "SE", "school": "ADA", "year": 2020},
+                        ],
+                        "languages": [
+                            {"code": "az", "level": "native"},
+                            {"code": "en", "level": "C1"},
+                        ],
+                        "work_history": [
+                            {
+                                "title": "Backend Developer",
+                                "company": "Acme",
+                                "start": "2021-03",
+                                "end": None,
+                                "location": "Remote",
+                                "summary": "Owned payment APIs",
+                                "skills": ["Java"],
+                            }
+                        ],
+                    },
+                },
+            )
+        self.assertEqual(saved.status_code, 200, saved.text)
+        profile = saved.json()["profile"]
+        self.assertEqual(profile["summary"], "Full-stack engineer who likes clean APIs.")
+        self.assertEqual(profile["contact"]["city"], "Ganja")
+        self.assertEqual(profile["links"]["github"], "https://github.com/aysel")
+        self.assertEqual(profile["education"][0]["degree"], "MSc")
+        self.assertEqual(profile["languages"][0]["code"], "az")
+        self.assertEqual(profile["work_history"][0]["summary"], "Owned payment APIs")
+        self.assertEqual(profile["work_history"][0]["location"], "Remote")
 
     def test_put_edits_skills_and_logs(self):
         self._seed_draft("person-3")

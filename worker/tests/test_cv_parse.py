@@ -55,15 +55,22 @@ class CvParseTextTest(unittest.TestCase):
 
         self.assertGreaterEqual(profile["total_years"], 5.0)
         self.assertEqual(profile["seniority"], "middle")
+        self.assertIn("Java and Spring", profile.get("summary") or "")
         self.assertEqual(profile["parse_meta"]["method"], "rules")
         self.assertEqual(profile["parse_meta"]["parser_version"], PARSER_VERSION)
         self.assertGreaterEqual(profile["parse_meta"]["confidence"], 0.6)
         self.assertIn("experience", profile["parse_meta"]["sections_found"])
+        self.assertIn("summary", profile["parse_meta"]["sections_found"])
         self.assertTrue(any(job.get("start") == "2021-03" for job in profile["work_history"]))
         self.assertTrue(
             any(job.get("end") is None for job in profile["work_history"]),
             profile["work_history"],
         )
+        self.assertTrue(
+            any("Built APIs" in (job.get("summary") or "") for job in profile["work_history"]),
+            profile["work_history"],
+        )
+        self.assertEqual(profile["education"][0]["school"], "ADA University")
         lang_codes = {item["code"] for item in profile["languages"]}
         self.assertEqual(lang_codes, {"az", "en", "ru"})
 

@@ -135,11 +135,13 @@ def parse_text(text: str) -> dict:
     education = _education(sections.get("education", ""))
     languages = _languages(sections.get("languages", ""))
     headline = _headline(body, sections, work_history)
+    summary = _profile_summary(sections)
     seniority = _seniority(body, headline, work_history, pro_years, intern_years)
     confidence = _confidence(body, sections, contact, dated_jobs, skills)
     return {
         "contact": contact,
         "headline": headline,
+        "summary": summary,
         "seniority": seniority,
         "total_years": total_years,
         "work_history": [
@@ -174,6 +176,15 @@ def parse_text(text: str) -> dict:
             "sections_found": sorted(sections.keys()),
         },
     }
+
+
+def _profile_summary(sections: dict[str, str]) -> str:
+    """Keep About/Summary section text for the review form (not just headline)."""
+    raw = (sections.get("summary") or "").strip()
+    if not raw:
+        return ""
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
+    return "\n".join(lines)[:2000]
 
 
 def _headline(text: str, sections: dict[str, str], work: list[dict]) -> str:
