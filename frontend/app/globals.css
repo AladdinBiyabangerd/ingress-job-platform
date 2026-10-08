@@ -2679,16 +2679,75 @@ body:has(.profile-review-page) {
 
 .recommendations-learn-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 10px;
 }
 
+.recommendations-learn-grid > .skills-row {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.recommendations-learn-grid .skills-row-top {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.recommendations-learn-grid .skills-course-links,
+.recommendations-learn-grid .skills-course-link {
+  max-width: 100%;
+}
+
+.recommendations-learn-grid .skills-row-meta {
+  min-width: 0;
+}
+
+.recommendations-learn-grid .skills-row-meta .hint {
+  display: block;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+
 .recommendations-tile-have .skills-rows {
-  gap: 6px;
+  gap: 2px;
 }
 
 .recommendations-tile-have .skills-row {
-  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 7.5rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 10px;
+  padding: 5px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.recommendations-tile-have .skills-row-top {
+  min-width: 0;
+}
+
+.recommendations-tile-have .skills-row-name {
+  font-size: 0.82rem;
+  font-weight: var(--fw-semibold);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recommendations-tile-have .skills-share {
+  grid-column: 2;
+  min-width: 0;
+}
+
+.recommendations-tile-have .skills-row-meta {
+  display: none;
+}
+
+.recommendations-tile-have .skills-share-track {
+  height: 5px;
 }
 
 .recommendations-tile-jobs-head {
@@ -3045,8 +3104,9 @@ body:has(.profile-review-page) {
       "learn learn jobs";
   }
 
+  /* 2 cols — 4 skinny cols caused meta/course text overflow */
   .recommendations-learn-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
