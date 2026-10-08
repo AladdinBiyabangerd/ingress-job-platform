@@ -3,26 +3,32 @@
 ## Completed
 - Hybrid 2 Faza 0–6
 - Recommendations density polish
-- **List-out pattern:** heavy job lists moved to button→subpages
+- Insights design options A–D + Option A implemented
+- Recommendations design options A–D (PNG in `docs/design-samples/recommendations-*.png`)
+- **Recommendations Option D (Bento) implemented**
 
 ## Current state
-- `/me/recommendations` — roles + coach/gap + CTA `Uyğun elanlara bax (N)`
-- `/me/recommendations/jobs?role=` — matching jobs + feedback (+ role chips)
-- `/me/insights` — near section is CTA only
-- `/me/insights/near` — full near-miss list
+- `/me/recommendations` overview is a 5-tile bento:
+  - selected role (score ring + Academy + CTA + collapsible coach)
+  - roles 2×N grid
+  - have skills
+  - learn skills (horizontal cards)
+  - jobs preview (top 3) + CTA to full jobs page
+- Responsive: 1-col mobile → 2-col tablet (720–1099) → 3-col desktop (≥1100)
+- `RecommendationJobs` full list page unchanged
 
 ## Decisions
-- Many inline job cards → dedicated page opened by button (no long scroll on hub pages)
-- `hrefFor` modes: `recommendationJobs` (+ optional `role`), `insightsNear`
+- Option D chosen over A/B/C
+- Coach lives in selected tile as `<details>` (does not break bento)
+- Jobs on overview are preview only; feedback stays on jobs page
+- No new API/copy required
 
 ## Remaining
-- Manual smoke: login → recommendations CTA → jobs; insights CTA → near
-- (opsional) company/home lists already purpose-built list pages — leave as-is
+- Manual smoke: `/me/recommendations` desktop/tablet/mobile with roles + gap + matches
+- Empty states: no roles, no jobs, no gap
+- (opsional) visual polish vs `docs/design-samples/recommendations-d-bento.png`
 
 ## Relevant files
-- `frontend/components/recommendations.js` (`Recommendations`, `RecommendationJobs`)
-- `frontend/components/insights.js` (`Insights`, `InsightsNear`)
-- `frontend/app/{,en/,ru/}me/recommendations/jobs/page.js`
-- `frontend/app/{,en/,ru/}me/insights/near/page.js`
-- `frontend/lib/copy.js` (`hrefFor`, open copy)
-- `frontend/lib/server/recommendations.js`
+- `frontend/components/recommendations.js`
+- `frontend/app/globals.css` (`.recommendations-bento`, `.recommendations-tile-*`)
+- `docs/design-samples/recommendations-d-bento.png`

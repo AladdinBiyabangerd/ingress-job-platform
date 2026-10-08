@@ -61,18 +61,6 @@ function CoachSection({ t, locale, coach }) {
       <p className="h2-candidate-lead">{title}</p>
       {body ? <p className="hint">{body}</p> : null}
       <RoleSkillParts t={t} have={strong} missing={must} />
-      {must.length ? (
-        <p className="hint">
-          <span className="role-skill-label">{t.skillsCoachMustLearn}</span>
-          {`: ${must.join(", ")}`}
-        </p>
-      ) : null}
-      {strong.length ? (
-        <p className="hint">
-          <span className="role-skill-label">{t.skillsCoachStrong}</span>
-          {`: ${strong.join(", ")}`}
-        </p>
-      ) : null}
       <div className="insights-links">
         {courses.slice(0, 3).map((course) => {
           const url = String(course?.url || "").trim();
@@ -110,24 +98,40 @@ function NearMissItem({ t, locale, item }) {
   );
 }
 
+const NEAR_PREVIEW = 3;
+
 function NearMissSection({ t, locale, items }) {
   const list = Array.isArray(items) ? items : [];
   if (!list.length) {
     return (
       <section className="h2-panel">
         <h2 className="h2-panel-title">{t.insightsNearTitle}</h2>
-        <p className="hint">{t.insightsNearEmpty}</p>
+        <p className="hint insights-near-empty">{t.insightsNearEmpty}</p>
       </section>
     );
   }
+  const preview = list.slice(0, NEAR_PREVIEW);
+  const more = list.length > NEAR_PREVIEW;
   return (
     <section className="h2-panel">
       <h2 className="h2-panel-title">{t.insightsNearTitle}</h2>
-      <div className="insights-links">
-        <a className="btn" href={hrefFor(locale, { mode: "insightsNear" })}>
-          {t.insightsNearOpenCount(list.length)}
-        </a>
-      </div>
+      <ul className="insights-near-list">
+        {preview.map((item, index) => (
+          <NearMissItem
+            key={`${item.job_id || item.job_title || "near"}-${index}`}
+            t={t}
+            locale={locale}
+            item={item}
+          />
+        ))}
+      </ul>
+      {more ? (
+        <div className="insights-links">
+          <a className="btn small" href={hrefFor(locale, { mode: "insightsNear" })}>
+            {t.insightsNearOpenCount(list.length)}
+          </a>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -164,7 +168,9 @@ function GrowthSection({ t, courses, roadmap }) {
       ) : null}
       {roads.length ? (
         <div className="notice-roadmap">
-          <p className="hint notice-roadmap-title">{t.noticeRoadmapTitle}</p>
+          {list.length ? (
+            <p className="hint notice-roadmap-title">{t.noticeRoadmapTitle}</p>
+          ) : null}
           <ul className="notice-roadmap-list">
             {roads.slice(0, 5).map((entry) => {
               const skill = String(entry?.skill || "").trim();
@@ -256,9 +262,15 @@ export function Insights({ locale, initialInsights = null }) {
               <a href={hrefFor(locale, { mode: "profile" })}>{t.recommendationsConsentLink}</a>
             </p>
           ) : null}
-          <CoachSection t={t} locale={locale} coach={data?.coach} />
-          <NearMissSection t={t} locale={locale} items={data?.near_misses} />
-          <GrowthSection t={t} courses={data?.academy_courses} roadmap={data?.roadmap} />
+          <div className="insights-layout">
+            <div className="insights-main">
+              <CoachSection t={t} locale={locale} coach={data?.coach} />
+            </div>
+            <aside className="insights-aside">
+              <NearMissSection t={t} locale={locale} items={data?.near_misses} />
+              <GrowthSection t={t} courses={data?.academy_courses} roadmap={data?.roadmap} />
+            </aside>
+          </div>
           <p className="hint h2-candidate-footer">
             <a href={hrefFor(locale, { mode: "emailSettings" })}>{t.emailSettingsOpen}</a>
             {" · "}
