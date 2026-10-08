@@ -5,6 +5,7 @@ import { hrefFor, text } from "../lib/copy";
 import { clearMeCache, fetchMe } from "../lib/me-client";
 import { exportMyData, saveCompanyProfile, saveConsents } from "../lib/server/refresh";
 import { ConsentFields, grantsFromPayload } from "./consent-fields";
+import { PageChrome } from "./page-chrome";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 import { useInitialMe } from "./me-seed";
@@ -230,20 +231,23 @@ export function ProfileForm({ locale }) {
   return (
     <Shell locale={locale} mode="profile">
       {me === undefined ? null : showCompany || showApplicant ? (
-        <div className="cabinet profile-page">
-          <div className="cabinet-head">
-            <div>
-              <h1>{t.profileTitle}</h1>
-              <p className="lede">{t.profileLede}</p>
-            </div>
-          </div>
+        <div className="h2-candidate profile-page">
+          <PageChrome
+            backHref={hrefFor(locale)}
+            backLabel={t.breadcrumbHome}
+            title={t.profileTitle}
+            actions={
+              showApplicant ? (
+                <a className="btn small ink" href={hrefFor(locale, { mode: "profileReview" })}>
+                  {t.profileReviewOpen}
+                </a>
+              ) : null
+            }
+          />
           <div className={layoutClass}>
             {showCompany ? (
-              <form className="form-card profile-card" onSubmit={saveCompany}>
-                <div className="cabinet-form-head">
-                  <h2>{t.companyTitle}</h2>
-                  <p className="hint">{t.profileCompanyLede}</p>
-                </div>
+              <form className="h2-panel h2-form" onSubmit={saveCompany}>
+                <h2 className="h2-panel-title">{t.companyTitle}</h2>
                 {companyError ? <p className="note">{companyError}</p> : null}
                 {companyNote ? <p className="note">{companyNote}</p> : null}
                 <div className="profile-grid">
@@ -261,22 +265,13 @@ export function ProfileForm({ locale }) {
                   </label>
                 </div>
                 <div className="ad-actions">
-                  <button type="submit" className="btn primary">{t.companySave}</button>
+                  <button type="submit" className="btn ink">{t.companySave}</button>
                 </div>
               </form>
             ) : null}
             {showApplicant ? (
-              <form className="form-card profile-card" onSubmit={saveApplicant}>
-                <div className="cabinet-form-head">
-                  <h2>{t.profileApplicantTitle}</h2>
-                  <p className="hint">{t.profileApplicantLede}</p>
-                  <p className="hint">{t.profileCvCtaLede}</p>
-                  <div className="ad-actions">
-                    <a className="btn primary" href={hrefFor(locale, { mode: "profileReview" })}>
-                      {t.profileReviewOpen}
-                    </a>
-                  </div>
-                </div>
+              <form className="h2-panel h2-form" onSubmit={saveApplicant}>
+                <h2 className="h2-panel-title">{t.profileApplicantTitle}</h2>
                 {applicantError ? <p className="note">{applicantError}</p> : null}
                 {applicantNote ? <p className="note">{applicantNote}</p> : null}
                 <div className="profile-grid">
@@ -296,19 +291,16 @@ export function ProfileForm({ locale }) {
                   </label>
                 </div>
                 <div className="ad-actions">
-                  <button type="submit" className="btn primary">{t.companySave}</button>
+                  <button type="submit" className="btn ink">{t.companySave}</button>
                 </div>
               </form>
             ) : null}
             {showApplicant && consentPayload ? (
-              <form className="form-card profile-card profile-privacy" onSubmit={savePrivacy}>
-                <div className="cabinet-form-head">
-                  <h2>{t.privacyTitle}</h2>
-                  <p className="hint">{t.privacyLede}</p>
-                  <p className="hint">
-                    <a href={hrefFor(locale, { mode: "emailSettings" })}>{t.emailSettingsOpen}</a>
-                  </p>
-                </div>
+              <form className="h2-panel h2-form profile-privacy" onSubmit={savePrivacy}>
+                <h2 className="h2-panel-title">{t.privacyTitle}</h2>
+                <p className="hint">
+                  <a href={hrefFor(locale, { mode: "emailSettings" })}>{t.emailSettingsOpen}</a>
+                </p>
                 {privacyError ? <p className="note">{privacyError}</p> : null}
                 {privacyNote ? <p className="note">{privacyNote}</p> : null}
                 <ConsentFields
@@ -320,7 +312,7 @@ export function ProfileForm({ locale }) {
                   idPrefix="profile-consent"
                 />
                 <div className="ad-actions">
-                  <button type="submit" className="btn primary">{t.companySave}</button>
+                  <button type="submit" className="btn ink">{t.companySave}</button>
                 </div>
                 {Array.isArray(consentPayload.privacy_rights) && consentPayload.privacy_rights.length ? (
                   <div className="privacy-rights">
@@ -365,11 +357,13 @@ export function ProfileForm({ locale }) {
           </div>
         </div>
       ) : (
-        <section className="empty profile-gate">
-          <h1>{t.profileTitle}</h1>
-          <p className="lede">{t.profileGate}</p>
-          <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "profile" })} />
-        </section>
+        <div className="h2-candidate">
+          <PageChrome backHref={hrefFor(locale)} backLabel={t.breadcrumbHome} title={t.profileTitle} />
+          <div className="h2-empty h2-gate">
+            <p>{t.profileGate}</p>
+            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "profile" })} />
+          </div>
+        </div>
       )}
     </Shell>
   );

@@ -17,6 +17,7 @@ import { ApplicationList } from "./application-list";
 import { ApplyFormFields } from "./apply-form-fields";
 import { CollectedAdmin } from "./collected-admin";
 import { ManualAd } from "./manual-ad";
+import { PageChrome } from "./page-chrome";
 import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
@@ -201,78 +202,76 @@ export function Admin({
   const pendingCount = items.filter((job) => job.status === "pending").length;
 
   return (
-    <div className="cabinet">
-      <div className="cabinet-head">
-        <div>
-          <h1>{t.adminTitle}</h1>
-          <p className="lede">{t.adminLede}</p>
-        </div>
-        <div className="cabinet-tabs" role="tablist" aria-label={t.adminTitle}>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "queue"}
-            className={tab === "queue" ? "on" : ""}
-            onClick={() => setTab("queue")}
-          >
-            {t.adminQueue}
-            {pendingCount ? <span className="cabinet-tab-count">{pendingCount}</span> : null}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "collected"}
-            className={tab === "collected" ? "on" : ""}
-            onClick={() => {
-              setTab("collected");
-              setSeenCollected(true);
-            }}
-          >
-            {t.collectedTitle}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "manual"}
-            className={tab === "manual" ? "on" : ""}
-            onClick={() => setTab("manual")}
-          >
-            {t.manualTitle}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "applications"}
-            className={tab === "applications" ? "on" : ""}
-            onClick={() => setTab("applications")}
-          >
-            {t.applicationsTitle}
-            {applications.length ? <span className="cabinet-tab-count">{applications.length}</span> : null}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "ai"}
-            className={tab === "ai" ? "on" : ""}
-            onClick={() => {
-              setTab("ai");
-              setSeenAi(true);
-            }}
-          >
-            {t.adminAiTitle}
-          </button>
-        </div>
+    <div className="h2-employer">
+      <PageChrome
+        backHref={hrefFor(locale)}
+        backLabel={t.breadcrumbHome}
+        title={t.adminTitle}
+      />
+      <p className="hint h2-employer-hint" title={t.adminLede}>{t.adminLede}</p>
+      <div className="h2-tabs" role="tablist" aria-label={t.adminTitle}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "queue"}
+          className={tab === "queue" ? "on" : ""}
+          onClick={() => setTab("queue")}
+        >
+          {t.adminQueue}
+          {pendingCount ? <span className="h2-tab-count">{pendingCount}</span> : null}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "collected"}
+          className={tab === "collected" ? "on" : ""}
+          onClick={() => {
+            setTab("collected");
+            setSeenCollected(true);
+          }}
+        >
+          {t.collectedTitle}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "manual"}
+          className={tab === "manual" ? "on" : ""}
+          onClick={() => setTab("manual")}
+        >
+          {t.manualTitle}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "applications"}
+          className={tab === "applications" ? "on" : ""}
+          onClick={() => setTab("applications")}
+        >
+          {t.applicationsTitle}
+          {applications.length ? <span className="h2-tab-count">{applications.length}</span> : null}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "ai"}
+          className={tab === "ai" ? "on" : ""}
+          onClick={() => {
+            setTab("ai");
+            setSeenAi(true);
+          }}
+        >
+          {t.adminAiTitle}
+        </button>
       </div>
       {error ? <p className="note">{error}</p> : null}
       {note ? <p className="note">{note}</p> : null}
 
       {tab === "queue" ? (
-        <section className="cabinet-ads">
+        <section className="h2-employer-queue">
           {editing && form ? (
-            <form className="form-card cabinet-form" onSubmit={onSave}>
-              <div className="cabinet-form-head">
-                <h2>{t.editAd}</h2>
-              </div>
+            <form className="h2-panel h2-form cabinet-form" onSubmit={onSave}>
+              <h2 className="h2-panel-title">{t.editAd}</h2>
               <div className="cabinet-form-layout">
                 <div className="cabinet-form-main">
                   <div className="cabinet-grid">
@@ -337,97 +336,101 @@ export function Admin({
                 </aside>
               </div>
               <div className="ad-actions">
-                <button type="submit" className="btn primary" disabled={busy}>{t.adSave}</button>
+                <button type="submit" className="btn ink" disabled={busy}>{t.adSave}</button>
                 <button type="button" className="btn red" onClick={cancelEdit}>{t.adCancel}</button>
               </div>
             </form>
           ) : null}
-          {items.length === 0 ? <p className="empty-line">{t.adminEmpty}</p> : null}
-          <div className="list">
-            {pageItems.map((job) => (
-              <article key={job.id} className={job.status === "closed" || job.status === "rejected" ? "card closed" : "card"}>
-                <p className={statusClass(job.status)}>{statusLabel(t, job.status)}</p>
-                <h2>
-                  {job.status === "published" ? (
-                    <a href={hrefFor(locale, { jobId: job.id })}>{job.title}</a>
-                  ) : (
-                    job.title
-                  )}
-                </h2>
-                <div className="meta">
-                  <span>{job.company || t.noCompany}</span>
-                  <span>{job.remote ? t.placeRemote : job.city || t.noCity}</span>
-                  <span>{languageLabel(locale, job.language)}</span>
-                  {job.job_type ? <span>{typeLabel(t, job.job_type)}</span> : null}
-                  {job.salary ? <span>{job.salary}</span> : null}
-                </div>
-                {job.text ? (
-                  <p className="admin-body">
-                    {job.text.length > 280 ? `${job.text.slice(0, 280)}…` : job.text}
-                  </p>
-                ) : null}
-                {job.reject_reason ? <p className="note">{t.rejectReason}: {job.reject_reason}</p> : null}
-                <div className="ad-actions">
-                  {job.status !== "closed" ? (
-                    <button
-                      type="button"
-                      className="btn primary"
-                      onClick={() => {
-                        setError("");
-                        setNote("");
-                        setBusy(true);
-                        fetchAdminJob(job.id)
-                          .then((full) => {
-                            setEditing(job.id);
-                            setForm(fromJob(locale, full));
-                          })
-                          .catch(() => setError(t.loadError))
-                          .finally(() => setBusy(false));
-                      }}
-                      disabled={busy}
-                    >
-                      {t.adEdit}
-                    </button>
+          <div className="h2-panel h2-employer-list">
+            {items.length === 0 ? <p className="empty-line">{t.adminEmpty}</p> : null}
+            <div className="h2-ad-list">
+              {pageItems.map((job) => (
+                <article key={job.id} className={`h2-ad-row${job.status === "closed" || job.status === "rejected" ? " is-muted" : ""}`}>
+                  <div className="h2-ad-row-top">
+                    <span className={statusClass(job.status)}>{statusLabel(t, job.status)}</span>
+                    <h2 className="h2-ad-title">
+                      {job.status === "published" ? (
+                        <a href={hrefFor(locale, { jobId: job.id })}>{job.title}</a>
+                      ) : (
+                        job.title
+                      )}
+                    </h2>
+                  </div>
+                  <div className="meta">
+                    <span>{job.company || t.noCompany}</span>
+                    <span>{job.remote ? t.placeRemote : job.city || t.noCity}</span>
+                    <span>{languageLabel(locale, job.language)}</span>
+                    {job.job_type ? <span>{typeLabel(t, job.job_type)}</span> : null}
+                    {job.salary ? <span>{job.salary}</span> : null}
+                  </div>
+                  {job.text ? (
+                    <p className="admin-body">
+                      {job.text.length > 280 ? `${job.text.slice(0, 280)}…` : job.text}
+                    </p>
                   ) : null}
-                  {job.status === "pending" ? (
-                    <>
+                  {job.reject_reason ? <p className="note">{t.rejectReason}: {job.reject_reason}</p> : null}
+                  <div className="ad-actions">
+                    {job.status !== "closed" ? (
                       <button
                         type="button"
-                        className="btn primary"
-                        onClick={() => act(job, "approve", null, t.adminApprovedNote)}
+                        className="btn ink"
+                        onClick={() => {
+                          setError("");
+                          setNote("");
+                          setBusy(true);
+                          fetchAdminJob(job.id)
+                            .then((full) => {
+                              setEditing(job.id);
+                              setForm(fromJob(locale, full));
+                            })
+                            .catch(() => setError(t.loadError))
+                            .finally(() => setBusy(false));
+                        }}
+                        disabled={busy}
                       >
-                        {t.adminApprove}
+                        {t.adEdit}
                       </button>
+                    ) : null}
+                    {job.status === "pending" ? (
+                      <>
+                        <button
+                          type="button"
+                          className="btn ink"
+                          onClick={() => act(job, "approve", null, t.adminApprovedNote)}
+                        >
+                          {t.adminApprove}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn red"
+                          onClick={() => rejectJob(job)}
+                        >
+                          {t.adminReject}
+                        </button>
+                      </>
+                    ) : null}
+                    {job.status !== "closed" ? (
                       <button
                         type="button"
                         className="btn red"
-                        onClick={() => rejectJob(job)}
+                        onClick={() => act(job, "close", t.adCloseAsk, t.adClosedNote)}
                       >
-                        {t.adminReject}
+                        {t.adClose}
                       </button>
-                    </>
-                  ) : null}
-                  {job.status !== "closed" ? (
-                    <button
-                      type="button"
-                      className="btn red"
-                      onClick={() => act(job, "close", t.adCloseAsk, t.adClosedNote)}
-                    >
-                      {t.adClose}
-                    </button>
-                  ) : null}
-                </div>
-              </article>
-            ))}
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+            <Pager
+              locale={locale}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              total={total}
+              pageSize={pageSize}
+              onPageChange={goToPage}
+            />
           </div>
-          <Pager
-            locale={locale}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            total={total}
-            pageSize={pageSize}
-            onPageChange={goToPage}
-          />
         </section>
       ) : null}
 
@@ -438,7 +441,9 @@ export function Admin({
       ) : null}
       {tab === "manual" ? <ManualAd locale={locale} onSaved={load} /> : null}
       {tab === "applications" ? (
-        <ApplicationList locale={locale} items={applications} mode="staff" onChanged={load} />
+        <div className="h2-panel h2-candidate-list">
+          <ApplicationList locale={locale} items={applications} mode="staff" onChanged={load} />
+        </div>
       ) : null}
       {tab === "ai" || seenAi ? (
         <div hidden={tab !== "ai"}>

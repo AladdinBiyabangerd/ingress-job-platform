@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { useInitialMe } from "./me-seed";
+import { PageChrome } from "./page-chrome";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 
@@ -16,8 +17,8 @@ function TalentCard({ locale, item }) {
       ? t.talentYears(item.total_years)
       : "";
   return (
-    <article className="talent-card">
-      <header className="talent-card-head">
+    <article className="h2-talent-row">
+      <header className="h2-talent-row-top">
         <h2>{item.visibility === "public" && item.display_name ? item.display_name : t.talentAnonymous}</h2>
         {item.visibility === "anonymous" ? (
           <span className="source-pill">{t.talentVisibilityAnonymous}</span>
@@ -133,47 +134,59 @@ export function TalentSearch({ locale, initial = null }) {
 
   return (
     <Shell locale={locale} mode="talent">
-      <div className="applications-page talent-page">
-        <header className="applications-head">
-          <h1>{t.talentTitle}</h1>
-          <p className="lede">{t.talentLede}</p>
-        </header>
+      <div className="h2-employer">
+        <PageChrome
+          backHref={hrefFor(locale)}
+          backLabel={t.breadcrumbHome}
+          title={t.talentTitle}
+          count={resolvedGate ? undefined : items.length || undefined}
+        />
+        <p className="hint h2-employer-hint" title={t.talentLede}>{t.talentLede}</p>
 
         {me === undefined ? null : resolvedGate === "guest" ? (
-          <section className="applications-gate">
-            <p className="lede">{t.talentGateGuest}</p>
+          <div className="h2-empty h2-gate">
+            <p>{t.talentGateGuest}</p>
             <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "talent" })} />
-          </section>
+          </div>
         ) : resolvedGate === "role" ? (
-          <p className="note">{t.talentGateRole}</p>
+          <div className="h2-empty">
+            <p className="note">{t.talentGateRole}</p>
+          </div>
         ) : resolvedGate === "company" ? (
-          <p className="note">
-            {t.talentGateCompany}{" "}
-            <a href={hrefFor(locale, { mode: "company" })}>{t.profileOpen}</a>
-          </p>
+          <div className="h2-empty">
+            <p className="note">
+              {t.talentGateCompany}{" "}
+              <a href={hrefFor(locale, { mode: "company" })}>{t.profileOpen}</a>
+            </p>
+          </div>
         ) : (
           <>
-            <form className="talent-search-form" onSubmit={onSubmit}>
+            <form className="h2-tools" onSubmit={onSubmit}>
               <label className="visually-hidden" htmlFor="talent-q">
                 {t.talentSearchLabel}
               </label>
-              <input
-                id="talent-q"
-                value={q}
-                onChange={(event) => setQ(event.target.value)}
-                placeholder={t.talentSearchPlaceholder}
-                maxLength={120}
-              />
-              <button type="submit" className="btn primary" disabled={loading}>
+              <div className="h2-tools-search">
+                <input
+                  id="talent-q"
+                  type="search"
+                  value={q}
+                  onChange={(event) => setQ(event.target.value)}
+                  placeholder={t.talentSearchPlaceholder}
+                  maxLength={120}
+                />
+              </div>
+              <button type="submit" className="btn ink" disabled={loading}>
                 {t.talentSearch}
               </button>
             </form>
             {error ? <p className="note">{error}</p> : null}
-            {!loading && items.length === 0 ? <p className="empty-line">{t.talentEmpty}</p> : null}
-            <div className="talent-list">
-              {items.map((item) => (
-                <TalentCard key={item.id} locale={locale} item={item} />
-              ))}
+            <div className="h2-panel h2-employer-list">
+              {!loading && items.length === 0 ? <p className="empty-line">{t.talentEmpty}</p> : null}
+              <div className="h2-talent-list">
+                {items.map((item) => (
+                  <TalentCard key={item.id} locale={locale} item={item} />
+                ))}
+              </div>
             </div>
           </>
         )}

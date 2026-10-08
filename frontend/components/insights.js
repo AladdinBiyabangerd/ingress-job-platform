@@ -5,6 +5,7 @@ import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { RoleSkillParts } from "./role-skill-parts";
 import { CareerPathLink } from "./skill-gap-bits";
+import { PageChrome } from "./page-chrome";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 import { useInitialMe } from "./me-seed";
@@ -39,7 +40,12 @@ function scorePct(score) {
 
 function CoachSection({ t, locale, coach }) {
   if (!coach) {
-    return <p className="hint">{t.insightsCoachEmpty}</p>;
+    return (
+      <section className="h2-panel">
+        <h2 className="h2-panel-title">{t.insightsCoachTitle}</h2>
+        <p className="hint">{t.insightsCoachEmpty}</p>
+      </section>
+    );
   }
   const role = String(coach.role || "").trim();
   const title = String(coach.ai_title || "").trim() || (role ? t.insightsCoachRole(role) : t.insightsCoachTitle);
@@ -50,9 +56,9 @@ function CoachSection({ t, locale, coach }) {
   const pathId = String(coach.academy_career_path || "").trim();
 
   return (
-    <section className="insights-block">
-      <h2>{t.insightsCoachTitle}</h2>
-      <p className="lede">{title}</p>
+    <section className="h2-panel">
+      <h2 className="h2-panel-title">{t.insightsCoachTitle}</h2>
+      <p className="h2-candidate-lead">{title}</p>
       {body ? <p className="hint">{body}</p> : null}
       <RoleSkillParts t={t} have={strong} missing={must} />
       {must.length ? (
@@ -79,7 +85,7 @@ function CoachSection({ t, locale, coach }) {
           );
         })}
         {pathId ? <CareerPathLink t={t} pathId={pathId} /> : null}
-        <a className="btn small" href={hrefFor(locale, { mode: "recommendations" })}>
+        <a className="btn small ink" href={hrefFor(locale, { mode: "recommendations" })}>
           {t.recommendationsOpen}
         </a>
       </div>
@@ -90,15 +96,15 @@ function CoachSection({ t, locale, coach }) {
 function NearMissSection({ t, locale, items }) {
   if (!Array.isArray(items) || items.length === 0) {
     return (
-      <section className="insights-block">
-        <h2>{t.insightsNearTitle}</h2>
+      <section className="h2-panel">
+        <h2 className="h2-panel-title">{t.insightsNearTitle}</h2>
         <p className="hint">{t.insightsNearEmpty}</p>
       </section>
     );
   }
   return (
-    <section className="insights-block">
-      <h2>{t.insightsNearTitle}</h2>
+    <section className="h2-panel">
+      <h2 className="h2-panel-title">{t.insightsNearTitle}</h2>
       <ul className="insights-near-list">
         {items.map((item, index) => {
           const pct = scorePct(item.score);
@@ -127,15 +133,15 @@ function GrowthSection({ t, courses, roadmap }) {
   const roads = Array.isArray(roadmap) ? roadmap : [];
   if (!list.length && !roads.length) {
     return (
-      <section className="insights-block">
-        <h2>{t.insightsGrowthTitle}</h2>
+      <section className="h2-panel">
+        <h2 className="h2-panel-title">{t.insightsGrowthTitle}</h2>
         <p className="hint">{t.insightsGrowthEmpty}</p>
       </section>
     );
   }
   return (
-    <section className="insights-block">
-      <h2>{t.insightsGrowthTitle}</h2>
+    <section className="h2-panel">
+      <h2 className="h2-panel-title">{t.insightsGrowthTitle}</h2>
       {list.length ? (
         <ul className="insights-course-list">
           {list.map((course) => {
@@ -233,16 +239,15 @@ export function Insights({ locale, initialInsights = null }) {
   return (
     <Shell locale={locale} mode="insights">
       {allowed ? (
-        <div className="cabinet insights-page">
-          <div className="cabinet-head">
-            <div>
-              <h1>{t.insightsTitle}</h1>
-              <p className="lede">{t.insightsLede}</p>
-            </div>
-          </div>
+        <div className="h2-candidate insights-page">
+          <PageChrome
+            backHref={hrefFor(locale)}
+            backLabel={t.breadcrumbHome}
+            title={t.insightsTitle}
+          />
           {error ? <p className="note">{error}</p> : null}
           {data && data.matching_consent === false ? (
-            <p className="hint">
+            <p className="hint h2-consent-banner">
               {t.recommendationsConsent}{" "}
               <a href={hrefFor(locale, { mode: "profile" })}>{t.recommendationsConsentLink}</a>
             </p>
@@ -250,18 +255,20 @@ export function Insights({ locale, initialInsights = null }) {
           <CoachSection t={t} locale={locale} coach={data?.coach} />
           <NearMissSection t={t} locale={locale} items={data?.near_misses} />
           <GrowthSection t={t} courses={data?.academy_courses} roadmap={data?.roadmap} />
-          <p className="hint">
+          <p className="hint h2-candidate-footer">
             <a href={hrefFor(locale, { mode: "emailSettings" })}>{t.emailSettingsOpen}</a>
             {" · "}
             <a href={hrefFor(locale, { mode: "notifications" })}>{t.notifications}</a>
           </p>
         </div>
       ) : me === undefined ? null : (
-        <section className="empty profile-gate">
-          <h1>{t.insightsTitle}</h1>
-          <p className="lede">{t.insightsGate}</p>
-          <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "insights" })} />
-        </section>
+        <div className="h2-candidate">
+          <PageChrome backHref={hrefFor(locale)} backLabel={t.breadcrumbHome} title={t.insightsTitle} />
+          <div className="h2-empty h2-gate">
+            <p>{t.insightsGate}</p>
+            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "insights" })} />
+          </div>
+        </div>
       )}
     </Shell>
   );

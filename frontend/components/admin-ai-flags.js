@@ -80,35 +80,31 @@ export function AdminAiFlags({ locale, initial = null }) {
   }
 
   return (
-    <section className="cabinet-ads">
-      <form className="form-card cabinet-form" onSubmit={onSave}>
-        <div className="cabinet-form-head">
-          <h2>{t.adminAiTitle}</h2>
-          <p className="lede">{t.adminAiLede}</p>
+    <form className="h2-panel h2-form" onSubmit={onSave}>
+      <h2 className="h2-panel-title">{t.adminAiTitle}</h2>
+      <p className="hint">{t.adminAiLede}</p>
+      {error ? <p className="note">{error}</p> : null}
+      {note ? <p className="note">{note}</p> : null}
+      {!keyConfigured ? <p className="note">{t.adminAiNoKey}</p> : null}
+      {flags ? (
+        <div className="cabinet-grid h2-ai-flags">
+          {FLOWS.map(([key, copyKey]) => (
+            <label key={key} className="profile-span consent-check">
+              <input
+                type="checkbox"
+                checked={Boolean(flags[key])}
+                onChange={(event) => setFlow(key, event.target.checked)}
+              />
+              <span>{t[copyKey]}</span>
+            </label>
+          ))}
         </div>
-        {error ? <p className="note">{error}</p> : null}
-        {note ? <p className="note">{note}</p> : null}
-        {!keyConfigured ? <p className="note">{t.adminAiNoKey}</p> : null}
-        {flags ? (
-          <div className="cabinet-grid">
-            {FLOWS.map(([key, copyKey]) => (
-              <label key={key} className="profile-span consent-check">
-                <input
-                  type="checkbox"
-                  checked={Boolean(flags[key])}
-                  onChange={(event) => setFlow(key, event.target.checked)}
-                />
-                <span>{t[copyKey]}</span>
-              </label>
-            ))}
-          </div>
-        ) : null}
-        <div className="ad-actions">
-          <button type="submit" className="btn primary" disabled={busy || !flags}>
-            {t.adSave}
-          </button>
-        </div>
-      </form>
-    </section>
+      ) : null}
+      <div className="ad-actions">
+        <button type="submit" className="btn ink" disabled={busy || !flags}>
+          {t.adSave}
+        </button>
+      </div>
+    </form>
   );
 }

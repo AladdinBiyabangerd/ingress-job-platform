@@ -6,6 +6,7 @@ import { fetchMe } from "../lib/me-client";
 import { refreshMyApplications } from "../lib/server/refresh";
 import { ApplicationList } from "./application-list";
 import { useInitialMe } from "./me-seed";
+import { PageChrome } from "./page-chrome";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 
@@ -59,22 +60,26 @@ export function MyApplications({ locale, initialItems = null }) {
   return (
     <Shell locale={locale} mode="applications">
       {me === undefined ? null : allowed ? (
-        <div className="applications-page">
-          <header className="applications-head">
-            <h1>{t.myApplications}</h1>
-            <p className="lede">{t.myApplicationsLede}</p>
-          </header>
+        <div className="h2-candidate">
+          <PageChrome
+            backHref={hrefFor(locale)}
+            backLabel={t.breadcrumbHome}
+            title={t.myApplications}
+            count={items.length || undefined}
+          />
           {error ? <p className="note">{error}</p> : null}
-          <ApplicationList locale={locale} items={items} mode="candidate" onChanged={load} />
+          <div className="h2-panel h2-candidate-list">
+            <ApplicationList locale={locale} items={items} mode="candidate" onChanged={load} />
+          </div>
         </div>
       ) : (
-        <section className="applications-page applications-gate">
-          <header className="applications-head">
-            <h1>{t.myApplications}</h1>
-            <p className="lede">{t.applicationsGate}</p>
-          </header>
-          <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "applications" })} />
-        </section>
+        <div className="h2-candidate">
+          <PageChrome backHref={hrefFor(locale)} backLabel={t.breadcrumbHome} title={t.myApplications} />
+          <div className="h2-empty h2-gate">
+            <p>{t.applicationsGate}</p>
+            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "applications" })} />
+          </div>
+        </div>
       )}
     </Shell>
   );

@@ -7,7 +7,9 @@ import { ingressUrl } from "../lib/ingress";
 import { clearMeCache } from "../lib/me-client";
 import { navTabs } from "../lib/roles";
 import { useMediaQuery } from "../lib/use-media-query";
+import { lockBodyScroll, trapTab } from "../lib/focus-trap";
 import { AccountBar } from "./account-bar";
+import { CommandPalette, useCommandPaletteHotkey } from "./command-palette";
 import { useInitialMe } from "./me-seed";
 
 const LOCALES = ["az", "en", "ru"];
@@ -20,7 +22,6 @@ function LanguageSwitcher({ locale, mode, jobId, companySlug }) {
     function closeOnOutsideClick(event) {
       if (!switcherRef.current?.contains(event.target)) setOpen(false);
     }
-
     document.addEventListener("pointerdown", closeOnOutsideClick);
     return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
   }, []);
@@ -38,7 +39,7 @@ function LanguageSwitcher({ locale, mode, jobId, companySlug }) {
         {locale.toUpperCase()}
         <span className="language-chevron" aria-hidden="true">⌄</span>
       </button>
-      {open && (
+      {open ? (
         <div className="language-menu" role="menu">
           {LOCALES.map((code) => (
             <a
@@ -54,7 +55,7 @@ function LanguageSwitcher({ locale, mode, jobId, companySlug }) {
             </a>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -75,18 +76,22 @@ function tabLabel(t, key) {
   return t.browse;
 }
 
-/** Mobile-only dropdown with the nav links and account entries. Rendered only while open. */
+/** Mobile drawer — account links match desktop AccountBar (incl. profileReview + admin). */
 function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
   const t = text(locale);
   const panelRef = useRef(null);
 
   useEffect(() => {
     panelRef.current?.querySelector("a, button")?.focus();
+    const unlock = lockBodyScroll();
     function onKey(event) {
       if (event.key === "Escape") {
+        event.preventDefault();
         onClose();
         toggleRef.current?.focus();
+        return;
       }
+      trapTab(event, panelRef.current);
     }
     function onPointer(event) {
       if (panelRef.current?.contains(event.target) || toggleRef.current?.contains(event.target)) return;
@@ -97,6 +102,7 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
     return () => {
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onPointer);
+      unlock();
     };
   }, [onClose, toggleRef]);
 
@@ -124,6 +130,13 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
             <li>
               <a href={hrefFor(locale, { mode: "profile" })} aria-current={mode === "profile" ? "page" : undefined}>
                 {t.profileOpen}
+              </a>
+            </li>
+          ) : null}
+          {me.candidate || me.staff ? (
+            <li>
+              <a href={hrefFor(locale, { mode: "profileReview" })} aria-current={mode === "profileReview" ? "page" : undefined}>
+                {t.profileReviewOpen}
               </a>
             </li>
           ) : null}
@@ -167,11 +180,25 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
               </a>
             </li>
           ) : null}
+          {me.employer || me.staff ? (
+            <li>
+              <a href={hrefFor(locale, { mode: "company" })} aria-current={mode === "company" ? "page" : undefined}>
+                {t.companyTitle}
+              </a>
+            </li>
+          ) : null}
           <li>
             <a href={hrefFor(locale, { mode: "notifications" })} aria-current={mode === "notifications" ? "page" : undefined}>
               {t.notifications}
             </a>
           </li>
+          {me.staff ? (
+            <li>
+              <a href={hrefFor(locale, { mode: "admin" })} aria-current={mode === "admin" ? "page" : undefined}>
+                {t.admin}
+              </a>
+            </li>
+          ) : null}
           <li>
             <form
               method="post"
@@ -204,10 +231,14 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
   const initialMe = useInitialMe();
   const [me, setMe] = useState(initialMe ?? null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
   const toggleRef = useRef(null);
-  const compact = useMediaQuery("(max-width: 768px)");
+  const compact = useMediaQuery("(max-width: 767px)");
   const returnTo = hrefFor(locale, { mode, jobId, companySlug, skillId });
   const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const openCmd = useCallback(() => setCmdOpen(true), []);
+
+  useCommandPaletteHotkey(openCmd);
 
   useEffect(() => {
     document.documentElement.lang = t.lang;
@@ -216,6 +247,8 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
   useEffect(() => {
     if (!compact) setMenuOpen(false);
   }, [compact]);
+
+  const nav = navTabs(me);
 
   return (
     <>
@@ -227,23 +260,26 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
           <div className="top-left">
             <a className="brand" href={hrefFor(locale)}>
               <img className="mark" src="/ingress-mark.svg" alt="" aria-hidden="true" />
-              Ingress Job
+              <span className="brand-text">Ingress Job</span>
             </a>
-          </div>
-          <div className="mode" role="tablist" aria-label={t.browse}>
-            {navTabs(me).map((key) => (
-              <a
-                key={key}
-                role="tab"
-                aria-selected={mode === key}
-                className={mode === key ? "on" : ""}
-                href={hrefFor(locale, { mode: key })}
-              >
-                {tabLabel(t, key)}
-              </a>
-            ))}
+            <nav className="primary-nav" aria-label={t.browse}>
+              {nav.map((key) => (
+                <a
+                  key={key}
+                  className={mode === key ? "on" : ""}
+                  href={hrefFor(locale, { mode: key })}
+                  aria-current={mode === key ? "page" : undefined}
+                >
+                  {tabLabel(t, key)}
+                </a>
+              ))}
+            </nav>
           </div>
           <div className="top-right">
+            <button type="button" className="cmdk-trigger" onClick={openCmd} aria-label={t.cmdKOpen}>
+              <span className="cmdk-trigger-label">{t.cmdKOpen}</span>
+              <kbd className="cmdk-trigger-kbd">{t.cmdKHint}</kbd>
+            </button>
             <AccountBar locale={locale} returnTo={returnTo} onMe={setMe} />
             <LanguageSwitcher locale={locale} mode={mode} jobId={jobId} companySlug={companySlug} />
             <button
@@ -263,6 +299,7 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
           <MobileNav locale={locale} mode={mode} me={me} returnTo={returnTo} onClose={closeMenu} toggleRef={toggleRef} />
         ) : null}
       </header>
+      <CommandPalette locale={locale} me={me} open={cmdOpen} onOpenChange={setCmdOpen} />
       <main id="main" className="wrap">{children}</main>
       <footer className="site-footer">
         <div className="site-footer-inner">
@@ -273,7 +310,6 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
               {t.ecosystemLinkLabel}
             </a>
           </p>
-          <p className="site-footer-note">{t.ecosystemFooter}</p>
         </div>
       </footer>
     </>

@@ -1,6 +1,7 @@
 import { AccountActions } from "./account-actions";
 import { applicationsLabel } from "./job-card";
 import { JsonLd } from "./json-ld";
+import { PageChrome } from "./page-chrome";
 import { SaveJobButton } from "./save-job-button";
 import { Shell } from "./shell";
 import { categoryLabel, hrefFor, text } from "../lib/copy";
@@ -54,6 +55,11 @@ function jobTypeLabel(t, jobType) {
   return "";
 }
 
+function companyInitial(name) {
+  const s = String(name || "").trim();
+  return s ? s.charAt(0).toUpperCase() : "?";
+}
+
 export function JobDetail({ locale, job }) {
   const t = text(locale);
   const blocks = descriptionBlocks(job.text, job.title);
@@ -62,6 +68,7 @@ export function JobDetail({ locale, job }) {
   const posted = calendarDate(job.created_at, locale);
   const stack = Array.isArray(job.tech_stack) ? job.tech_stack : [];
   const companyName = job.company || t.noCompany;
+  const jobHref = hrefFor(locale, { jobId: job.id });
   const company = job.company_slug ? (
     <a className="company-link" href={hrefFor(locale, { companySlug: job.company_slug })}>
       {companyName}
@@ -70,57 +77,68 @@ export function JobDetail({ locale, job }) {
     companyName
   );
   const applications = applicationsLabel(t, job);
+  const metaBits = [
+    place,
+    jobType || null,
+    job.salary || null,
+    job.relocation ? t.relocationBadge : null,
+  ].filter(Boolean);
+
   return (
     <>
       <JsonLd data={jobPostingJsonLd(job, locale)} />
       <Shell locale={locale} mode="browse" jobId={job.id}>
-        <nav className="breadcrumbs" aria-label={t.breadcrumbs}>
-          <ol>
-            <li>
-              <a href={hrefFor(locale)}>{t.breadcrumbHome}</a>
-            </li>
-            <li>
-              <span aria-current="page">{job.title}</span>
-            </li>
-          </ol>
-        </nav>
-        <article className="detail">
-          <header className="detail-head">
-            {job.source_name ? (
-              job.source_homepage ? (
-                <p className="source-line">
-                  <a className="source-pill" href={job.source_homepage} target="_blank" rel="noopener" title={t.sourceSite}>
-                    {job.source_name}
-                  </a>
-                </p>
-              ) : (
-                <p className="source-pill">{job.source_name}</p>
-              )
-            ) : null}
-            <div className="detail-title-row">
-              <h1>{job.title}</h1>
+        <article className="h2-detail">
+          <PageChrome
+            backHref={hrefFor(locale)}
+            backLabel={t.breadcrumbHome}
+            title={job.title}
+            actions={
               <SaveJobButton
                 locale={locale}
                 jobId={job.id}
-                returnTo={hrefFor(locale, { jobId: job.id })}
+                returnTo={jobHref}
                 className="save-job-btn-detail"
               />
+            }
+          >
+            <div className="h2-detail-kicker">
+              {job.source_name ? (
+                job.source_homepage ? (
+                  <a
+                    className="source-pill"
+                    href={job.source_homepage}
+                    target="_blank"
+                    rel="noopener"
+                    title={t.sourceSite}
+                  >
+                    {job.source_name}
+                  </a>
+                ) : (
+                  <span className="source-pill">{job.source_name}</span>
+                )
+              ) : null}
+              <p className="h2-detail-meta">
+                <span className="h2-detail-company">
+                  <span className="h2-detail-avatar" aria-hidden="true">
+                    {companyInitial(companyName)}
+                  </span>
+                  {company}
+                </span>
+                {metaBits.map((bit) => (
+                  <span key={bit}>{bit}</span>
+                ))}
+              </p>
             </div>
-            <p className="meta line">
-              <span className="detail-company">{company}</span>
-              <span>{place}</span>
-              {jobType ? <span>{jobType}</span> : null}
-              {job.salary ? <span>{job.salary}</span> : null}
-              {job.relocation ? <span className="relocation-badge">{t.relocationBadge}</span> : null}
-            </p>
-          </header>
-          <div className="detail-layout">
-            <section className="detail-main" aria-label={t.description}>
+          </PageChrome>
+
+          <div className="h2-detail-layout">
+            <section className="h2-detail-main h2-panel" aria-label={t.description}>
               {blocks.length ? <Description blocks={blocks} /> : null}
             </section>
-            <aside className="detail-aside" aria-label={t.keyFacts}>
-              <div className="facts-card">
-                <h2 className="facts-title">{t.keyFacts}</h2>
+            <aside className="h2-detail-aside" aria-label={t.keyFacts}>
+              <div className="h2-panel h2-facts">
+                <h2 className="h2-panel-title">{t.keyFacts}</h2>
                 <dl className="facts">
                   <div>
                     <dt>{t.companies}</dt>
@@ -182,20 +200,25 @@ export function JobDetail({ locale, job }) {
                     <h2 className="tech-title">{t.techStack}</h2>
                     <ul className="tech-chips">
                       {stack.map((name) => (
-                        <li key={name} className="tech-chip">{name}</li>
+                        <li key={name} className="tech-chip">
+                          {name}
+                        </li>
                       ))}
                     </ul>
                   </div>
                 ) : null}
                 {applications ? (
-                  <p className={job.applications > 0 ? "applications-line" : "applications-line first"} title={t.applicationsNote}>
+                  <p
+                    className={job.applications > 0 ? "applications-line" : "applications-line first"}
+                    title={t.applicationsNote}
+                  >
                     {applications}
                   </p>
                 ) : null}
                 <AccountActions
                   locale={locale}
                   jobId={job.id}
-                  returnTo={hrefFor(locale, { jobId: job.id })}
+                  returnTo={jobHref}
                   onsite={Boolean(job.onsite)}
                   hasOriginal={Boolean(job.has_original)}
                   form={job.form}

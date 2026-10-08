@@ -7,6 +7,7 @@ import { fetchMe } from "../lib/me-client";
 import { canPostJobs, isCandidateOnly } from "../lib/roles";
 import { Cabinet } from "./cabinet";
 import { useInitialMe } from "./me-seed";
+import { PageChrome } from "./page-chrome";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 
@@ -51,20 +52,24 @@ export function PostPage({ locale, initialJobs = null, initialApplications = nul
       {me === undefined ? null : canPost ? (
         <Cabinet locale={locale} me={me} initialJobs={initialJobs} initialApplications={initialApplications} />
       ) : isCandidateOnly(me) ? (
-        <section className="empty post-denied" role="status">
-          <h1>{t.postCandidateTitle}</h1>
-          <p className="lede">{t.postCandidateBody}</p>
-          <div className="post-denied-actions">
-            <a className="btn primary" href={hrefFor(locale)}>{t.postBackToJobs}</a>
-            <a className="btn" href={loginHref({ intent: "job_employer", returnTo: back })}>{t.postBecomeEmployer}</a>
+        <div className="h2-employer">
+          <PageChrome backHref={hrefFor(locale)} backLabel={t.breadcrumbHome} title={t.postCandidateTitle} />
+          <div className="h2-empty h2-gate">
+            <p>{t.postCandidateBody}</p>
+            <div className="h2-gate-actions">
+              <a className="btn ink" href={hrefFor(locale)}>{t.postBackToJobs}</a>
+              <a className="btn" href={loginHref({ intent: "job_employer", returnTo: back })}>{t.postBecomeEmployer}</a>
+            </div>
           </div>
-        </section>
+        </div>
       ) : (
-        <section className="empty">
-          <h1>{t.postTitle}</h1>
-          <p className="lede">{t.postBody}</p>
-          <RegisterChoice locale={locale} returnTo={back} />
-        </section>
+        <div className="h2-employer">
+          <PageChrome backHref={hrefFor(locale)} backLabel={t.breadcrumbHome} title={t.postTitle} />
+          <div className="h2-empty h2-gate">
+            <p>{t.postBody}</p>
+            <RegisterChoice locale={locale} returnTo={back} />
+          </div>
+        </div>
       )}
     </Shell>
   );

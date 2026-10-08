@@ -3,6 +3,7 @@
 import { hrefFor, text } from "../lib/copy";
 import { loginHref } from "../lib/auth-link";
 import { AcademyCourseLinks, SkillRow } from "./skill-gap-bits";
+import { PageChrome } from "./page-chrome";
 import { Shell } from "./shell";
 import { useInitialMe } from "./me-seed";
 
@@ -39,9 +40,7 @@ function oneSalaryParts(t, salary) {
   const low = formatMoney(salary.low);
   const high = formatMoney(salary.high);
   const range =
-    low && high && low !== high && low !== median
-      ? t.trendsSalaryRange(low, high, currency)
-      : null;
+    low && high && low !== high && low !== median ? t.trendsSalaryRange(low, high, currency) : null;
   return {
     median: t.trendsSalaryMedian(median, currency),
     range,
@@ -51,11 +50,12 @@ function oneSalaryParts(t, salary) {
 }
 
 function salaryGroups(t, data) {
-  const list = Array.isArray(data?.salaries) && data.salaries.length
-    ? data.salaries
-    : data?.salary
-      ? [data.salary]
-      : [];
+  const list =
+    Array.isArray(data?.salaries) && data.salaries.length
+      ? data.salaries
+      : data?.salary
+        ? [data.salary]
+        : [];
   return list.map((row) => oneSalaryParts(t, row)).filter(Boolean);
 }
 
@@ -104,48 +104,58 @@ function YouBlock({ t, locale, authenticated, candidate, you, showYou, learnNext
   );
 }
 
+function TrendStat({ label, href, children }) {
+  if (href) {
+    return (
+      <a className="h2-trend-stat" href={href}>
+        <span className="h2-trend-stat-label">{label}</span>
+        <span className="h2-trend-stat-value">{children}</span>
+      </a>
+    );
+  }
+  return (
+    <div className="h2-trend-stat">
+      <span className="h2-trend-stat-label">{label}</span>
+      <span className="h2-trend-stat-value">{children}</span>
+    </div>
+  );
+}
+
 function FactsCard({ t, share, growth, data, salaries, marketCourses, showGuestCta, detailHref, jobsHref }) {
   return (
-    <div className="facts-card">
-      <h2 className="facts-title">{t.keyFacts}</h2>
-      <dl className="facts">
+    <div className="h2-trend-facts">
+      <div className="h2-trend-stats" role="group" aria-label={t.keyFacts}>
         {share !== null ? (
-          <div>
-            <dt>{t.trendsShare}</dt>
-            <dd>{share}%</dd>
-          </div>
+          <TrendStat label={t.trendsShare} href={jobsHref}>
+            {share}%
+          </TrendStat>
         ) : null}
         {growth ? (
-          <div>
-            <dt>{t.trendsGrowth}</dt>
-            <dd>
-              <span className={`trends-growth trends-growth-${growth.direction}`}>{growth.label}</span>
-            </dd>
-          </div>
+          <TrendStat label={t.trendsGrowth} href={jobsHref}>
+            <span className={`trends-growth trends-growth-${growth.direction}`}>{growth.label}</span>
+          </TrendStat>
         ) : null}
         {typeof data.ad_count === "number" ? (
-          <div>
-            <dt>{t.trendsAds}</dt>
-            <dd>{data.ad_count.toLocaleString("en-US")}</dd>
-          </div>
+          <TrendStat label={t.trendsAds} href={jobsHref}>
+            {data.ad_count.toLocaleString("en-US")}
+          </TrendStat>
         ) : null}
         {salaries.map((salary) => (
-          <div key={salary.currency}>
-            <dt>{t.trendsSalaryLabel}</dt>
-            <dd>
-              {salary.median}
-              {salary.range ? <span className="fact-sub"> · {salary.range}</span> : null}
-              {salary.sample ? <span className="fact-sub"> · {salary.sample}</span> : null}
-            </dd>
-          </div>
+          <TrendStat key={salary.currency} label={t.trendsSalaryLabel} href={jobsHref}>
+            {salary.median}
+            {salary.range || salary.sample ? (
+              <span className="h2-trend-stat-sub">
+                {[salary.range, salary.sample].filter(Boolean).join(" · ")}
+              </span>
+            ) : null}
+          </TrendStat>
         ))}
         {data.as_of ? (
-          <div>
-            <dt>{t.trendsAsOfLabel}</dt>
-            <dd>{data.as_of}</dd>
-          </div>
+          <TrendStat label={t.trendsAsOfLabel} href={jobsHref}>
+            {data.as_of}
+          </TrendStat>
         ) : null}
-      </dl>
+      </div>
 
       <p className="hint trends-disclaimer">{data.disclaimer || t.trendsDisclaimer}</p>
 
@@ -153,8 +163,8 @@ function FactsCard({ t, share, growth, data, salaries, marketCourses, showGuestC
         <AcademyCourseLinks item={marketCourses} />
       </div>
 
-      <div className="actions">
-        <a className="btn primary" href={jobsHref}>
+      <div className="h2-trend-facts-actions actions">
+        <a className="btn ink" href={jobsHref}>
           {t.trendsDetailJobs}
         </a>
         {showGuestCta ? (
@@ -173,31 +183,21 @@ export function TrendDetailPage({ locale, data, error }) {
   const authenticated = Boolean(me?.authenticated);
   const candidate = Boolean(me?.candidate || me?.staff);
   const skillId = data?.skill_id;
-  const detailHref = skillId != null ? hrefFor(locale, { mode: "trend", skillId }) : hrefFor(locale, { mode: "trends" });
+  const detailHref =
+    skillId != null ? hrefFor(locale, { mode: "trend", skillId }) : hrefFor(locale, { mode: "trends" });
   const jobsHref = skillId != null ? hrefFor(locale, { mode: "trendJobs", skillId }) : detailHref;
 
   if (error || !data) {
     return (
       <Shell locale={locale} mode="trends">
-        <nav className="breadcrumbs" aria-label={t.breadcrumbs}>
-          <ol>
-            <li>
-              <a href={hrefFor(locale)}>{t.breadcrumbHome}</a>
-            </li>
-            <li>
-              <a href={hrefFor(locale, { mode: "trends" })}>{t.trendsTitle}</a>
-            </li>
-            <li>
-              <span aria-current="page">{t.trendsDetailNotFound}</span>
-            </li>
-          </ol>
-        </nav>
-        <main className="trend-detail-page">
+        <div className="h2-public">
+          <PageChrome
+            backHref={hrefFor(locale, { mode: "trends" })}
+            backLabel={t.trendsTitle}
+            title={t.trendsDetailNotFound}
+          />
           <p className="note">{t.trendsDetailNotFound}</p>
-          <p className="hint">
-            <a href={hrefFor(locale, { mode: "trends" })}>{t.trendsDetailBack}</a>
-          </p>
-        </main>
+        </div>
       </Shell>
     );
   }
@@ -231,7 +231,7 @@ export function TrendDetailPage({ locale, data, error }) {
   );
 
   const youSection = showYouSection ? (
-    <section className="trend-detail-section">
+    <section className="h2-panel trend-detail-section">
       <YouBlock
         t={t}
         locale={locale}
@@ -247,48 +247,33 @@ export function TrendDetailPage({ locale, data, error }) {
 
   return (
     <Shell locale={locale} mode="trends" skillId={skillId}>
-      <div className="trend-detail-top">
-        <nav className="breadcrumbs" aria-label={t.breadcrumbs}>
-          <ol>
-            <li>
-              <a href={hrefFor(locale)}>{t.breadcrumbHome}</a>
-            </li>
-            <li>
-              <a href={hrefFor(locale, { mode: "trends" })}>{t.trendsTitle}</a>
-            </li>
-            <li>
-              <span aria-current="page">{data.name}</span>
-            </li>
-          </ol>
-        </nav>
-        <a className="trend-back" href={hrefFor(locale, { mode: "trends" })}>
-          {t.trendsDetailBack}
-        </a>
-      </div>
+      <div className="h2-public h2-trend-detail">
+        <PageChrome
+          backHref={hrefFor(locale, { mode: "trends" })}
+          backLabel={t.trendsTitle}
+          title={data.name}
+        />
 
-      <main
-        className={
-          showCompanions ? "trend-detail-page trend-detail-page-split" : "trend-detail-page"
-        }
-      >
-        {showCompanions ? (
-          <div className="detail-layout trend-detail-layout">
-            <div className="detail-main">{youSection}</div>
-            <aside className="detail-aside" aria-label={t.keyFacts}>
+        <div className={showCompanions ? "h2-detail-layout" : "h2-trend-detail-stack"}>
+          {showCompanions ? (
+            <>
+              <div className="h2-detail-main">{youSection}</div>
+              <aside className="h2-detail-aside" aria-label={t.keyFacts}>
+                {facts}
+              </aside>
+            </>
+          ) : (
+            <>
               {facts}
-            </aside>
-          </div>
-        ) : (
-          <>
-            {facts}
-            {youSection}
-          </>
-        )}
+              {youSection}
+            </>
+          )}
+        </div>
 
         <p className="hint skills-footer">
           <a href={hrefFor(locale, { mode: "recommendations" })}>{t.recommendationsOpen}</a>
         </p>
-      </main>
+      </div>
     </Shell>
   );
 }

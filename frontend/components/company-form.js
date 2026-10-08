@@ -5,6 +5,7 @@ import { hrefFor, text } from "../lib/copy";
 import { clearMeCache, fetchMe } from "../lib/me-client";
 import { saveCompanyProfile } from "../lib/server/refresh";
 import { useInitialMe } from "./me-seed";
+import { PageChrome } from "./page-chrome";
 import { Shell } from "./shell";
 
 function fieldsFrom(me, profile) {
@@ -88,39 +89,47 @@ export function CompanyForm({ locale, initialMe, initialProfile = null }) {
 
   return (
     <Shell locale={locale} mode="company">
-      <h1>{t.companyTitle}</h1>
-      {done ? (
-        <>
-          <p className="lede">{t.companyEditOnProfile}</p>
-          <p>
-            <a className="btn primary" href={hrefFor(locale, { mode: "profile" })}>
+      <div className="h2-employer">
+        <PageChrome
+          backHref={hrefFor(locale)}
+          backLabel={t.breadcrumbHome}
+          title={t.companyTitle}
+        />
+        {done ? (
+          <div className="h2-panel h2-gate">
+            <p>{t.companyEditOnProfile}</p>
+            <a className="btn ink" href={hrefFor(locale, { mode: "profile" })}>
               {t.companyGoProfile}
             </a>
-          </p>
-        </>
-      ) : (
-        <>
-          <p className="lede">{t.companyLede}</p>
-          {error ? <p className="note">{error}</p> : null}
-          {ready ? (
-            <form className="form-card" onSubmit={onSubmit}>
-              <label>
-                {t.companyName}
-                <input value={companyName} maxLength={120} required onChange={(event) => setCompanyName(event.target.value)} />
-              </label>
-              <label>
-                {t.companyCity}
-                <input value={city} maxLength={80} required onChange={(event) => setCity(event.target.value)} />
-              </label>
-              <label>
-                {t.companyAbout}
-                <textarea value={about} maxLength={400} required rows={5} onChange={(event) => setAbout(event.target.value)} />
-              </label>
-              <button type="submit" className="btn primary">{t.companySave}</button>
-            </form>
-          ) : null}
-        </>
-      )}
+          </div>
+        ) : (
+          <>
+            {error ? <p className="note">{error}</p> : null}
+            {ready ? (
+              <form className="h2-panel h2-form" onSubmit={onSubmit} title={t.companyLede}>
+                <p className="hint">{t.companyLede}</p>
+                <div className="profile-grid">
+                  <label>
+                    {t.companyName}
+                    <input value={companyName} maxLength={120} required onChange={(event) => setCompanyName(event.target.value)} />
+                  </label>
+                  <label>
+                    {t.companyCity}
+                    <input value={city} maxLength={80} required onChange={(event) => setCity(event.target.value)} />
+                  </label>
+                  <label className="profile-span">
+                    {t.companyAbout}
+                    <textarea value={about} maxLength={400} required rows={5} onChange={(event) => setAbout(event.target.value)} />
+                  </label>
+                </div>
+                <div className="ad-actions">
+                  <button type="submit" className="btn ink">{t.companySave}</button>
+                </div>
+              </form>
+            ) : null}
+          </>
+        )}
+      </div>
     </Shell>
   );
 }

@@ -1,6 +1,7 @@
 import { LinkPager } from "./companies";
 import { CompanyAvatar, Popularity } from "./company-bits";
-import { JobCard } from "./job-card";
+import { JobRow } from "./job-row";
+import { PageChrome } from "./page-chrome";
 import { Shell } from "./shell";
 import { categoryLabel, hrefFor, text } from "../lib/copy";
 import { calendarDate } from "../lib/dates";
@@ -12,27 +13,19 @@ export function CompanyPage({ locale, data }) {
   const base = hrefFor(locale, { companySlug: company.slug });
   const latest = calendarDate(company.latest_posted, locale);
   const locations = company.locations || [];
+
   return (
     <Shell locale={locale} mode="companies" companySlug={company.slug}>
-      <nav className="breadcrumbs" aria-label={t.breadcrumbs}>
-        <ol>
-          <li>
-            <a href={hrefFor(locale)}>{t.breadcrumbHome}</a>
-          </li>
-          <li>
-            <a href={hrefFor(locale, { mode: "companies" })}>{t.companiesTitle}</a>
-          </li>
-          <li>
-            <span aria-current="page">{company.name}</span>
-          </li>
-        </ol>
-      </nav>
-      <section className="company-header">
-        <div className="company-header-top">
-          <CompanyAvatar name={company.name} slug={company.slug} size="lg" />
-          <div className="company-header-title">
-            <h1>{company.name}</h1>
-            <p className="meta line">
+      <div className="h2-public h2-company">
+        <PageChrome
+          backHref={hrefFor(locale, { mode: "companies" })}
+          backLabel={t.companiesTitle}
+          title={company.name}
+          count={jobs.total != null ? String(jobs.total) : null}
+        >
+          <div className="h2-company-kicker">
+            <CompanyAvatar name={company.name} slug={company.slug} size="lg" />
+            <p className="h2-detail-meta">
               {locations.length ? <span>{locations.join(" · ")}</span> : null}
               {latest ? (
                 <span>
@@ -41,8 +34,9 @@ export function CompanyPage({ locale, data }) {
               ) : null}
             </p>
           </div>
-        </div>
-        <dl className="company-stats">
+        </PageChrome>
+
+        <dl className="h2-stat-strip">
           <div>
             <dt>{t.statOpenJobs}</dt>
             <dd>{company.open_jobs}</dd>
@@ -74,19 +68,21 @@ export function CompanyPage({ locale, data }) {
             </>
           ) : null}
         </dl>
+
         {company.onsite_jobs ? (
-          <div className="company-popularity">
+          <div className="h2-company-popularity">
             <Popularity locale={locale} share={company.application_share} withHelp={false} />
-            <p className="company-help">
+            <p className="h2-help">
               {t.popularityHelp} {t.applicationsNote}
             </p>
           </div>
         ) : null}
+
         {company.top_categories?.length || company.top_tech?.length ? (
-          <div className="company-summary">
+          <div className="h2-company-summary">
             {company.top_categories?.length ? (
               <div>
-                <h2 className="tech-title">{t.companyCategories}</h2>
+                <h2 className="h2-panel-title">{t.companyCategories}</h2>
                 <ul className="tech-chips">
                   {company.top_categories.map((item) => (
                     <li key={item.name} className="category-tag">
@@ -98,7 +94,7 @@ export function CompanyPage({ locale, data }) {
             ) : null}
             {company.top_tech?.length ? (
               <div>
-                <h2 className="tech-title">{t.techStack}</h2>
+                <h2 className="h2-panel-title">{t.techStack}</h2>
                 <ul className="tech-chips">
                   {company.top_tech.map((item) => (
                     <li key={item.name} className="tech-chip">
@@ -110,23 +106,25 @@ export function CompanyPage({ locale, data }) {
             ) : null}
           </div>
         ) : null}
-      </section>
-      <section className="company-jobs" aria-labelledby="company-jobs-title">
-        <h2 id="company-jobs-title" className="company-jobs-title">
-          {t.companyJobs} <span className="check-count">{jobs.total}</span>
-        </h2>
-        <div className="job-list">
-          {jobs.items.map((job) => (
-            <JobCard key={job.id} locale={locale} job={job} showCompany={false} />
-          ))}
-        </div>
-        <LinkPager
-          locale={locale}
-          page={jobs.page}
-          pages={jobs.pages}
-          hrefOf={(next) => (next > 1 ? `${base}?page=${next}` : base)}
-        />
-      </section>
+
+        <section className="h2-company-jobs" aria-labelledby="company-jobs-title">
+          <div className="open-roles-head">
+            <h2 id="company-jobs-title">{t.companyJobs}</h2>
+            <p className="open-roles-count">{jobs.total}</p>
+          </div>
+          <div className="job-row-list">
+            {jobs.items.map((job) => (
+              <JobRow key={job.id} locale={locale} job={job} showCompany={false} />
+            ))}
+          </div>
+          <LinkPager
+            locale={locale}
+            page={jobs.page}
+            pages={jobs.pages}
+            hrefOf={(next) => (next > 1 ? `${base}?page=${next}` : base)}
+          />
+        </section>
+      </div>
     </Shell>
   );
 }

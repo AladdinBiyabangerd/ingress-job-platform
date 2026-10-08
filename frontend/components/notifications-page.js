@@ -7,6 +7,7 @@ import { markAllNotificationsRead, markNotificationRead, refreshNotifications } 
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
 import { Pager } from "./pager";
 import { useInitialMe } from "./me-seed";
+import { PageChrome } from "./page-chrome";
 import { RegisterChoice } from "./register-choice";
 import { RoleSkillParts } from "./role-skill-parts";
 import { Shell } from "./shell";
@@ -147,7 +148,7 @@ function EngagementCard({ t, locale, item, onMark }) {
       <RoleSkillParts t={t} have={payload.have} missing={payload.missing || payload.must_learn} />
       <RoadmapBlock t={t} roadmap={payload.roadmap} />
       <div className="notice-actions">
-        <a className="btn small primary" href={primary}>
+        <a className="btn small ink" href={primary}>
           {item.kind === "profile_nudge"
             ? t.noticeCtaProfile
             : item.kind === "coach_weekly"
@@ -264,38 +265,57 @@ export function NotificationsPage({ locale, initialItems = null, initialUnread =
 
   return (
     <Shell locale={locale} mode="notifications">
-      <section className="cabinet">
-        <h1>{t.notificationsTitle}</h1>
-      </section>
       {me === undefined ? null : !signedIn ? (
-        <div className="empty">
-          <p className="lede">{t.notificationsGate}</p>
-          <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "notifications" })} />
+        <div className="h2-candidate">
+          <PageChrome
+            backHref={hrefFor(locale)}
+            backLabel={t.breadcrumbHome}
+            title={t.notificationsTitle}
+          />
+          <div className="h2-empty h2-gate">
+            <p>{t.notificationsGate}</p>
+            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "notifications" })} />
+          </div>
         </div>
       ) : (
-        <div className="notice-list">
-          {error ? <p className="note">{error}</p> : null}
-          {unread > 0 ? (
-            <button type="button" className="text-btn" onClick={markAll}>
-              {t.markAllRead}
-            </button>
-          ) : null}
-          {items.length === 0 ? <p>{t.notificationsEmpty}</p> : null}
-          {pageItems.map((item) =>
-            ENGAGEMENT_KINDS.has(item.kind) ? (
-              <EngagementCard key={item.id} t={t} locale={locale} item={item} onMark={markOne} />
-            ) : (
-              <SimpleCard key={item.id} t={t} locale={locale} item={item} onMark={markOne} />
-            ),
-          )}
-          <Pager
-            locale={locale}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            total={total}
-            pageSize={pageSize}
-            onPageChange={goToPage}
+        <div className="h2-candidate">
+          <PageChrome
+            backHref={hrefFor(locale)}
+            backLabel={t.breadcrumbHome}
+            title={t.notificationsTitle}
+            count={unread > 0 ? unread : undefined}
+            actions={
+              unread > 0 ? (
+                <button type="button" className="text-btn" onClick={markAll}>
+                  {t.markAllRead}
+                </button>
+              ) : null
+            }
           />
+          {error ? <p className="note">{error}</p> : null}
+          {items.length === 0 ? (
+            <div className="h2-empty">
+              <p>{t.notificationsEmpty}</p>
+            </div>
+          ) : (
+            <div className="notice-list h2-notice-list">
+              {pageItems.map((item) =>
+                ENGAGEMENT_KINDS.has(item.kind) ? (
+                  <EngagementCard key={item.id} t={t} locale={locale} item={item} onMark={markOne} />
+                ) : (
+                  <SimpleCard key={item.id} t={t} locale={locale} item={item} onMark={markOne} />
+                ),
+              )}
+              <Pager
+                locale={locale}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                total={total}
+                pageSize={pageSize}
+                onPageChange={goToPage}
+              />
+            </div>
+          )}
         </div>
       )}
     </Shell>

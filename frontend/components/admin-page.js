@@ -5,6 +5,7 @@ import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { Admin } from "./admin";
 import { useInitialMe } from "./me-seed";
+import { PageChrome } from "./page-chrome";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 
@@ -53,11 +54,13 @@ export function AdminPage({
           initialAiFlags={initialAiFlags}
         />
       ) : (
-        <section className="empty">
-          <h1>{t.adminTitle}</h1>
-          <p className="lede">{t.adminGate}</p>
-          <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "admin" })} />
-        </section>
+        <div className="h2-employer">
+          <PageChrome backHref={hrefFor(locale)} backLabel={t.breadcrumbHome} title={t.adminTitle} />
+          <div className="h2-empty h2-gate">
+            <p>{t.adminGate}</p>
+            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "admin" })} />
+          </div>
+        </div>
       )}
     </Shell>
   );

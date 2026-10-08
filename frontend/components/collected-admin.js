@@ -126,48 +126,48 @@ export function CollectedAdmin({ locale, initialItems = null }) {
   }
 
   return (
-    <section className="cabinet-ads">
-      <p className="lede">{t.collectedLede}</p>
+    <section className="h2-employer-queue">
+      <p className="hint h2-employer-hint" title={t.collectedLede}>{t.collectedLede}</p>
       {error ? <p className="note">{error}</p> : null}
       {note ? <p className="note">{note}</p> : null}
       {editing && form ? (
-        <form className="form-card" onSubmit={save}>
-          <h2>{t.editAd}</h2>
-          <label>
-            {t.language}
-            <select value={form.language} onChange={(event) => setField("language", event.target.value)}>
-              <option value="">{t.languageAuto}</option>
-              <option value="az">{t.langAz}</option>
-              <option value="en">{t.langEn}</option>
-              <option value="ru">{t.langRu}</option>
-            </select>
-          </label>
-          <label>
-            {t.adTitle}
-            <input value={form.title} maxLength={140} required onChange={(event) => setField("title", event.target.value)} />
-          </label>
-          <label>
-            {t.companyName}
-            <input value={form.company} maxLength={120} onChange={(event) => setField("company", event.target.value)} />
-          </label>
-          <label>
-            {t.adCityOrRemote}
-            <input
-              value={form.city}
-              maxLength={80}
-              disabled={form.remote}
-              onChange={(event) => setField("city", event.target.value)}
-            />
-          </label>
-          <label className="inline">
-            <input type="checkbox" checked={form.remote} onChange={(event) => setField("remote", event.target.checked)} />
-            <span>{t.placeRemote}</span>
-          </label>
-          <label>
-            {t.adBody}
-            <textarea value={form.text} maxLength={8000} rows={8} onChange={(event) => setField("text", event.target.value)} />
-          </label>
-          <div className="split">
+        <form className="h2-panel h2-form" onSubmit={save}>
+          <h2 className="h2-panel-title">{t.editAd}</h2>
+          <div className="cabinet-grid">
+            <label>
+              {t.language}
+              <select value={form.language} onChange={(event) => setField("language", event.target.value)}>
+                <option value="">{t.languageAuto}</option>
+                <option value="az">{t.langAz}</option>
+                <option value="en">{t.langEn}</option>
+                <option value="ru">{t.langRu}</option>
+              </select>
+            </label>
+            <label className="cabinet-span">
+              {t.adTitle}
+              <input value={form.title} maxLength={140} required onChange={(event) => setField("title", event.target.value)} />
+            </label>
+            <label>
+              {t.companyName}
+              <input value={form.company} maxLength={120} onChange={(event) => setField("company", event.target.value)} />
+            </label>
+            <label>
+              {t.adCityOrRemote}
+              <input
+                value={form.city}
+                maxLength={80}
+                disabled={form.remote}
+                onChange={(event) => setField("city", event.target.value)}
+              />
+            </label>
+            <label className="inline">
+              <input type="checkbox" checked={form.remote} onChange={(event) => setField("remote", event.target.checked)} />
+              <span>{t.placeRemote}</span>
+            </label>
+            <label className="cabinet-span">
+              {t.adBody}
+              <textarea value={form.text} maxLength={8000} rows={8} onChange={(event) => setField("text", event.target.value)} />
+            </label>
             <label>
               {t.adSalary}
               <input value={form.salary} maxLength={120} onChange={(event) => setField("salary", event.target.value)} />
@@ -184,80 +184,84 @@ export function CollectedAdmin({ locale, initialItems = null }) {
             </label>
           </div>
           <div className="ad-actions">
-            <button type="submit" className="btn primary">{t.adSave}</button>
+            <button type="submit" className="btn ink">{t.adSave}</button>
             <button type="button" className="btn red" onClick={() => { setEditing(null); setForm(null); }}>{t.adCancel}</button>
           </div>
         </form>
       ) : null}
-      {items.length === 0 ? <p className="empty-line">{t.collectedEmpty}</p> : null}
-      <div className="list">
-        {pageItems.map((job) => (
-          <article key={job.id} className={job.hidden ? "card closed" : "card"}>
-            <p className={job.hidden ? "source-pill closed" : "source-pill live"}>
-              {job.hidden ? t.collectedHidden : t.statusPublished}
-              {job.merged_into ? ` · ${t.collectedMerged}` : ""}
-            </p>
-            <h2>{job.title}</h2>
-            <div className="meta">
-              <span>{job.company || t.noCompany}</span>
-              <span>{job.remote ? t.placeRemote : job.city || t.noCity}</span>
-              {job.source_name ? <span>{job.source_name}</span> : null}
-              {job.merged_into ? <span>#{job.merged_into}</span> : null}
-            </div>
-            {job.text ? <p className="admin-body">{job.text.length > 280 ? `${job.text.slice(0, 280)}…` : job.text}</p> : null}
-            <div className="ad-actions">
-              <button
-                type="button"
-                className="btn primary"
-                disabled={busy}
-                onClick={() => {
-                  setError("");
-                  setNote("");
-                  setBusy(true);
-                  fetchCrawledJob(job.id)
-                    .then((full) => {
-                      setEditing(job.id);
-                      setForm(fromJob(locale, full));
-                    })
-                    .catch(() => setError(t.loadError))
-                    .finally(() => setBusy(false));
-                }}
-              >
-                {t.adEdit}
-              </button>
-              {job.hidden && !job.merged_into ? (
-                <button type="button" className="btn primary" onClick={() => visibility(job, "show")}>{t.collectedShow}</button>
-              ) : null}
-              {!job.hidden ? (
-                <button type="button" className="btn red" onClick={() => visibility(job, "hide")}>{t.collectedHide}</button>
-              ) : null}
-              {!job.hidden ? (
+      <div className="h2-panel h2-employer-list">
+        {items.length === 0 ? <p className="empty-line">{t.collectedEmpty}</p> : null}
+        <div className="h2-ad-list">
+          {pageItems.map((job) => (
+            <article key={job.id} className={`h2-ad-row${job.hidden ? " is-muted" : ""}`}>
+              <div className="h2-ad-row-top">
+                <span className={job.hidden ? "source-pill closed" : "source-pill live"}>
+                  {job.hidden ? t.collectedHidden : t.statusPublished}
+                  {job.merged_into ? ` · ${t.collectedMerged}` : ""}
+                </span>
+                <h2 className="h2-ad-title">{job.title}</h2>
+              </div>
+              <div className="meta">
+                <span>{job.company || t.noCompany}</span>
+                <span>{job.remote ? t.placeRemote : job.city || t.noCity}</span>
+                {job.source_name ? <span>{job.source_name}</span> : null}
+                {job.merged_into ? <span>#{job.merged_into}</span> : null}
+              </div>
+              {job.text ? <p className="admin-body">{job.text.length > 280 ? `${job.text.slice(0, 280)}…` : job.text}</p> : null}
+              <div className="ad-actions">
                 <button
                   type="button"
-                  className="btn primary"
+                  className="btn ink"
+                  disabled={busy}
                   onClick={() => {
-                    setKeepId(job.id);
-                    setNote(t.collectedKept);
+                    setError("");
+                    setNote("");
+                    setBusy(true);
+                    fetchCrawledJob(job.id)
+                      .then((full) => {
+                        setEditing(job.id);
+                        setForm(fromJob(locale, full));
+                      })
+                      .catch(() => setError(t.loadError))
+                      .finally(() => setBusy(false));
                   }}
                 >
-                  {t.collectedKeep}
+                  {t.adEdit}
                 </button>
-              ) : null}
-              {keepId && keepId !== job.id && !job.merged_into ? (
-                <button type="button" className="btn red" onClick={() => merge(job)}>{t.collectedMerge}</button>
-              ) : null}
-            </div>
-          </article>
-        ))}
+                {job.hidden && !job.merged_into ? (
+                  <button type="button" className="btn ink" onClick={() => visibility(job, "show")}>{t.collectedShow}</button>
+                ) : null}
+                {!job.hidden ? (
+                  <button type="button" className="btn red" onClick={() => visibility(job, "hide")}>{t.collectedHide}</button>
+                ) : null}
+                {!job.hidden ? (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                      setKeepId(job.id);
+                      setNote(t.collectedKept);
+                    }}
+                  >
+                    {t.collectedKeep}
+                  </button>
+                ) : null}
+                {keepId && keepId !== job.id && !job.merged_into ? (
+                  <button type="button" className="btn red" onClick={() => merge(job)}>{t.collectedMerge}</button>
+                ) : null}
+              </div>
+            </article>
+          ))}
+        </div>
+        <Pager
+          locale={locale}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={goToPage}
+        />
       </div>
-      <Pager
-        locale={locale}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        total={total}
-        pageSize={pageSize}
-        onPageChange={goToPage}
-      />
     </section>
   );
 }

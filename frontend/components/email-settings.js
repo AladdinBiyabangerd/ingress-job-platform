@@ -9,6 +9,7 @@ import {
   enableBrowserPush,
   pushSupported,
 } from "../lib/web-push";
+import { PageChrome } from "./page-chrome";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 import { useInitialMe } from "./me-seed";
@@ -249,17 +250,18 @@ export function EmailSettings({ locale, initialPrefs = null }) {
   return (
     <Shell locale={locale} mode="emailSettings">
       {allowed ? (
-        <div className="cabinet">
-          <div className="cabinet-head">
-            <div>
-              <h1>{t.emailSettingsTitle}</h1>
-              <p className="lede">{t.emailSettingsLede}</p>
-              <p className="hint">
-                <a href={hrefFor(locale, { mode: "profile" })}>{t.emailSettingsPrivacyLink}</a>
-              </p>
-            </div>
-          </div>
-          <form className="form-card profile-card" onSubmit={save}>
+        <div className="h2-candidate">
+          <PageChrome
+            backHref={hrefFor(locale)}
+            backLabel={t.breadcrumbHome}
+            title={t.emailSettingsTitle}
+            actions={
+              <a className="text-btn" href={hrefFor(locale, { mode: "profile" })}>
+                {t.emailSettingsPrivacyLink}
+              </a>
+            }
+          />
+          <form className="h2-panel h2-form" onSubmit={save}>
             {error ? <p className="note">{error}</p> : null}
             {note ? <p className="note">{note}</p> : null}
             {prefs && !prefs.emails_consent ? (
@@ -372,18 +374,24 @@ export function EmailSettings({ locale, initialPrefs = null }) {
               </div>
             </div>
             <div className="ad-actions">
-              <button type="submit" className="btn primary" disabled={busy}>
+              <button type="submit" className="btn ink" disabled={busy}>
                 {t.companySave}
               </button>
             </div>
           </form>
         </div>
       ) : me === undefined ? null : (
-        <section className="empty profile-gate">
-          <h1>{t.emailSettingsTitle}</h1>
-          <p className="lede">{t.emailSettingsGate}</p>
-          <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "emailSettings" })} />
-        </section>
+        <div className="h2-candidate">
+          <PageChrome
+            backHref={hrefFor(locale)}
+            backLabel={t.breadcrumbHome}
+            title={t.emailSettingsTitle}
+          />
+          <div className="h2-empty h2-gate">
+            <p>{t.emailSettingsGate}</p>
+            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "emailSettings" })} />
+          </div>
+        </div>
       )}
     </Shell>
   );

@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { refreshSavedJobs, unsaveJob } from "../lib/server/refresh";
-import { JobCard } from "./job-card";
+import { JobRow } from "./job-row";
 import { useInitialMe } from "./me-seed";
+import { PageChrome } from "./page-chrome";
 import { preloadSavedIds } from "./save-job-button";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
@@ -73,32 +74,44 @@ export function MySaved({ locale, initialItems = null, initialIds = null }) {
   return (
     <Shell locale={locale} mode="saved">
       {me === undefined ? null : allowed ? (
-        <div className="applications-page">
-          <header className="applications-head">
-            <h1>{t.savedJobs}</h1>
-            <p className="lede">{t.savedJobsLede}</p>
-          </header>
+        <div className="h2-candidate">
+          <PageChrome
+            backHref={hrefFor(locale)}
+            backLabel={t.breadcrumbHome}
+            title={t.savedJobs}
+            count={items.length || undefined}
+          />
           {error ? <p className="note">{error}</p> : null}
-          {items.length === 0 ? <p className="empty-line">{t.savedJobsEmpty}</p> : null}
-          <div className="job-list saved-job-list">
-            {items.map((job) => (
-              <div key={job.id} className="saved-job-row">
-                <JobCard locale={locale} job={job} />
-                <button type="button" className="text-btn" onClick={() => remove(job.id)}>
-                  {t.unsaveJob}
-                </button>
-              </div>
-            ))}
-          </div>
+          {items.length === 0 ? (
+            <div className="h2-empty">
+              <p>{t.savedJobsEmpty}</p>
+            </div>
+          ) : (
+            <div className="job-row-list saved-job-list">
+              {items.map((job) => (
+                <JobRow
+                  key={job.id}
+                  locale={locale}
+                  job={job}
+                  showSave={false}
+                  leading={
+                    <button type="button" className="text-btn" onClick={() => remove(job.id)}>
+                      {t.unsaveJob}
+                    </button>
+                  }
+                />
+              ))}
+            </div>
+          )}
         </div>
       ) : (
-        <section className="applications-page applications-gate">
-          <header className="applications-head">
-            <h1>{t.savedJobs}</h1>
-            <p className="lede">{t.savedJobsGate}</p>
-          </header>
-          <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "saved" })} />
-        </section>
+        <div className="h2-candidate">
+          <PageChrome backHref={hrefFor(locale)} backLabel={t.breadcrumbHome} title={t.savedJobs} />
+          <div className="h2-empty h2-gate">
+            <p>{t.savedJobsGate}</p>
+            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "saved" })} />
+          </div>
+        </div>
       )}
     </Shell>
   );

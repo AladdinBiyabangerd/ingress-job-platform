@@ -7,6 +7,7 @@ import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
 import { cabinetCloseJob, cabinetSaveJob, refreshCabinet } from "../lib/server/refresh";
 import { ApplicationList } from "./application-list";
 import { ApplyFormFields } from "./apply-form-fields";
+import { PageChrome } from "./page-chrome";
 import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
@@ -182,54 +183,52 @@ export function Cabinet({ locale, me, initialJobs = null, initialApplications = 
   }
 
   return (
-    <div className="cabinet">
-      <div className="cabinet-head">
-        <div>
-          <h1>{t.postTitle}</h1>
-          <p className="lede">{t.cabinetLede}</p>
-        </div>
-        <div className="cabinet-tabs" role="tablist" aria-label={t.postTitle}>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "create"}
-            className={tab === "create" ? "on" : ""}
-            onClick={openCreate}
-          >
-            {editing ? t.editAd : t.post}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "ads"}
-            className={tab === "ads" ? "on" : ""}
-            onClick={openMyAds}
-          >
-            {t.myAds}
-            {items.length ? <span className="cabinet-tab-count">{items.length}</span> : null}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "applications"}
-            className={tab === "applications" ? "on" : ""}
-            onClick={openApplications}
-          >
-            {t.cabinetApplicationsTab}
-            {applications.length ? <span className="cabinet-tab-count">{applications.length}</span> : null}
-          </button>
-        </div>
+    <div className="h2-employer">
+      <PageChrome
+        backHref={hrefFor(locale)}
+        backLabel={t.breadcrumbHome}
+        title={t.postTitle}
+      />
+      <p className="hint h2-employer-hint" title={t.cabinetLede}>{t.cabinetLede}</p>
+      <div className="h2-tabs" role="tablist" aria-label={t.postTitle}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "create"}
+          className={tab === "create" ? "on" : ""}
+          onClick={openCreate}
+        >
+          {editing ? t.editAd : t.post}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "ads"}
+          className={tab === "ads" ? "on" : ""}
+          onClick={openMyAds}
+        >
+          {t.myAds}
+          {items.length ? <span className="h2-tab-count">{items.length}</span> : null}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "applications"}
+          className={tab === "applications" ? "on" : ""}
+          onClick={openApplications}
+        >
+          {t.cabinetApplicationsTab}
+          {applications.length ? <span className="h2-tab-count">{applications.length}</span> : null}
+        </button>
       </div>
       {error ? <p className="note">{error}</p> : null}
       {note ? <p className="note">{note}</p> : null}
 
       {tab === "create" ? (
-        <form className="form-card cabinet-form" onSubmit={onSubmit}>
-          <div className="cabinet-form-head">
-            <h2>{editing ? t.editAd : t.post}</h2>
-            {editing && items.find((job) => job.id === editing)?.status === "rejected" ? <p className="hint">{t.resubmitHint}</p> : null}
-            {editing && !me.staff && items.find((job) => job.id === editing)?.status === "published" ? <p className="hint">{t.reviewHint}</p> : null}
-          </div>
+        <form className="h2-panel h2-form cabinet-form" onSubmit={onSubmit}>
+          <h2 className="h2-panel-title">{editing ? t.editAd : t.post}</h2>
+          {editing && items.find((job) => job.id === editing)?.status === "rejected" ? <p className="hint">{t.resubmitHint}</p> : null}
+          {editing && !me.staff && items.find((job) => job.id === editing)?.status === "published" ? <p className="hint">{t.reviewHint}</p> : null}
           <div className="cabinet-form-layout">
             <div className="cabinet-form-main">
               <div className="cabinet-grid">
@@ -301,7 +300,7 @@ export function Cabinet({ locale, me, initialJobs = null, initialApplications = 
             </aside>
           </div>
           <div className="ad-actions">
-            <button type="submit" className="btn primary" disabled={busy}>{t.adSave}</button>
+            <button type="submit" className="btn ink" disabled={busy}>{t.adSave}</button>
             {editing ? (
               <button type="button" className="btn red" onClick={reset}>{t.adCancel}</button>
             ) : null}
@@ -310,21 +309,23 @@ export function Cabinet({ locale, me, initialJobs = null, initialApplications = 
       ) : null}
 
       {tab === "ads" ? (
-        <section className="cabinet-ads">
+        <section className="h2-panel h2-employer-list">
           {items.length === 0 ? <p className="empty-line">{t.cabinetEmpty}</p> : null}
-          <div className="list">
+          <div className="h2-ad-list">
             {pageItems.map((job) => (
-              <article key={job.id} className={job.status === "closed" || job.status === "rejected" ? "card closed" : "card"}>
-                <p className={job.status === "published" ? "source-pill live" : job.status === "closed" ? "source-pill closed" : job.status === "rejected" ? "source-pill rejected" : "source-pill"}>
-                  {statusLabel(t, job.status)}
-                </p>
-                <h2>
-                  {job.status === "published" ? (
-                    <a href={hrefFor(locale, { jobId: job.id })}>{job.title}</a>
-                  ) : (
-                    job.title
-                  )}
-                </h2>
+              <article key={job.id} className={`h2-ad-row${job.status === "closed" || job.status === "rejected" ? " is-muted" : ""}`}>
+                <div className="h2-ad-row-top">
+                  <span className={job.status === "published" ? "source-pill live" : job.status === "closed" ? "source-pill closed" : job.status === "rejected" ? "source-pill rejected" : "source-pill"}>
+                    {statusLabel(t, job.status)}
+                  </span>
+                  <h2 className="h2-ad-title">
+                    {job.status === "published" ? (
+                      <a href={hrefFor(locale, { jobId: job.id })}>{job.title}</a>
+                    ) : (
+                      job.title
+                    )}
+                  </h2>
+                </div>
                 <div className="meta">
                   <span>{job.company || t.noCompany}</span>
                   <span>{job.remote ? t.placeRemote : job.city || t.noCity}</span>
@@ -345,7 +346,7 @@ export function Cabinet({ locale, me, initialJobs = null, initialApplications = 
                   {canEdit(me, job) ? (
                     <button
                       type="button"
-                      className="btn primary"
+                      className="btn ink"
                       onClick={() => {
                         setEditing(job.id);
                         setForm(fromJob(locale, me, job));
@@ -378,7 +379,7 @@ export function Cabinet({ locale, me, initialJobs = null, initialApplications = 
       ) : null}
 
       {tab === "applications" ? (
-        <section className="cabinet-apps">
+        <section className="h2-panel h2-candidate-list">
           <ApplicationList
             locale={locale}
             title={t.ownerApplicationsAll}

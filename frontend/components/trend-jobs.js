@@ -1,5 +1,6 @@
 import { hrefFor, text } from "../lib/copy";
 import { LinkPager } from "./companies";
+import { PageChrome } from "./page-chrome";
 import { Shell } from "./shell";
 
 function jobMeta(t, job) {
@@ -9,24 +10,42 @@ function jobMeta(t, job) {
     .join(" · ");
 }
 
+function companyInitial(name) {
+  const s = String(name || "").trim();
+  return s ? s.charAt(0).toUpperCase() : "?";
+}
+
 function JobsList({ t, locale, jobs }) {
   if (!jobs.length) {
     return <p className="hint">{t.trendsDetailJobsEmpty}</p>;
   }
   return (
-    <ul className="reco-jobs trend-detail-jobs">
+    <ul className="trend-jobs-list">
       {jobs.map((job) => {
         const meta = jobMeta(t, job);
+        const href = hrefFor(locale, { jobId: job.job_id });
         return (
-          <li key={job.job_id} className="reco-job">
-            <div className="reco-job-top">
-              <div className="reco-job-body">
-                <a className="reco-job-title" href={hrefFor(locale, { jobId: job.job_id })}>
-                  <strong>{job.title}</strong>
-                </a>
-                {meta ? <span className="hint">{meta}</span> : null}
-              </div>
+          <li key={job.job_id} className="trend-job-row">
+            <span className="job-row-avatar" aria-hidden="true">
+              {companyInitial(job.company)}
+            </span>
+            <div className="trend-job-body">
+              <a className="trend-job-title" href={href}>
+                {job.title}
+              </a>
+              {meta ? <span className="trend-job-meta">{meta}</span> : null}
             </div>
+            <a className="job-row-open" href={href} aria-label={t.openRole}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+                <path
+                  d="M6 3.5 10.5 8 6 12.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </a>
           </li>
         );
       })}
@@ -41,29 +60,19 @@ export function TrendJobsPage({ locale, data, error, page = 1 }) {
     skillId != null ? hrefFor(locale, { mode: "trend", skillId }) : hrefFor(locale, { mode: "trends" });
   const jobsBase =
     skillId != null ? hrefFor(locale, { mode: "trendJobs", skillId }) : hrefFor(locale, { mode: "trends" });
+  const skillName = data?.name || t.trendsDetailNotFound;
 
   if (error || !data) {
     return (
       <Shell locale={locale} mode="trends">
-        <nav className="breadcrumbs" aria-label={t.breadcrumbs}>
-          <ol>
-            <li>
-              <a href={hrefFor(locale)}>{t.breadcrumbHome}</a>
-            </li>
-            <li>
-              <a href={hrefFor(locale, { mode: "trends" })}>{t.trendsTitle}</a>
-            </li>
-            <li>
-              <span aria-current="page">{t.trendsDetailNotFound}</span>
-            </li>
-          </ol>
-        </nav>
-        <main className="trend-detail-page">
+        <div className="h2-public">
+          <PageChrome
+            backHref={hrefFor(locale, { mode: "trends" })}
+            backLabel={t.trendsTitle}
+            title={t.trendsDetailNotFound}
+          />
           <p className="note">{t.trendsDetailNotFound}</p>
-          <p className="hint">
-            <a href={hrefFor(locale, { mode: "trends" })}>{t.trendsDetailBack}</a>
-          </p>
-        </main>
+        </div>
       </Shell>
     );
   }
@@ -80,38 +89,16 @@ export function TrendJobsPage({ locale, data, error, page = 1 }) {
 
   return (
     <Shell locale={locale} mode="trends" skillId={skillId}>
-      <div className="trend-detail-top">
-        <nav className="breadcrumbs" aria-label={t.breadcrumbs}>
-          <ol>
-            <li>
-              <a href={hrefFor(locale)}>{t.breadcrumbHome}</a>
-            </li>
-            <li>
-              <a href={hrefFor(locale, { mode: "trends" })}>{t.trendsTitle}</a>
-            </li>
-            <li>
-              <a href={detailHref}>{data.name}</a>
-            </li>
-            <li>
-              <span aria-current="page">{t.trendsDetailJobs}</span>
-            </li>
-          </ol>
-        </nav>
-        <a className="trend-back" href={detailHref}>
-          {t.trendsDetailJobsBack}
-        </a>
+      <div className="h2-public h2-trend-jobs">
+        <PageChrome
+          backHref={detailHref}
+          backLabel={skillName}
+          title={t.trendsDetailJobs}
+          count={String(total)}
+        />
+        <JobsList t={t} locale={locale} jobs={jobs} />
+        <LinkPager locale={locale} page={currentPage} pages={pages} hrefOf={hrefOf} />
       </div>
-
-      <main className="trend-detail-page">
-        <section className="trend-detail-section" aria-labelledby="trend-jobs-heading">
-          <h2 id="trend-jobs-heading">
-            {t.trendsDetailJobs}
-            <span className="recommendations-panel-count">{total.toLocaleString("en-US")}</span>
-          </h2>
-          <JobsList t={t} locale={locale} jobs={jobs} />
-          <LinkPager locale={locale} page={currentPage} pages={pages} hrefOf={hrefOf} />
-        </section>
-      </main>
     </Shell>
   );
 }

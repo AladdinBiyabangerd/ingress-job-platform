@@ -11,6 +11,7 @@ import {
   saveCvProfile,
   uploadCvProfile,
 } from "../lib/server/refresh";
+import { PageChrome } from "./page-chrome";
 import { RegisterChoice } from "./register-choice";
 import { RoleSkillParts } from "./role-skill-parts";
 import { Shell } from "./shell";
@@ -670,7 +671,12 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
   return (
     <Shell locale={locale} mode="profileReview">
       {me === undefined ? null : allowed ? (
-        <div className="cabinet profile-review-page">
+        <div className="h2-candidate profile-review-page">
+          <PageChrome
+            backHref={hrefFor(locale, { mode: "profile" })}
+            backLabel={t.profileTitle}
+            title={t.profileReviewTitle}
+          />
           {error ? <p className="note profile-review-flash">{error}</p> : null}
           {note ? <p className="note profile-review-flash ok">{note}</p> : null}
 
@@ -683,8 +689,8 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
           />
 
           {showChooser ? (
-            <section className="profile-review-chooser" aria-label={t.profileReviewChooserTitle}>
-              <h2>{t.profileReviewChooserTitle}</h2>
+            <section className="h2-panel profile-review-chooser" aria-label={t.profileReviewChooserTitle}>
+              <h2 className="h2-panel-title">{t.profileReviewChooserTitle}</h2>
               <p className="hint">{t.profileReviewChooserLede}</p>
               {payload.parse_status === "failed" ? <p className="hint">{t.profileReviewFailed}</p> : null}
               <div className="profile-review-options">
@@ -708,7 +714,7 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
           ) : null}
 
           {isParsing && !showChooser ? (
-            <section className="profile-review-source is-parsing">
+            <section className="h2-panel profile-review-source is-parsing">
               <ParseProgress
                 t={t}
                 uploading={uploading}
@@ -721,11 +727,11 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
           ) : null}
 
           {entry === "upload" && !showForm && !isParsing && !showChooser ? (
-            <section className="profile-review-source profile-review-source-compact">
+            <section className="h2-panel profile-review-source profile-review-source-compact">
               <div className="profile-review-source-actions">
                 <button
                   type="button"
-                  className="btn primary"
+                  className="btn ink"
                   disabled={uploading || busy}
                   onClick={() => fileRef.current?.click()}
                 >
@@ -740,7 +746,7 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
 
           {showForm ? (
             <form
-              className="profile-review-form"
+              className="h2-panel profile-review-form"
               onSubmit={(event) => {
                 event.preventDefault();
                 submit(false);
@@ -1247,7 +1253,7 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
                 </button>
                 <button
                   type="button"
-                  className="btn primary"
+                  className="btn ink"
                   disabled={busy || uploading}
                   onClick={() => submit(true)}
                 >
@@ -1258,11 +1264,17 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
           ) : null}
         </div>
       ) : (
-        <section className="empty profile-gate">
-          <h1>{t.profileReviewTitle}</h1>
-          <p className="lede">{t.profileGate}</p>
-          <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "profileReview" })} />
-        </section>
+        <div className="h2-candidate">
+          <PageChrome
+            backHref={hrefFor(locale, { mode: "profile" })}
+            backLabel={t.profileTitle}
+            title={t.profileReviewTitle}
+          />
+          <div className="h2-empty h2-gate">
+            <p>{t.profileGate}</p>
+            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "profileReview" })} />
+          </div>
+        </div>
       )}
     </Shell>
   );

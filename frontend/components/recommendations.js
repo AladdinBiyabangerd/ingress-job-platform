@@ -7,6 +7,7 @@ import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
 import { loadSkillGap } from "../lib/server/refresh";
 import { CareerPathLink, SkillRow } from "./skill-gap-bits";
 import { Pager } from "./pager";
+import { PageChrome } from "./page-chrome";
 import { RegisterChoice } from "./register-choice";
 import { RoleSkillParts } from "./role-skill-parts";
 import { Shell } from "./shell";
@@ -267,20 +268,17 @@ export function Recommendations({
 
   return (
     <Shell locale={locale} mode="recommendations">
-      {me === undefined ? (
-        <section className="empty">
-          <p className="lede">…</p>
-        </section>
-      ) : candidate ? (
-        <div className="cabinet recommendations-page">
-          <div className="recommendations-head">
-            <h1>{t.recommendationsTitle}</h1>
-            <p className="lede">{t.recommendationsLede}</p>
-            <p className="hint recommendations-disclaimer">{t.recommendationsDisclaimer}</p>
-          </div>
+      {me === undefined ? null : candidate ? (
+        <div className="h2-candidate recommendations-page">
+          <PageChrome
+            backHref={hrefFor(locale)}
+            backLabel={t.breadcrumbHome}
+            title={t.recommendationsTitle}
+          />
+          <p className="hint recommendations-disclaimer">{t.recommendationsDisclaimer}</p>
 
           {!consentOk ? (
-            <p className="hint">
+            <p className="hint h2-consent-banner">
               {t.recommendationsConsent}{" "}
               <a href={hrefFor(locale, { mode: "profile" })}>{t.recommendationsConsentLink}</a>
             </p>
@@ -290,8 +288,8 @@ export function Recommendations({
           {error ? <p className="hint error">{error}</p> : null}
 
           <div className="recommendations-layout">
-            <section className="recommendations-roles" aria-label={t.recommendationsRoles}>
-              <h2>{t.recommendationsRoles}</h2>
+            <section className="h2-panel recommendations-roles" aria-label={t.recommendationsRoles}>
+              <h2 className="h2-panel-title">{t.recommendationsRoles}</h2>
               {!roleList.length ? (
                 <p className="hint">
                   {t.recommendationsEmptyRoles}{" "}
@@ -336,12 +334,12 @@ export function Recommendations({
               )}
             </section>
 
-            <section className="recommendations-detail" aria-live="polite">
+            <section className="h2-panel recommendations-detail" aria-live="polite">
               {selected ? (
                 <header className="recommendations-detail-head">
                   <div>
                     <p className="recommendations-detail-kicker">{t.recommendationsSelectedRole}</p>
-                    <h2>{selected.canonical_name}</h2>
+                    <h2 className="h2-panel-title">{selected.canonical_name}</h2>
                     <p className="hint">
                       {[
                         selected.category,
@@ -468,16 +466,22 @@ export function Recommendations({
             </section>
           </div>
 
-          <p className="hint recommendations-footer">
+          <p className="hint h2-candidate-footer recommendations-footer">
             <a href={hrefFor(locale, { mode: "trends" })}>{t.trendsTitle}</a>
           </p>
         </div>
       ) : (
-        <section className="empty profile-gate">
-          <h1>{t.recommendationsTitle}</h1>
-          <p className="lede">{t.recommendationsGate}</p>
-          <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "recommendations" })} />
-        </section>
+        <div className="h2-candidate">
+          <PageChrome
+            backHref={hrefFor(locale)}
+            backLabel={t.breadcrumbHome}
+            title={t.recommendationsTitle}
+          />
+          <div className="h2-empty h2-gate">
+            <p>{t.recommendationsGate}</p>
+            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "recommendations" })} />
+          </div>
+        </div>
       )}
     </Shell>
   );
