@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from app.account import current_user
 from app.auth_oidc import VerifiedAccess
+from app.cabinet_store import CabinetError
 from app.matching import (
     FEEDBACK_REASONS,
     FEEDBACK_VOTES,
@@ -17,9 +18,24 @@ from app.matching import (
 )
 from app.me_data import build_export_zip, delete_my_data
 from app.role_suggestions import MAX_LIMIT as ROLE_MAX_LIMIT, suggest_roles
+from app.saved_jobs import (
+    DEFAULT_PER_PAGE,
+    MAX_PER_PAGE,
+    list_saved,
+    list_saved_ids,
+    save_job,
+    unsave_job,
+)
 from app.skill_gap import MAX_TOP as SKILL_GAP_MAX_TOP, skill_gap
 
 router = APIRouter(prefix="/api/v1/me", tags=["me"])
+
+
+def _run(action):
+    try:
+        return action()
+    except CabinetError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
 
 
 class MatchFeedbackBody(BaseModel):
@@ -30,6 +46,36 @@ class MatchFeedbackBody(BaseModel):
 def _require_candidate(user: VerifiedAccess) -> None:
     if "job:candidate" not in user.scopes and "job:staff" not in user.scopes:
         raise HTTPException(status_code=403, detail="Namizəd hesabı tələb edir")
+
+
+@router.get("/saved-jobs/ids")
+def get_saved_job_ids(user: VerifiedAccess = Depends(current_user)) -> dict:
+    return {"ids": list_saved_ids(user_id=user.subject)}
+
+
+@router.get("/saved-jobs")
+def get_saved_jobs(
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=DEFAULT_PER_PAGE, ge=1, le=MAX_PER_PAGE),
+    user: VerifiedAccess = Depends(current_user),
+) -> dict:
+    return list_saved(user_id=user.subject, page=page, per_page=per_page)
+
+
+@router.post("/saved-jobs/{job_id}")
+def post_saved_job(job_id: int, user: VerifiedAccess = Depends(current_user)) -> JSONResponse:
+    result = _run(lambda: save_job(user_id=user.subject, job_id=job_id))
+    created = bool(result.pop("created", False))
+    return JSONResponse(
+        {"job_id": result["job_id"], "saved_at": result["saved_at"]},
+        status_code=201 if created else 200,
+    )
+
+
+@router.delete("/saved-jobs/{job_id}", status_code=204)
+def delete_saved_job(job_id: int, user: VerifiedAccess = Depends(current_user)) -> Response:
+    _run(lambda: unsave_job(user_id=user.subject, job_id=job_id))
+    return Response(status_code=204)
 
 
 @router.get("/roles")

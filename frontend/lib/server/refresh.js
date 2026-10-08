@@ -153,6 +153,32 @@ export async function refreshMyApplications() {
   return itemsOf(await loadJson("/api/v1/applications"));
 }
 
+/** Saved jobs list after toggle/remove. Hits FastAPI, not the BFF. */
+export async function refreshSavedJobs(page = 1, perPage = 20) {
+  const q = new URLSearchParams({
+    page: String(Math.max(1, Number(page) || 1)),
+    per_page: String(Math.min(60, Math.max(1, Number(perPage) || 20))),
+  });
+  return loadJson(`/api/v1/me/saved-jobs?${q}`);
+}
+
+export async function refreshSavedJobIds() {
+  const data = await loadJson("/api/v1/me/saved-jobs/ids");
+  return Array.isArray(data.ids) ? data.ids.map((id) => Number(id)).filter((id) => id > 0) : [];
+}
+
+export async function saveJob(id) {
+  const jobId = numericId(id);
+  if (!jobId) return { ok: false, status: 404, data: {} };
+  return mutate(`/api/v1/me/saved-jobs/${jobId}`);
+}
+
+export async function unsaveJob(id) {
+  const jobId = numericId(id);
+  if (!jobId) return { ok: false, status: 404, data: {} };
+  return mutate(`/api/v1/me/saved-jobs/${jobId}`, { method: "DELETE", empty: true });
+}
+
 /** Notifications after mark-read. Hits FastAPI, not the BFF. */
 export async function refreshNotifications() {
   const data = await loadJson("/api/v1/notifications");

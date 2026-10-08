@@ -135,6 +135,16 @@ export function AccountBar({ locale, returnTo, onMe }) {
                     {t.myApplications}
                   </a>
                 ) : null}
+                {me.authenticated ? (
+                  <a role="menuitem" href={hrefFor(locale, { mode: "saved" })} onClick={() => setOpen(false)}>
+                    {t.savedJobs}
+                  </a>
+                ) : null}
+                {me.employer || me.staff ? (
+                  <a role="menuitem" href={hrefFor(locale, { mode: "talent" })} onClick={() => setOpen(false)}>
+                    {t.talentTitle}
+                  </a>
+                ) : null}
                 {me.staff ? (
                   <a role="menuitem" href={hrefFor(locale, { mode: "admin" })} onClick={() => setOpen(false)}>
                     {t.admin}

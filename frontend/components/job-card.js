@@ -1,5 +1,6 @@
 import { categoryLabel, hrefFor, text } from "../lib/copy";
 import { calendarDate } from "../lib/dates";
+import { SaveJobButton } from "./save-job-button";
 
 function Icon({ name }) {
   const props = {
@@ -58,7 +59,7 @@ export function applicationsLabel(t, job, { short = false } = {}) {
  * One job in a list. The title link covers the whole card; the company name
  * is its own link to the company page, so no link is nested in another.
  */
-export function JobCard({ locale, job, showCompany = true }) {
+export function JobCard({ locale, job, showCompany = true, showSave = true }) {
   const t = text(locale);
   const when = calendarDate(job.created_at, locale);
   const place = job.remote ? t.placeRemote : job.city || t.noCity;
@@ -121,7 +122,17 @@ export function JobCard({ locale, job, showCompany = true }) {
           ) : null}
         </span>
       </div>
-      <span className="job-open" aria-hidden="true">{t.openRole}</span>
+      <div className="job-card-aside">
+        {showSave ? (
+          <SaveJobButton
+            locale={locale}
+            jobId={job.id}
+            returnTo={hrefFor(locale, { jobId: job.id })}
+            className="save-job-btn-card"
+          />
+        ) : null}
+        <span className="job-open" aria-hidden="true">{t.openRole}</span>
+      </div>
     </article>
   );
 }

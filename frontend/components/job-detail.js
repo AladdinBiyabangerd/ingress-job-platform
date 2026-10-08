@@ -1,6 +1,7 @@
 import { AccountActions } from "./account-actions";
 import { applicationsLabel } from "./job-card";
 import { JsonLd } from "./json-ld";
+import { SaveJobButton } from "./save-job-button";
 import { Shell } from "./shell";
 import { categoryLabel, hrefFor, text } from "../lib/copy";
 import { calendarDate } from "../lib/dates";
@@ -96,7 +97,15 @@ export function JobDetail({ locale, job }) {
                 <p className="source-pill">{job.source_name}</p>
               )
             ) : null}
-            <h1>{job.title}</h1>
+            <div className="detail-title-row">
+              <h1>{job.title}</h1>
+              <SaveJobButton
+                locale={locale}
+                jobId={job.id}
+                returnTo={hrefFor(locale, { jobId: job.id })}
+                className="save-job-btn-detail"
+              />
+            </div>
             <p className="meta line">
               <span className="detail-company">{company}</span>
               <span>{place}</span>

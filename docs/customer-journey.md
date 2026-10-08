@@ -177,17 +177,20 @@ flowchart LR
 ## Növbəti backlog (bu sənədə daxil deyil)
 
 - Şəhər filteri; filter state URL-də
-- Saved / favorited jobs
-- Talent search (recruiter visibility UI)
+- Talent contact-request (accept/decline) + verified-employer gate
 - Public `/companies/[slug]` ilə `company_profiles` birləşməsi
 - Application status genişlənməsi (interview, hire)
 - Staff moderasiya journey sənədi
+
+### Bu iterasiyada bağlandı
+- Saved / favorited jobs (`/saved`, `GET/POST/DELETE /api/v1/me/saved-jobs`)
+- Talent search browse MVP (`/talent`, `GET /api/v1/talent`; consent + visibility redaction; contact request yoxdur)
 
 ---
 
 ## Əlaqəli kod
 
-- Namizəd UI: `frontend/components/{home,job-detail,account-bar,profile-form,profile-review,my-applications,recommendations}.js`
-- İşəgötürən UI: `frontend/components/{company-form,cabinet,post-page,application-list}.js`
+- Namizəd UI: `frontend/components/{home,job-detail,account-bar,profile-form,profile-review,my-applications,my-saved,recommendations,save-job-button}.js`
+- İşəgötürən UI: `frontend/components/{company-form,cabinet,post-page,application-list,talent-search}.js`
 - Auth / gate: `frontend/middleware.js`, `api/app/account.py`
 - Arxitektura: [`.cursor/context/architecture.md`](../.cursor/context/architecture.md)

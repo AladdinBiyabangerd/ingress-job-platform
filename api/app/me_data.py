@@ -109,6 +109,19 @@ def build_export_payload(*, user_id: str) -> dict:
                         "created_at": row[10] or "",
                     }
                 )
+            saved = []
+            try:
+                for row in conn.execute(
+                    """
+                    SELECT job_id, created_at FROM saved_jobs
+                    WHERE user_id = ?
+                    ORDER BY id
+                    """,
+                    (user_id,),
+                ):
+                    saved.append({"job_id": int(row[0]), "saved_at": row[1] or ""})
+            except Exception:
+                saved = []
             grants = conn.execute(
                 """
                 SELECT kind, granted, version, ts FROM consent
@@ -137,6 +150,7 @@ def build_export_payload(*, user_id: str) -> dict:
         "cv_profile": read_profile(user_id=user_id),
         "consents": consents,
         "applications": apps,
+        "saved_jobs": saved,
         "cv_files": cv_meta,
     }
 
@@ -245,6 +259,10 @@ def delete_my_data(*, user_id: str) -> dict:
                 pass
             conn.execute("DELETE FROM candidate_profile WHERE user_id = ?", (subject,))
             conn.execute("DELETE FROM parse_cv_queue WHERE user_id = ?", (subject,))
+            try:
+                conn.execute("DELETE FROM saved_jobs WHERE user_id = ?", (subject,))
+            except Exception:
+                pass
             conn.execute(
                 """
                 UPDATE applications

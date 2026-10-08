@@ -3577,6 +3577,136 @@ span.pager-btn {
   text-decoration: none;
 }
 
+.save-job-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgba(9, 47, 132, 0.14);
+  border-radius: 999px;
+  background: #fff;
+  color: #092F84;
+  cursor: pointer;
+}
+
+.save-job-btn:hover,
+.save-job-btn:focus-visible {
+  border-color: #001FFF;
+  color: #001FFF;
+}
+
+.save-job-btn.on {
+  background: #001FFF;
+  border-color: #001FFF;
+  color: #fff;
+}
+
+.save-job-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.job-card-aside {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.save-job-btn-card {
+  flex: 0 0 auto;
+}
+
+.save-job-btn-detail {
+  flex: 0 0 auto;
+}
+
+.detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.detail-title-row h1 {
+  flex: 1 1 auto;
+  margin: 0;
+}
+
+.saved-job-row {
+  display: grid;
+  gap: 8px;
+}
+
+.saved-job-row .text-btn {
+  justify-self: start;
+}
+
+.talent-search-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 20px;
+}
+
+.talent-search-form input {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(9, 47, 132, 0.16);
+  border-radius: 12px;
+  font: inherit;
+}
+
+.talent-list {
+  display: grid;
+  gap: 14px;
+}
+
+.talent-card {
+  padding: 18px 20px;
+  border: 1px solid rgba(9, 47, 132, 0.08);
+  border-radius: 18px;
+  background: #fff;
+}
+
+.talent-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.talent-card-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.talent-headline {
+  margin: 0 0 8px;
+  color: #20242b;
+}
+
+.talent-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin: 0 0 10px;
+  color: #5a6270;
+  font-size: 14px;
+}
+
+.talent-card .tech-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
 .job-company-link:hover,
 .job-company-link:focus-visible {
   text-decoration: underline;
@@ -3775,9 +3905,16 @@ span.pager-btn {
     padding: 16px;
   }
 
+  .job-card-aside {
+    flex-direction: row-reverse;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
   .job-open {
     min-height: 44px;
-    width: 100%;
+    flex: 1 1 auto;
   }
 
   .home-faq h2 {

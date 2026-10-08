@@ -7,7 +7,14 @@ const COMPANY = new Set(["/company", "/en/company", "/ru/company"]);
 /** Employer routes that must redirect when company profile is incomplete. */
 function needsCompanyGate(pathname) {
   const path = pathname.replace(/^\/(en|ru)(?=\/|$)/, "") || "/";
-  return path === "/post" || path.startsWith("/post/") || path === "/admin" || path.startsWith("/admin/");
+  return (
+    path === "/post"
+    || path.startsWith("/post/")
+    || path === "/talent"
+    || path.startsWith("/talent/")
+    || path === "/admin"
+    || path.startsWith("/admin/")
+  );
 }
 
 function localeOf(pathname) {

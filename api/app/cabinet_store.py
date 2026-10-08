@@ -143,6 +143,16 @@ CREATE TABLE IF NOT EXISTS applications (
 )
 """
 
+_SAVED_JOBS = """
+CREATE TABLE IF NOT EXISTS saved_jobs (
+    id INTEGER PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    job_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (user_id, job_id)
+)
+"""
+
 
 class CabinetError(Exception):
     def __init__(self, status: int, detail: str) -> None:
@@ -225,6 +235,7 @@ def _apply_schema(conn) -> None:
     conn.execute(_CRAWL_SOURCES)
     conn.execute(_MERGES)
     conn.execute(_APPLICATIONS)
+    conn.execute(_SAVED_JOBS)
     cols = {row[1] for row in conn.execute("PRAGMA table_info(jobs)")}
     for name, decl in _COLUMNS.items():
         if name not in cols:
@@ -242,6 +253,8 @@ def _apply_schema(conn) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS applications_candidate ON applications(candidate_subject)"
     )
+    conn.execute("CREATE INDEX IF NOT EXISTS saved_jobs_user ON saved_jobs(user_id, id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS saved_jobs_job ON saved_jobs(job_id)")
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS notifications (

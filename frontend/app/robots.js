@@ -1,6 +1,6 @@
 import { LOCALES, siteOrigin } from "../lib/seo";
 
-const PRIVATE = ["admin", "applications", "profile", "notifications", "company", "post"];
+const PRIVATE = ["admin", "applications", "saved", "talent", "profile", "notifications", "company", "post"];
 
 /** Explicit AI crawler allow-list — same public rules as `*`. */
 const AI_BOTS = [

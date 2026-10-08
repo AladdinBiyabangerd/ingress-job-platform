@@ -18,6 +18,7 @@ from app.routers import (
     me,
     notifications,
     profile,
+    talent,
     trends,
 )
 from app.account import router as account_router
@@ -89,6 +90,7 @@ app.include_router(account_router)
 app.include_router(cabinet.router)
 app.include_router(admin.router)
 app.include_router(applications.router)
+app.include_router(talent.router)
 app.include_router(consents.router)
 app.include_router(email_prefs.router)
 app.include_router(profile.router)

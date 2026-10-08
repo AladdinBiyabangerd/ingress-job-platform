@@ -1,23 +1,22 @@
 # Current task
 
 ## Completed
-- Customer journey sənədi: `docs/customer-journey.md` (namizəd + işəgötürən) + README link
-- A: Account menyuya CV profil linki (`profileReviewOpen`)
-- B: `/profile` CV CTA düyməsi; `/profile/review` kontakt hint + geri link
-- C: `/post` kabinetdə ümumi **Müraciətlər** tabı
-- D: `/company` onboarding-only — tamamlanmış profil → Profilə yönləndirmə mesajı
+- Saved jobs: table + `/api/v1/me/saved-jobs` CRUD/ids + tests; `/saved` pages; card/detail toggle; account/menu links
+- Talent browse MVP: `GET /api/v1/talent` + consent/visibility gate + redaction + tests; `/talent` UI + employer menu; company incomplete gate in middleware
+- Docs: customer-journey backlog + architecture notes
 
 ## Current state
-- Commit `5c9453e` on `main` (local, not pushed). Plan faylına toxunulmayıb.
+- Committing saved jobs + talent MVP to `main` (push requested).
 
 ## Remaining
-- None for this task (opsional: lokalda axınları vizual yoxlama)
+- Backlog: şəhər filteri + URL state; talent contact-requests; companies slug merge
 
 ## Decisions
-- Yeni API yox; employer inbox mövcud `cabinet/applications` üzərində
-- Şəhər filteri / saved jobs / talent search backlog-da qalıb (`docs/customer-journey.md`)
+- Saved: any authenticated user (not candidate-only)
+- Talent: employer/staff + complete company profile; opaque card id = `candidate_profile.id`; no contact-request in MVP
 
 ## Relevant files
-- `docs/customer-journey.md`, `README.md`
-- `frontend/components/{account-bar,profile-form,profile-review,cabinet,company-form}.js`
-- `frontend/lib/copy.js`
+- `api/app/{saved_jobs,talent}.py`, `api/app/routers/{me,talent}.py`, `api/tests/test_{saved_jobs,talent}.py`
+- `frontend/components/{save-job-button,my-saved,talent-search,job-card,job-detail,account-bar,shell}.js`
+- `frontend/app/{saved,talent,en/...,ru/...}/page.js`, `frontend/lib/server/{saved-jobs,talent}.js`, `copy.js`
+- `docs/customer-journey.md`, `.cursor/context/architecture.md`
