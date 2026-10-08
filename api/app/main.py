@@ -26,6 +26,24 @@ from app.account import router as account_router
 load_local_env(Path(__file__).resolve().parents[1] / ".env")
 init_observability("ingress-job-api")
 
+
+def _log_push_vapid_status() -> None:
+    """Startup line so Railway logs show whether Web Push env is present."""
+    try:
+        from app.push import vapid_configured, vapid_missing_names
+
+        if vapid_configured():
+            print("push vapid: configured=True", flush=True)
+        else:
+            missing = ",".join(vapid_missing_names()) or "(unknown)"
+            print(f"push vapid: configured=False missing={missing}", flush=True)
+    except Exception as exc:
+        print(f"push vapid: status check failed ({exc})", flush=True)
+
+
+_log_push_vapid_status()
+
+
 def _origins() -> list[str]:
     origins = [
         "http://localhost:3010",

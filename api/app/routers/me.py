@@ -180,6 +180,8 @@ def get_push_vapid_key(user: VerifiedAccess = Depends(current_user)) -> dict:
 
     if not vapid_configured():
         missing = vapid_missing_names()
+        # Visible in Railway request logs without leaking secret values.
+        print(f"push-vapid-key 503 missing={','.join(missing) or '(unknown)'}", flush=True)
         raise HTTPException(
             status_code=503,
             detail={

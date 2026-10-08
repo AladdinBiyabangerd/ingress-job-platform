@@ -73,6 +73,17 @@ class WantsReturningTest(unittest.TestCase):
                 "INSERT INTO job_skill (job_id, skill_id, source) VALUES (?, ?, ?)"
             )
         )
+        self.assertFalse(
+            _wants_returning(
+                "INSERT INTO email_prefs (user_id, frequency) VALUES (?, ?) "
+                "ON CONFLICT(user_id) DO UPDATE SET frequency = excluded.frequency"
+            )
+        )
+        self.assertFalse(
+            _wants_returning(
+                "INSERT INTO match_feedback (user_id, job_id, vote, ts) VALUES (?, ?, ?, ?)"
+            )
+        )
 
 
 class CursorRowcountTests(unittest.TestCase):
