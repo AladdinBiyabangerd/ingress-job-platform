@@ -2,7 +2,7 @@
 
 import { hrefFor, text } from "../lib/copy";
 import { loginHref } from "../lib/auth-link";
-import { AcademyCourseLinks, SkillRow } from "./skill-gap-bits";
+import { AcademyCourseLinks, SkillRow, sharePct } from "./skill-gap-bits";
 import { PageChrome } from "./page-chrome";
 import { Shell } from "./shell";
 import { useInitialMe } from "./me-seed";
@@ -59,51 +59,6 @@ function salaryGroups(t, data) {
   return list.map((row) => oneSalaryParts(t, row)).filter(Boolean);
 }
 
-function YouBlock({ t, locale, authenticated, candidate, you, showYou, learnNext, companionsHave }) {
-  if (!authenticated || !candidate || !showYou) {
-    if (you && you.matching_consent === false) {
-      return (
-        <p className="hint">
-          {t.recommendationsConsent}{" "}
-          <a href={hrefFor(locale, { mode: "profile" })}>{t.recommendationsConsentLink}</a>
-        </p>
-      );
-    }
-    return null;
-  }
-  if (!learnNext.length && !companionsHave.length) return null;
-  return (
-    <>
-      {learnNext.length ? (
-        <div className="skills-panel skills-panel-missing">
-          <h3>
-            {t.trendsDetailCompanionsLearn}
-            <span className="skills-panel-count">{learnNext.length}</span>
-          </h3>
-          <ul className="skills-rows">
-            {learnNext.map((item) => (
-              <SkillRow key={`learn-${item.skill_id || item.name}`} t={t} item={item} tone="missing" />
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      {companionsHave.length ? (
-        <div className="skills-panel skills-panel-have">
-          <h3>
-            {t.trendsDetailCompanionsHave}
-            <span className="skills-panel-count">{companionsHave.length}</span>
-          </h3>
-          <ul className="skills-rows">
-            {companionsHave.map((item) => (
-              <SkillRow key={`have-${item.skill_id || item.name}`} t={t} item={item} tone="have" />
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </>
-  );
-}
-
 function TrendStat({ label, href, children }) {
   if (href) {
     return (
@@ -121,48 +76,50 @@ function TrendStat({ label, href, children }) {
   );
 }
 
-function FactsCard({ t, share, growth, data, salaries, marketCourses, showGuestCta, detailHref, jobsHref }) {
+function KpiStrip({ t, share, growth, data, salaries, jobsHref }) {
+  const hasAny =
+    share !== null ||
+    growth ||
+    typeof data.ad_count === "number" ||
+    salaries.length > 0;
+  if (!hasAny) return null;
   return (
-    <div className="h2-trend-facts">
-      <div className="h2-trend-stats" role="group" aria-label={t.keyFacts}>
-        {share !== null ? (
-          <TrendStat label={t.trendsShare} href={jobsHref}>
-            {share}%
-          </TrendStat>
-        ) : null}
-        {growth ? (
-          <TrendStat label={t.trendsGrowth} href={jobsHref}>
-            <span className={`trends-growth trends-growth-${growth.direction}`}>{growth.label}</span>
-          </TrendStat>
-        ) : null}
-        {typeof data.ad_count === "number" ? (
-          <TrendStat label={t.trendsAds} href={jobsHref}>
-            {data.ad_count.toLocaleString("en-US")}
-          </TrendStat>
-        ) : null}
-        {salaries.map((salary) => (
-          <TrendStat key={salary.currency} label={t.trendsSalaryLabel} href={jobsHref}>
-            {salary.median}
-            {salary.range || salary.sample ? (
-              <span className="h2-trend-stat-sub">
-                {[salary.range, salary.sample].filter(Boolean).join(" · ")}
-              </span>
-            ) : null}
-          </TrendStat>
-        ))}
-        {data.as_of ? (
-          <TrendStat label={t.trendsAsOfLabel} href={jobsHref}>
-            {data.as_of}
-          </TrendStat>
-        ) : null}
-      </div>
+    <div className="h2-trend-stats td-a-kpis" role="group" aria-label={t.keyFacts}>
+      {share !== null ? (
+        <TrendStat label={t.trendsShare} href={jobsHref}>
+          {share}%
+        </TrendStat>
+      ) : null}
+      {growth ? (
+        <TrendStat label={t.trendsGrowth} href={jobsHref}>
+          <span className={`trends-growth trends-growth-${growth.direction}`}>{growth.label}</span>
+        </TrendStat>
+      ) : null}
+      {typeof data.ad_count === "number" ? (
+        <TrendStat label={t.trendsAds} href={jobsHref}>
+          {data.ad_count.toLocaleString("en-US")}
+        </TrendStat>
+      ) : null}
+      {salaries.map((salary) => (
+        <TrendStat key={salary.currency} label={t.trendsSalaryLabel} href={jobsHref}>
+          {salary.median}
+          {salary.range || salary.sample ? (
+            <span className="h2-trend-stat-sub">
+              {[salary.range, salary.sample].filter(Boolean).join(" · ")}
+            </span>
+          ) : null}
+        </TrendStat>
+      ))}
+    </div>
+  );
+}
 
-      <p className="hint trends-disclaimer">{data.disclaimer || t.trendsDisclaimer}</p>
-
+function AsideActions({ t, data, marketCourses, showGuestCta, detailHref, jobsHref }) {
+  return (
+    <aside className="td-a-aside h2-panel" aria-label={t.keyFacts}>
       <div className="trend-detail-courses">
         <AcademyCourseLinks item={marketCourses} />
       </div>
-
       <div className="h2-trend-facts-actions actions">
         <a className="btn ink" href={jobsHref}>
           {t.trendsDetailJobs}
@@ -173,7 +130,32 @@ function FactsCard({ t, share, growth, data, salaries, marketCourses, showGuestC
           </a>
         ) : null}
       </div>
-    </div>
+      {data.as_of ? <p className="hint td-a-asof">{t.trendsAsOf(data.as_of)}</p> : null}
+      <p className="hint trends-disclaimer">{data.disclaimer || t.trendsDisclaimer}</p>
+    </aside>
+  );
+}
+
+function HaveStrip({ t, items }) {
+  if (!items.length) return null;
+  return (
+    <section className="td-a-have skills-panel skills-panel-have">
+      <h3>
+        {t.trendsDetailCompanionsHave}
+        <span className="skills-panel-count">{items.length}</span>
+      </h3>
+      <ul className="td-a-have-chips">
+        {items.map((item) => {
+          const share = sharePct(item.share);
+          return (
+            <li key={`have-${item.skill_id || item.name}`} className="td-a-have-chip">
+              <strong>{item.name}</strong>
+              {share !== null ? <span>{share}%</span> : null}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -212,63 +194,68 @@ export function TrendDetailPage({ locale, data, error }) {
   const marketCourses = { academy_courses: data.academy_courses };
   const showGuestCta = !authenticated || !candidate;
   const showConsentHint = Boolean(you && you.matching_consent === false);
-  const showCompanions =
-    authenticated && candidate && showYou && (learnNext.length > 0 || companionsHave.length > 0);
-  const showYouSection = showConsentHint || showCompanions;
-
-  const facts = (
-    <FactsCard
-      t={t}
-      share={share}
-      growth={growth}
-      data={data}
-      salaries={salaries}
-      marketCourses={marketCourses}
-      showGuestCta={showGuestCta}
-      detailHref={detailHref}
-      jobsHref={jobsHref}
-    />
-  );
-
-  const youSection = showYouSection ? (
-    <section className="h2-panel trend-detail-section">
-      <YouBlock
-        t={t}
-        locale={locale}
-        authenticated={authenticated}
-        candidate={candidate}
-        you={you}
-        showYou={showYou}
-        learnNext={learnNext}
-        companionsHave={companionsHave}
-      />
-    </section>
-  ) : null;
+  const showLearn = authenticated && candidate && showYou && learnNext.length > 0;
+  const showHave = authenticated && candidate && showYou && companionsHave.length > 0;
 
   return (
     <Shell locale={locale} mode="trends" skillId={skillId}>
-      <div className="h2-public h2-trend-detail">
+      <div className="h2-public h2-trend-detail td-a">
         <PageChrome
           backHref={hrefFor(locale, { mode: "trends" })}
           backLabel={t.trendsTitle}
           title={data.name}
         />
 
-        <div className={showCompanions ? "h2-detail-layout" : "h2-trend-detail-stack"}>
-          {showCompanions ? (
-            <>
-              <div className="h2-detail-main">{youSection}</div>
-              <aside className="h2-detail-aside" aria-label={t.keyFacts}>
-                {facts}
-              </aside>
-            </>
-          ) : (
-            <>
-              {facts}
-              {youSection}
-            </>
-          )}
-        </div>
+        <KpiStrip t={t} share={share} growth={growth} data={data} salaries={salaries} jobsHref={jobsHref} />
+
+        {showConsentHint ? (
+          <p className="hint">
+            {t.recommendationsConsent}{" "}
+            <a href={hrefFor(locale, { mode: "profile" })}>{t.recommendationsConsentLink}</a>
+          </p>
+        ) : null}
+
+        {showLearn ? (
+          <div className="td-a-body">
+            <div className="td-a-main">
+              <section className="skills-panel skills-panel-missing td-a-learn">
+                <h3>
+                  {t.trendsDetailCompanionsLearn}
+                  <span className="skills-panel-count">{learnNext.length}</span>
+                </h3>
+                <ul className="skills-rows td-a-learn-grid">
+                  {learnNext.map((item) => (
+                    <SkillRow
+                      key={`learn-${item.skill_id || item.name}`}
+                      t={t}
+                      item={item}
+                      tone="missing"
+                    />
+                  ))}
+                </ul>
+              </section>
+            </div>
+            <AsideActions
+              t={t}
+              data={data}
+              marketCourses={marketCourses}
+              showGuestCta={showGuestCta}
+              detailHref={detailHref}
+              jobsHref={jobsHref}
+            />
+          </div>
+        ) : (
+          <AsideActions
+            t={t}
+            data={data}
+            marketCourses={marketCourses}
+            showGuestCta={showGuestCta}
+            detailHref={detailHref}
+            jobsHref={jobsHref}
+          />
+        )}
+
+        {showHave ? <HaveStrip t={t} items={companionsHave} /> : null}
 
         <p className="hint skills-footer">
           <a href={hrefFor(locale, { mode: "recommendations" })}>{t.recommendationsOpen}</a>

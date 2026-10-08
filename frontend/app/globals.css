@@ -2643,8 +2643,9 @@ body:has(.profile-review-page) {
   align-items: stretch;
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    "selected"
     "roles"
+    "selected"
+    "coach"
     "learn"
     "have"
     "jobs";
@@ -2660,13 +2661,14 @@ body:has(.profile-review-page) {
 
 .recommendations-tile:not(.h2-panel) {
   padding: 16px;
-  border: 1px solid #e0e3e8;
-  border-radius: 14px;
-  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
 }
 
 .recommendations-tile-selected { grid-area: selected; }
 .recommendations-tile-roles { grid-area: roles; }
+.recommendations-tile-coach { grid-area: coach; }
 .recommendations-tile-have { grid-area: have; }
 .recommendations-tile-learn { grid-area: learn; }
 .recommendations-tile-jobs { grid-area: jobs; }
@@ -2720,18 +2722,18 @@ body:has(.profile-review-page) {
   height: 88px;
   border-radius: 50%;
   background:
-    radial-gradient(closest-side, #ffffff 72%, transparent 73% 100%),
-    conic-gradient(#001fff calc(var(--score) * 1%), #e8eaef 0);
+    radial-gradient(closest-side, var(--surface) 72%, transparent 73% 100%),
+    conic-gradient(var(--brand) calc(var(--score) * 1%), #e8eaef 0);
   font-size: 1rem;
   font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
-  color: #20242b;
+  color: var(--text);
 }
 
 .recommendations-score-ring-empty {
   background: #eef0f4;
-  color: #656b75;
+  color: var(--muted);
 }
 
 .recommendations-selected-actions {
@@ -2745,44 +2747,80 @@ body:has(.profile-review-page) {
   text-decoration: none;
 }
 
-.recommendations-coach {
+.recommendations-tile-coach .skills-coach-summary {
   margin: 0;
-  padding-top: 10px;
-  border-top: 1px solid #eef0f3;
+  max-width: 72ch;
+  color: var(--text);
 }
 
-.recommendations-coach > summary {
-  cursor: pointer;
-  font-size: 0.88rem;
+.recommendations-coach-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.recommendations-coach-grid .skills-coach-block {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--canvas);
+}
+
+.recommendations-coach-grid .skills-coach-block h3 {
+  margin: 0;
+  font-size: 0.78rem;
   font-weight: var(--fw-semibold);
-  color: #20242b;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.recommendations-coach-grid .skills-coach-list {
+  gap: 8px;
+}
+
+.recommendations-coach-grid .skills-coach-list > li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.recommendations-coach-chips {
   list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.recommendations-coach > summary::-webkit-details-marker {
-  display: none;
+.recommendations-coach-chips > li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 0.84rem;
+  font-weight: var(--fw-medium);
+  color: var(--text);
 }
 
-.recommendations-coach > summary::before {
-  content: "";
-  display: inline-block;
-  width: 0.4em;
-  height: 0.4em;
-  margin-right: 8px;
-  border-right: 2px solid #656b75;
-  border-bottom: 2px solid #656b75;
-  transform: rotate(-45deg);
-  vertical-align: 0.15em;
-  transition: transform 0.15s ease;
+.recommendations-xfer-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
 }
 
-.recommendations-coach[open] > summary::before {
-  transform: rotate(45deg);
-}
-
-.recommendations-coach .skills-coach-summary,
-.recommendations-coach .skills-coach-block {
-  margin-top: 8px;
+.recommendations-xfer-arrow {
+  color: var(--muted);
+  font-size: 0.75rem;
 }
 
 .recommendations-role-list {
@@ -2790,7 +2828,7 @@ body:has(.profile-review-page) {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 
@@ -2802,9 +2840,9 @@ body:has(.profile-review-page) {
   width: 100%;
   height: 100%;
   padding: 10px;
-  border: 1px solid #e0e3e8;
-  border-radius: 12px;
-  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
   text-align: left;
   cursor: pointer;
   font: inherit;
@@ -2814,13 +2852,13 @@ body:has(.profile-review-page) {
 
 .recommendations-role-pick:hover {
   border-color: #b8c4d8;
-  background: #f8faff;
+  background: var(--brand-soft);
 }
 
 .recommendations-role-pick.on {
-  border-color: #001FFF;
-  background: #f0f3ff;
-  box-shadow: inset 0 0 0 1px #001FFF;
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  box-shadow: inset 0 0 0 1px var(--brand);
 }
 
 .recommendations-role-score {
@@ -2829,7 +2867,7 @@ body:has(.profile-review-page) {
   min-height: 36px;
   border-radius: 10px;
   background: #eef0f4;
-  color: #20242b;
+  color: var(--text);
   font-size: 0.8rem;
   font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
@@ -2837,7 +2875,7 @@ body:has(.profile-review-page) {
 }
 
 .recommendations-role-pick.on .recommendations-role-score {
-  background: #001FFF;
+  background: var(--brand);
   color: #ffffff;
 }
 
@@ -2896,7 +2934,7 @@ body:has(.profile-review-page) {
 
 .recommendations-tile-have .skills-row {
   display: grid;
-  grid-template-columns: minmax(0, 7.5rem) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
   gap: 6px 10px;
   padding: 5px 0;
@@ -3264,11 +3302,16 @@ body:has(.profile-review-page) {
 @media (min-width: 720px) and (max-width: 1099px) {
   .recommendations-layout,
   .recommendations-bento {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(200px, 0.9fr) minmax(0, 1.4fr);
     grid-template-areas:
-      "selected roles"
-      "have have"
-      "learn jobs";
+      "roles selected"
+      "roles coach"
+      "have learn"
+      "jobs jobs";
+  }
+
+  .recommendations-coach-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .recommendations-learn-grid {
@@ -3279,10 +3322,15 @@ body:has(.profile-review-page) {
 @media (min-width: 1100px) {
   .recommendations-layout,
   .recommendations-bento {
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(0, 1.2fr);
+    grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1.1fr);
     grid-template-areas:
-      "selected roles have"
-      "learn learn jobs";
+      "roles selected selected selected"
+      "roles coach coach coach"
+      "have learn learn jobs";
+  }
+
+  .recommendations-coach-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   /* 2 cols — 4 skinny cols caused meta/course text overflow */
@@ -3363,10 +3411,44 @@ body:has(.profile-review-page) {
 }
 
 /* Skill gap panels / coach (used on /me/recommendations + trends) */
+.skill-icon {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--brand-soft);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.skill-icon-img {
+  display: block;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.skill-icon-fallback {
+  font-size: 0.62rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+  color: var(--brand-deep);
+  line-height: 1;
+}
+
+.skills-row-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .skills-career-link {
   font-size: 0.86rem;
   font-weight: var(--fw-semibold);
-  color: #001FFF;
+  color: var(--brand);
   text-decoration: none;
 }
 
@@ -6983,6 +7065,185 @@ a.h2-trend-stat:focus-visible {
   display: grid;
   gap: 16px;
   max-width: 720px;
+}
+
+/* Trend detail — Variant A: KPI strip + skill cards */
+.h2-trend-detail.td-a {
+  gap: 18px;
+  max-width: none;
+}
+
+.h2-trend-detail.td-a .td-a-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.h2-trend-detail.td-a .td-a-kpis .h2-trend-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  padding: 16px 18px;
+}
+
+.h2-trend-detail.td-a .td-a-kpis .h2-trend-stat-value {
+  font-size: 26px;
+}
+
+.h2-trend-detail.td-a .td-a-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.h2-trend-detail.td-a .td-a-main {
+  min-width: 0;
+}
+
+.h2-trend-detail.td-a .td-a-learn {
+  background: #f6f5f1;
+  border: 1px solid rgb(0 0 0 / 4%);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px 18px;
+}
+
+.h2-trend-detail.td-a .td-a-learn-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.h2-trend-detail.td-a .td-a-learn-grid > .skills-row {
+  min-width: 0;
+  background: var(--surface);
+  border-color: rgb(0 0 0 / 6%);
+}
+
+.h2-trend-detail.td-a .td-a-learn-grid .skills-row-top {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.h2-trend-detail.td-a .td-a-learn-grid .skills-course-links,
+.h2-trend-detail.td-a .td-a-learn-grid .skills-course-link {
+  max-width: 100%;
+}
+
+.h2-trend-detail.td-a > .td-a-aside {
+  max-width: 420px;
+}
+
+.h2-trend-detail.td-a .td-a-aside {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.h2-trend-detail.td-a .td-a-body .td-a-aside {
+  max-width: none;
+}
+
+.h2-trend-detail.td-a .td-a-aside .trend-detail-courses {
+  margin: 0;
+}
+
+.h2-trend-detail.td-a .td-a-aside .skills-course-links {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.h2-trend-detail.td-a .td-a-aside .skills-course-link {
+  max-width: none;
+  justify-content: flex-start;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border-color: var(--brand);
+  background: var(--surface);
+  white-space: normal;
+}
+
+.h2-trend-detail.td-a .td-a-aside .h2-trend-facts-actions {
+  margin: 0;
+}
+
+.h2-trend-detail.td-a .td-a-aside .h2-trend-facts-actions .btn {
+  flex: 1 1 auto;
+  justify-content: center;
+  text-align: center;
+}
+
+.h2-trend-detail.td-a .td-a-asof,
+.h2-trend-detail.td-a .td-a-aside .trends-disclaimer {
+  margin: 0;
+}
+
+.h2-trend-detail.td-a .td-a-have {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-soft);
+}
+
+.h2-trend-detail.td-a .td-a-have-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.h2-trend-detail.td-a .td-a-have-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: #eef7f1;
+  color: #145c3a;
+  font-size: 13px;
+}
+
+.h2-trend-detail.td-a .td-a-have-chip strong {
+  font-weight: var(--fw-semibold);
+}
+
+.h2-trend-detail.td-a .td-a-have-chip span {
+  color: var(--muted);
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 959px) {
+  .h2-trend-detail.td-a .td-a-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .h2-trend-detail.td-a .td-a-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .h2-trend-detail.td-a .td-a-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .h2-trend-detail.td-a .td-a-learn-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Trend jobs */

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="utf-8" />
+<title>A — KPI strip + skill cards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --brand: #001fff;
+    --brand-deep: #092f84;
+    --brand-soft: #eaefff;
+    --ink: #0b1220;
+    --canvas: #f4f6fb;
+    --surface: #ffffff;
+    --text: #20242b;
+    --muted: #656b75;
+    --border: #dfe1e5;
+    --panel: #f6f5f1;
+    --bar: #c45c26;
+    --have: #1a7a4c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    background: var(--canvas);
+    color: var(--text);
+  }
+  .top {
+    height: 56px;
+    background: rgb(255 255 255 / 92%);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+  }
+  .top-inner, .page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 24px;
+    width: 100%;
+  }
+  .top-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+  }
+  .logo { font-weight: 700; color: var(--brand); display: flex; gap: 8px; align-items: center; }
+  .logo i { width: 14px; height: 14px; background: var(--brand); transform: rotate(45deg); display: inline-block; }
+  nav { display: flex; gap: 20px; font-size: 14px; color: var(--muted); }
+  nav .on { color: var(--brand); font-weight: 600; }
+  .right { display: flex; gap: 12px; align-items: center; font-size: 13px; color: var(--muted); }
+  .search { border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; background: #fff; width: 160px; color: #9aa0a8; }
+  .page { padding-top: 28px; padding-bottom: 48px; }
+  .back { color: var(--brand); text-decoration: none; font-size: 14px; font-weight: 500; }
+  h1 { margin: 10px 0 20px; font-size: 40px; letter-spacing: -0.03em; color: var(--ink); }
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .kpi label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .kpi strong { font-size: 28px; letter-spacing: -0.02em; color: var(--ink); }
+  .kpi .sub { display: block; margin-top: 4px; font-size: 12px; color: var(--muted); }
+  .up { color: #1a7a4c; }
+  .grid {
+    display: grid;
+    grid-template-columns: 1.7fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  .panel {
+    background: var(--panel);
+    border-radius: 16px;
+    padding: 18px 20px 20px;
+  }
+  .panel-h {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .panel-h h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .count {
+    background: #e8a07a;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px 14px 12px;
+    border: 1px solid rgb(0 0 0 / 4%);
+  }
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .card-top strong { font-size: 15px; }
+  .pct { font-size: 20px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+  .bar {
+    height: 6px;
+    background: #eceae4;
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .bar > i {
+    display: block; height: 100%; background: var(--bar); border-radius: 99px;
+  }
+  .hint { font-size: 12px; color: var(--muted); margin: 0 0 10px; line-height: 1.35; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 11px;
+    color: var(--brand);
+    border: 1px solid var(--brand);
+    border-radius: 6px;
+    padding: 3px 8px;
+    background: #fff;
+    white-space: nowrap;
+  }
+  .aside {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+  }
+  .aside h3 { margin: 0 0 12px; font-size: 14px; color: var(--muted); font-weight: 600; }
+  .aside .course {
+    display: block;
+    padding: 10px 12px;
+    border: 1px solid var(--brand);
+    border-radius: 8px;
+    color: var(--brand);
+    text-decoration: none;
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  .btn {
+    display: inline-flex;
+    margin-top: 8px;
+    background: var(--ink);
+    color: #fff;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .have-strip {
+    margin-top: 16px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+  }
+  .have-strip h3 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .have-strip .count { background: var(--have); }
+  .have-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .have-chip {
+    background: #eef7f1;
+    color: #145c3a;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .have-chip span { color: var(--muted); font-weight: 500; margin-left: 6px; }
+  .badge {
+    position: absolute; top: 12px; right: 16px;
+    background: var(--brand); color: #fff; font-size: 11px; font-weight: 700;
+    padding: 4px 8px; border-radius: 6px;
+  }
+  .wrap { position: relative; }
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <div style="display:flex;gap:28px;align-items:center">
+        <div class="logo"><i></i> Ingress Job</div>
+        <nav>
+          <span>Elanlara bax</span>
+          <span>Şirkətlər</span>
+          <span class="on">Trendlər</span>
+        </nav>
+      </div>
+      <div class="right">
+        <div class="search">Axtarış</div>
+        <span>Aladdin Biyabangerd</span>
+        <span>AZ</span>
+      </div>
+    </div>
+  </header>
+  <main class="page wrap">
+    <div class="badge">VARIANT A</div>
+    <a class="back" href="#">← Bacarıq trendləri</a>
+    <h1>Python</h1>
+
+    <section class="kpis" aria-label="Bazar faktları">
+      <div class="kpi"><label>Bazar payı</label><strong>18%</strong><span class="sub">elanların payı</span></div>
+      <div class="kpi"><label>Artım</label><strong class="up">+4%</strong><span class="sub">əvvəlki pəncərəyə nəzərən</span></div>
+      <div class="kpi"><label>Elan sayı</label><strong>246</strong><span class="sub">son 30 gün</span></div>
+      <div class="kpi"><label>Median maaş</label><strong>2,800 AZN</strong><span class="sub">n=42 · 2.2–3.5k</span></div>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-h">
+          <h2>Ora çatmaq üçün öyrənin</h2>
+          <span class="count">7</span>
+        </div>
+        <div class="cards">
+          <article class="card">
+            <div class="card-top"><strong>Kubernetes</strong><span class="pct">24%</span></div>
+            <div class="bar"><i style="width:24%"></i></div>
+            <p class="hint">Python elanlarının ~24%-də tələb olunur</p>
+            <div class="chips"><span class="chip">Certified Kubernetes Administrator CKA</span><span class="chip">+1</span></div>
+          </article>
+          <article class="card">
+            <div class="card-top"><strong>LLM</strong><span class="pct">21%</span></div>
+            <div class="bar"><i style="width:21%"></i></div>
+            <p class="hint">Python elanlarının ~21%-də tələb olunur</p>
+            <div class="chips"><span class="chip">Data Science Machine Learning</span></div>
+          </article>
+          <article class="card">
+            <div class="card-top"><strong>GCP</strong><span class="pct">18%</span></div>
+            <div class="bar"><i style="width:18%"></i></div>
+            <p class="hint">Python elanlarının ~18%-də tələb olunur</p>
+            <div class="chips"><span class="chip">Devops Engineer</span></div>
+          </article>
+          <article class="card">
+            <div class="card-top"><strong>Azure</strong><span class="pct">17%</span></div>
+            <div class="bar"><i style="width:17%"></i></div>
+            <p class="hint">Python elanlarının ~17%-də tələb olunur</p>
+            <div class="chips"><span class="chip">Azure Administrator</span></div>
+          </article>
+          <article class="card">
+            <div class="card-top"><strong>Go</strong><span class="pct">16%</span></div>
+            <div class="bar"><i style="width:16%"></i></div>
+            <p class="hint">Python elanlarının ~16%-də tələb olunur</p>
+            <div class="chips"><span class="chip">Devops Engineer</span></div>
+          </article>
+          <article class="card">
+            <div class="card-top"><strong>PostgreSQL</strong><span class="pct">15%</span></div>
+            <div class="bar"><i style="width:15%"></i></div>
+            <p class="hint">Python elanlarının ~15%-də tələb olunur</p>
+            <div class="chips"><span class="chip">Backend Developer</span></div>
+          </article>
+        </div>
+      </section>
+
+      <aside class="aside">
+        <h3>Python üçün kurslar</h3>
+        <a class="course" href="#">Python Developer</a>
+        <a class="course" href="#">Data Science Machine Learning</a>
+        <a class="btn" href="#">Bu bacarıqlı elanlar →</a>
+        <p class="hint" style="margin-top:14px">Məlumat elan mətnlərindən çıxarılır; təxmini göstəricidir.</p>
+      </aside>
+    </div>
+
+    <section class="have-strip">
+      <h3>Artıq sizin var <span class="count">3</span></h3>
+      <div class="have-chips">
+        <div class="have-chip">Python <span>100%</span></div>
+        <div class="have-chip">SQL <span>31%</span></div>
+        <div class="have-chip">Docker <span>22%</span></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

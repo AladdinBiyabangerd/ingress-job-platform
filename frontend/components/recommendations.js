@@ -10,6 +10,7 @@ import { Pager } from "./pager";
 import { PageChrome } from "./page-chrome";
 import { RegisterChoice } from "./register-choice";
 import { RoleSkillParts } from "./role-skill-parts";
+import { SkillIcon } from "./skill-icon";
 import { Shell } from "./shell";
 import { useInitialMe } from "./me-seed";
 
@@ -300,74 +301,6 @@ export function Recommendations({
           ) : null}
 
           <div className="recommendations-layout recommendations-bento" aria-live="polite">
-            <section className="h2-panel recommendations-tile recommendations-tile-selected">
-              {selected ? (
-                <>
-                  <header className="recommendations-selected-head">
-                    <div className="recommendations-selected-copy">
-                      <p className="recommendations-detail-kicker">{t.recommendationsSelectedRole}</p>
-                      <h2 className="h2-panel-title">{selected.canonical_name}</h2>
-                      {selected.category ? <p className="hint">{selected.category}</p> : null}
-                    </div>
-                    <ScoreRing pct={selectedScore} />
-                  </header>
-                  <div className="recommendations-selected-actions">
-                    <CareerPathLink t={t} pathId={gap?.academy_career_path} />
-                    {jobCount ? (
-                      <a className="btn" href={jobsHref}>
-                        {t.recommendationsJobsOpenCount(jobCount)}
-                      </a>
-                    ) : (
-                      <p className="hint">{t.recommendationsEmptyJobs}</p>
-                    )}
-                  </div>
-                  {hasCoach ? (
-                    <details className="recommendations-coach">
-                      <summary>{t.skillsCoachTitle}</summary>
-                      <p className="lede skills-coach-summary">{coach.fit_summary}</p>
-                      {mustLearn.length ? (
-                        <div className="skills-coach-block">
-                          <h4>{t.skillsCoachMustLearn}</h4>
-                          <ul className="skills-coach-list">
-                            {mustLearn.map((item) => (
-                              <li key={`coach-learn-${item.skill}`}>
-                                <strong>{item.skill}</strong>
-                                {item.why ? <span className="hint"> — {item.why}</span> : null}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
-                      {alreadyStrong.length ? (
-                        <div className="skills-coach-block">
-                          <h4>{t.skillsCoachStrong}</h4>
-                          <p className="hint">{alreadyStrong.join(" · ")}</p>
-                        </div>
-                      ) : null}
-                      {transferable.length ? (
-                        <div className="skills-coach-block">
-                          <h4>{t.skillsCoachTransferable}</h4>
-                          <ul className="skills-coach-list">
-                            {transferable.map((item) => (
-                              <li key={`xfer-${item.from}-${item.to}`}>
-                                <strong>{t.skillsCoachTransfer(item.from, item.to)}</strong>
-                                {item.note ? <span className="hint"> — {item.note}</span> : null}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
-                    </details>
-                  ) : null}
-                </>
-              ) : (
-                <p className="hint">
-                  {t.recommendationsEmptyRoles}{" "}
-                  <a href={hrefFor(locale, { mode: "profileReview" })}>{t.profileReviewOpen}</a>
-                </p>
-              )}
-            </section>
-
             <section
               className="h2-panel recommendations-tile recommendations-tile-roles"
               aria-label={t.recommendationsRoles}
@@ -414,6 +347,109 @@ export function Recommendations({
                     );
                   })}
                 </ul>
+              )}
+            </section>
+
+            <section className="h2-panel recommendations-tile recommendations-tile-selected">
+              {selected ? (
+                <>
+                  <header className="recommendations-selected-head">
+                    <div className="recommendations-selected-copy">
+                      <p className="recommendations-detail-kicker">{t.recommendationsSelectedRole}</p>
+                      <h2 className="h2-panel-title">{selected.canonical_name}</h2>
+                      {selected.category ? <p className="hint">{selected.category}</p> : null}
+                    </div>
+                    <ScoreRing pct={selectedScore} />
+                  </header>
+                  <div className="recommendations-selected-actions">
+                    <CareerPathLink t={t} pathId={gap?.academy_career_path} />
+                    {jobCount ? (
+                      <a className="btn" href={jobsHref}>
+                        {t.recommendationsJobsOpenCount(jobCount)}
+                      </a>
+                    ) : (
+                      <p className="hint">{t.recommendationsEmptyJobs}</p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="hint">
+                  {t.recommendationsEmptyRoles}{" "}
+                  <a href={hrefFor(locale, { mode: "profileReview" })}>{t.profileReviewOpen}</a>
+                </p>
+              )}
+            </section>
+
+            <section
+              className="h2-panel recommendations-tile recommendations-tile-coach"
+              aria-label={t.skillsCoachTitle}
+            >
+              <h2 className="h2-panel-title">{t.skillsCoachTitle}</h2>
+              {!selected ? (
+                <p className="hint">{t.recommendationsGapEmpty}</p>
+              ) : hasCoach ? (
+                <>
+                  <p className="lede skills-coach-summary">{coach.fit_summary}</p>
+                  <div className="recommendations-coach-grid">
+                    <div className="skills-coach-block">
+                      <h3>{t.skillsCoachMustLearn}</h3>
+                      {mustLearn.length ? (
+                        <ul className="skills-coach-list">
+                          {mustLearn.map((item) => (
+                            <li key={`coach-learn-${item.skill}`}>
+                              <SkillIcon name={item.skill} />
+                              <span>
+                                <strong>{item.skill}</strong>
+                                {item.why ? <span className="hint"> — {item.why}</span> : null}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="hint">{t.skillsMissingEmpty}</p>
+                      )}
+                    </div>
+                    <div className="skills-coach-block">
+                      <h3>{t.skillsCoachStrong}</h3>
+                      {alreadyStrong.length ? (
+                        <ul className="recommendations-coach-chips">
+                          {alreadyStrong.map((skill) => (
+                            <li key={`strong-${skill}`}>
+                              <SkillIcon name={skill} />
+                              <span>{skill}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="hint">{t.skillsHaveEmpty}</p>
+                      )}
+                    </div>
+                    <div className="skills-coach-block">
+                      <h3>{t.skillsCoachTransferable}</h3>
+                      {transferable.length ? (
+                        <ul className="skills-coach-list">
+                          {transferable.map((item) => (
+                            <li key={`xfer-${item.from}-${item.to}`}>
+                              <span className="recommendations-xfer-icons" aria-hidden="true">
+                                <SkillIcon name={item.from} />
+                                <span className="recommendations-xfer-arrow">→</span>
+                                <SkillIcon name={item.to} />
+                              </span>
+                              <span>
+                                <strong>{t.skillsCoachTransfer(item.from, item.to)}</strong>
+                                {item.note ? <span className="hint"> — {item.note}</span> : null}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="hint">—</p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <p className="hint">{t.skillsCoachEmpty}</p>
               )}
             </section>
 

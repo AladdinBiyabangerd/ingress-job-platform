@@ -3,6 +3,7 @@ import {
   academyCourseLabel,
   academyCourseUrl,
 } from "../lib/academy-urls";
+import { SkillIcon } from "./skill-icon";
 
 const GROWTH_CAP_PCT = 300;
 const MAX_COURSE_LINKS = 2;
@@ -96,7 +97,10 @@ export function SkillRow({ t, item, tone }) {
   return (
     <li className={`skills-row skills-row-${tone}`}>
       <div className="skills-row-top">
-        <strong className="skills-row-name">{item.name}</strong>
+        <span className="skills-row-label">
+          <SkillIcon name={item.name} />
+          <strong className="skills-row-name">{item.name}</strong>
+        </span>
         {showCourses ? <AcademyCourseLinks item={item} /> : null}
       </div>
       <SkillShareBar share={item.share} />

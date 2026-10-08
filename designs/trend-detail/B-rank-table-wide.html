@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="utf-8" />
+<title>B — Wide rank table</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --brand: #001fff;
+    --ink: #0b1220;
+    --canvas: #f4f6fb;
+    --muted: #656b75;
+    --border: #dfe1e5;
+    --panel: #f6f5f1;
+    --bar: #c45c26;
+    --have: #1a7a4c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Plus Jakarta Sans", system-ui, sans-serif; background: var(--canvas); color: #20242b; }
+  .top { height: 56px; background: #fff; border-bottom: 1px solid var(--border); }
+  .top-inner, .page { max-width: 1280px; margin: 0 auto; padding: 0 24px; width: 100%; }
+  .top-inner { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+  .logo { font-weight: 700; color: var(--brand); display: flex; gap: 8px; align-items: center; }
+  .logo i { width: 14px; height: 14px; background: var(--brand); transform: rotate(45deg); display: inline-block; }
+  nav { display: flex; gap: 20px; font-size: 14px; color: var(--muted); }
+  nav .on { color: var(--brand); font-weight: 600; }
+  .right { font-size: 13px; color: var(--muted); display: flex; gap: 12px; }
+  .page { padding: 28px 24px 48px; position: relative; }
+  .back { color: var(--brand); text-decoration: none; font-size: 14px; font-weight: 500; }
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: end;
+    margin: 10px 0 22px;
+  }
+  h1 { margin: 0; font-size: 40px; letter-spacing: -0.03em; color: var(--ink); }
+  .hero-meta { display: flex; gap: 28px; align-items: end; }
+  .hm label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+  .hm strong { font-size: 22px; color: var(--ink); }
+  .up { color: var(--have); }
+  .shell {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 16px;
+    align-items: start;
+  }
+  .table-wrap {
+    background: var(--panel);
+    border-radius: 16px;
+    padding: 8px 8px 12px;
+  }
+  .table-h {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px 10px;
+  }
+  .table-h h2 { margin: 0; font-size: 16px; }
+  .count {
+    background: #e8a07a; color: #fff; font-size: 12px; font-weight: 700;
+    width: 22px; height: 22px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 36px 140px 1fr 72px 280px;
+    gap: 12px;
+    align-items: center;
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 0 6px 8px;
+  }
+  .rank { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .name { font-weight: 700; font-size: 15px; }
+  .bar-col { min-width: 0; }
+  .bar { height: 8px; background: #eceae4; border-radius: 99px; overflow: hidden; margin-bottom: 4px; }
+  .bar > i { display: block; height: 100%; background: var(--bar); }
+  .hint { font-size: 11px; color: var(--muted); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pct { font-size: 22px; font-weight: 700; text-align: right; letter-spacing: -0.02em; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .chip {
+    font-size: 11px; color: var(--brand); border: 1px solid var(--brand);
+    border-radius: 6px; padding: 3px 8px; background: #fff; max-width: 100%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .aside {
+    background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 18px;
+  }
+  .aside h3 { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
+  .course {
+    display: block; padding: 10px 12px; border: 1px solid var(--brand); border-radius: 8px;
+    color: var(--brand); text-decoration: none; font-size: 13px; margin-bottom: 8px;
+  }
+  .btn {
+    display: block; text-align: center; margin-top: 10px; background: var(--ink); color: #fff;
+    border-radius: 8px; padding: 11px 14px; font-size: 13px; font-weight: 600; text-decoration: none;
+  }
+  .have {
+    margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
+  }
+  .have h3 { display: flex; gap: 8px; align-items: center; color: #20242b; font-size: 14px; }
+  .have .count { background: var(--have); }
+  .htag {
+    display: flex; justify-content: space-between; background: #eef7f1; color: #145c3a;
+    border-radius: 8px; padding: 8px 10px; font-size: 13px; font-weight: 600; margin-bottom: 6px;
+  }
+  .htag span { color: var(--muted); font-weight: 500; }
+  .badge {
+    position: absolute; top: 12px; right: 16px;
+    background: var(--brand); color: #fff; font-size: 11px; font-weight: 700;
+    padding: 4px 8px; border-radius: 6px;
+  }
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <div style="display:flex;gap:28px;align-items:center">
+        <div class="logo"><i></i> Ingress Job</div>
+        <nav><span>Elanlara bax</span><span>Şirkətlər</span><span class="on">Trendlər</span></nav>
+      </div>
+      <div class="right"><span>Axtarış</span><span>Aladdin Biyabangerd</span><span>AZ</span></div>
+    </div>
+  </header>
+  <main class="page">
+    <div class="badge">VARIANT B</div>
+    <a class="back" href="#">← Bacarıq trendləri</a>
+    <div class="hero">
+      <h1>Python</h1>
+      <div class="hero-meta">
+        <div class="hm"><label>Bazar payı</label><strong>18%</strong></div>
+        <div class="hm"><label>Artım</label><strong class="up">+4%</strong></div>
+        <div class="hm"><label>Elan</label><strong>246</strong></div>
+        <div class="hm"><label>Median</label><strong>2,800 AZN</strong></div>
+      </div>
+    </div>
+
+    <div class="shell">
+      <section class="table-wrap">
+        <div class="table-h"><h2>Ora çatmaq üçün öyrənin</h2><span class="count">7</span></div>
+
+        <div class="row">
+          <span class="rank">01</span>
+          <strong class="name">Kubernetes</strong>
+          <div class="bar-col">
+            <div class="bar"><i style="width:24%"></i></div>
+            <p class="hint">Python elanlarının ~24%-də tələb olunur</p>
+          </div>
+          <span class="pct">24%</span>
+          <div class="chips"><span class="chip">Certified Kubernetes Administrator CKA</span><span class="chip">+1</span></div>
+        </div>
+        <div class="row">
+          <span class="rank">02</span>
+          <strong class="name">LLM</strong>
+          <div class="bar-col">
+            <div class="bar"><i style="width:21%"></i></div>
+            <p class="hint">Python elanlarının ~21%-də tələb olunur</p>
+          </div>
+          <span class="pct">21%</span>
+          <div class="chips"><span class="chip">Data Science Machine Learning</span></div>
+        </div>
+        <div class="row">
+          <span class="rank">03</span>
+          <strong class="name">GCP</strong>
+          <div class="bar-col">
+            <div class="bar"><i style="width:18%"></i></div>
+            <p class="hint">Python elanlarının ~18%-də tələb olunur</p>
+          </div>
+          <span class="pct">18%</span>
+          <div class="chips"><span class="chip">Devops Engineer</span></div>
+        </div>
+        <div class="row">
+          <span class="rank">04</span>
+          <strong class="name">Azure</strong>
+          <div class="bar-col">
+            <div class="bar"><i style="width:17%"></i></div>
+            <p class="hint">Python elanlarının ~17%-də tələb olunur</p>
+          </div>
+          <span class="pct">17%</span>
+          <div class="chips"><span class="chip">Azure Administrator</span></div>
+        </div>
+        <div class="row">
+          <span class="rank">05</span>
+          <strong class="name">Go</strong>
+          <div class="bar-col">
+            <div class="bar"><i style="width:16%"></i></div>
+            <p class="hint">Python elanlarının ~16%-də tələb olunur</p>
+          </div>
+          <span class="pct">16%</span>
+          <div class="chips"><span class="chip">Devops Engineer</span></div>
+        </div>
+        <div class="row">
+          <span class="rank">06</span>
+          <strong class="name">PostgreSQL</strong>
+          <div class="bar-col">
+            <div class="bar"><i style="width:15%"></i></div>
+            <p class="hint">Python elanlarının ~15%-də tələb olunur</p>
+          </div>
+          <span class="pct">15%</span>
+          <div class="chips"><span class="chip">Backend Developer</span></div>
+        </div>
+        <div class="row">
+          <span class="rank">07</span>
+          <strong class="name">Redis</strong>
+          <div class="bar-col">
+            <div class="bar"><i style="width:12%"></i></div>
+            <p class="hint">Python elanlarının ~12%-də tələb olunur</p>
+          </div>
+          <span class="pct">12%</span>
+          <div class="chips"><span class="chip">Backend Developer</span></div>
+        </div>
+      </section>
+
+      <aside class="aside">
+        <h3>Python üçün kurslar</h3>
+        <a class="course" href="#">Python Developer</a>
+        <a class="course" href="#">Data Science Machine Learning</a>
+        <a class="btn" href="#">Bu bacarıqlı elanlar →</a>
+        <div class="have">
+          <h3>Artıq sizin var <span class="count">3</span></h3>
+          <div class="htag">Python <span>100%</span></div>
+          <div class="htag">SQL <span>31%</span></div>
+          <div class="htag">Docker <span>22%</span></div>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin:14px 0 0;line-height:1.4">Məlumat elan mətnlərindən çıxarılır; təxmini göstəricidir.</p>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

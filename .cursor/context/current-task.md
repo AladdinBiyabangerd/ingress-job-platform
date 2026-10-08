@@ -1,23 +1,23 @@
 # Current task
 
 ## Completed
-- Profile Option A: fix broken labels (`display:grid` + field-label)
-- Removed fluff: page lede, panel subs, save/applicant hints, consent intro/legal, retention stub
-- Visibility pill+select; Export/Sil/Tezliklə short actions
+- Trend detail design variants A/B/C (PNG mocks in `designs/trend-detail/`)
+- User chose **Variant A** — implemented
 
 ## Current state
-- Local fix ready; Railway still on previous deploy until push
-- Smoke: `_smoke-profile-a.png` — labels no overlap
+- Trend detail page: full-width KPI strip + 2-col learn cards + aside (courses/CTA) + have chip strip
+- Files changed: `frontend/components/trend-detail.js`, `frontend/app/globals.css`
 
 ## Decisions
-- ConsentFields on profile: `showVisibility={false}`, `showMeta={false}`
-- Keep consent `short_help` + rights descriptions (API product copy, not draft disclaimers)
+- Variant A layout (not B rank table / C bento)
+- KPI strip always shown; as_of moved under aside disclaimer
+- Have companions as horizontal chips, not tall rows
 
 ## Remaining
-- Deploy / hard-refresh production `/profile` to verify
+- Visual smoke on logged-in `/trends/{python}` and guest state
+- User pick deploy / commit when ready
 
 ## Relevant files
-- `frontend/components/profile-form.js`
-- `frontend/components/consent-fields.js`
+- `frontend/components/trend-detail.js`
 - `frontend/app/globals.css`
-- `frontend/.profile-smoke.html`
+- `designs/trend-detail/A-kpi-strip-cards.png`

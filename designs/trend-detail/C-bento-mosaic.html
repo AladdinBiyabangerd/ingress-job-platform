@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="utf-8" />
+<title>C — Bento mosaic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --brand: #001fff;
+    --ink: #0b1220;
+    --canvas: #f4f6fb;
+    --muted: #656b75;
+    --border: #dfe1e5;
+    --panel: #f6f5f1;
+    --bar: #c45c26;
+    --have: #1a7a4c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Plus Jakarta Sans", system-ui, sans-serif; background: var(--canvas); color: #20242b; }
+  .top { height: 56px; background: #fff; border-bottom: 1px solid var(--border); }
+  .top-inner, .page { max-width: 1280px; margin: 0 auto; padding: 0 24px; width: 100%; }
+  .top-inner { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+  .logo { font-weight: 700; color: var(--brand); display: flex; gap: 8px; align-items: center; }
+  .logo i { width: 14px; height: 14px; background: var(--brand); transform: rotate(45deg); display: inline-block; }
+  nav { display: flex; gap: 20px; font-size: 14px; color: var(--muted); }
+  nav .on { color: var(--brand); font-weight: 600; }
+  .right { font-size: 13px; color: var(--muted); display: flex; gap: 12px; }
+  .page { padding: 28px 24px 48px; position: relative; }
+  .back { color: var(--brand); text-decoration: none; font-size: 14px; font-weight: 500; }
+  h1 { margin: 10px 0 18px; font-size: 40px; letter-spacing: -0.03em; color: var(--ink); }
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-auto-rows: minmax(88px, auto);
+    gap: 12px;
+  }
+  .tile {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .tile.panel { background: var(--panel); border-color: transparent; }
+  .t-title { grid-column: span 5; grid-row: span 2; background: var(--ink); color: #fff; border: none; display: flex; flex-direction: column; justify-content: space-between; }
+  .t-title .label { font-size: 12px; opacity: 0.7; }
+  .t-title .big { font-size: 48px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; margin: 8px 0; }
+  .t-title .meta { font-size: 13px; opacity: 0.8; }
+  .t-kpi { grid-column: span 2; display: flex; flex-direction: column; justify-content: center; }
+  .t-kpi label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .t-kpi strong { font-size: 26px; letter-spacing: -0.02em; }
+  .up { color: var(--have); }
+  .t-learn {
+    grid-column: span 8;
+    grid-row: span 4;
+  }
+  .t-side {
+    grid-column: span 4;
+    grid-row: span 4;
+  }
+  .sec-h { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 15px; }
+  .count {
+    background: #e8a07a; color: #fff; font-size: 12px; font-weight: 700;
+    width: 22px; height: 22px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .mosaic {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 10px;
+  }
+  .skill {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .skill.featured {
+    grid-row: span 2;
+    display: flex;
+    flex-direction: column;
+  }
+  .skill .topr { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .skill strong { font-size: 15px; }
+  .skill.featured strong { font-size: 20px; }
+  .pct { font-weight: 700; font-size: 22px; letter-spacing: -0.02em; }
+  .skill.featured .pct { font-size: 40px; margin: 8px 0 12px; }
+  .bar { height: 6px; background: #eceae4; border-radius: 99px; overflow: hidden; margin-bottom: 8px; }
+  .bar > i { display: block; height: 100%; background: var(--bar); }
+  .hint { font-size: 12px; color: var(--muted); margin: 0 0 10px; line-height: 1.35; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+  .chip {
+    font-size: 11px; color: var(--brand); border: 1px solid var(--brand);
+    border-radius: 6px; padding: 3px 8px; background: #fff;
+  }
+  .side-h { font-size: 13px; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  .course {
+    display: block; padding: 10px 12px; border: 1px solid var(--brand); border-radius: 8px;
+    color: var(--brand); text-decoration: none; font-size: 13px; margin-bottom: 8px; background: #fff;
+  }
+  .btn {
+    display: block; text-align: center; margin: 12px 0 18px; background: var(--ink); color: #fff;
+    border-radius: 8px; padding: 11px 14px; font-size: 13px; font-weight: 600; text-decoration: none;
+  }
+  .have-list { display: flex; flex-direction: column; gap: 6px; }
+  .htag {
+    display: flex; justify-content: space-between; background: #eef7f1; color: #145c3a;
+    border-radius: 8px; padding: 9px 11px; font-size: 13px; font-weight: 600;
+  }
+  .htag span { color: var(--muted); font-weight: 500; }
+  .disclaimer { font-size: 12px; color: var(--muted); margin-top: 14px; line-height: 1.4; }
+  .badge {
+    position: absolute; top: 12px; right: 16px;
+    background: var(--brand); color: #fff; font-size: 11px; font-weight: 700;
+    padding: 4px 8px; border-radius: 6px;
+  }
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <div style="display:flex;gap:28px;align-items:center">
+        <div class="logo"><i></i> Ingress Job</div>
+        <nav><span>Elanlara bax</span><span>Şirkətlər</span><span class="on">Trendlər</span></nav>
+      </div>
+      <div class="right"><span>Axtarış</span><span>Aladdin Biyabangerd</span><span>AZ</span></div>
+    </div>
+  </header>
+  <main class="page">
+    <div class="badge">VARIANT C</div>
+    <a class="back" href="#">← Bacarıq trendləri</a>
+    <h1>Python</h1>
+
+    <div class="bento">
+      <div class="tile t-title">
+        <div>
+          <div class="label">Bazar payı · son 30 gün</div>
+          <div class="big">18%</div>
+          <div class="meta">246 elan · 08 okt 2025</div>
+        </div>
+        <div class="meta">Artım +4% · Median 2,800 AZN</div>
+      </div>
+      <div class="tile t-kpi"><label>Artım</label><strong class="up">+4%</strong></div>
+      <div class="tile t-kpi"><label>Elan sayı</label><strong>246</strong></div>
+      <div class="tile t-kpi"><label>Median</label><strong>2.8k</strong></div>
+      <div class="tile t-kpi"><label>Nümunə</label><strong>n=42</strong></div>
+
+      <section class="tile panel t-learn">
+        <h2 class="sec-h">Ora çatmaq üçün öyrənin <span class="count">7</span></h2>
+        <div class="mosaic">
+          <article class="skill featured">
+            <div class="topr"><strong>Kubernetes</strong></div>
+            <div class="pct">24%</div>
+            <div class="bar"><i style="width:24%"></i></div>
+            <p class="hint">Python elanlarının ~24%-də tələb olunur</p>
+            <div class="chips">
+              <span class="chip">Certified Kubernetes Administrator CKA</span>
+              <span class="chip">+1</span>
+            </div>
+          </article>
+          <article class="skill">
+            <div class="topr"><strong>LLM</strong><span class="pct">21%</span></div>
+            <div class="bar"><i style="width:21%"></i></div>
+            <p class="hint">~21% Python elanında</p>
+            <div class="chips"><span class="chip">Data Science ML</span></div>
+          </article>
+          <article class="skill">
+            <div class="topr"><strong>GCP</strong><span class="pct">18%</span></div>
+            <div class="bar"><i style="width:18%"></i></div>
+            <p class="hint">~18% Python elanında</p>
+            <div class="chips"><span class="chip">Devops Engineer</span></div>
+          </article>
+          <article class="skill">
+            <div class="topr"><strong>Azure</strong><span class="pct">17%</span></div>
+            <div class="bar"><i style="width:17%"></i></div>
+            <p class="hint">~17% Python elanında</p>
+            <div class="chips"><span class="chip">Azure Administrator</span></div>
+          </article>
+          <article class="skill">
+            <div class="topr"><strong>Go</strong><span class="pct">16%</span></div>
+            <div class="bar"><i style="width:16%"></i></div>
+            <p class="hint">~16% Python elanında</p>
+            <div class="chips"><span class="chip">Devops Engineer</span></div>
+          </article>
+        </div>
+      </section>
+
+      <aside class="tile panel t-side">
+        <h3 class="side-h">Python üçün kurslar</h3>
+        <a class="course" href="#">Python Developer</a>
+        <a class="course" href="#">Data Science Machine Learning</a>
+        <a class="btn" href="#">Bu bacarıqlı elanlar →</a>
+        <h3 class="side-h" style="display:flex;gap:8px;align-items:center;color:#20242b">Artıq sizin var <span class="count" style="background:var(--have)">3</span></h3>
+        <div class="have-list">
+          <div class="htag">Python <span>100%</span></div>
+          <div class="htag">SQL <span>31%</span></div>
+          <div class="htag">Docker <span>22%</span></div>
+        </div>
+        <p class="disclaimer">Məlumat elan mətnlərindən çıxarılır; təxmini göstəricidir.</p>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>
