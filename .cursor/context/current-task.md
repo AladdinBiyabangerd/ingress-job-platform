@@ -8,7 +8,7 @@
 - D: `/company` onboarding-only — tamamlanmış profil → Profilə yönləndirmə mesajı
 
 ## Current state
-- Plan icra olundu (uncommitted). Plan faylına toxunulmayıb.
+- Commit `5c9453e` on `main` (local, not pushed). Plan faylına toxunulmayıb.
 
 ## Remaining
 - None for this task (opsional: lokalda axınları vizual yoxlama)
