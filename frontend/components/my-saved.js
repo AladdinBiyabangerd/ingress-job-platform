@@ -4,14 +4,22 @@ import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { refreshSavedJobs, unsaveJob } from "../lib/server/refresh";
-import { JobRow } from "./job-row";
 import { useInitialMe } from "./me-seed";
 import { PageChrome } from "./page-chrome";
 import { preloadSavedIds } from "./save-job-button";
 import { RegisterChoice } from "./register-choice";
+import { SavedJobListItem, SavedJobPreview } from "./saved-job-panel";
 import { Shell } from "./shell";
 
-export function MySaved({ locale, initialItems = null, initialIds = null }) {
+const PER_PAGE = 20;
+
+export function MySaved({
+  locale,
+  initialItems = null,
+  initialIds = null,
+  initialTotal = null,
+  initialPages = null,
+}) {
   const t = text(locale);
   const initialMe = useInitialMe();
   const seededList = Array.isArray(initialItems);
@@ -20,6 +28,18 @@ export function MySaved({ locale, initialItems = null, initialIds = null }) {
     return undefined;
   });
   const [items, setItems] = useState(() => (seededList ? initialItems : []));
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(() =>
+    typeof initialPages === "number" ? initialPages : seededList && initialItems.length ? 1 : 0,
+  );
+  const [total, setTotal] = useState(() =>
+    typeof initialTotal === "number" ? initialTotal : seededList ? initialItems.length : 0,
+  );
+  const [selectedId, setSelectedId] = useState(() =>
+    seededList && initialItems[0] ? initialItems[0].id : null,
+  );
+  const [mobileDetail, setMobileDetail] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -50,9 +70,16 @@ export function MySaved({ locale, initialItems = null, initialIds = null }) {
     if (!allowed) return undefined;
     if (seededList) return undefined;
     let cancelled = false;
-    refreshSavedJobs()
+    refreshSavedJobs(1, PER_PAGE)
       .then((data) => {
-        if (!cancelled) setItems(Array.isArray(data.items) ? data.items : []);
+        if (cancelled) return;
+        const next = Array.isArray(data.items) ? data.items : [];
+        setItems(next);
+        setPage(Number(data.page) || 1);
+        setPages(Number(data.pages) || 0);
+        setTotal(Number(data.total) || next.length);
+        setSelectedId(next[0]?.id ?? null);
+        setMobileDetail(false);
       })
       .catch(() => {
         if (!cancelled) setError(t.loadError);
@@ -62,14 +89,67 @@ export function MySaved({ locale, initialItems = null, initialIds = null }) {
     };
   }, [allowed, seededList, t.loadError]);
 
+  useEffect(() => {
+    if (!items.length) {
+      setSelectedId(null);
+      return;
+    }
+    if (!items.some((job) => job.id === selectedId)) {
+      setSelectedId(items[0].id);
+    }
+  }, [items, selectedId]);
+
+  const selected = items.find((job) => job.id === selectedId) || null;
+
+  function selectJob(jobId) {
+    setSelectedId(jobId);
+    setMobileDetail(true);
+  }
+
+  function backToList() {
+    setMobileDetail(false);
+  }
+
   async function remove(jobId) {
     const result = await unsaveJob(jobId);
     if (!result.ok) {
       setError(t.saveJobError);
       return;
     }
-    setItems((prev) => prev.filter((job) => job.id !== jobId));
+    const idx = items.findIndex((job) => job.id === jobId);
+    const next = items.filter((job) => job.id !== jobId);
+    setItems(next);
+    setTotal((n) => Math.max(0, Number(n) - 1));
+    if (selectedId === jobId) {
+      const neighbor = next[idx] || next[idx - 1] || null;
+      setSelectedId(neighbor?.id ?? null);
+      if (!neighbor) setMobileDetail(false);
+    }
   }
+
+  async function loadMore() {
+    if (loadingMore || page >= pages) return;
+    setLoadingMore(true);
+    setError("");
+    try {
+      const data = await refreshSavedJobs(page + 1, PER_PAGE);
+      const more = Array.isArray(data.items) ? data.items : [];
+      setItems((prev) => {
+        const seen = new Set(prev.map((job) => job.id));
+        return [...prev, ...more.filter((job) => !seen.has(job.id))];
+      });
+      setPage(Number(data.page) || page + 1);
+      setPages(Number(data.pages) || pages);
+      setTotal(Number(data.total) || total);
+    } catch {
+      setError(t.loadError);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  const count = total || items.length || undefined;
+  const canLoadMore = page < pages;
 
   return (
     <Shell locale={locale} mode="saved">
@@ -79,7 +159,7 @@ export function MySaved({ locale, initialItems = null, initialIds = null }) {
             backHref={hrefFor(locale)}
             backLabel={t.breadcrumbHome}
             title={t.savedJobs}
-            count={items.length || undefined}
+            count={count}
           />
           {error ? <p className="note">{error}</p> : null}
           {items.length === 0 ? (
@@ -87,20 +167,37 @@ export function MySaved({ locale, initialItems = null, initialIds = null }) {
               <p>{t.savedJobsEmpty}</p>
             </div>
           ) : (
-            <div className="job-row-list saved-job-list">
-              {items.map((job) => (
-                <JobRow
-                  key={job.id}
-                  locale={locale}
-                  job={job}
-                  showSave={false}
-                  leading={
-                    <button type="button" className="text-btn" onClick={() => remove(job.id)}>
-                      {t.unsaveJob}
+            <div className={["saved-split", mobileDetail ? "is-mobile-detail" : ""].filter(Boolean).join(" ")}>
+              <div className="saved-list-pane">
+                <div className="saved-list" aria-label={t.savedJobs}>
+                  {items.map((job) => (
+                    <SavedJobListItem
+                      key={job.id}
+                      locale={locale}
+                      job={job}
+                      selected={job.id === selectedId}
+                      onSelect={selectJob}
+                    />
+                  ))}
+                </div>
+                {canLoadMore ? (
+                  <div className="saved-list-more">
+                    <button type="button" className="btn" disabled={loadingMore} onClick={loadMore}>
+                      {t.savedJobsLoadMore}
                     </button>
-                  }
-                />
-              ))}
+                  </div>
+                ) : null}
+              </div>
+              <div className="saved-preview-pane">
+                {selected ? (
+                  <SavedJobPreview
+                    locale={locale}
+                    job={selected}
+                    onUnsave={remove}
+                    onBack={mobileDetail ? backToList : null}
+                  />
+                ) : null}
+              </div>
             </div>
           )}
         </div>

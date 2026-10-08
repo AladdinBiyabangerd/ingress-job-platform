@@ -16,6 +16,7 @@ import { useInitialMe } from "./me-seed";
 
 const FREQUENCIES = ["weekly", "biweekly", "important_only", "none"];
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
+const CHANNEL_TOTAL = 6;
 
 function frequencyLabel(t, value) {
   if (value === "weekly") return t.emailFreqWeekly;
@@ -49,6 +50,31 @@ function applyPrefs(data, setters, fallbackLang) {
   setters.setPushEnabled(data.push_enabled !== false);
   setters.setLanguage(data.language || fallbackLang);
   setters.setSendWeekday(typeof data.send_weekday === "number" ? data.send_weekday : 0);
+}
+
+function PrefSwitch({ checked, onChange, label }) {
+  return (
+    <button
+      type="button"
+      className={`es-switch${checked ? " is-on" : ""}`}
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+    />
+  );
+}
+
+function ChannelCard({ title, hint, checked, onChange }) {
+  return (
+    <div className="es-channel">
+      <div className="es-channel-text">
+        <strong>{title}</strong>
+        <span>{hint}</span>
+      </div>
+      <PrefSwitch checked={checked} onChange={onChange} label={title} />
+    </div>
+  );
 }
 
 export function EmailSettings({ locale, initialPrefs = null }) {
@@ -246,11 +272,16 @@ export function EmailSettings({ locale, initialPrefs = null }) {
   }
 
   const allowed = Boolean(me?.authenticated && (me.candidate || me.staff));
+  const activeCount = [digest, highMatch, matchNear, profileNudge, coachWeekly, pushEnabled].filter(
+    Boolean,
+  ).length;
+  const consentOn = !prefs || prefs.emails_consent !== false;
+  const langLabel = String(language || fallbackLang).toUpperCase();
 
   return (
     <Shell locale={locale} mode="emailSettings">
       {allowed ? (
-        <div className="h2-candidate">
+        <div className="h2-candidate email-settings">
           <PageChrome
             backHref={hrefFor(locale)}
             backLabel={t.breadcrumbHome}
@@ -260,123 +291,166 @@ export function EmailSettings({ locale, initialPrefs = null }) {
                 {t.emailSettingsPrivacyLink}
               </a>
             }
-          />
-          <form className="h2-panel h2-form" onSubmit={save}>
+          >
+            <p className="es-lede">{t.emailSettingsLede}</p>
+          </PageChrome>
+
+          <form className="es-form" onSubmit={save}>
             {error ? <p className="note">{error}</p> : null}
             {note ? <p className="note">{note}</p> : null}
             {prefs && !prefs.emails_consent ? (
-              <p className="hint">
+              <p className="hint es-consent-banner">
                 {t.emailSettingsConsentOff}{" "}
                 <a href={hrefFor(locale, { mode: "profile" })}>{t.emailSettingsPrivacyLink}</a>
               </p>
             ) : null}
-            <div className="profile-grid">
-              <label className="profile-span">
-                {t.emailSettingsFrequency}
-                <select value={frequency} onChange={(event) => setFrequency(event.target.value)}>
-                  {FREQUENCIES.map((value) => (
-                    <option key={value} value={value}>
-                      {frequencyLabel(t, value)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {t.emailSettingsLanguage}
-                <select value={language} onChange={(event) => setLanguage(event.target.value)}>
-                  <option value="az">AZ</option>
-                  <option value="en">EN</option>
-                  <option value="ru">RU</option>
-                </select>
-              </label>
-              <label>
-                {t.emailSettingsWeekday}
-                <select
-                  value={sendWeekday}
-                  onChange={(event) => setSendWeekday(Number(event.target.value))}
-                >
-                  {WEEKDAYS.map((day) => (
-                    <option key={day} value={day}>
-                      {weekdayLabel(t, day)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="profile-span consent-check">
-                <input
-                  type="checkbox"
-                  checked={digest}
-                  onChange={(event) => setDigest(event.target.checked)}
-                />
-                <span>{t.emailSettingsDigest}</span>
-              </label>
-              <label className="profile-span consent-check">
-                <input
-                  type="checkbox"
-                  checked={highMatch}
-                  onChange={(event) => setHighMatch(event.target.checked)}
-                />
-                <span>{t.emailSettingsHighMatch}</span>
-              </label>
-              <label className="profile-span consent-check">
-                <input
-                  type="checkbox"
-                  checked={matchNear}
-                  onChange={(event) => setMatchNear(event.target.checked)}
-                />
-                <span>{t.emailSettingsMatchNear}</span>
-              </label>
-              <label className="profile-span consent-check">
-                <input
-                  type="checkbox"
-                  checked={profileNudge}
-                  onChange={(event) => setProfileNudge(event.target.checked)}
-                />
-                <span>{t.emailSettingsProfileNudge}</span>
-              </label>
-              <label className="profile-span consent-check">
-                <input
-                  type="checkbox"
-                  checked={coachWeekly}
-                  onChange={(event) => setCoachWeekly(event.target.checked)}
-                />
-                <span>{t.emailSettingsCoachWeekly}</span>
-              </label>
-              <label className="profile-span consent-check">
-                <input
-                  type="checkbox"
-                  checked={pushEnabled}
-                  onChange={(event) => setPushEnabled(event.target.checked)}
-                />
-                <span>{t.emailSettingsPush}</span>
-              </label>
-              <p className="hint profile-span">{t.emailSettingsPushHint}</p>
-              {pushNote ? <p className="note profile-span">{pushNote}</p> : null}
-              <div className="ad-actions profile-span">
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={pushBusy || !pushSupported()}
-                  onClick={onEnablePush}
-                >
-                  {t.emailSettingsPushEnable}
-                </button>
-                {pushSubActive || pushEnabled ? (
-                  <button
-                    type="button"
-                    className="btn"
-                    disabled={pushBusy}
-                    onClick={onDisablePush}
-                  >
-                    {t.emailSettingsPushDisable}
+
+            <div className="es-layout">
+              <aside className="es-rail" aria-label={t.emailSettingsCurrentPlan}>
+                <div className="es-stat">
+                  <div className="es-stat-num">
+                    {activeCount}/{CHANNEL_TOTAL}
+                  </div>
+                  <div className="es-stat-lbl">{t.emailSettingsActiveKinds}</div>
+                  <span className={`es-pill${pushSubActive ? " is-on" : ""}`}>
+                    <i aria-hidden="true" />
+                    {pushSubActive ? t.emailSettingsPushSubOn : t.emailSettingsPushSubOff}
+                  </span>
+                </div>
+                <div className="h2-panel es-plan">
+                  <p className="h2-panel-title">{t.emailSettingsCurrentPlan}</p>
+                  <dl className="es-plan-list">
+                    <div>
+                      <dt>{t.emailSettingsPlanFrequency}</dt>
+                      <dd>{frequencyLabel(t, frequency)}</dd>
+                    </div>
+                    <div>
+                      <dt>{t.emailSettingsPlanLanguage}</dt>
+                      <dd>{langLabel}</dd>
+                    </div>
+                    <div>
+                      <dt>{t.emailSettingsPlanWeekday}</dt>
+                      <dd>{weekdayLabel(t, sendWeekday)}</dd>
+                    </div>
+                    <div>
+                      <dt>{t.emailSettingsPlanConsent}</dt>
+                      <dd>{consentOn ? t.emailSettingsConsentOn : t.emailSettingsConsentClosed}</dd>
+                    </div>
+                  </dl>
+                </div>
+              </aside>
+
+              <div className="es-board">
+                <div className="h2-panel es-panel">
+                  <p className="h2-panel-title">{t.emailSettingsDelivery}</p>
+                  <p className="es-sub">{t.emailSettingsDeliverySub}</p>
+                  <div className="es-delivery">
+                    <label className="es-field">
+                      {t.emailSettingsFrequency}
+                      <select value={frequency} onChange={(event) => setFrequency(event.target.value)}>
+                        {FREQUENCIES.map((value) => (
+                          <option key={value} value={value}>
+                            {frequencyLabel(t, value)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="es-field">
+                      {t.emailSettingsLanguage}
+                      <select value={language} onChange={(event) => setLanguage(event.target.value)}>
+                        <option value="az">AZ</option>
+                        <option value="en">EN</option>
+                        <option value="ru">RU</option>
+                      </select>
+                    </label>
+                    <label className="es-field">
+                      {t.emailSettingsWeekday}
+                      <select
+                        value={sendWeekday}
+                        onChange={(event) => setSendWeekday(Number(event.target.value))}
+                      >
+                        {WEEKDAYS.map((day) => (
+                          <option key={day} value={day}>
+                            {weekdayLabel(t, day)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="h2-panel es-panel">
+                  <p className="h2-panel-title">{t.emailSettingsChannels}</p>
+                  <p className="es-sub">{t.emailSettingsChannelsSub}</p>
+                  <div className="es-channels">
+                    <ChannelCard
+                      title={t.emailSettingsDigest}
+                      hint={t.emailSettingsDigestHint}
+                      checked={digest}
+                      onChange={setDigest}
+                    />
+                    <ChannelCard
+                      title={t.emailSettingsHighMatch}
+                      hint={t.emailSettingsHighMatchHint}
+                      checked={highMatch}
+                      onChange={setHighMatch}
+                    />
+                    <ChannelCard
+                      title={t.emailSettingsMatchNear}
+                      hint={t.emailSettingsMatchNearHint}
+                      checked={matchNear}
+                      onChange={setMatchNear}
+                    />
+                    <ChannelCard
+                      title={t.emailSettingsProfileNudge}
+                      hint={t.emailSettingsProfileNudgeHint}
+                      checked={profileNudge}
+                      onChange={setProfileNudge}
+                    />
+                    <ChannelCard
+                      title={t.emailSettingsCoachWeekly}
+                      hint={t.emailSettingsCoachWeeklyHint}
+                      checked={coachWeekly}
+                      onChange={setCoachWeekly}
+                    />
+                    <ChannelCard
+                      title={t.emailSettingsPush}
+                      hint={t.emailSettingsPushHintShort}
+                      checked={pushEnabled}
+                      onChange={setPushEnabled}
+                    />
+                  </div>
+                </div>
+
+                <div className="es-push">
+                  <div className="es-push-copy">
+                    <strong>{t.emailSettingsPushSubTitle}</strong>
+                    <p className="hint">{t.emailSettingsPushHint}</p>
+                    {pushNote ? <p className="note">{pushNote}</p> : null}
+                  </div>
+                  <div className="es-push-actions">
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={pushBusy || !pushSupported()}
+                      onClick={onEnablePush}
+                    >
+                      {t.emailSettingsPushEnable}
+                    </button>
+                    {pushSubActive || pushEnabled ? (
+                      <button type="button" className="btn" disabled={pushBusy} onClick={onDisablePush}>
+                        {t.emailSettingsPushDisable}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="es-save">
+                  <button type="submit" className="btn ink" disabled={busy}>
+                    {t.companySave}
                   </button>
-                ) : null}
+                </div>
               </div>
-            </div>
-            <div className="ad-actions">
-              <button type="submit" className="btn ink" disabled={busy}>
-                {t.companySave}
-              </button>
             </div>
           </form>
         </div>

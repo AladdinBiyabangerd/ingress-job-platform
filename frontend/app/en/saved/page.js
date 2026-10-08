@@ -6,5 +6,13 @@ export const metadata = privatePageMetadata;
 
 export default async function Page() {
   const initial = await getSavedJobs();
-  return <MySaved locale="en" initialItems={initial.items} initialIds={initial.ids} />;
+  return (
+    <MySaved
+      locale="en"
+      initialItems={initial.items}
+      initialIds={initial.ids}
+      initialTotal={initial.total}
+      initialPages={initial.pages}
+    />
+  );
 }

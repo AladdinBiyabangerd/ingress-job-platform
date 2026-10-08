@@ -180,31 +180,35 @@
     gap: 16px;
     align-items: stretch;
   }
-  .a-left, .a-right { display: flex; flex-direction: column; gap: 14px; min-height: 100%; }
-  .a-fields { display: grid; gap: 12px; }
+  .a-left, .a-right { display: flex; flex-direction: column; gap: 14px; height: 100%; }
+  .a-fields { display: grid; gap: 14px; flex: 1; }
   .a-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .a-toggles { display: grid; gap: 0; }
+  .a-toggles { display: grid; gap: 0; flex: 1; }
   .a-row {
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 16px;
     align-items: center;
-    padding: 12px 0;
+    padding: 13px 0;
     border-bottom: 1px solid var(--border);
   }
   .a-row:last-child { border-bottom: 0; padding-bottom: 0; }
   .a-row:first-child { padding-top: 0; }
   .a-row strong { display: block; font-size: 14px; font-weight: 600; }
   .a-row span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; font-weight: 400; }
-  .a-push {
-    margin-top: auto;
-    padding-top: 14px;
-    border-top: 1px solid var(--border);
+  .a-push-band {
+    margin-top: 14px;
     display: grid;
-    gap: 10px;
+    grid-template-columns: 1fr auto auto;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 16px;
+    border: 1px solid #c9d4ff;
+    border-radius: var(--radius-md);
+    background: var(--brand-soft);
   }
   .a-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-  .a-save { margin-top: auto; padding-top: 8px; }
+  .a-save { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 4px; }
 
   /* —— B: Strip + grid —— */
   .b-strip {
@@ -407,18 +411,20 @@
         <div class="a-fields">
           <label class="field">Tezlik
             <div class="control">Heç biri</div>
+            <span class="hint" style="font-weight:400">Weekly · biweekly · yalnız vacib · heç biri</span>
           </label>
-          <div class="a-pair">
-            <label class="field">E-poçt dili
-              <div class="control">AZ</div>
-            </label>
-            <label class="field">Göndərmə günü
-              <div class="control">Bazar ertəsi</div>
-            </label>
-          </div>
+          <label class="field">E-poçt dili
+            <div class="control">AZ</div>
+          </label>
+          <label class="field">Göndərmə günü
+            <div class="control">Bazar ertəsi</div>
+          </label>
+          <p class="hint">Tranzaksion məktublar (şifrə, təsdiq) bu seçimlərdən asılı deyil.</p>
         </div>
-        <p class="hint">Tranzaksion məktublar (şifrə, təsdiq) bu seçimlərdən asılı deyil.</p>
-        <div class="a-save"><button class="btn ink">Saxla</button></div>
+        <div class="a-save">
+          <span class="hint">Dəyişikliklər saxlanmalıdır</span>
+          <button class="btn ink">Saxla</button>
+        </div>
       </div>
       <div class="panel a-right">
         <div>
@@ -431,18 +437,17 @@
           <div class="a-row"><div><strong>Yaxın elanlar</strong><span>Skill artımı tövsiyəsi ilə</span></div><div class="switch"></div></div>
           <div class="a-row"><div><strong>Profil tamamlama xatırlatması</strong><span>Boş sahələr üçün yumşaq nudge</span></div><div class="switch"></div></div>
           <div class="a-row"><div><strong>Həftəlik öyrənmə planı</strong><span>Coach weekly plan</span></div><div class="switch"></div></div>
-        </div>
-        <div class="a-push">
-          <div class="a-row" style="border:0;padding:0">
-            <div><strong>Brauzer push (master)</strong><span>HTTPS və iOS-da PWA tələb olunur</span></div>
-            <div class="switch"></div>
-          </div>
-          <div class="a-actions">
-            <button class="btn">Bildiriş icazəsi ver</button>
-            <button class="btn ghost">Push abunəliyini sil</button>
-          </div>
+          <div class="a-row"><div><strong>Brauzer push (master)</strong><span>Aşağıdakı abunəliklə birgə işləyir</span></div><div class="switch"></div></div>
         </div>
       </div>
+    </div>
+    <div class="a-push-band">
+      <div>
+        <strong style="font-size:14px;display:block;margin-bottom:2px">Push abunəliyi</strong>
+        <span class="hint">HTTPS lazımdır; iOS-da PWA kimi əlavə edin.</span>
+      </div>
+      <button class="btn">Bildiriş icazəsi ver</button>
+      <button class="btn ghost">Push abunəliyini sil</button>
     </div>
   </div>
 </section>

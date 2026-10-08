@@ -291,7 +291,6 @@ export function Recommendations({
             backLabel={t.breadcrumbHome}
             title={t.recommendationsTitle}
           />
-          <p className="hint recommendations-disclaimer">{t.recommendationsDisclaimer}</p>
 
           {!consentOk ? (
             <p className="hint h2-consent-banner">
@@ -626,7 +625,6 @@ export function RecommendationJobs({
             title={t.recommendationsJobs}
             count={total || null}
           />
-          <p className="hint recommendations-disclaimer">{t.recommendationsDisclaimer}</p>
 
           {!consentOk ? (
             <p className="hint h2-consent-banner">
