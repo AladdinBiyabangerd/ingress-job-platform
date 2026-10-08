@@ -1496,15 +1496,6 @@ body:has(.profile-review-page) {
   color: #2a3038;
 }
 
-.profile-review-page .cabinet-head,
-.profile-review-page .profile-review-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px 14px;
-}
-
 .profile-review-page .profile-grid {
   gap: 8px 12px;
 }
