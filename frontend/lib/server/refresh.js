@@ -13,12 +13,12 @@ async function bearer() {
   return access;
 }
 
-async function loadJson(path) {
+async function loadJson(path, timeoutMs = TIMEOUT_MS) {
   const access = await bearer();
   const res = await fetch(`${apiBase()}${path}`, {
     headers: { Authorization: `Bearer ${access}`, Accept: "application/json" },
     cache: "no-store",
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) throw new Error("load");
   const data = await res.json().catch(() => null);
@@ -285,12 +285,15 @@ export async function markAllNotificationsRead() {
   return mutate("/api/v1/notifications/read");
 }
 
-/** Skill-gap for a picked role on /me/recommendations. Hits FastAPI, not the BFF. */
+/** Skill-gap for a picked role on /me/recommendations. Hits FastAPI, not the BFF.
+ *  Role coach LLM may take up to ~30s — keep client wait above that so coach:null
+ *  is a real soft-fail, not a truncated response.
+ */
 export async function loadSkillGap(lang, role) {
   const name = typeof role === "string" ? role.trim() : "";
   if (!name) throw new Error("load");
   const qs = new URLSearchParams({ lang: localeLang(lang), role: name });
-  return loadJson(`/api/v1/me/skill-gap?${qs}`);
+  return loadJson(`/api/v1/me/skill-gap?${qs}`, 35_000);
 }
 
 export async function saveEmailPrefs(payload) {

@@ -567,6 +567,7 @@ export const copy = {
     skillsCoachStrong: "Güclü tərəflər",
     skillsCoachTransferable: "Keçid bacarıqları",
     skillsCoachTransfer: (from, to) => `${from} → ${to}`,
+    skillsCoachTransferEmpty: "Hələ keçid tövsiyəsi yoxdur.",
     skillsCoachEmpty:
       "Koç məsləhəti hələ hazır deyil. Bir az sonra yeniləyin və ya profili tamamlayın.",
     recommendationsCoachMore: "Tam koç məsləhəti",
@@ -1235,6 +1236,7 @@ export const copy = {
     skillsCoachStrong: "Already strong",
     skillsCoachTransferable: "Transferable skills",
     skillsCoachTransfer: (from, to) => `${from} → ${to}`,
+    skillsCoachTransferEmpty: "No transferable tips yet.",
     skillsCoachEmpty:
       "Coach advice is not ready yet. Refresh shortly or complete your profile.",
     recommendationsCoachMore: "Full coach advice",
@@ -1904,6 +1906,7 @@ export const copy = {
     skillsCoachStrong: "Сильные стороны",
     skillsCoachTransferable: "Переносимые навыки",
     skillsCoachTransfer: (from, to) => `${from} → ${to}`,
+    skillsCoachTransferEmpty: "Пока нет подсказок по переносу.",
     skillsCoachEmpty:
       "Совет коуча пока не готов. Обновите позже или заполните профиль.",
     recommendationsCoachMore: "Полный совет коуча",

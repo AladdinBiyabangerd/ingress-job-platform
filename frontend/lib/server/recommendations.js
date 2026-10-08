@@ -9,12 +9,12 @@ function localeLang(lang) {
   return lang === "en" || lang === "ru" ? lang : "az";
 }
 
-async function loadJson(access, path) {
+async function loadJson(access, path, timeoutMs = TIMEOUT_MS) {
   try {
     const res = await fetch(`${apiBase()}${path}`, {
       headers: { Authorization: `Bearer ${access}`, Accept: "application/json" },
       cache: "no-store",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) return null;
     const data = await res.json();
@@ -48,7 +48,11 @@ export const getRecommendationBundle = cache(async (lang = "az", preferredRole =
   const [matches, gap] = await Promise.all([
     loadJson(access, `/api/v1/me/matches?${qs}&limit=${MATCHES_FETCH_LIMIT}${roleQs}`),
     includeGap && topRole
-      ? loadJson(access, `/api/v1/me/skill-gap?${qs}&role=${encodeURIComponent(topRole)}`)
+      ? loadJson(
+          access,
+          `/api/v1/me/skill-gap?${qs}&role=${encodeURIComponent(topRole)}`,
+          35_000,
+        )
       : Promise.resolve(null),
   ]);
   return { roles, matches, gap, role: topRole };

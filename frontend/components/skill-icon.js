@@ -18,7 +18,7 @@ export function SkillIcon({ name, className = "" }) {
 
   return (
     <span className={wrap} aria-hidden="true">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- Simple Icons CDN; Next Image domains not configured */}
       <img
         className="skill-icon-img"
         src={`https://cdn.simpleicons.org/${meta.slug}/${meta.color}`}

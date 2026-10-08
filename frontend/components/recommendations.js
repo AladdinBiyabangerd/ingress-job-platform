@@ -19,24 +19,57 @@ const MATCHES_FETCH_LIMIT = 10;
 const SKILL_PREVIEW = 4;
 const JOBS_PREVIEW = 3;
 
-function ScoreRing({ pct }) {
+function ScoreRing({ pct, label }) {
   const value = typeof pct === "number" && !Number.isNaN(pct) ? Math.max(0, Math.min(100, pct)) : null;
-  if (value === null) {
-    return (
+  const ring =
+    value === null ? (
       <div className="recommendations-score-ring recommendations-score-ring-empty" aria-hidden="true">
         <span>—</span>
       </div>
+    ) : (
+      <div
+        className="recommendations-score-ring"
+        style={{ "--score": String(value) }}
+        role="img"
+        aria-label={label ? `${label} ${value}%` : `${value}%`}
+      >
+        <span>{value}%</span>
+      </div>
     );
-  }
+  if (!label) return ring;
   return (
-    <div
-      className="recommendations-score-ring"
-      style={{ "--score": String(value) }}
-      role="img"
-      aria-label={`${value}%`}
-    >
-      <span>{value}%</span>
+    <div className="recommendations-score-wrap">
+      {ring}
+      <span className="recommendations-score-label">{label}</span>
     </div>
+  );
+}
+
+function normalizeCoach(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  return raw;
+}
+
+function coachLearnItems(list) {
+  if (!Array.isArray(list)) return [];
+  return list.filter(
+    (item) => item && typeof item === "object" && String(item.skill || "").trim(),
+  );
+}
+
+function coachNameList(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map((item) => String(item || "").trim()).filter(Boolean);
+}
+
+function coachTransferItems(list) {
+  if (!Array.isArray(list)) return [];
+  return list.filter(
+    (item) =>
+      item &&
+      typeof item === "object" &&
+      String(item.from || "").trim() &&
+      String(item.to || "").trim(),
   );
 }
 
@@ -243,22 +276,22 @@ export function Recommendations({
     ssrMatchesPending.current = false;
     let cancelled = false;
     const roleQs = `&role=${encodeURIComponent(activeRole)}`;
-    Promise.all([
-      loadSkillGap(lang, activeRole),
-      fetch(`/api/auth/me/matches?lang=${lang}&limit=${MATCHES_FETCH_LIMIT}${roleQs}`, {
-        cache: "no-store",
-      }).then((res) => (res.ok ? res.json() : null)),
-    ])
-      .then(([gapPayload, matchesPayload]) => {
-        if (cancelled) return;
-        setGap(gapPayload);
-        setMatches(matchesPayload);
+    loadSkillGap(lang, activeRole)
+      .then((gapPayload) => {
+        if (!cancelled) setGap(gapPayload);
       })
       .catch(() => {
-        if (!cancelled) {
-          setGap(null);
-          setMatches(null);
-        }
+        if (!cancelled) setGap(null);
+      });
+    fetch(`/api/auth/me/matches?lang=${lang}&limit=${MATCHES_FETCH_LIMIT}${roleQs}`, {
+      cache: "no-store",
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((matchesPayload) => {
+        if (!cancelled) setMatches(matchesPayload);
+      })
+      .catch(() => {
+        if (!cancelled) setMatches(null);
       });
     return () => {
       cancelled = true;
@@ -272,11 +305,14 @@ export function Recommendations({
   const selected = roleList.find((role) => role.canonical_name === activeRole) || null;
   const selectedScore =
     selected && typeof selected.score === "number" ? Math.round(selected.score * 100) : null;
-  const coach = gap?.coach && typeof gap.coach === "object" ? gap.coach : null;
-  const mustLearn = Array.isArray(coach?.must_learn) ? coach.must_learn : [];
-  const alreadyStrong = Array.isArray(coach?.already_strong) ? coach.already_strong : [];
-  const transferable = Array.isArray(coach?.transferable) ? coach.transferable : [];
-  const hasCoach = Boolean(coach?.fit_summary);
+  const coach = normalizeCoach(gap?.coach);
+  const mustLearn = coachLearnItems(coach?.must_learn);
+  const alreadyStrong = coachNameList(coach?.already_strong);
+  const transferable = coachTransferItems(coach?.transferable);
+  const fitSummary = String(coach?.fit_summary || "").trim();
+  const hasCoach = Boolean(
+    fitSummary || mustLearn.length || alreadyStrong.length || transferable.length,
+  );
   const missing = Array.isArray(gap?.missing) ? gap.missing : [];
   const have = Array.isArray(gap?.have) ? gap.have : [];
   const hasGap = missing.length > 0 || have.length > 0;
@@ -359,7 +395,7 @@ export function Recommendations({
                       <h2 className="h2-panel-title">{selected.canonical_name}</h2>
                       {selected.category ? <p className="hint">{selected.category}</p> : null}
                     </div>
-                    <ScoreRing pct={selectedScore} />
+                    <ScoreRing pct={selectedScore} label={t.jobRowMatch} />
                   </header>
                   <div className="recommendations-selected-actions">
                     <CareerPathLink t={t} pathId={gap?.academy_career_path} />
@@ -389,21 +425,25 @@ export function Recommendations({
                 <p className="hint">{t.recommendationsGapEmpty}</p>
               ) : hasCoach ? (
                 <>
-                  <p className="lede skills-coach-summary">{coach.fit_summary}</p>
+                  {fitSummary ? <p className="lede skills-coach-summary">{fitSummary}</p> : null}
                   <div className="recommendations-coach-grid">
                     <div className="skills-coach-block">
                       <h3>{t.skillsCoachMustLearn}</h3>
                       {mustLearn.length ? (
                         <ul className="skills-coach-list">
-                          {mustLearn.map((item) => (
-                            <li key={`coach-learn-${item.skill}`}>
-                              <SkillIcon name={item.skill} />
-                              <span>
-                                <strong>{item.skill}</strong>
-                                {item.why ? <span className="hint"> — {item.why}</span> : null}
-                              </span>
-                            </li>
-                          ))}
+                          {mustLearn.map((item) => {
+                            const skill = String(item.skill || "").trim();
+                            const why = String(item.why || "").trim();
+                            return (
+                              <li key={`coach-learn-${skill}`}>
+                                <SkillIcon name={skill} />
+                                <span>
+                                  <strong>{skill}</strong>
+                                  {why ? <span className="hint"> — {why}</span> : null}
+                                </span>
+                              </li>
+                            );
+                          })}
                         </ul>
                       ) : (
                         <p className="hint">{t.skillsMissingEmpty}</p>
@@ -428,28 +468,35 @@ export function Recommendations({
                       <h3>{t.skillsCoachTransferable}</h3>
                       {transferable.length ? (
                         <ul className="skills-coach-list">
-                          {transferable.map((item) => (
-                            <li key={`xfer-${item.from}-${item.to}`}>
-                              <span className="recommendations-xfer-icons" aria-hidden="true">
-                                <SkillIcon name={item.from} />
-                                <span className="recommendations-xfer-arrow">→</span>
-                                <SkillIcon name={item.to} />
-                              </span>
-                              <span>
-                                <strong>{t.skillsCoachTransfer(item.from, item.to)}</strong>
-                                {item.note ? <span className="hint"> — {item.note}</span> : null}
-                              </span>
-                            </li>
-                          ))}
+                          {transferable.map((item) => {
+                            const from = String(item.from || "").trim();
+                            const to = String(item.to || "").trim();
+                            const note = String(item.note || "").trim();
+                            return (
+                              <li key={`xfer-${from}-${to}`}>
+                                <span className="recommendations-xfer-icons" aria-hidden="true">
+                                  <SkillIcon name={from} />
+                                  <span className="recommendations-xfer-arrow">→</span>
+                                  <SkillIcon name={to} />
+                                </span>
+                                <span>
+                                  <strong>{t.skillsCoachTransfer(from, to)}</strong>
+                                  {note ? <span className="hint"> — {note}</span> : null}
+                                </span>
+                              </li>
+                            );
+                          })}
                         </ul>
                       ) : (
-                        <p className="hint">—</p>
+                        <p className="hint">{t.skillsCoachTransferEmpty}</p>
                       )}
                     </div>
                   </div>
                 </>
               ) : (
-                <p className="hint">{t.skillsCoachEmpty}</p>
+                <div className="recommendations-coach-empty">
+                  <p className="hint">{t.skillsCoachEmpty}</p>
+                </div>
               )}
             </section>
 

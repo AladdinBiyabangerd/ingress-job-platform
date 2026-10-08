@@ -2713,6 +2713,13 @@ body:has(.profile-review-page) {
   color: #656b75;
 }
 
+.recommendations-score-wrap {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  flex: 0 0 auto;
+}
+
 .recommendations-score-ring {
   --score: 0;
   flex: 0 0 auto;
@@ -2736,6 +2743,14 @@ body:has(.profile-review-page) {
   color: var(--muted);
 }
 
+.recommendations-score-label {
+  font-size: 0.72rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .recommendations-selected-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2747,10 +2762,34 @@ body:has(.profile-review-page) {
   text-decoration: none;
 }
 
+.h2-panel.recommendations-tile-coach,
+.recommendations-tile-coach {
+  background:
+    linear-gradient(180deg, var(--brand-soft) 0%, var(--surface) 42%);
+  border-color: #d5def5;
+}
+
 .recommendations-tile-coach .skills-coach-summary {
   margin: 0;
   max-width: 72ch;
   color: var(--text);
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.recommendations-coach-empty {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px dashed #c9d3ea;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.recommendations-coach-empty .hint {
+  margin: 0;
+  max-width: 56ch;
+  line-height: 1.45;
 }
 
 .recommendations-coach-grid {
@@ -2766,7 +2805,8 @@ body:has(.profile-review-page) {
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: var(--canvas);
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .recommendations-coach-grid .skills-coach-block h3 {
@@ -2805,7 +2845,7 @@ body:has(.profile-review-page) {
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--brand-soft);
   font-size: 0.84rem;
   font-weight: var(--fw-medium);
   color: var(--text);

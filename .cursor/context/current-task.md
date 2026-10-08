@@ -1,23 +1,30 @@
 # Current task
 
 ## Completed
-- Trend detail design variants A/B/C (PNG mocks in `designs/trend-detail/`)
-- User chose **Variant A** — implemented
+- AI axınları: nə vaxt işləyir (izah)
+- Reco Design A/B/C mockups (assets/)
+- User chose **Design A** for `/me/recommendations`
+- Design A polish + coach null handling
 
 ## Current state
-- Trend detail page: full-width KPI strip + 2-col learn cards + aside (courses/CTA) + have chip strip
-- Files changed: `frontend/components/trend-detail.js`, `frontend/app/globals.css`
+- Design A: roles rail | selected + score ring label | coach hero | have / learn / jobs
+- Coach always visible; `coach: null` → dashed empty panel (`skillsCoachEmpty`)
+- Skill-gap fetch timeout 35s (coach LLM ~30s); gap/matches load independently
+- Tech icons via Simple Icons CDN + fallback initials (`SkillIcon`)
 
 ## Decisions
-- Variant A layout (not B rank table / C bento)
-- KPI strip always shown; as_of moved under aside disclaimer
-- Have companions as horizontal chips, not tall rows
+- Layout Design A with brand tokens
+- Null coach is soft-fail UI, not a crash; lists filter invalid items
+- Do not clear matches if only skill-gap fails
 
 ## Remaining
-- Visual smoke on logged-in `/trends/{python}` and guest state
-- User pick deploy / commit when ready
+- Visual smoke logged-in `/me/recommendations` with `role_coach` on (optional)
 
 ## Relevant files
-- `frontend/components/trend-detail.js`
+- `frontend/components/recommendations.js`
+- `frontend/components/skill-icon.js`
+- `frontend/lib/skill-icons.js`
+- `frontend/lib/server/refresh.js`
+- `frontend/lib/server/recommendations.js`
 - `frontend/app/globals.css`
-- `designs/trend-detail/A-kpi-strip-cards.png`
+- `frontend/lib/copy.js`
