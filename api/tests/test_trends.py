@@ -23,6 +23,7 @@ from app.trends import (
     _category_job_count,
     _day_after,
     combine_salary_days,
+    combine_salary_groups,
     ensure_trend_tables,
     growth_wow,
     trends_payload,
@@ -205,6 +206,20 @@ class TrendsTests(unittest.TestCase):
         self.assertEqual(combined["n"], MIN_SALARY_SAMPLES)
         self.assertEqual(combined["median"], 50000.0)
 
+    def test_combine_salary_groups_keeps_currencies_separate(self):
+        rows = [
+            {"median": 50000, "currency": "GBP", "n": MIN_SALARY_SAMPLES, "low": 40_000, "high": 60_000},
+            {"median": 42000, "currency": "EUR", "n": MIN_SALARY_SAMPLES, "low": 36_000, "high": 48_000},
+            {"median": 900000, "currency": "RUB", "n": 2, "low": 800_000, "high": 1_000_000},
+        ]
+        groups = combine_salary_groups(rows)
+        codes = [g["currency"] for g in groups]
+        self.assertEqual(codes, ["EUR", "GBP"])
+        by_code = {g["currency"]: g for g in groups}
+        self.assertEqual(by_code["GBP"]["median"], 50000.0)
+        self.assertEqual(by_code["EUR"]["median"], 42000.0)
+        self.assertNotIn("RUB", by_code)  # below MIN_SALARY_SAMPLES
+
     def test_public_trends_endpoint(self):
         self._seed_trend_rows()
         res = self.client.get("/api/v1/trends?category=Backend&lang=en&window_days=7")
@@ -241,10 +256,33 @@ class TrendsTests(unittest.TestCase):
                 """
                 INSERT INTO skill_trend_daily (
                     day, skill_id, category, region, remote, relocation, ad_count,
-                    salary_median, salary_currency, salary_n, salary_low, salary_high
-                ) VALUES (?, ?, 'Backend', '', 1, 0, 10, 55000, 'GBP', ?, 40000, 70000)
+                    salary_median, salary_currency, salary_n, salary_low, salary_high,
+                    salary_by_currency
+                ) VALUES (?, ?, 'Backend', '', 1, 0, 10, 55000, 'GBP', ?, 40000, 70000, ?)
                 """,
-                ("2026-10-05", ids["Java"], MIN_SALARY_SAMPLES),
+                (
+                    "2026-10-05",
+                    ids["Java"],
+                    MIN_SALARY_SAMPLES,
+                    json.dumps(
+                        [
+                            {
+                                "median": 55000,
+                                "currency": "GBP",
+                                "n": MIN_SALARY_SAMPLES,
+                                "low": 40000,
+                                "high": 70000,
+                            },
+                            {
+                                "median": 42000,
+                                "currency": "EUR",
+                                "n": MIN_SALARY_SAMPLES,
+                                "low": 36000,
+                                "high": 48000,
+                            },
+                        ]
+                    ),
+                ),
             )
             conn.commit()
             conn.row_factory = sqlite3.Row
@@ -253,10 +291,13 @@ class TrendsTests(unittest.TestCase):
             )
         java = next(item for item in payload["items"] if item["name"] == "Java")
         self.assertIsNotNone(java["salary"])
-        self.assertEqual(java["salary"]["currency"], "GBP")
+        self.assertEqual(java["salary"]["currency"], "EUR")  # tie → lex order in groups
         self.assertEqual(java["salary"]["n"], MIN_SALARY_SAMPLES)
-        self.assertEqual(java["salary"]["median"], 55000.0)
         self.assertEqual(java["salary"]["period"], "year")
+        self.assertEqual([g["currency"] for g in java["salaries"]], ["EUR", "GBP"])
+        by_code = {g["currency"]: g for g in java["salaries"]}
+        self.assertEqual(by_code["GBP"]["median"], 55000.0)
+        self.assertEqual(by_code["EUR"]["median"], 42000.0)
 
     def test_trends_often_with_companions(self):
         ids = self._skill_ids()

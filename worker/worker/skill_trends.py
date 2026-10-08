@@ -12,7 +12,9 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from worker.salary_parse import parse_salary_annual, pick_currency_values, salary_stats
+import json
+
+from worker.salary_parse import parse_salary_annual, stats_by_currency
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS skill_trend_daily (
@@ -28,6 +30,7 @@ CREATE TABLE IF NOT EXISTS skill_trend_daily (
     salary_n INTEGER NOT NULL DEFAULT 0,
     salary_low REAL,
     salary_high REAL,
+    salary_by_currency TEXT NOT NULL DEFAULT '[]',
     PRIMARY KEY (day, skill_id, category, region, remote, relocation)
 );
 
@@ -57,6 +60,7 @@ _SALARY_COLUMNS = (
     ("salary_n", "INTEGER NOT NULL DEFAULT 0"),
     ("salary_low", "REAL"),
     ("salary_high", "REAL"),
+    ("salary_by_currency", "TEXT NOT NULL DEFAULT '[]'"),
 )
 
 BACKFILL_DAYS = 56
@@ -195,16 +199,17 @@ def aggregate_skill_trends(conn, day: str | date | None = None) -> int:
     sql = """
         INSERT INTO skill_trend_daily (
             day, skill_id, category, region, remote, relocation, ad_count,
-            salary_median, salary_currency, salary_n, salary_low, salary_high
-        ) VALUES (?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?)
+            salary_median, salary_currency, salary_n, salary_low, salary_high,
+            salary_by_currency
+        ) VALUES (?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     written = 0
     for (skill_id, category, remote, relocation), bucket in groups.items():
         ad_count = len(bucket["job_ids"])
         if ad_count <= 0:
             continue
-        currency, values = pick_currency_values(bucket["parsed"])
-        stats = salary_stats(values, currency)
+        groups_stats = stats_by_currency(bucket["parsed"])
+        primary = groups_stats[0] if groups_stats else None
         conn.execute(
             sql,
             (
@@ -214,11 +219,12 @@ def aggregate_skill_trends(conn, day: str | date | None = None) -> int:
                 remote,
                 relocation,
                 ad_count,
-                None if stats is None else stats["median"],
-                "" if stats is None else stats["currency"],
-                0 if stats is None else stats["n"],
-                None if stats is None else stats["low"],
-                None if stats is None else stats["high"],
+                None if primary is None else primary["median"],
+                "" if primary is None else primary["currency"],
+                0 if primary is None else primary["n"],
+                None if primary is None else primary["low"],
+                None if primary is None else primary["high"],
+                json.dumps(groups_stats, separators=(",", ":")),
             ),
         )
         written += 1

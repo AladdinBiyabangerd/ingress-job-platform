@@ -204,16 +204,35 @@ def salary_stats(values: list[float], currency: str) -> dict[str, Any] | None:
     }
 
 
-def pick_currency_values(parsed: list[dict[str, Any]]) -> tuple[str, list[float]]:
-    """Prefer the currency with the most samples; tie → lexicographic."""
+def values_by_currency(parsed: list[dict[str, Any]]) -> dict[str, list[float]]:
+    """Group annualized amounts by currency code. Never mixes currencies."""
     by_currency: dict[str, list[float]] = {}
     for item in parsed:
-        code = str(item.get("currency") or "")
+        code = str(item.get("currency") or "").strip().upper()
         annual = item.get("annual")
         if not code or not isinstance(annual, (int, float)) or annual <= 0:
             continue
         by_currency.setdefault(code, []).append(float(annual))
-    if not by_currency:
+    return by_currency
+
+
+def pick_currency_values(parsed: list[dict[str, Any]]) -> tuple[str, list[float]]:
+    """Prefer the currency with the most samples; tie → lexicographic (A→Z)."""
+    groups = stats_by_currency(parsed)
+    if not groups:
         return "", []
-    best = max(by_currency.items(), key=lambda kv: (len(kv[1]), kv[0]))
-    return best[0], best[1]
+    top = groups[0]
+    return top["currency"], values_by_currency(parsed).get(top["currency"], [])
+
+
+def stats_by_currency(parsed: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One salary_stats row per currency, majority first (then code)."""
+    by_currency = values_by_currency(parsed)
+    out: list[dict[str, Any]] = []
+    for currency, values in sorted(
+        by_currency.items(), key=lambda kv: (-len(kv[1]), kv[0])
+    ):
+        stats = salary_stats(values, currency)
+        if stats is not None:
+            out.append(stats)
+    return out

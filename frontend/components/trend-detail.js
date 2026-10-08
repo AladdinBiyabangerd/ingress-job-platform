@@ -30,7 +30,7 @@ function formatMoney(value) {
   return Math.round(value).toLocaleString("en-US");
 }
 
-function salaryParts(t, salary) {
+function oneSalaryParts(t, salary) {
   if (!salary || typeof salary !== "object") return null;
   const median = formatMoney(salary.median);
   const currency = String(salary.currency || "").trim();
@@ -46,7 +46,17 @@ function salaryParts(t, salary) {
     median: t.trendsSalaryMedian(median, currency),
     range,
     sample: t.trendsSalaryN(n),
+    currency,
   };
+}
+
+function salaryGroups(t, data) {
+  const list = Array.isArray(data?.salaries) && data.salaries.length
+    ? data.salaries
+    : data?.salary
+      ? [data.salary]
+      : [];
+  return list.map((row) => oneSalaryParts(t, row)).filter(Boolean);
 }
 
 function YouBlock({ t, locale, authenticated, candidate, you, showYou, learnNext, companionsHave }) {
@@ -94,7 +104,7 @@ function YouBlock({ t, locale, authenticated, candidate, you, showYou, learnNext
   );
 }
 
-function FactsCard({ t, share, growth, data, salary, marketCourses, showGuestCta, detailHref, jobsHref }) {
+function FactsCard({ t, share, growth, data, salaries, marketCourses, showGuestCta, detailHref, jobsHref }) {
   return (
     <div className="facts-card">
       <h2 className="facts-title">{t.keyFacts}</h2>
@@ -119,8 +129,8 @@ function FactsCard({ t, share, growth, data, salary, marketCourses, showGuestCta
             <dd>{data.ad_count.toLocaleString("en-US")}</dd>
           </div>
         ) : null}
-        {salary ? (
-          <div>
+        {salaries.map((salary) => (
+          <div key={salary.currency}>
             <dt>{t.trendsSalaryLabel}</dt>
             <dd>
               {salary.median}
@@ -128,7 +138,7 @@ function FactsCard({ t, share, growth, data, salary, marketCourses, showGuestCta
               {salary.sample ? <span className="fact-sub"> · {salary.sample}</span> : null}
             </dd>
           </div>
-        ) : null}
+        ))}
         {data.as_of ? (
           <div>
             <dt>{t.trendsAsOfLabel}</dt>
@@ -194,7 +204,7 @@ export function TrendDetailPage({ locale, data, error }) {
 
   const share = pct(data.share);
   const growth = growthParts(data.growth_wow);
-  const salary = salaryParts(t, data.salary);
+  const salaries = salaryGroups(t, data);
   const you = data.you && typeof data.you === "object" ? data.you : null;
   const learnNext = Array.isArray(you?.learn_next) ? you.learn_next : [];
   const companionsHave = Array.isArray(you?.have) ? you.have : [];
@@ -212,7 +222,7 @@ export function TrendDetailPage({ locale, data, error }) {
       share={share}
       growth={growth}
       data={data}
-      salary={salary}
+      salaries={salaries}
       marketCourses={marketCourses}
       showGuestCta={showGuestCta}
       detailHref={detailHref}

@@ -321,6 +321,7 @@ def _apply_schema(conn) -> None:
             salary_n INTEGER NOT NULL DEFAULT 0,
             salary_low REAL,
             salary_high REAL,
+            salary_by_currency TEXT NOT NULL DEFAULT '[]',
             PRIMARY KEY (day, skill_id, category, region, remote, relocation)
         );
         CREATE TABLE IF NOT EXISTS skill_pair_daily (
@@ -339,6 +340,7 @@ def _apply_schema(conn) -> None:
         ("salary_n", "INTEGER NOT NULL DEFAULT 0"),
         ("salary_low", "REAL"),
         ("salary_high", "REAL"),
+        ("salary_by_currency", "TEXT NOT NULL DEFAULT '[]'"),
     ):
         if name not in trend_cols:
             conn.execute(f"ALTER TABLE skill_trend_daily ADD COLUMN {name} {decl}")

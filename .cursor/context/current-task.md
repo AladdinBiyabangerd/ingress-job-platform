@@ -1,22 +1,20 @@
 # Current task
 
 ## Completed
-- Saved jobs: table + `/api/v1/me/saved-jobs` CRUD/ids + tests; `/saved` pages; card/detail toggle; account/menu links
-- Talent browse MVP: `GET /api/v1/talent` + consent/visibility gate + redaction + tests; `/talent` UI + employer menu; company incomplete gate in middleware
-- Docs: customer-journey backlog + architecture notes
+- Trends salary: group by currency (no FX mix). Worker stores `salary_by_currency` JSON; API exposes `salaries[]` + primary `salary`; UI lists each currency group separately
 
 ## Current state
-- Committing saved jobs + talent MVP to `main` (push requested).
-
-## Remaining
-- Backlog: şəhər filteri + URL state; talent contact-requests; companies slug merge
+- Local changes ready; needs deploy + worker refresh so daily rows rewrite with multi-currency JSON (until then API falls back to primary columns only)
 
 ## Decisions
-- Saved: any authenticated user (not candidate-only)
-- Talent: employer/staff + complete company profile; opaque card id = `candidate_profile.id`; no contact-request in MVP
+- Never convert or merge different currencies into one median/range
+- Show every currency group with `n >= 5`; primary = most samples (tie → A→Z)
+
+## Remaining
+- Deploy + confirm worker re-aggregates trends
+- Prior backlog: şəhər filteri + URL state; talent contact-requests; companies slug merge
 
 ## Relevant files
-- `api/app/{saved_jobs,talent}.py`, `api/app/routers/{me,talent}.py`, `api/tests/test_{saved_jobs,talent}.py`
-- `frontend/components/{save-job-button,my-saved,talent-search,job-card,job-detail,account-bar,shell}.js`
-- `frontend/app/{saved,talent,en/...,ru/...}/page.js`, `frontend/lib/server/{saved-jobs,talent}.js`, `copy.js`
-- `docs/customer-journey.md`, `.cursor/context/architecture.md`
+- `worker/worker/{salary_parse,skill_trends}.py`, `worker/tests/test_{salary_parse,skill_trends}.py`
+- `api/app/{trends,cabinet_store}.py`, `api/tests/test_trends.py`
+- `frontend/components/{trends,trend-detail}.js`

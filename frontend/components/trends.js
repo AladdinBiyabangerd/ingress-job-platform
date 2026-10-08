@@ -51,7 +51,7 @@ function formatMoney(value) {
   return Math.round(value).toLocaleString("en-US");
 }
 
-function salaryParts(t, salary) {
+function oneSalaryParts(t, salary) {
   if (!salary || typeof salary !== "object") return null;
   const median = formatMoney(salary.median);
   const currency = String(salary.currency || "").trim();
@@ -67,7 +67,19 @@ function salaryParts(t, salary) {
     median: t.trendsSalaryMedian(median, currency),
     range,
     sample: t.trendsSalaryN(n),
+    line: [t.trendsSalaryMedian(median, currency), range, t.trendsSalaryN(n)]
+      .filter(Boolean)
+      .join(" · "),
   };
+}
+
+function salaryGroups(t, item) {
+  const list = Array.isArray(item?.salaries) && item.salaries.length
+    ? item.salaries
+    : item?.salary
+      ? [item.salary]
+      : [];
+  return list.map((row) => oneSalaryParts(t, row)).filter(Boolean);
 }
 
 function companionsOf(item) {
@@ -85,13 +97,13 @@ function companionsOf(item) {
 function TrendCard({ t, locale, item, index }) {
   const share = pct(item.share);
   const growth = growthParts(item.growth_wow);
-  const salary = salaryParts(t, item.salary);
+  const salaries = salaryGroups(t, item);
   const companions = companionsOf(item);
   const rank = String(index + 1).padStart(2, "0");
   const barWidth = share === null ? 0 : Math.max(4, Math.min(100, share));
   const meta = [
     typeof item.ad_count === "number" ? t.trendsAdsCount(item.ad_count) : null,
-    salary ? salary.median : null,
+    ...salaries.map((row) => row.line),
   ].filter(Boolean);
   const href =
     item.skill_id != null
@@ -127,13 +139,7 @@ function TrendCard({ t, locale, item, index }) {
           </div>
         ) : null}
 
-        {meta.length || salary?.range || salary?.sample ? (
-          <p className="trends-meta-line">
-            {meta.join(" · ")}
-            {salary?.range ? ` · ${salary.range}` : ""}
-            {salary?.sample ? ` · ${salary.sample}` : ""}
-          </p>
-        ) : null}
+        {meta.length ? <p className="trends-meta-line">{meta.join(" · ")}</p> : null}
 
         {companions.length ? (
           <ul className="tech-chips trends-companion-chips" aria-label={t.trendsOftenWith}>

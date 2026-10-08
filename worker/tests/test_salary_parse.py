@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import unittest
 
-from worker.salary_parse import parse_salary_annual, pick_currency_values, salary_stats
+from worker.salary_parse import (
+    parse_salary_annual,
+    pick_currency_values,
+    salary_stats,
+    stats_by_currency,
+)
 
 
 class SalaryParseTest(unittest.TestCase):
@@ -42,6 +47,26 @@ class SalaryParseTest(unittest.TestCase):
         self.assertEqual(stats["median"], 50000.0)
         self.assertEqual(stats["low"], 40000.0)
         self.assertEqual(stats["high"], 60000.0)
+
+    def test_stats_by_currency_keeps_groups_separate(self):
+        parsed = [
+            parse_salary_annual("40,000 GBP per year"),
+            parse_salary_annual("60,000 GBP per year"),
+            parse_salary_annual("3000 EUR per month"),
+            parse_salary_annual("3500 EUR per month"),
+            parse_salary_annual("100000 RUB per month"),
+        ]
+        parsed = [p for p in parsed if p]
+        groups = stats_by_currency(parsed)
+        by_code = {g["currency"]: g for g in groups}
+        self.assertEqual(set(by_code), {"EUR", "GBP", "RUB"})
+        self.assertEqual(by_code["GBP"]["n"], 2)
+        self.assertEqual(by_code["GBP"]["median"], 50000.0)
+        self.assertEqual(by_code["EUR"]["n"], 2)
+        self.assertEqual(by_code["EUR"]["median"], 3250.0 * 12)
+        self.assertEqual(by_code["RUB"]["n"], 1)
+        # Majority currency first.
+        self.assertIn(groups[0]["currency"], {"EUR", "GBP"})
 
 
 if __name__ == "__main__":

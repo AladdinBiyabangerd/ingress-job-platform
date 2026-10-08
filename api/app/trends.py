@@ -29,6 +29,7 @@ _SALARY_COLUMNS = (
     ("salary_n", "INTEGER NOT NULL DEFAULT 0"),
     ("salary_low", "REAL"),
     ("salary_high", "REAL"),
+    ("salary_by_currency", "TEXT NOT NULL DEFAULT '[]'"),
 )
 
 # Schema DDL is also applied by cabinet_store.ensure_schema; cache so hot
@@ -129,6 +130,7 @@ def ensure_trend_tables(conn) -> None:
                 salary_n INTEGER NOT NULL DEFAULT 0,
                 salary_low REAL,
                 salary_high REAL,
+                salary_by_currency TEXT NOT NULL DEFAULT '[]',
                 PRIMARY KEY (day, skill_id, category, region, remote, relocation)
             );
             CREATE TABLE IF NOT EXISTS skill_pair_daily (
@@ -546,8 +548,8 @@ def best_pair_share_for_missing(
     return out
 
 
-def combine_salary_days(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """Merge daily salary rows for one skill. Same currency only; suppress if n low."""
+def _salary_group_parts(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    """Bucket daily salary samples by currency. Never mixes currencies together."""
     by_currency: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         currency = str(row.get("currency") or "").strip().upper()
@@ -565,23 +567,52 @@ def combine_salary_days(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
                 else float(med),
             }
         )
-    if not by_currency:
-        return None
-    currency, parts = max(by_currency.items(), key=lambda kv: (sum(p["n"] for p in kv[1]), kv[0]))
-    total_n = sum(p["n"] for p in parts)
+    return by_currency
+
+
+def _combine_currency_parts(currency: str, parts: list[dict[str, Any]]) -> dict[str, Any] | None:
+    total_n = sum(int(p["n"]) for p in parts)
     if total_n < MIN_SALARY_SAMPLES:
         return None
     expanded: list[float] = []
     for part in parts:
-        expanded.extend([part["median"]] * part["n"])
+        expanded.extend([float(part["median"])] * int(part["n"]))
     return {
         "median": round(float(median(expanded)), 2),
-        "low": round(min(p["low"] for p in parts), 2),
-        "high": round(max(p["high"] for p in parts), 2),
+        "low": round(min(float(p["low"]) for p in parts), 2),
+        "high": round(max(float(p["high"]) for p in parts), 2),
         "currency": currency,
         "period": "year",
         "n": total_n,
     }
+
+
+def combine_salary_groups(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Merge daily salary rows into one stats object per currency (majority first)."""
+    by_currency = _salary_group_parts(rows)
+    out: list[dict[str, Any]] = []
+    for currency, parts in sorted(
+        by_currency.items(), key=lambda kv: (-sum(p["n"] for p in kv[1]), kv[0])
+    ):
+        combined = _combine_currency_parts(currency, parts)
+        if combined is not None:
+            out.append(combined)
+    return out
+
+
+def combine_salary_days(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Merge daily salary rows for one skill. Same currency only; suppress if n low."""
+    groups = combine_salary_groups(rows)
+    return groups[0] if groups else None
+
+
+def _salary_payload(entry: dict[str, Any] | None) -> dict[str, Any]:
+    """Public salary fields: primary + all currency groups (never FX-mixed)."""
+    if not entry:
+        return {"salary": None, "salaries": []}
+    groups = list(entry.get("groups") or [])
+    primary = entry.get("primary") or (groups[0] if groups else None)
+    return {"salary": primary, "salaries": groups}
 
 
 def _skill_salaries(
@@ -609,18 +640,43 @@ def _skill_salaries(
         clauses.append("region = ?")
         params.append(region)
     sql = f"""
-        SELECT skill_id, salary_median, salary_currency, salary_n, salary_low, salary_high
+        SELECT skill_id, salary_median, salary_currency, salary_n, salary_low, salary_high,
+               salary_by_currency
         FROM skill_trend_daily
         WHERE {' AND '.join(clauses)}
     """
     try:
         rows = conn.execute(sql, params).fetchall()
     except Exception:
-        return {}
+        # Older DBs without salary_by_currency — fall back to primary columns only.
+        sql_legacy = f"""
+            SELECT skill_id, salary_median, salary_currency, salary_n, salary_low, salary_high
+            FROM skill_trend_daily
+            WHERE {' AND '.join(clauses)}
+        """
+        try:
+            rows = conn.execute(sql_legacy, params).fetchall()
+        except Exception:
+            return {}
     by_skill: dict[int, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         skill_id = int(_row_get(row, "skill_id", 0) or 0)
         if skill_id <= 0:
+            continue
+        grouped = _parse_json_list(_row_get(row, "salary_by_currency", 6))
+        if grouped:
+            for item in grouped:
+                if not isinstance(item, dict):
+                    continue
+                by_skill[skill_id].append(
+                    {
+                        "median": item.get("median"),
+                        "currency": item.get("currency"),
+                        "n": item.get("n"),
+                        "low": item.get("low"),
+                        "high": item.get("high"),
+                    }
+                )
             continue
         by_skill[skill_id].append(
             {
@@ -633,9 +689,9 @@ def _skill_salaries(
         )
     out: dict[int, dict] = {}
     for skill_id, parts in by_skill.items():
-        combined = combine_salary_days(parts)
-        if combined is not None:
-            out[skill_id] = combined
+        groups = combine_salary_groups(parts)
+        if groups:
+            out[skill_id] = {"primary": groups[0], "groups": groups}
     return out
 
 
@@ -715,7 +771,7 @@ def trends_payload(
                 "growth_wow": growth_wow(share, prior_share, ad_count=ad_count),
                 "category_hint": str(info.get("category_hint") or ""),
                 "academy_courses": list(info.get("academy_courses") or []),
-                "salary": salaries.get(skill_id),
+                **_salary_payload(salaries.get(skill_id)),
                 "often_with": companions.get(skill_id) or [],
             }
         )
@@ -1079,7 +1135,7 @@ def trend_detail_payload(
         "growth_wow": growth_wow(share, prior_share, ad_count=ad_count),
         "category_hint": str(info.get("category_hint") or ""),
         "academy_courses": academy_courses,
-        "salary": salaries.get(sid),
+        **_salary_payload(salaries.get(sid)),
         "often_with": often_with,
         "jobs": jobs,
         "jobs_total": jobs_total,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -180,7 +181,7 @@ class SkillTrendsTest(unittest.TestCase):
         row = self.store.conn.execute(
             """
             SELECT ad_count, salary_median, salary_currency, salary_n,
-                   salary_low, salary_high
+                   salary_low, salary_high, salary_by_currency
             FROM skill_trend_daily
             WHERE day = '2026-10-06' AND skill_id = ?
             """,
@@ -192,6 +193,54 @@ class SkillTrendsTest(unittest.TestCase):
         self.assertEqual(float(row["salary_median"]), 50000.0)
         self.assertEqual(float(row["salary_low"]), 40000.0)
         self.assertEqual(float(row["salary_high"]), 60000.0)
+        groups = json.loads(str(row["salary_by_currency"] or "[]"))
+        self.assertEqual(len(groups), 1)
+        self.assertEqual(groups[0]["currency"], "GBP")
+
+    def test_aggregate_salary_keeps_currencies_separate(self):
+        self._insert_job(
+            title="G1",
+            day="2026-10-06",
+            skills=["Python"],
+            salary="40,000 GBP per year",
+        )
+        self._insert_job(
+            title="G2",
+            day="2026-10-06",
+            skills=["Python"],
+            salary="60,000 GBP per year",
+        )
+        self._insert_job(
+            title="E1",
+            day="2026-10-06",
+            skills=["Python"],
+            salary="3000 EUR per month",
+        )
+        self._insert_job(
+            title="E2",
+            day="2026-10-06",
+            skills=["Python"],
+            salary="4000 EUR per month",
+        )
+        aggregate_skill_trends(self.store.conn, "2026-10-06")
+        self.store.conn.commit()
+        py = self._skill_id("Python")
+        row = self.store.conn.execute(
+            """
+            SELECT salary_currency, salary_by_currency
+            FROM skill_trend_daily
+            WHERE day = '2026-10-06' AND skill_id = ?
+            """,
+            (py,),
+        ).fetchone()
+        groups = {g["currency"]: g for g in json.loads(str(row["salary_by_currency"] or "[]"))}
+        self.assertEqual(set(groups), {"GBP", "EUR"})
+        self.assertEqual(groups["GBP"]["n"], 2)
+        self.assertEqual(groups["EUR"]["n"], 2)
+        self.assertEqual(groups["GBP"]["median"], 50000.0)
+        self.assertEqual(groups["EUR"]["median"], 3500.0 * 12)
+        # Tie on n → lexicographic primary (EUR before GBP).
+        self.assertEqual(str(row["salary_currency"]), "EUR")
 
     def test_aggregate_skill_pairs(self):
         # 3 Java ads; 2 of them also ask for Kafka → Java→Kafka co=2
