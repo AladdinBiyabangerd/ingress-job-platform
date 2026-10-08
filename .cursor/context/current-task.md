@@ -1,28 +1,23 @@
 # Current task
 
 ## Completed
-- Applications Option E (columns + detail) implemented + smoke
-- Live smoke: empty, many, withdraw UI, AZ/EN/RU; guest gates on `/applications`
-- Polish: shorter board labels; withdraw note kept on empty; mobile tabs no clip
+- Profile Option A: fix broken labels (`display:grid` + field-label)
+- Removed fluff: page lede, panel subs, save/applicant hints, consent intro/legal, retention stub
+- Visibility pill+select; Export/Sil/Tezliklə short actions
 
 ## Current state
-- Board labels: `applicationsColSubmitted/Seen/Rejected` (AZ Göndərilib/Baxılıb/Rədd)
-- Empty after last withdraw keeps `appWithdrawn` note above `.h2-empty`
-- Guest `/applications` (az/en/ru) shows gate copy correctly
-- Authenticated withdraw API path not exercised (no session in browser)
+- Local fix ready; Railway still on previous deploy until push
+- Smoke: `_smoke-profile-a.png` — labels no overlap
 
 ## Decisions
-- Option E retained; timeline keeps lowercase `appSubmitted`/`appSeen`/`appRejected`
-- Board/tab headers use Title-case col labels matching design sample
+- ConsentFields on profile: `showVisibility={false}`, `showMeta={false}`
+- Keep consent `short_help` + rights descriptions (API product copy, not draft disclaimers)
 
 ## Remaining
-- (optional) authenticated live withdraw on `/applications` after login
-- (optional) drop `frontend/.applications-e-smoke.html` once signed off
+- Deploy / hard-refresh production `/profile` to verify
 
 ## Relevant files
-- `frontend/components/applications-board.js`
-- `frontend/components/my-applications.js`
-- `frontend/lib/copy.js`
-- `frontend/app/globals.css` (`.apps-e*`)
-- `frontend/.applications-e-smoke.html`
-- `docs/design-samples/_smoke-applications-e*.png`
+- `frontend/components/profile-form.js`
+- `frontend/components/consent-fields.js`
+- `frontend/app/globals.css`
+- `frontend/.profile-smoke.html`

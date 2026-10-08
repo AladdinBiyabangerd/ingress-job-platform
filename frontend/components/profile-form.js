@@ -251,65 +251,58 @@ export function ProfileForm({ locale }) {
                 </a>
               ) : null
             }
-          >
-            <p className="page-chrome-hint">{t.profileLede}</p>
-          </PageChrome>
+          />
           <div className={layoutClass}>
             {showCompany ? (
               <form className="h2-panel h2-form profile-panel" onSubmit={saveCompany}>
-                <div className="profile-panel-head">
-                  <h2 className="h2-panel-title">{t.companyTitle}</h2>
-                  <p className="profile-panel-sub">{t.profileCompanySub}</p>
-                </div>
+                <h2 className="h2-panel-title">{t.companyTitle}</h2>
                 {companyError ? <p className="note">{companyError}</p> : null}
                 {companyNote ? <p className="note">{companyNote}</p> : null}
                 <div className="profile-grid">
                   <label>
-                    {t.companyName}
+                    <span className="profile-field-label">{t.companyName}</span>
                     <input value={companyName} maxLength={120} required onChange={(event) => setCompanyName(event.target.value)} />
                   </label>
                   <label>
-                    {t.companyCity}
+                    <span className="profile-field-label">{t.companyCity}</span>
                     <input value={city} maxLength={80} required onChange={(event) => setCity(event.target.value)} />
                   </label>
                   <label className="profile-span">
-                    {t.companyAbout}
+                    <span className="profile-field-label">{t.companyAbout}</span>
                     <textarea value={about} maxLength={400} required rows={3} onChange={(event) => setAbout(event.target.value)} />
                   </label>
                 </div>
                 <div className="ad-actions profile-panel-actions">
-                  <span className="hint profile-save-hint">{t.profileSaveHint}</span>
                   <button type="submit" className="btn ink">{t.companySave}</button>
                 </div>
               </form>
             ) : null}
             {showApplicant ? (
               <form className="h2-panel h2-form profile-panel profile-applicant" onSubmit={saveApplicant}>
-                <div className="profile-panel-head">
-                  <h2 className="h2-panel-title">{t.profileApplicantTitle}</h2>
-                  <p className="profile-panel-sub">{t.profileApplicantSub}</p>
-                </div>
+                <h2 className="h2-panel-title">{t.profileApplicantTitle}</h2>
                 {applicantError ? <p className="note">{applicantError}</p> : null}
                 {applicantNote ? <p className="note">{applicantNote}</p> : null}
                 <div className="profile-grid">
                   <label className="profile-span">
-                    {t.profileName}
+                    <span className="profile-field-label">{t.profileName}</span>
                     <input value={displayName} maxLength={80} required onChange={(event) => setDisplayName(event.target.value)} />
                   </label>
                   <label>
-                    {t.applyPhone}
-                    <span className="hint">{t.adOptional}</span>
+                    <span className="profile-field-label">
+                      {t.applyPhone}
+                      <span className="hint">{t.adOptional}</span>
+                    </span>
                     <input type="tel" value={phone} maxLength={40} onChange={(event) => setPhone(event.target.value)} />
                   </label>
                   <label>
-                    {t.applyEmail}
-                    <span className="hint">{t.adOptional}</span>
+                    <span className="profile-field-label">
+                      {t.applyEmail}
+                      <span className="hint">{t.adOptional}</span>
+                    </span>
                     <input type="email" value={email} maxLength={120} onChange={(event) => setEmail(event.target.value)} />
                   </label>
                 </div>
-                <p className="hint profile-field-hint">{t.profileApplicantHint}</p>
                 <div className="ad-actions profile-panel-actions">
-                  <span className="hint profile-save-hint">{t.profileSaveHint}</span>
                   <button type="submit" className="btn ink">{t.companySave}</button>
                 </div>
               </form>
@@ -317,10 +310,7 @@ export function ProfileForm({ locale }) {
             {hasPrivacy ? (
               <form className="h2-panel h2-form profile-panel profile-privacy" onSubmit={savePrivacy}>
                 <div className="profile-privacy-head">
-                  <div className="profile-panel-head">
-                    <h2 className="h2-panel-title">{t.privacyTitle}</h2>
-                    <p className="profile-panel-sub">{t.privacySub}</p>
-                  </div>
+                  <h2 className="h2-panel-title">{t.privacyTitle}</h2>
                   <a className="profile-privacy-link" href={hrefFor(locale, { mode: "emailSettings" })}>
                     {t.emailSettingsOpen}
                   </a>
@@ -334,11 +324,12 @@ export function ProfileForm({ locale }) {
                   onGrantChange={(kind, value) => setGrants((current) => ({ ...current, [kind]: value }))}
                   onVisibilityChange={setVisibility}
                   showVisibility={false}
+                  showMeta={false}
                   idPrefix="profile-consent"
                 />
                 <div className="ad-actions profile-panel-actions">
                   {visibilityLevels.length ? (
-                    <label className="profile-visibility-pill">
+                    <div className="profile-visibility-pill">
                       <span className="profile-visibility-dot" aria-hidden="true" />
                       <span>
                         {t.privacyVisibilityLabel}: {visibilityLabel}
@@ -354,7 +345,7 @@ export function ProfileForm({ locale }) {
                           </option>
                         ))}
                       </select>
-                    </label>
+                    </div>
                   ) : (
                     <span className="profile-visibility-pill">
                       <span className="profile-visibility-dot" aria-hidden="true" />
@@ -369,9 +360,6 @@ export function ProfileForm({ locale }) {
             ) : null}
             {privacyRights.length ? (
               <div className="profile-rights">
-                {consentPayload.retention_stub ? (
-                  <p className="hint profile-rights-retention">{consentPayload.retention_stub}</p>
-                ) : null}
                 <div className="profile-rights-grid">
                   {privacyRights.map((right) => (
                     <div key={right.id} className="profile-right-card">

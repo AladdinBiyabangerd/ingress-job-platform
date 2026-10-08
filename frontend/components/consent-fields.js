@@ -8,6 +8,7 @@ export function ConsentFields({
   onGrantChange,
   onVisibilityChange,
   showVisibility = true,
+  showMeta = true,
   idPrefix = "consent",
 }) {
   if (!payload) return null;
@@ -16,8 +17,8 @@ export function ConsentFields({
 
   return (
     <fieldset className="consent-fields">
-      {payload.intro ? <p className="hint">{payload.intro}</p> : null}
-      {payload.legal_disclaimer ? <p className="hint consent-legal">{payload.legal_disclaimer}</p> : null}
+      {showMeta && payload.intro ? <p className="hint">{payload.intro}</p> : null}
+      {showMeta && payload.legal_disclaimer ? <p className="hint consent-legal">{payload.legal_disclaimer}</p> : null}
       {items.map((item) => (
         <div key={item.kind} className="consent-item">
           <label className="inline" htmlFor={`${idPrefix}-${item.kind}`}>

@@ -1608,22 +1608,54 @@ textarea { min-height: 120px; resize: vertical; }
   margin: 0;
 }
 
-.profile-panel-head {
+.profile-page .profile-grid > label {
   display: grid;
-  gap: 4px;
+  gap: 6px;
+  align-content: start;
+  font-size: 13px;
+  font-weight: var(--fw-semibold, 600);
+  color: var(--ink, #0b1220);
   min-width: 0;
 }
 
-.profile-panel-sub {
-  margin: 0;
-  font-size: 13px;
-  font-weight: var(--fw-regular, 400);
-  color: var(--muted, #656b75);
-  line-height: 1.4;
+.profile-page .profile-field-label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
 }
 
-.profile-field-hint {
-  margin: 0;
+.profile-page .profile-field-label .hint {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.profile-page .profile-grid input,
+.profile-page .profile-grid textarea {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  border: 1px solid var(--border, #dfe1e5);
+  border-radius: var(--radius-sm, 8px);
+  padding: 0 10px;
+  font: inherit;
+  background: #fafbfe;
+  color: var(--text, #20242b);
+}
+
+.profile-page .profile-grid textarea {
+  height: auto;
+  min-height: 88px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.profile-page .profile-grid input:focus,
+.profile-page .profile-grid textarea:focus {
+  outline: none;
+  border-color: var(--brand, #001fff);
+  box-shadow: 0 0 0 3px var(--brand-soft, #eaefff);
 }
 
 .profile-page .profile-panel .profile-grid,
@@ -1649,14 +1681,14 @@ textarea { min-height: 120px; resize: vertical; }
   margin-top: auto;
   padding-top: 4px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.profile-save-hint {
-  margin: 0;
+.profile-page .profile-privacy .profile-panel-actions {
+  justify-content: space-between;
 }
 
 .profile-visibility-pill {
@@ -1706,11 +1738,6 @@ textarea { min-height: 120px; resize: vertical; }
 
 .profile-privacy-head .h2-panel-title {
   margin: 0;
-}
-
-.profile-privacy-head .profile-panel-head {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 .profile-privacy-link {
@@ -7071,6 +7098,15 @@ a.h2-trend-stat:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.profile-page .h2-form .h2-panel-title,
+.profile-page .h2-form .profile-grid {
+  margin-bottom: 0;
+}
+
+.profile-page .h2-form .ad-actions.profile-panel-actions {
+  margin-top: auto;
 }
 
 .h2-gate {
