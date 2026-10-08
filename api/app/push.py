@@ -15,16 +15,24 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def _env_strip(name: str) -> str:
+    """Read env and drop accidental wrapping quotes from Railway/UI paste."""
+    raw = (os.environ.get(name) or "").strip()
+    if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in {'"', "'"}:
+        raw = raw[1:-1].strip()
+    return raw
+
+
 def vapid_public_key() -> str:
-    return (os.environ.get("VAPID_PUBLIC_KEY") or "").strip()
+    return _env_strip("VAPID_PUBLIC_KEY")
 
 
 def vapid_private_key() -> str:
-    return (os.environ.get("VAPID_PRIVATE_KEY") or "").strip()
+    return _env_strip("VAPID_PRIVATE_KEY")
 
 
 def vapid_subject() -> str:
-    raw = (os.environ.get("VAPID_SUBJECT") or "").strip()
+    raw = _env_strip("VAPID_SUBJECT")
     if not raw:
         return ""
     if raw.startswith("mailto:") or raw.startswith("https://"):
@@ -34,6 +42,18 @@ def vapid_subject() -> str:
 
 def vapid_configured() -> bool:
     return bool(vapid_public_key() and vapid_private_key() and vapid_subject())
+
+
+def vapid_missing_names() -> list[str]:
+    """Env var names that are empty (for 503 diagnostics; no secret values)."""
+    missing: list[str] = []
+    if not vapid_public_key():
+        missing.append("VAPID_PUBLIC_KEY")
+    if not vapid_private_key():
+        missing.append("VAPID_PRIVATE_KEY")
+    if not vapid_subject():
+        missing.append("VAPID_SUBJECT")
+    return missing
 
 
 def _ensure_tables(conn) -> None:

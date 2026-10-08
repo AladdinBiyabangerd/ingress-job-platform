@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
-FREQUENCIES = ("weekly", "biweekly", "important_only", "none")
+FREQUENCIES = ("daily", "weekly", "biweekly", "important_only", "none")
 LOCALES = ("az", "en", "ru")
 WEEKDAYS = frozenset(range(7))  # 0=Mon … 6=Sun
 
@@ -378,6 +378,8 @@ def coach_weekly_enabled(prefs: dict) -> bool:
 
 def period_key_for_digest(*, when: datetime | None = None, frequency: str) -> str:
     moment = when or datetime.now(timezone.utc)
+    if frequency == "daily":
+        return day_key(when=moment)
     iso = moment.isocalendar()
     if frequency == "biweekly":
         # Pair weeks: 1-2, 3-4, …

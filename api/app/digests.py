@@ -104,6 +104,8 @@ def _lang(value: str) -> str:
 
 
 def _since_for_frequency(frequency: str, *, when: datetime) -> datetime:
+    if frequency == "daily":
+        return when - timedelta(days=1)
     if frequency == "biweekly":
         return when - timedelta(days=14)
     return when - timedelta(days=7)
@@ -116,8 +118,10 @@ def _weekday_iso(when: datetime) -> int:
 def _due_for_digest(prefs: dict, *, when: datetime) -> bool:
     if not digest_enabled(prefs):
         return False
-    if int(prefs.get("send_weekday") or 0) != _weekday_iso(when):
-        return False
+    # Daily digests ignore send_weekday; weekly/biweekly wait for that ISO weekday.
+    if prefs.get("frequency") != "daily":
+        if int(prefs.get("send_weekday") or 0) != _weekday_iso(when):
+            return False
     return True
 
 

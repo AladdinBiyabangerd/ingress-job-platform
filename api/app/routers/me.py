@@ -176,10 +176,17 @@ class PushSubscriptionDeleteBody(BaseModel):
 def get_push_vapid_key(user: VerifiedAccess = Depends(current_user)) -> dict:
     """Public VAPID key for Web Push subscribe (engagement Phase 5)."""
     _require_candidate(user)
-    from app.push import vapid_configured, vapid_public_key
+    from app.push import vapid_configured, vapid_missing_names, vapid_public_key
 
     if not vapid_configured():
-        raise HTTPException(status_code=503, detail="Web Push is not configured")
+        missing = vapid_missing_names()
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "web_push_not_configured",
+                "missing": missing,
+            },
+        )
     return {"publicKey": vapid_public_key()}
 
 

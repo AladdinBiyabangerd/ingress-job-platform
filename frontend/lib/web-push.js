@@ -30,14 +30,34 @@ export async function registerPushWorker() {
 export async function fetchVapidPublicKey() {
   const res = await fetch("/api/auth/me/push-vapid-key", { cache: "no-store" });
   if (!res.ok) {
+    let detail = null;
+    try {
+      detail = await res.json();
+    } catch {
+      detail = null;
+    }
     const err = new Error("vapid_unavailable");
     err.status = res.status;
+    err.detail = detail;
     throw err;
   }
   const data = await res.json();
   const key = data && data.publicKey;
-  if (!key) throw new Error("vapid_missing");
+  if (!key) {
+    const err = new Error("vapid_missing");
+    err.status = 503;
+    throw err;
+  }
   return key;
+}
+
+/** Map push-vapid-key / enable failures to a UI reason code. */
+export function pushEnableFailureReason(error) {
+  const status = error && typeof error.status === "number" ? error.status : 0;
+  if (status === 401 || status === 403) return "auth";
+  if (status === 502 || status === 504) return "upstream";
+  if (status === 503 || status === 0) return "vapid";
+  return "vapid";
 }
 
 export async function savePushSubscription(subscription) {
@@ -92,8 +112,8 @@ export async function enableBrowserPush() {
   let publicKey;
   try {
     publicKey = await fetchVapidPublicKey();
-  } catch {
-    return { ok: false, reason: "vapid" };
+  } catch (error) {
+    return { ok: false, reason: pushEnableFailureReason(error) };
   }
   const reg = await navigator.serviceWorker.ready;
   let sub = await reg.pushManager.getSubscription();
@@ -103,7 +123,14 @@ export async function enableBrowserPush() {
       applicationServerKey: urlBase64ToUint8Array(publicKey),
     });
   }
-  await savePushSubscription(sub);
+  try {
+    await savePushSubscription(sub);
+  } catch (error) {
+    const status = error && typeof error.status === "number" ? error.status : 0;
+    if (status === 401 || status === 403) return { ok: false, reason: "auth" };
+    if (status === 502 || status === 504) return { ok: false, reason: "upstream" };
+    return { ok: false, reason: "error" };
+  }
   return { ok: true, endpoint: sub.endpoint };
 }
 

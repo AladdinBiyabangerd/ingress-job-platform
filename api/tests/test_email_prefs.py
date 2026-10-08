@@ -213,6 +213,34 @@ class EmailPrefsTests(unittest.TestCase):
             finally:
                 conn.close()
 
+    def test_daily_frequency_digest_ignores_weekday(self):
+        from app.digests import _due_for_digest, _since_for_frequency
+        from app.email_prefs import period_key_for_digest
+
+        wednesday = datetime(2026, 10, 7, 10, 0, tzinfo=timezone.utc)
+        prefs = {
+            "frequency": "daily",
+            "digest": True,
+            "emails_consent": True,
+            "unsubscribed_at": "",
+            "send_weekday": 0,  # Monday — must not block daily
+        }
+        self.assertTrue(_due_for_digest(prefs, when=wednesday))
+        self.assertEqual(period_key_for_digest(when=wednesday, frequency="daily"), "2026-10-07")
+        since = _since_for_frequency("daily", when=wednesday)
+        self.assertEqual(since.date().isoformat(), "2026-10-06")
+
+        subject = "mail-daily-1"
+        self._grant_emails(subject)
+        with self._auth("job:candidate", subject):
+            saved = self.client.put(
+                "/api/v1/email-prefs",
+                headers=self.headers,
+                json={"frequency": "daily", "digest": True, "language": "az"},
+            )
+        self.assertEqual(saved.status_code, 200, saved.text)
+        self.assertEqual(saved.json()["frequency"], "daily")
+
     def test_email_click_redirect_logs(self):
         from app.cabinet_store import _connect
         from app.email_clicks import click_token, tracked_job_url

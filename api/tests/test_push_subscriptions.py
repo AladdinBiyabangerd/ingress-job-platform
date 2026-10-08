@@ -67,6 +67,18 @@ class PushSubscriptionTests(unittest.TestCase):
         self.assertIn("publicKey", res.json())
         self.assertTrue(res.json()["publicKey"])
 
+    def test_vapid_key_reports_missing_env(self):
+        with patch.dict(
+            "os.environ",
+            {"VAPID_PUBLIC_KEY": "", "VAPID_PRIVATE_KEY": "", "VAPID_SUBJECT": ""},
+            clear=False,
+        ):
+            res = self.client.get("/api/v1/me/push-vapid-key", headers=self.headers)
+        self.assertEqual(res.status_code, 503, res.text)
+        detail = res.json().get("detail") or {}
+        self.assertEqual(detail.get("error"), "web_push_not_configured")
+        self.assertIn("VAPID_PUBLIC_KEY", detail.get("missing") or [])
+
     def test_subscribe_and_delete(self):
         body = {
             "endpoint": "https://push.example/endpoint/abc",

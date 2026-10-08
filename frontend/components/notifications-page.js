@@ -274,6 +274,8 @@ export function NotificationsPage({ locale, initialItems = null, initialUnread =
       const result = await enableBrowserPush();
       if (!result.ok) {
         if (result.reason === "vapid") setPushNote(t.emailSettingsPushVapid);
+        else if (result.reason === "auth") setPushNote(t.emailSettingsPushAuth);
+        else if (result.reason === "upstream") setPushNote(t.emailSettingsPushUpstream);
         else if (result.reason === "denied" || result.reason === "permission") {
           setPushNote(t.emailSettingsPushDenied);
         } else if (result.reason === "unsupported") {

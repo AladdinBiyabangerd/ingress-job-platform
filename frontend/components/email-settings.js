@@ -14,15 +14,20 @@ import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 import { useInitialMe } from "./me-seed";
 
-const FREQUENCIES = ["weekly", "biweekly", "important_only", "none"];
+const FREQUENCIES = ["daily", "weekly", "biweekly", "important_only", "none"];
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
 const CHANNEL_TOTAL = 6;
 
 function frequencyLabel(t, value) {
+  if (value === "daily") return t.emailFreqDaily;
   if (value === "weekly") return t.emailFreqWeekly;
   if (value === "biweekly") return t.emailFreqBiweekly;
   if (value === "important_only") return t.emailFreqImportant;
   return t.emailFreqNone;
+}
+
+function showsWeekday(frequency) {
+  return frequency === "weekly" || frequency === "biweekly";
 }
 
 function weekdayLabel(t, value) {
@@ -178,6 +183,8 @@ export function EmailSettings({ locale, initialPrefs = null }) {
     if (reason === "denied" || reason === "permission") return t.emailSettingsPushDenied;
     if (reason === "unsupported") return t.emailSettingsPushUnsupported;
     if (reason === "vapid") return t.emailSettingsPushVapid;
+    if (reason === "auth") return t.emailSettingsPushAuth;
+    if (reason === "upstream") return t.emailSettingsPushUpstream;
     return t.emailSettingsPushError;
   }
 
@@ -328,10 +335,12 @@ export function EmailSettings({ locale, initialPrefs = null }) {
                       <dt>{t.emailSettingsPlanLanguage}</dt>
                       <dd>{langLabel}</dd>
                     </div>
-                    <div>
-                      <dt>{t.emailSettingsPlanWeekday}</dt>
-                      <dd>{weekdayLabel(t, sendWeekday)}</dd>
-                    </div>
+                    {showsWeekday(frequency) ? (
+                      <div>
+                        <dt>{t.emailSettingsPlanWeekday}</dt>
+                        <dd>{weekdayLabel(t, sendWeekday)}</dd>
+                      </div>
+                    ) : null}
                     <div>
                       <dt>{t.emailSettingsPlanConsent}</dt>
                       <dd>{consentOn ? t.emailSettingsConsentOn : t.emailSettingsConsentClosed}</dd>
@@ -363,19 +372,21 @@ export function EmailSettings({ locale, initialPrefs = null }) {
                         <option value="ru">RU</option>
                       </select>
                     </label>
-                    <label className="es-field">
-                      {t.emailSettingsWeekday}
-                      <select
-                        value={sendWeekday}
-                        onChange={(event) => setSendWeekday(Number(event.target.value))}
-                      >
-                        {WEEKDAYS.map((day) => (
-                          <option key={day} value={day}>
-                            {weekdayLabel(t, day)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    {showsWeekday(frequency) ? (
+                      <label className="es-field">
+                        {t.emailSettingsWeekday}
+                        <select
+                          value={sendWeekday}
+                          onChange={(event) => setSendWeekday(Number(event.target.value))}
+                        >
+                          {WEEKDAYS.map((day) => (
+                            <option key={day} value={day}>
+                              {weekdayLabel(t, day)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
                   </div>
                 </div>
 
