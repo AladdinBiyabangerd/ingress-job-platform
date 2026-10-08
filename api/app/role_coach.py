@@ -1,15 +1,19 @@
 """AI role skill coach: what to learn next for a target role.
 
 Soft-fails to coach=null. Post-validates skill names against have/missing sets.
+Returns (coach, error_code) so callers can surface why advice is missing.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from app.ai_flags import feature_on
 from app.ai_gateway import complete_json
+
+log = logging.getLogger("ingress-job.api.role_coach")
 
 PURPOSE = "role_coach"
 PROMPT_VERSION = "role-coach-v1"
@@ -222,6 +226,11 @@ def _validate_coach(data: dict, *, have: list[dict], missing: list[dict]) -> dic
     }
 
 
+def _fail(role_name: str, code: str) -> tuple[None, str]:
+    log.warning("role_coach soft-fail role=%s reason=%s", role_name or "-", code)
+    return None, code
+
+
 def build_role_coach(
     conn,
     *,
@@ -230,12 +239,12 @@ def build_role_coach(
     missing: list[dict],
     profile: dict,
     lang: str,
-) -> dict | None:
-    """Return validated coach payload or None (soft-fail)."""
+) -> tuple[dict | None, str]:
+    """Return (validated coach payload, error_code). error_code is '' on success."""
     if not coach_enabled(conn):
-        return None
+        return _fail(role_name, "role_coach_disabled")
     if not role_name or (not have and not missing):
-        return None
+        return _fail(role_name, "coach_no_skills")
     result = complete_json(
         purpose=PURPOSE,
         prompt_version=PROMPT_VERSION,
@@ -254,5 +263,9 @@ def build_role_coach(
         timeout=30.0,
     )
     if not result.ok or not isinstance(result.data, dict):
-        return None
-    return _validate_coach(result.data, have=have, missing=missing)
+        code = str(result.error or "ai_failed").strip() or "ai_failed"
+        return _fail(role_name, code[:80])
+    validated = _validate_coach(result.data, have=have, missing=missing)
+    if validated is None:
+        return _fail(role_name, "ai_validation_failed")
+    return validated, ""

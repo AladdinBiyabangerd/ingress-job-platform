@@ -2792,6 +2792,13 @@ body:has(.profile-review-page) {
   line-height: 1.45;
 }
 
+.recommendations-coach-error-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
 .recommendations-coach-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

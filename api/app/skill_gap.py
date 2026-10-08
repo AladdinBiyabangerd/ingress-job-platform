@@ -7,9 +7,12 @@ skill_trend_daily is optional when the trends table is populated.
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from app.cv_profile import _profile_payload, ensure_profile_tables
+
+log = logging.getLogger("ingress-job.api.skill_gap")
 from app.role_suggestions import (
     _build_skill_lookup,
     _candidate_skills,
@@ -201,6 +204,7 @@ def skill_gap_payload(
         "explanation": "",
         "coach": None,
         "ai_coach": False,
+        "coach_error": "",
     }
     if not matching:
         return base
@@ -307,7 +311,7 @@ def skill_gap_payload(
     try:
         from app.role_coach import build_role_coach
 
-        coach = build_role_coach(
+        coach, coach_error = build_role_coach(
             conn,
             role_name=str(base["role"] or ""),
             have=have,
@@ -315,14 +319,20 @@ def skill_gap_payload(
             profile=profile,
             lang=locale,
         )
-    except Exception:
-        coach = None
+    except Exception as exc:
+        log.warning("role_coach exception role=%s: %s", base.get("role") or "-", exc)
+        coach, coach_error = None, "coach_exception"
     if coach:
         base["coach"] = coach
         base["ai_coach"] = True
+        base["coach_error"] = ""
         src = str(base.get("source") or "role_skill_weight")
         if "+role_coach" not in src:
             base["source"] = f"{src}+role_coach"
+    else:
+        base["coach"] = None
+        base["ai_coach"] = False
+        base["coach_error"] = str(coach_error or "ai_failed")[:80]
     return base
 
 

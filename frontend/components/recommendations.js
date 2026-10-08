@@ -73,6 +73,20 @@ function coachTransferItems(list) {
   );
 }
 
+function coachEmptyMessage(t, coachError) {
+  const code = String(coachError || "").trim();
+  if (!code) return t.skillsCoachEmpty;
+  if (code === "ai_no_key") return t.skillsCoachErrorNoKey;
+  if (code === "ai_disabled" || code === "role_coach_disabled") return t.skillsCoachErrorOff;
+  if (code === "ai_budget_exceeded") return t.skillsCoachErrorBudget;
+  if (code === "ai_validation_failed") return t.skillsCoachErrorValidation;
+  if (code.startsWith("ai_provider") || code === "ai_bad_json" || code === "ai_failed") {
+    return t.skillsCoachErrorProvider;
+  }
+  if (typeof t.skillsCoachErrorCode === "function") return t.skillsCoachErrorCode(code);
+  return t.skillsCoachEmpty;
+}
+
 function JobPreviewItem({ t, locale, job }) {
   const score = typeof job.score === "number" ? Math.round(job.score * 100) : null;
   const meta = jobMeta(t, job);
@@ -313,6 +327,7 @@ export function Recommendations({
   const hasCoach = Boolean(
     fitSummary || mustLearn.length || alreadyStrong.length || transferable.length,
   );
+  const coachError = String(gap?.coach_error || "").trim();
   const missing = Array.isArray(gap?.missing) ? gap.missing : [];
   const have = Array.isArray(gap?.have) ? gap.have : [];
   const hasGap = missing.length > 0 || have.length > 0;
@@ -495,7 +510,10 @@ export function Recommendations({
                 </>
               ) : (
                 <div className="recommendations-coach-empty">
-                  <p className="hint">{t.skillsCoachEmpty}</p>
+                  <p className="hint">{coachEmptyMessage(t, coachError)}</p>
+                  {coachError ? (
+                    <p className="hint recommendations-coach-error-code">{coachError}</p>
+                  ) : null}
                 </div>
               )}
             </section>

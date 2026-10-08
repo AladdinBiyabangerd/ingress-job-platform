@@ -54,7 +54,7 @@ class RoleCoachValidateTests(unittest.TestCase):
 class RoleCoachBuildTests(unittest.TestCase):
     def test_flag_off(self):
         with patch.dict(os.environ, {"AI_ROLE_COACH_ENABLED": "0"}, clear=False):
-            out = build_role_coach(
+            coach, err = build_role_coach(
                 None,
                 role_name="Java Backend",
                 have=[{"name": "Java"}],
@@ -62,7 +62,8 @@ class RoleCoachBuildTests(unittest.TestCase):
                 profile={"seniority": "middle"},
                 lang="en",
             )
-        self.assertIsNone(out)
+        self.assertIsNone(coach)
+        self.assertEqual(err, "role_coach_disabled")
 
     def test_applies_when_flag_on(self):
         from app.ai_gateway.gateway import GatewayResult
@@ -82,7 +83,7 @@ class RoleCoachBuildTests(unittest.TestCase):
         )
         with patch.dict(os.environ, {"AI_ROLE_COACH_ENABLED": "1"}, clear=False):
             with patch("app.role_coach.complete_json", return_value=fake) as api:
-                out = build_role_coach(
+                coach, err = build_role_coach(
                     None,
                     role_name="Java Backend",
                     have=[{"name": "Java", "weight": 1}],
@@ -90,9 +91,10 @@ class RoleCoachBuildTests(unittest.TestCase):
                     profile={"seniority": "middle", "skills": [{"name": "Java"}]},
                     lang="en",
                 )
-        self.assertIsNotNone(out)
-        self.assertIn("Solid Java", out["fit_summary"])
-        self.assertEqual(out["must_learn"][0]["skill"], "Kafka")
+        self.assertEqual(err, "")
+        self.assertIsNotNone(coach)
+        self.assertIn("Solid Java", coach["fit_summary"])
+        self.assertEqual(coach["must_learn"][0]["skill"], "Kafka")
         self.assertEqual(api.call_args.kwargs["prompt_version"], PROMPT_VERSION)
 
     def test_soft_fail(self):
@@ -103,7 +105,7 @@ class RoleCoachBuildTests(unittest.TestCase):
                 "app.role_coach.complete_json",
                 return_value=GatewayResult(ok=False, error="ai_provider_error"),
             ):
-                out = build_role_coach(
+                coach, err = build_role_coach(
                     None,
                     role_name="Java Backend",
                     have=[{"name": "Java"}],
@@ -111,7 +113,8 @@ class RoleCoachBuildTests(unittest.TestCase):
                     profile={},
                     lang="az",
                 )
-        self.assertIsNone(out)
+        self.assertIsNone(coach)
+        self.assertEqual(err, "ai_provider_error")
 
 
 class SkillGapCoachWireTests(unittest.TestCase):
@@ -186,7 +189,7 @@ class SkillGapCoachWireTests(unittest.TestCase):
                                 ):
                                     with patch(
                                         "app.role_coach.build_role_coach",
-                                        return_value=fake_coach,
+                                        return_value=(fake_coach, ""),
                                     ):
                                         with patch.dict(
                                             os.environ,
@@ -200,10 +203,74 @@ class SkillGapCoachWireTests(unittest.TestCase):
                                                 lang="en",
                                             )
         self.assertTrue(out["ai_coach"])
+        self.assertEqual(out["coach_error"], "")
         self.assertEqual(out["coach"]["fit_summary"], fake_coach["fit_summary"])
         self.assertIn("+role_coach", out["source"])
         self.assertEqual(out["have"][0]["name"], "Java")
         self.assertEqual(out["missing"][0]["name"], "Kafka")
+
+    def test_payload_surfaces_coach_error(self):
+        from app.skill_gap import skill_gap_payload
+
+        class FakeConn:
+            def execute(self, *a, **k):
+                raise AssertionError("should be mocked before SQL")
+
+        with patch("app.skill_gap.ensure_profile_tables"):
+          with patch("app.skill_gap._matching_granted", return_value=True):
+            with patch(
+                "app.skill_gap._profile_payload",
+                return_value={
+                    "exists": True,
+                    "status": "ready",
+                    "profile": {"skills": [{"name": "Java"}]},
+                },
+            ):
+                with patch(
+                    "app.skill_gap.resolve_taxonomy_role",
+                    return_value={
+                        "id": 1,
+                        "canonical_name": "Java Backend Developer",
+                        "category": "Backend",
+                        "academy_career_path_id": "",
+                    },
+                ):
+                    with patch(
+                        "app.skill_gap._role_target_skills",
+                        return_value=[
+                            {
+                                "skill_id": 10,
+                                "name": "Java",
+                                "weight": 1.0,
+                                "share": None,
+                                "growth": None,
+                                "academy_courses": [],
+                                "group_key": "",
+                            },
+                        ],
+                    ):
+                        with patch("app.trends.trend_metrics_for_skills", return_value={}):
+                            with patch(
+                                "app.skill_gap._candidate_skills",
+                                return_value={10: {"years": 3}},
+                            ):
+                                with patch(
+                                    "app.skill_gap._build_skill_lookup",
+                                    return_value={},
+                                ):
+                                    with patch(
+                                        "app.role_coach.build_role_coach",
+                                        return_value=(None, "ai_no_key"),
+                                    ):
+                                        out = skill_gap_payload(
+                                            FakeConn(),
+                                            user_id="u1",
+                                            role="Java Backend Developer",
+                                            lang="en",
+                                        )
+        self.assertFalse(out["ai_coach"])
+        self.assertIsNone(out["coach"])
+        self.assertEqual(out["coach_error"], "ai_no_key")
 
 
 if __name__ == "__main__":

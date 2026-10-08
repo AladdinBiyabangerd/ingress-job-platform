@@ -1,30 +1,23 @@
 # Current task
 
 ## Completed
-- AI axınları: nə vaxt işləyir (izah)
-- Reco Design A/B/C mockups (assets/)
-- User chose **Design A** for `/me/recommendations`
-- Design A polish + coach null handling
+- Reco Design A polish + coach null UI
+- Coach soft-fail diagnostics: `coach_error` + warning logs + UI hint
 
 ## Current state
-- Design A: roles rail | selected + score ring label | coach hero | have / learn / jobs
-- Coach always visible; `coach: null` → dashed empty panel (`skillsCoachEmpty`)
-- Skill-gap fetch timeout 35s (coach LLM ~30s); gap/matches load independently
-- Tech icons via Simple Icons CDN + fallback initials (`SkillIcon`)
+- skill-gap returns `coach_error` (e.g. `ai_no_key`, `role_coach_disabled`)
+- API logs `role_coach soft-fail role=… reason=…`
+- Recommendations empty coach shows mapped message + raw code
 
 ## Decisions
-- Layout Design A with brand tokens
-- Null coach is soft-fail UI, not a crash; lists filter invalid items
-- Do not clear matches if only skill-gap fails
+- Soft-fail stays non-blocking; expose reason instead of silent null
 
 ## Remaining
-- Visual smoke logged-in `/me/recommendations` with `role_coach` on (optional)
+- After deploy: open `/me/recommendations`, read `coach_error` / Railway warning
 
 ## Relevant files
+- `api/app/role_coach.py`
+- `api/app/skill_gap.py`
+- `api/tests/test_role_coach.py`
 - `frontend/components/recommendations.js`
-- `frontend/components/skill-icon.js`
-- `frontend/lib/skill-icons.js`
-- `frontend/lib/server/refresh.js`
-- `frontend/lib/server/recommendations.js`
-- `frontend/app/globals.css`
 - `frontend/lib/copy.js`
