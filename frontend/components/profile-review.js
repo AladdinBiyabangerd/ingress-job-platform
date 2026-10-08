@@ -672,9 +672,12 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
       {me === undefined ? null : allowed ? (
         <div className="cabinet profile-review-page">
           <div className="cabinet-head profile-review-toolbar">
-            <a className="btn ghost" href={hrefFor(locale, { mode: "profile" })}>
-              {t.profileReviewBack}
-            </a>
+            <div>
+              <a className="btn ghost" href={hrefFor(locale, { mode: "profile" })}>
+                {t.profileReviewBack}
+              </a>
+              <p className="hint">{t.profileReviewContactHint}</p>
+            </div>
           </div>
 
           {error ? <p className="note profile-review-flash">{error}</p> : null}

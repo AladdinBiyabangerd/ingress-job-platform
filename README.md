@@ -146,9 +146,13 @@ CV faylı `BUCKET_NAME`, `BUCKET_ACCESS_KEY` və `BUCKET_SECRET_KEY` üçünün 
 
 Servislər (`api`, `web`, saatlıq `worker`) və mühit dəyişənlərinin adları: [docs/railway.md](docs/railway.md).
 
+## Customer journey
+
+Namizəd və işəgötürən səyahət xəritəsi: [docs/customer-journey.md](docs/customer-journey.md).
+
 ## Qovluqlar
 
 - `frontend` — sayt
 - `api` — server
 - `worker` — elan toplayıcısı
-- `docs` — arxitektura planı və Railway qeydləri
+- `docs` — arxitektura planı, customer journey və Railway qeydləri

@@ -1,23 +1,23 @@
 # Current task
 
 ## Completed
-- Profile review densify + tabs (local, uncommitted)
-- Trend detail layout:
-  - Static hero/you copy removed; back right of breadcrumbs
-  - Companions (learn/have) → two-col: companions left, facts right
-  - Jobs button → `/trends/{id}/jobs` with server pagination (20/page)
-  - Detail SSR skips jobs payload (`jobs_limit=0`)
+- Customer journey sənədi: `docs/customer-journey.md` (namizəd + işəgötürən) + README link
+- A: Account menyuya CV profil linki (`profileReviewOpen`)
+- B: `/profile` CV CTA düyməsi; `/profile/review` kontakt hint + geri link
+- C: `/post` kabinetdə ümumi **Müraciətlər** tabı
+- D: `/company` onboarding-only — tamamlanmış profil → Profilə yönləndirmə mesajı
 
 ## Current state
-- Committed and pushed: `925c4e7` on `main`.
+- Plan icra olundu (uncommitted). Plan faylına toxunulmayıb.
 
 ## Remaining
-- None for this task (visual check on deploy optional)
+- None for this task (opsional: lokalda axınları vizual yoxlama)
+
+## Decisions
+- Yeni API yox; employer inbox mövcud `cabinet/applications` üzərində
+- Şəhər filteri / saved jobs / talent search backlog-da qalıb (`docs/customer-journey.md`)
 
 ## Relevant files
-- `frontend/components/trend-detail.js`
-- `frontend/components/trend-jobs.js`
-- `frontend/app/{,en/,ru/}trends/[skillId]/jobs/page.js`
-- `frontend/app/globals.css`
-- `frontend/lib/{api,copy,server/trends}.js`
-- `api/app/trends.py`, `api/app/routers/trends.py`
+- `docs/customer-journey.md`, `README.md`
+- `frontend/components/{account-bar,profile-form,profile-review,cabinet,company-form}.js`
+- `frontend/lib/copy.js`

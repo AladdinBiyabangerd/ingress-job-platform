@@ -112,6 +112,10 @@ export function Cabinet({ locale, me, initialJobs = null, initialApplications = 
     setTab("ads");
   }
 
+  function openApplications() {
+    setTab("applications");
+  }
+
   async function onSubmit(event) {
     event.preventDefault();
     setError("");
@@ -204,6 +208,16 @@ export function Cabinet({ locale, me, initialJobs = null, initialApplications = 
             {t.myAds}
             {items.length ? <span className="cabinet-tab-count">{items.length}</span> : null}
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "applications"}
+            className={tab === "applications" ? "on" : ""}
+            onClick={openApplications}
+          >
+            {t.cabinetApplicationsTab}
+            {applications.length ? <span className="cabinet-tab-count">{applications.length}</span> : null}
+          </button>
         </div>
       </div>
       {error ? <p className="note">{error}</p> : null}
@@ -293,7 +307,9 @@ export function Cabinet({ locale, me, initialJobs = null, initialApplications = 
             ) : null}
           </div>
         </form>
-      ) : (
+      ) : null}
+
+      {tab === "ads" ? (
         <section className="cabinet-ads">
           {items.length === 0 ? <p className="empty-line">{t.cabinetEmpty}</p> : null}
           <div className="list">
@@ -359,7 +375,19 @@ export function Cabinet({ locale, me, initialJobs = null, initialApplications = 
             onPageChange={goToPage}
           />
         </section>
-      )}
+      ) : null}
+
+      {tab === "applications" ? (
+        <section className="cabinet-apps">
+          <ApplicationList
+            locale={locale}
+            title={t.ownerApplicationsAll}
+            items={applications}
+            mode="owner"
+            onChanged={load}
+          />
+        </section>
+      ) : null}
     </div>
   );
 }

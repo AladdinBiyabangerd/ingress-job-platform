@@ -21,6 +21,10 @@ function loginHref(locale) {
   return `/api/auth/login?returnTo=${encodeURIComponent(hrefFor(locale, { mode: "company" }))}`;
 }
 
+function profileComplete(me) {
+  return Boolean(me?.authenticated && me.company_profile?.complete);
+}
+
 export function CompanyForm({ locale, initialMe, initialProfile = null }) {
   const t = text(locale);
   const contextMe = useInitialMe();
@@ -31,7 +35,8 @@ export function CompanyForm({ locale, initialMe, initialProfile = null }) {
   const [city, setCity] = useState(() => seed.city);
   const [about, setAbout] = useState(() => seed.about);
   const [error, setError] = useState("");
-  const [ready, setReady] = useState(() => Boolean(seededMe && meSeed.authenticated));
+  const [ready, setReady] = useState(() => Boolean(seededMe && meSeed.authenticated && !profileComplete(meSeed)));
+  const [done, setDone] = useState(() => Boolean(seededMe && profileComplete(meSeed)));
 
   useEffect(() => {
     function apply(me) {
@@ -39,10 +44,16 @@ export function CompanyForm({ locale, initialMe, initialProfile = null }) {
         window.location.href = loginHref(locale);
         return;
       }
+      if (profileComplete(me)) {
+        setDone(true);
+        setReady(false);
+        return;
+      }
       const fields = fieldsFrom(me, initialProfile);
       setCompanyName(fields.companyName);
       setCity(fields.city);
       setAbout(fields.about);
+      setDone(false);
       setReady(true);
     }
     if (seededMe) {
@@ -78,25 +89,38 @@ export function CompanyForm({ locale, initialMe, initialProfile = null }) {
   return (
     <Shell locale={locale} mode="company">
       <h1>{t.companyTitle}</h1>
-      <p className="lede">{t.companyLede}</p>
-      {error ? <p className="note">{error}</p> : null}
-      {ready ? (
-        <form className="form-card" onSubmit={onSubmit}>
-          <label>
-            {t.companyName}
-            <input value={companyName} maxLength={120} required onChange={(event) => setCompanyName(event.target.value)} />
-          </label>
-          <label>
-            {t.companyCity}
-            <input value={city} maxLength={80} required onChange={(event) => setCity(event.target.value)} />
-          </label>
-          <label>
-            {t.companyAbout}
-            <textarea value={about} maxLength={400} required rows={5} onChange={(event) => setAbout(event.target.value)} />
-          </label>
-          <button type="submit" className="btn primary">{t.companySave}</button>
-        </form>
-      ) : null}
+      {done ? (
+        <>
+          <p className="lede">{t.companyEditOnProfile}</p>
+          <p>
+            <a className="btn primary" href={hrefFor(locale, { mode: "profile" })}>
+              {t.companyGoProfile}
+            </a>
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="lede">{t.companyLede}</p>
+          {error ? <p className="note">{error}</p> : null}
+          {ready ? (
+            <form className="form-card" onSubmit={onSubmit}>
+              <label>
+                {t.companyName}
+                <input value={companyName} maxLength={120} required onChange={(event) => setCompanyName(event.target.value)} />
+              </label>
+              <label>
+                {t.companyCity}
+                <input value={city} maxLength={80} required onChange={(event) => setCity(event.target.value)} />
+              </label>
+              <label>
+                {t.companyAbout}
+                <textarea value={about} maxLength={400} required rows={5} onChange={(event) => setAbout(event.target.value)} />
+              </label>
+              <button type="submit" className="btn primary">{t.companySave}</button>
+            </form>
+          ) : null}
+        </>
+      )}
     </Shell>
   );
 }

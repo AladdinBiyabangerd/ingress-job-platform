@@ -116,6 +116,11 @@ export function AccountBar({ locale, returnTo, onMe }) {
                   </a>
                 ) : null}
                 {me.candidate || me.staff ? (
+                  <a role="menuitem" href={hrefFor(locale, { mode: "profileReview" })} onClick={() => setOpen(false)}>
+                    {t.profileReviewOpen}
+                  </a>
+                ) : null}
+                {me.candidate || me.staff ? (
                   <a role="menuitem" href={hrefFor(locale, { mode: "recommendations" })} onClick={() => setOpen(false)}>
                     {t.recommendationsOpen}
                   </a>
