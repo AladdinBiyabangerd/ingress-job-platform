@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { skillIconMeta, skillInitials } from "../lib/skill-icons";
+import { skillIconSrc, skillInitials } from "../lib/skill-icons";
 
 export function SkillIcon({ name, className = "" }) {
-  const meta = skillIconMeta(name);
+  const src = skillIconSrc(name);
   const [failed, setFailed] = useState(false);
   const wrap = `skill-icon ${className}`.trim();
 
-  if (!meta || failed) {
+  if (!src || failed) {
     return (
       <span className={`${wrap} skill-icon-fallback`} aria-hidden="true">
         {skillInitials(name)}
@@ -18,15 +18,16 @@ export function SkillIcon({ name, className = "" }) {
 
   return (
     <span className={wrap} aria-hidden="true">
-      {/* eslint-disable-next-line @next/next/no-img-element -- Simple Icons CDN; Next Image domains not configured */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- Devicon CDN; Next Image domains not configured */}
       <img
         className="skill-icon-img"
-        src={`https://cdn.simpleicons.org/${meta.slug}/${meta.color}`}
+        src={src}
         alt=""
         width={18}
         height={18}
         loading="lazy"
         decoding="async"
+        referrerPolicy="no-referrer"
         onError={() => setFailed(true)}
       />
     </span>
