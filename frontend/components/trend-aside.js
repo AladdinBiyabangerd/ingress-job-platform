@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
+import { SkillIcon } from "./skill-icon";
 
 const MAX_DISPLAY_GROWTH = 5;
 const LIMIT = 4;
@@ -55,9 +56,7 @@ export function TrendAside({ locale }) {
           return (
             <li key={item.skill_id || item.name}>
               <a className="trend-aside-item" href={href}>
-                <span className="trend-aside-mark" aria-hidden="true">
-                  {(item.name || "?").charAt(0).toUpperCase()}
-                </span>
+                <SkillIcon name={item.name} className="trend-aside-icon" />
                 <span className="trend-aside-name">{item.name}</span>
                 {growth ? (
                   <span className={`trend-aside-growth is-${growth.direction}`}>{growth.label}</span>

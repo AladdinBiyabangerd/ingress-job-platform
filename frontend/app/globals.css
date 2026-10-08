@@ -6293,7 +6293,8 @@ span.pager-btn {
   background: var(--canvas);
 }
 
-.trend-aside-mark {
+.trend-aside-mark,
+.trend-aside-icon.skill-icon {
   width: 28px;
   height: 28px;
   border-radius: 8px;
