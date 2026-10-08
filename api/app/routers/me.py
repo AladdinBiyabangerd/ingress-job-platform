@@ -144,6 +144,101 @@ def get_skill_gap(
     return skill_gap(user_id=user.subject, role=role, top=top, lang=lang)
 
 
+@router.get("/insights")
+def get_insights(
+    lang: str | None = Query(default=None, max_length=8),
+    user: VerifiedAccess = Depends(current_user),
+) -> dict:
+    """Growth hub: weekly coach, near-miss jobs, Academy/roadmap (engagement Phase 4)."""
+    _require_candidate(user)
+    from app.cabinet_store import _LOCK, _connect, ensure_schema
+    from app.engagement import insights_payload
+
+    ensure_schema(create=True)
+    with _LOCK:
+        conn = _connect()
+        try:
+            return insights_payload(conn, user_id=user.subject, lang=lang)
+        finally:
+            conn.close()
+
+
+class PushSubscriptionBody(BaseModel):
+    endpoint: str = Field(..., min_length=8, max_length=2048)
+    keys: dict[str, str] = Field(default_factory=dict)
+
+
+class PushSubscriptionDeleteBody(BaseModel):
+    endpoint: str = Field(..., min_length=8, max_length=2048)
+
+
+@router.get("/push-vapid-key")
+def get_push_vapid_key(user: VerifiedAccess = Depends(current_user)) -> dict:
+    """Public VAPID key for Web Push subscribe (engagement Phase 5)."""
+    _require_candidate(user)
+    from app.push import vapid_configured, vapid_public_key
+
+    if not vapid_configured():
+        raise HTTPException(status_code=503, detail="Web Push is not configured")
+    return {"publicKey": vapid_public_key()}
+
+
+@router.post("/push-subscription", status_code=201)
+def post_push_subscription(
+    body: PushSubscriptionBody,
+    user: VerifiedAccess = Depends(current_user),
+) -> dict:
+    """Store or refresh a browser push subscription."""
+    _require_candidate(user)
+    from app.cabinet_store import _LOCK, _connect, ensure_schema
+    from app.push import upsert_subscription
+
+    keys = body.keys if isinstance(body.keys, dict) else {}
+    p256dh = str(keys.get("p256dh") or "").strip()
+    auth = str(keys.get("auth") or "").strip()
+    ensure_schema(create=True)
+    with _LOCK:
+        conn = _connect()
+        try:
+            try:
+                stored = upsert_subscription(
+                    conn,
+                    user_id=user.subject,
+                    endpoint=body.endpoint,
+                    p256dh=p256dh,
+                    auth=auth,
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            conn.commit()
+            return stored
+        finally:
+            conn.close()
+
+
+@router.delete("/push-subscription")
+def delete_push_subscription(
+    body: PushSubscriptionDeleteBody,
+    user: VerifiedAccess = Depends(current_user),
+) -> dict:
+    """Remove a browser push subscription for the current user."""
+    _require_candidate(user)
+    from app.cabinet_store import _LOCK, _connect, ensure_schema
+    from app.push import delete_subscription
+
+    ensure_schema(create=True)
+    with _LOCK:
+        conn = _connect()
+        try:
+            removed = delete_subscription(
+                conn, user_id=user.subject, endpoint=body.endpoint
+            )
+            conn.commit()
+            return {"deleted": removed}
+        finally:
+            conn.close()
+
+
 @router.get("/export")
 def export_my_data(user: VerifiedAccess = Depends(current_user)) -> Response:
     """ZIP: export.json + original CV files.

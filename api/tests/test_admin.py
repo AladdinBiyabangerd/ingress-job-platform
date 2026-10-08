@@ -396,8 +396,10 @@ class AdminAiFlagTests(unittest.TestCase):
                 self.assertTrue(body["flags"]["rerank"])
                 self.assertIn("llm_rerank", body["flags"])
                 self.assertIn("role_coach", body["flags"])
+                self.assertIn("engagement_copy", body["flags"])
                 self.assertTrue(body["flags"]["llm_rerank"])
                 self.assertTrue(body["flags"]["role_coach"])
+                self.assertTrue(body["flags"]["engagement_copy"])
 
                 saved = self.client.put(
                     "/api/v1/admin/ai-flags",
@@ -408,6 +410,7 @@ class AdminAiFlagTests(unittest.TestCase):
                             "digest_intro": False,
                             "llm_rerank": False,
                             "role_coach": False,
+                            "engagement_copy": False,
                         }
                     },
                 )
@@ -416,6 +419,7 @@ class AdminAiFlagTests(unittest.TestCase):
                 self.assertFalse(saved.json()["flags"]["digest_intro"])
                 self.assertFalse(saved.json()["flags"]["llm_rerank"])
                 self.assertFalse(saved.json()["flags"]["role_coach"])
+                self.assertFalse(saved.json()["flags"]["engagement_copy"])
                 self.assertTrue(saved.json()["flags"]["gateway"])
 
                 again = self.client.get("/api/v1/admin/ai-flags", headers=headers)

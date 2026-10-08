@@ -21,6 +21,7 @@ dependencies = [
   "pillow>=10.0,<12",
   "pytesseract>=0.3.10,<1",
   "pypdfium2>=4.30,<5",
+  "pywebpush>=2.0,<3",
 ]
 
 [project.optional-dependencies]

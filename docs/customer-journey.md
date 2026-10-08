@@ -26,7 +26,10 @@ flowchart LR
   C3 --> C4[Apply]
   C3 --> C5[Profile_CV]
   C5 --> C6[Recommendations]
+  C5 --> C8[Engagement]
+  C6 --> C8
   C4 --> C7[MyApplications]
+  C8 --> C9[Insights_Push]
 ```
 
 ### 1. Awareness — kəşf
@@ -83,12 +86,16 @@ flowchart LR
 
 | | |
 |--|--|
-| **Məqsəd** | Status izləmək, tövsiyə almaq, yenidən gəlmək |
-| **Ekranlar** | `/applications`; `/me/recommendations`; `/settings/emails`; `/notifications` |
-| **Ağrı** | AI/matching bayraqlar sönülü olanda boş görünə bilər |
-| **Success** | Müraciət status dəyişikliyi bildirişi; digest / yüksək uyğunluq e-poçtu |
+| **Məqsəd** | Status izləmək, uyğun elan / öyrənmə çağırışı almaq, yenidən gəlmək və hərəkətə keçmək |
+| **Ekranlar** | `/applications`; `/me/recommendations`; `/me/insights`; `/notifications`; `/settings/notifications` |
+| **Kanallar** | In-app zəng + e-poçt + brauzer Web Push (prefs + subscribe) |
+| **Engagement** | Saatlıq job: `match_new` (≥75%), `match_near` (45–75%, ≤3 çatışmayan skill + Academy/roadmap CTA), `profile_nudge` (natamam / köhnə profil, həftədə ≤1), `coach_weekly` (top rol + skill-gap → `/me/insights`) |
+| **Davranış** | Rich bildiriş kartları (score, have/missing, CTA); Insights hub (son coach / near-miss + böyümə); push `/settings/notifications`-də aktivləşir |
+| **Limit** | ≤1 engagement e-poçt / gün; ≤3 engagement in-app / gün; `engagement_log` dedup |
+| **Ağrı** | AI/matching bayraqlar sönülü olanda boş görünə bilər; push HTTPS + istifadəçi jesti tələb edir (iOS/Safari) |
+| **Success** | Müraciət status bildirişi; digest; `match_new` / `match_near` / nudge / coach kanallardan birində; Insights-də plan görünür |
 
-**Namizəd funnell metrikləri (tövsiyə):** qonaq → detal → login → ilk müraciət; login → CV confirmed; confirmed → recommendations baxışı.
+**Namizəd funnell metrikləri (tövsiyə):** qonaq → detal → login → ilk müraciət; login → CV confirmed; confirmed → recommendations / insights baxışı; engagement open → CTA klik (elan / Academy / roadmap).
 
 ---
 
@@ -171,6 +178,7 @@ flowchart LR
 | Profil parçaları | Zəif link | `/profile` ↔ `/profile/review` aydın CTA |
 | Employer applications | Yalnız per-ad | `/post` ümumi Müraciətlər tabı |
 | Company edit dual | `/company` + `/profile` | `/company` onboarding; sonra `/profile` |
+| Namizəd retention | Yalnız digest / high_match + transactional bell | Engagement kinds + Insights + Web Push + `/settings/notifications` |
 
 ---
 
@@ -185,12 +193,14 @@ flowchart LR
 ### Bu iterasiyada bağlandı
 - Saved / favorited jobs (`/saved`, `GET/POST/DELETE /api/v1/me/saved-jobs`)
 - Talent search browse MVP (`/talent`, `GET /api/v1/talent`; consent + visibility redaction; contact request yoxdur)
+- Engagement retention: `match_new` / `match_near` / `profile_nudge` / `coach_weekly` (in-app + email + Web Push); `/me/insights`; `/settings/notifications`
 
 ---
 
 ## Əlaqəli kod
 
-- Namizəd UI: `frontend/components/{home,job-detail,account-bar,profile-form,profile-review,my-applications,my-saved,recommendations,save-job-button}.js`
+- Namizəd UI: `frontend/components/{home,job-detail,account-bar,profile-form,profile-review,my-applications,my-saved,recommendations,insights,notifications-page,email-settings,save-job-button}.js`
 - İşəgötürən UI: `frontend/components/{company-form,cabinet,post-page,application-list,talent-search}.js`
+- Engagement API: `api/app/{engagement,engagement_copy,push,notifications,email_prefs}.py`; worker `worker/worker/engagement.py`
 - Auth / gate: `frontend/middleware.js`, `api/app/account.py`
 - Arxitektura: [`.cursor/context/architecture.md`](../.cursor/context/architecture.md)

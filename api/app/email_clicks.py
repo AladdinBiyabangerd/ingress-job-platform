@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
-KINDS = frozenset({"digest", "high_match"})
+KINDS = frozenset({"digest", "high_match", "match_near"})
 LOCALES = frozenset({"az", "en", "ru"})
 
 SCHEMA = """

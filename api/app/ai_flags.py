@@ -27,6 +27,7 @@ FEATURES = (
     "match_why",
     "role_coach",
     "digest_intro",
+    "engagement_copy",
 )
 
 FEATURE_ENV = {
@@ -37,6 +38,7 @@ FEATURE_ENV = {
     "match_why": "AI_MATCH_WHY_ENABLED",
     "role_coach": "AI_ROLE_COACH_ENABLED",
     "digest_intro": "DIGEST_AI_INTRO_ENABLED",
+    "engagement_copy": "ENGAGEMENT_AI_COPY_ENABLED",
 }
 
 _FALSE = {"0", "false", "no", "off"}

@@ -14,6 +14,7 @@ const FLOWS = [
   ["match_why", "adminAiWhy"],
   ["role_coach", "adminAiRoleCoach"],
   ["digest_intro", "adminAiDigest"],
+  ["engagement_copy", "adminAiEngagement"],
 ];
 
 function flagsFromPayload(data) {

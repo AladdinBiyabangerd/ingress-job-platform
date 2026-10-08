@@ -321,6 +321,9 @@ def save_consents(
                 frequency="weekly",
                 digest=True,
                 high_match=True,
+                profile_nudge=True,
+                match_near=True,
+                coach_weekly=True,
                 language=_pick_locale(lang),
                 clear_unsubscribe=True,
             )

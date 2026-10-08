@@ -268,10 +268,16 @@ def _apply_schema(conn) -> None:
             reason TEXT NOT NULL DEFAULT '',
             language TEXT NOT NULL DEFAULT '',
             read_at TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            payload TEXT NOT NULL DEFAULT ''
         )
         """
     )
+    note_cols = {row[1] for row in conn.execute("PRAGMA table_info(notifications)")}
+    if "payload" not in note_cols:
+        conn.execute(
+            "ALTER TABLE notifications ADD COLUMN payload TEXT NOT NULL DEFAULT ''"
+        )
     conn.execute(
         "CREATE INDEX IF NOT EXISTS notifications_recipient ON notifications(recipient_subject, id)"
     )
@@ -378,10 +384,12 @@ def _apply_schema(conn) -> None:
     from app.cv_queue import ensure_cv_queue_tables
     from app.consents import ensure_consent_tables
     from app.email_prefs import ensure_email_tables
+    from app.engagement import ensure_engagement_tables
 
     ensure_cv_queue_tables(conn)
     ensure_consent_tables(conn)
     ensure_email_tables(conn)
+    ensure_engagement_tables(conn)
     from app.matching import ensure_match_tables
 
     ensure_match_tables(conn)

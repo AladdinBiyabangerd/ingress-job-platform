@@ -136,6 +136,20 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
           ) : null}
           {me.candidate || me.staff ? (
             <li>
+              <a href={hrefFor(locale, { mode: "insights" })} aria-current={mode === "insights" ? "page" : undefined}>
+                {t.insightsOpen}
+              </a>
+            </li>
+          ) : null}
+          {me.candidate || me.staff ? (
+            <li>
+              <a href={hrefFor(locale, { mode: "emailSettings" })} aria-current={mode === "emailSettings" ? "page" : undefined}>
+                {t.emailSettingsOpen}
+              </a>
+            </li>
+          ) : null}
+          {me.candidate || me.staff ? (
+            <li>
               <a href={hrefFor(locale, { mode: "applications" })} aria-current={mode === "applications" ? "page" : undefined}>
                 {t.myApplications}
               </a>

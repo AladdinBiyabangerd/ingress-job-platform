@@ -4,6 +4,10 @@ import { getMe, sessionAccess } from "./me";
 
 const TIMEOUT_MS = 10_000;
 
+function localeLang(lang) {
+  return lang === "en" || lang === "ru" ? lang : "az";
+}
+
 async function loadJson(access, path) {
   try {
     const res = await fetch(`${apiBase()}${path}`, {
@@ -20,17 +24,16 @@ async function loadJson(access, path) {
 }
 
 /**
- * Email prefs for /settings/notifications. Skips FastAPI for guests and
- * non-candidates. Deduped within one RSC request.
+ * Growth hub payload for /me/insights. Skips FastAPI for guests / non-candidates.
  */
-export const getEmailPrefs = cache(async () => {
+export const getInsightsBundle = cache(async (lang = "az") => {
   const me = await getMe();
   if (!me?.authenticated || !(me.candidate || me.staff)) {
-    return { prefs: null };
+    return { insights: null };
   }
   const access = await sessionAccess();
-  if (!access) return { prefs: null };
-  const data = await loadJson(access, "/api/v1/email-prefs");
-  if (!data || typeof data.frequency !== "string") return { prefs: null };
-  return { prefs: data };
+  if (!access) return { insights: null };
+  const locale = localeLang(lang);
+  const insights = await loadJson(access, `/api/v1/me/insights?lang=${encodeURIComponent(locale)}`);
+  return { insights };
 });

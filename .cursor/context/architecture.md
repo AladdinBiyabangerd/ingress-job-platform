@@ -37,7 +37,10 @@ compose.yaml
 - Skill trends (`GET /api/v1/trends`): current+prior skill/job counts in one scan each; job denom uses `created_at` range (not `substr`) for `jobs_public_list`; trend DDL ensure is process-cached (no PRAGMA/ALTER per request)
 - Company jobs (moderation: pending → published); `/company` RSC hydrates the profile form from `GET /me` so first paint skips the me BFF; save is a FastAPI POST server action. `/post` RSC hydrates owner jobs + applications so first paint skips the list BFF; create/edit/close and list refresh are FastAPI server actions
 - Candidate applications + CV upload; candidate `GET /applications` list is compact (no message/answers/phone/email; UI paginates client-side); `/applications` RSC hydrates that list so first paint skips the BFF; withdraw is a FastAPI DELETE server action, then list refresh via FastAPI
-- Notifications list (`GET /notifications`); `/notifications` RSC hydrates items+unread so first paint skips the BFF; mark-read is a FastAPI POST server action, then list refresh via FastAPI
+- Notifications list (`GET /notifications`); `/notifications` RSC hydrates items+unread so first paint skips the BFF; mark-read is a FastAPI POST server action, then list refresh via FastAPI. Schema supports engagement kinds (`match_new`, `match_near`, `profile_nudge`, `coach_weekly`) + optional `payload` JSON; `engagement_log` / `push_subscriptions`
+- Engagement engine (`api/app/engagement.py`): hourly `POST /internal/engagement-jobs` selects `match_new` (≥0.75), `match_near` (0.45–0.75, ≤3 missing), `profile_nudge` (draft / &lt;3 skills / stale 14d, max 1/ISO week), `coach_weekly` (top role + skill-gap, max 1/ISO week); fanout in-app + email + Web Push (`push_enabled` + VAPID/`pywebpush`, 410 cleanup), Academy/roadmap CTA, `engagement_log` dedup; worker triggers after digests. `engagement_copy` AI title/body (`ENGAGEMENT_AI_COPY_ENABLED`, soft-fail → payload `ai_title`/`ai_body`). Subscribe: `GET/POST/DELETE /me/push-*` + `frontend/public/sw.js`
+- `GET /api/v1/me/insights` — coach summary + near-miss + Academy/roadmap hub; UI `/me/insights`
+- Email prefs also store `match_near`, `coach_weekly`, `push_enabled` (and `profile_nudge` default on); marketing daily cap includes those kinds; UI `/settings/notifications` (legacy `/settings/emails` redirects)
 - Staff moderation (manual role): approve/reject/edit, crawled job tools; `/admin` RSC hydrates queue jobs + applications + crawled ads + AI flags so first paint and those tabs skip the list BFF; queue/crawled/application writes and list refresh are FastAPI server actions; AI-flag save is a FastAPI PUT server action; manual ad create is a FastAPI POST server action. AI flow toggles (`GET/PUT /api/v1/admin/ai-flags`, jobs-DB `ai_feature_flags`) so staff can turn CV/tidy/embed/rerank/llm_rerank/why/role_coach/digest on or off without deleting `OPENAI_API_KEY`
 - Aggregation: remote/relocation IT sources (API/RSS/ATS); Jooble/Reed gated by API keys + monthly budgets
 - CV parse: API enqueues `parse_cv_queue` then drains in-process (`app.cv_parse_jobs` background thread → `worker.cv_parse` + OCR + AI #1 `cv-parse-ai1-v2` when confidence < 0.55 or dictionary skills < 3 → jobs-DB `candidate_profile`); skill items carry evidence/confidence; soft skills stay out of matching list; hourly crawl worker may drain stranded rows; contact-only `candidate_profiles` (display/phone/email) shares jobs Postgres when `DATABASE_URL` is set, else `accounts.sqlite`
@@ -53,10 +56,11 @@ compose.yaml
 - Recommendations detail: market-ranked skill-gap `missing` + Academy course/career-path links; `GET /me/matches?role=` filters/re-ranks by `role_skill_weight` overlap (limit ~10); shared UI in `frontend/components/skill-gap-bits.js`
 - Trend salary signals: worker `salary_parse` annualizes free-text `jobs.salary` (currency+period required, no FX) into per-currency groups in `salary_by_currency` JSON (+ primary `salary_median/currency/n/low/high`); API returns `salaries[]` (and `salary` = top group) when a currency has `n >= 5` — currencies never mixed/converted
 - Skill pairs: ordered co-occurrence in `skill_pair_daily`; trends items expose top `often_with` (share among base-skill ads, min 10 base ads); skill-gap missing skills get best pair vs candidate’s have skills
-- UI: `/me/recommendations` (roles + Öyrənmək üçün / Sizdə var gap + full coach + matching jobs + 👍/👎; RSC hydrates from FastAPI); `/me/skills` redirects to recommendations; `/notifications` (RSC hydrates list); BFF under `/api/auth/me/*`
-- Email program: `email_prefs` / `email_log`; `GET/PUT /api/v1/email-prefs`; public unsubscribe; digests + high-match via `POST /api/v1/internal/email-jobs` (`INTERNAL_JOB_TOKEN`); UI `/settings/emails` RSC hydrates prefs so first paint skips the BFF; save is a FastAPI PUT server action
-- Email click tracking: HMAC `/r/<token>` (frontend proxy → `GET /api/v1/r/{token}` → 302 job page); logs `email_click`; digests/high-match use tracked URLs only
+- UI: `/me/recommendations` (roles + Öyrənmək üçün / Sizdə var gap + full coach + matching jobs + 👍/👎; RSC hydrates from FastAPI); `/me/skills` redirects to recommendations; `/me/insights` (coach + near-miss + growth); `/notifications` rich engagement cards (score/chips/CTA); BFF under `/api/auth/me/*`
+- Email program: `email_prefs` / `email_log`; `GET/PUT /api/v1/email-prefs`; public unsubscribe; digests via `POST /api/v1/internal/email-jobs` (`INTERNAL_JOB_TOKEN`); high-match email owned by engagement (`match_new` → prefs kind `high_match`); UI `/settings/notifications` RSC hydrates prefs so first paint skips the BFF; save is a FastAPI PUT server action
+- Email click tracking: HMAC `/r/<token>` (frontend proxy → `GET /api/v1/r/{token}` → 302 job page); logs `email_click`; digests/engagement emails use tracked URLs only
 - AI #4 digest intro: API `ai_gateway` + `digest_intro` (optional 2–3 sentences; `DIGEST_AI_INTRO_ENABLED`; soft-fail to static copy; shares jobs-DB `ai_cache`/`ai_usage_daily` with worker CV AI #1)
+- Engagement AI copy: API `engagement_copy` via `ai_gateway` (`engagement-copy-v1`; flag `engagement_copy` / `ENGAGEMENT_AI_COPY_ENABLED`; cache+budget; soft-fail az/en/ru templates); lookback `ENGAGEMENT_LOOKBACK_HOURS` (default 26)
 - AI #2: worker `embed_stale_jobs` hourly; API embeds profile on save; compose image `pgvector/pgvector:pg16`; Railway needs `CREATE EXTENSION vector`
 - Academy cross-sell: ~135 skills mapped to training slugs; UI/digest UTM `utm_source=ingress_job`
 - Data rights: `GET /api/v1/me/export` (zip: export.json + CVs); `DELETE /api/v1/me` (hard-delete; audit → pseudonym). Account identity remains `GET /api/v1/me`
@@ -67,7 +71,8 @@ compose.yaml
 - Job source APIs / RSS / ATS boards (`worker/worker/catalog.py`, `ats_boards.py`)
 - Object storage for uploads (when configured)
 - Optional `JOOBLE_API_KEY`, `REED_API_KEY`, `HH_API_KEY`
-- Optional `OPENAI_API_KEY` (job tidy + CV AI #1 via `ai_gateway`)
+- Optional `OPENAI_API_KEY` (job tidy + CV AI #1 + engagement_copy via `ai_gateway`)
+- Optional Web Push: `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` (API `pywebpush`; public key also exposed to browser via `/me/push-vapid-key`)
 
 ## Notes
 

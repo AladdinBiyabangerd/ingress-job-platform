@@ -3375,6 +3375,113 @@ body:has(.profile-review-page) {
   color: #656b75;
 }
 
+.notice-rich-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.notice-score {
+  flex: 0 0 auto;
+  min-width: 3.2rem;
+  padding: 4px 8px;
+  border-radius: 10px;
+  background: #eef1ff;
+  color: #001fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.notice-rich-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.notice-body {
+  margin: 0;
+}
+
+.notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.notice-roadmap {
+  display: grid;
+  gap: 6px;
+}
+
+.notice-roadmap-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.notice-roadmap-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 6px;
+}
+
+.notice-roadmap-list ol {
+  margin: 4px 0 0;
+  padding-left: 1.1rem;
+}
+
+.insights-page {
+  display: grid;
+  gap: 20px;
+  max-width: 720px;
+}
+
+.insights-block {
+  display: grid;
+  gap: 10px;
+}
+
+.insights-block h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.insights-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.insights-near-list,
+.insights-course-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.insights-near-item {
+  display: grid;
+  gap: 6px;
+  padding: 12px 0;
+  border-top: 1px solid #e8eaee;
+}
+
+.insights-near-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.insights-near-top {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .wrap:has(.home) {
   max-width: 1120px;
 }

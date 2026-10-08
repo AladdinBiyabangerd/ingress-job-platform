@@ -15,6 +15,7 @@ from email.message import EmailMessage
 from email.utils import formataddr
 
 from app.cabinet_store import _connect, _now
+from app.engagement import dump_payload, parse_payload
 from app.profiles import contact_email_for
 
 logger = logging.getLogger("ingress-job.mail")
@@ -26,6 +27,10 @@ KINDS = {
     "ad_approved",
     "ad_rejected",
     "ad_review",
+    "match_new",
+    "match_near",
+    "profile_nudge",
+    "coach_weekly",
 }
 _REASON_KINDS = {"application_rejected", "ad_rejected"}
 _ADDR = re.compile(r"<([^<>@\s]+@[^<>@\s]+)>")
@@ -57,6 +62,22 @@ _COPY = {
             "Elanınız yenidən moderasiyadadır: {title}",
             "«{title}» elanınız mühüm dəyişiklikdən sonra Ingress Job saytında yenidən moderasiyadadır.",
         ),
+        "match_new": (
+            "Sənə uyğun yeni elan: {title}",
+            "«{title}» elanı profilinə uyğundur. Bax və müraciət et.",
+        ),
+        "match_near": (
+            "Yaxın elan — skill artır: {title}",
+            "«{title}» elanı yaxındır. Çatışmayan skill-ləri artırsan, bu elanı tövsiyə edirəm.",
+        ),
+        "profile_nudge": (
+            "Profilini tamamla",
+            "CV və skill-lərini doldur ki, sənə uyğun elanları tapa bilək.",
+        ),
+        "coach_weekly": (
+            "Bu həftənin öyrənmə planı",
+            "Rolun üçün qısa plan hazırdır — güclü tərəflər və öyrəniləcək skill-lər.",
+        ),
         "reason": "Səbəb: {reason}",
     },
     "en": {
@@ -84,6 +105,22 @@ _COPY = {
             "Your ad is back in review: {title}",
             "Your published ad «{title}» went back to review on Ingress Job after a significant edit.",
         ),
+        "match_new": (
+            "New match for you: {title}",
+            "«{title}» looks like a strong fit. Open it and apply.",
+        ),
+        "match_near": (
+            "Almost a match — grow a skill: {title}",
+            "«{title}» is close. Level up the missing skills and I will recommend this role.",
+        ),
+        "profile_nudge": (
+            "Complete your profile",
+            "Fill in your CV and skills so we can find matching jobs for you.",
+        ),
+        "coach_weekly": (
+            "This week’s learning plan",
+            "A short plan for your target role — strengths and skills to learn.",
+        ),
         "reason": "Reason: {reason}",
     },
     "ru": {
@@ -110,6 +147,22 @@ _COPY = {
         "ad_review": (
             "Ваше объявление снова на модерации: {title}",
             "Опубликованное объявление «{title}» снова на модерации Ingress Job после существенной правки.",
+        ),
+        "match_new": (
+            "Новое совпадение: {title}",
+            "«{title}» хорошо подходит под ваш профиль. Откройте и откликнитесь.",
+        ),
+        "match_near": (
+            "Почти совпадение — прокачайте навык: {title}",
+            "«{title}» близко. Подтяните недостающие навыки — и я порекомендую эту вакансию.",
+        ),
+        "profile_nudge": (
+            "Заполните профиль",
+            "Добавьте CV и навыки, чтобы мы могли находить подходящие вакансии.",
+        ),
+        "coach_weekly": (
+            "План обучения на эту неделю",
+            "Краткий план по вашей роли — сильные стороны и навыки для роста.",
         ),
         "reason": "Причина: {reason}",
     },
@@ -146,6 +199,7 @@ def insert_notification(
     status: str,
     reason: str,
     language: str,
+    payload: dict | None = None,
 ) -> dict | None:
     subject = (recipient or "").strip()
     if not subject or kind not in KINDS:
@@ -153,12 +207,13 @@ def insert_notification(
     reason_text = _reason(kind, reason)
     lang = _language(language)
     title = (job_title or "").strip()
+    payload_text = dump_payload(payload)
     cur = conn.execute(
         """
         INSERT INTO notifications (
             recipient_subject, kind, job_id, job_title, application_id,
-            status, reason, language, read_at, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', ?)
+            status, reason, language, read_at, created_at, payload
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?)
         """,
         (
             subject,
@@ -170,9 +225,10 @@ def insert_notification(
             reason_text,
             lang,
             _now(),
+            payload_text,
         ),
     )
-    return {
+    out = {
         "id": int(cur.lastrowid),
         "recipient": subject,
         "kind": kind,
@@ -183,6 +239,17 @@ def insert_notification(
         "reason": reason_text,
         "language": lang,
     }
+    parsed = parse_payload(payload_text)
+    if parsed:
+        out["payload"] = parsed
+    return out
+
+
+def _row_keys(row) -> set:
+    try:
+        return set(row.keys())
+    except Exception:
+        return set()
 
 
 def _view(row) -> dict:
@@ -199,6 +266,11 @@ def _view(row) -> dict:
     reason = (row["reason"] or "").strip()
     if reason:
         payload["reason"] = reason
+    keys = _row_keys(row)
+    if "payload" in keys:
+        parsed = parse_payload(row["payload"] if "payload" in keys else "")
+        if parsed:
+            payload["payload"] = parsed
     return payload
 
 
@@ -227,7 +299,8 @@ def list_for(subject: str) -> dict:
     try:
         rows = conn.execute(
             """
-            SELECT id, kind, job_id, job_title, application_id, status, reason, read_at, created_at
+            SELECT id, kind, job_id, job_title, application_id, status, reason,
+                   read_at, created_at, payload
             FROM notifications
             WHERE recipient_subject = ?
             ORDER BY id DESC
@@ -245,7 +318,8 @@ def mark_read(subject: str, notification_id: int) -> dict | None:
     try:
         row = conn.execute(
             """
-            SELECT id, kind, job_id, job_title, application_id, status, reason, read_at, created_at
+            SELECT id, kind, job_id, job_title, application_id, status, reason,
+                   read_at, created_at, payload
             FROM notifications
             WHERE id = ? AND recipient_subject = ?
             """,
@@ -261,7 +335,8 @@ def mark_read(subject: str, notification_id: int) -> dict | None:
             conn.commit()
             row = conn.execute(
                 """
-                SELECT id, kind, job_id, job_title, application_id, status, reason, read_at, created_at
+                SELECT id, kind, job_id, job_title, application_id, status, reason,
+                       read_at, created_at, payload
                 FROM notifications
                 WHERE id = ? AND recipient_subject = ?
                 """,
@@ -310,10 +385,16 @@ def _recipient(note: dict, fallback: str) -> str:
 def render_email(note: dict) -> tuple[str, str]:
     lang = _language(note.get("language") or "")
     pack = _COPY[lang]
-    subject_t, body_t = pack[note["kind"]]
+    kind = note.get("kind") or ""
+    subject_t, body_t = pack[kind]
     title = note.get("job_title") or ""
     subject = subject_t.format(title=title)
-    body = body_t.format(title=title)
+    extra = note.get("payload") if isinstance(note.get("payload"), dict) else {}
+    ai_title = str((extra or {}).get("ai_title") or "").strip()
+    if ai_title:
+        subject = ai_title
+    ai_body = str((extra or {}).get("ai_body") or "").strip()
+    body = ai_body if ai_body else body_t.format(title=title)
     reason = note.get("reason") or ""
     if reason:
         body = body + "\n\n" + pack["reason"].format(reason=reason)

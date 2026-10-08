@@ -20,11 +20,14 @@ CREATE TABLE IF NOT EXISTS email_prefs (
     frequency TEXT NOT NULL DEFAULT 'none',
     digest INTEGER NOT NULL DEFAULT 1,
     high_match INTEGER NOT NULL DEFAULT 1,
-    profile_nudge INTEGER NOT NULL DEFAULT 0,
+    profile_nudge INTEGER NOT NULL DEFAULT 1,
     language TEXT NOT NULL DEFAULT 'az',
     send_weekday INTEGER NOT NULL DEFAULT 0,
     unsubscribed_at TEXT NOT NULL DEFAULT '',
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    match_near INTEGER NOT NULL DEFAULT 1,
+    coach_weekly INTEGER NOT NULL DEFAULT 1,
+    push_enabled INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS email_log (
@@ -43,6 +46,12 @@ CREATE INDEX IF NOT EXISTS email_log_user_created ON email_log(user_id, created_
 CREATE INDEX IF NOT EXISTS email_log_kind_period ON email_log(kind, period_key);
 """
 
+_PREF_COLUMNS = {
+    "match_near": "INTEGER NOT NULL DEFAULT 1",
+    "coach_weekly": "INTEGER NOT NULL DEFAULT 1",
+    "push_enabled": "INTEGER NOT NULL DEFAULT 0",
+}
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -50,6 +59,10 @@ def _now() -> str:
 
 def ensure_email_tables(conn) -> None:
     conn.executescript(SCHEMA)
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(email_prefs)")}
+    for name, decl in _PREF_COLUMNS.items():
+        if name not in cols:
+            conn.execute(f"ALTER TABLE email_prefs ADD COLUMN {name} {decl}")
     from app.email_clicks import ensure_email_click_tables
 
     ensure_email_click_tables(conn)
@@ -127,13 +140,26 @@ def _normalize_weekday(value: Any) -> int:
     return day if day in WEEKDAYS else 0
 
 
+def _bool_col(row, name: str, *, default: bool = True) -> bool:
+    keys = row.keys()
+    if name not in keys:
+        return default
+    try:
+        return bool(int(row[name]))
+    except (TypeError, ValueError):
+        return default
+
+
 def _row_prefs(row) -> dict:
     if row is None:
         return {
             "frequency": "none",
             "digest": True,
             "high_match": True,
-            "profile_nudge": False,
+            "profile_nudge": True,
+            "match_near": True,
+            "coach_weekly": True,
+            "push_enabled": False,
             "language": "az",
             "send_weekday": 0,
             "unsubscribed_at": "",
@@ -143,7 +169,10 @@ def _row_prefs(row) -> dict:
         "frequency": _normalize_frequency(row["frequency"] if "frequency" in row.keys() else row[1]),
         "digest": bool(int(row["digest"] if "digest" in row.keys() else row[2])),
         "high_match": bool(int(row["high_match"] if "high_match" in row.keys() else row[3])),
-        "profile_nudge": bool(int(row["profile_nudge"] if "profile_nudge" in row.keys() else row[4])),
+        "profile_nudge": _bool_col(row, "profile_nudge", default=True),
+        "match_near": _bool_col(row, "match_near", default=True),
+        "coach_weekly": _bool_col(row, "coach_weekly", default=True),
+        "push_enabled": _bool_col(row, "push_enabled", default=False),
         "language": _normalize_language(row["language"] if "language" in row.keys() else row[5]),
         "send_weekday": _normalize_weekday(row["send_weekday"] if "send_weekday" in row.keys() else row[6]),
         "unsubscribed_at": str(
@@ -173,7 +202,8 @@ def get_prefs(conn, user_id: str) -> dict:
     row = conn.execute(
         """
         SELECT user_id, frequency, digest, high_match, profile_nudge,
-               language, send_weekday, unsubscribed_at, updated_at
+               language, send_weekday, unsubscribed_at, updated_at,
+               match_near, coach_weekly, push_enabled
         FROM email_prefs
         WHERE user_id = ?
         """,
@@ -196,6 +226,9 @@ def save_prefs(
     digest: bool | None = None,
     high_match: bool | None = None,
     profile_nudge: bool | None = None,
+    match_near: bool | None = None,
+    coach_weekly: bool | None = None,
+    push_enabled: bool | None = None,
     language: str | None = None,
     send_weekday: int | None = None,
     clear_unsubscribe: bool = False,
@@ -209,6 +242,9 @@ def save_prefs(
     next_digest = bool(current["digest"] if digest is None else digest)
     next_high = bool(current["high_match"] if high_match is None else high_match)
     next_nudge = bool(current["profile_nudge"] if profile_nudge is None else profile_nudge)
+    next_near = bool(current["match_near"] if match_near is None else match_near)
+    next_coach = bool(current["coach_weekly"] if coach_weekly is None else coach_weekly)
+    next_push = bool(current["push_enabled"] if push_enabled is None else push_enabled)
     next_lang = _normalize_language(language if language is not None else current["language"])
     next_day = _normalize_weekday(
         send_weekday if send_weekday is not None else current["send_weekday"]
@@ -223,8 +259,9 @@ def save_prefs(
         """
         INSERT INTO email_prefs (
             user_id, frequency, digest, high_match, profile_nudge,
-            language, send_weekday, unsubscribed_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            language, send_weekday, unsubscribed_at, updated_at,
+            match_near, coach_weekly, push_enabled
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(user_id) DO UPDATE SET
             frequency = excluded.frequency,
             digest = excluded.digest,
@@ -233,7 +270,10 @@ def save_prefs(
             language = excluded.language,
             send_weekday = excluded.send_weekday,
             unsubscribed_at = excluded.unsubscribed_at,
-            updated_at = excluded.updated_at
+            updated_at = excluded.updated_at,
+            match_near = excluded.match_near,
+            coach_weekly = excluded.coach_weekly,
+            push_enabled = excluded.push_enabled
         """,
         (
             subject,
@@ -245,6 +285,9 @@ def save_prefs(
             next_day,
             unsub,
             ts,
+            1 if next_near else 0,
+            1 if next_coach else 0,
+            1 if next_push else 0,
         ),
     )
     return get_prefs(conn, subject)
@@ -265,6 +308,9 @@ def apply_unsubscribe(conn, user_id: str) -> dict:
         digest=False,
         high_match=False,
         profile_nudge=False,
+        match_near=False,
+        coach_weekly=False,
+        push_enabled=False,
     )
     version = "1.0"
     try:
@@ -312,6 +358,24 @@ def high_match_enabled(prefs: dict) -> bool:
     return bool(prefs.get("high_match"))
 
 
+def match_near_enabled(prefs: dict) -> bool:
+    if not marketing_allowed(prefs):
+        return False
+    return bool(prefs.get("match_near"))
+
+
+def profile_nudge_enabled(prefs: dict) -> bool:
+    if not marketing_allowed(prefs):
+        return False
+    return bool(prefs.get("profile_nudge"))
+
+
+def coach_weekly_enabled(prefs: dict) -> bool:
+    if not marketing_allowed(prefs):
+        return False
+    return bool(prefs.get("coach_weekly"))
+
+
 def period_key_for_digest(*, when: datetime | None = None, frequency: str) -> str:
     moment = when or datetime.now(timezone.utc)
     iso = moment.isocalendar()
@@ -340,18 +404,22 @@ def already_logged(conn, *, user_id: str, kind: str, period_key: str) -> bool:
 
 
 def marketing_sent_today(conn, *, user_id: str, day: str | None = None) -> bool:
+    from app.engagement import MARKETING_EMAIL_KINDS
+
     ensure_email_tables(conn)
     key = day or day_key()
+    kinds = tuple(sorted(MARKETING_EMAIL_KINDS))
+    placeholders = ", ".join("?" for _ in kinds)
     row = conn.execute(
-        """
+        f"""
         SELECT 1 FROM email_log
         WHERE user_id = ?
           AND status = 'sent'
-          AND kind IN ('digest', 'high_match', 'profile_nudge')
+          AND kind IN ({placeholders})
           AND substr(created_at, 1, 10) = ?
         LIMIT 1
         """,
-        (user_id, key),
+        (user_id, *kinds, key),
     ).fetchone()
     return row is not None
 

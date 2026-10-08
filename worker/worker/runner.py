@@ -324,6 +324,25 @@ def _run_pass(store: Store) -> int:
             print(f"email_jobs: failed ({mail_stats.get('reason')})", flush=True)
     except Exception:
         capture_exception()
+    try:
+        from worker.engagement import trigger_engagement_jobs
+
+        eng_stats = trigger_engagement_jobs()
+        if eng_stats.get("skipped"):
+            print(f"engagement_jobs: skipped ({eng_stats.get('reason')})", flush=True)
+        elif eng_stats.get("ok"):
+            print(
+                "engagement_jobs: "
+                f"match_new={eng_stats.get('match_new', 0)} "
+                f"match_near={eng_stats.get('match_near', 0)} "
+                f"skipped_dedup={eng_stats.get('skipped_dedup', 0)} "
+                f"users={eng_stats.get('users', 0)}",
+                flush=True,
+            )
+        else:
+            print(f"engagement_jobs: failed ({eng_stats.get('reason')})", flush=True)
+    except Exception:
+        capture_exception()
     return 0
 
 

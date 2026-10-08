@@ -467,7 +467,11 @@ def send_high_match_for_user(conn, *, user_id: str, when: datetime | None = None
 
 
 def run_email_jobs(*, dry_run: bool = False) -> dict[str, Any]:
-    """Process digests + high-match alerts for all eligible users."""
+    """Process digests for all eligible users.
+
+    High-match alerts are owned by ``run_engagement_jobs`` (match_new fanout)
+    so the same event is not emailed twice.
+    """
     from app.cabinet_store import _LOCK, _connect, ensure_schema
 
     ensure_schema(create=True)
@@ -491,20 +495,12 @@ def run_email_jobs(*, dry_run: bool = False) -> dict[str, Any]:
                     prefs = get_prefs(conn, user_id)
                     if _due_for_digest(prefs, when=when):
                         stats["digest_skipped"] += 1
-                    if high_match_enabled(prefs):
-                        stats["high_match_skipped"] += 1
                     continue
                 digest_result = send_digest_for_user(conn, user_id=user_id, when=when)
                 if digest_result.get("status") == "sent":
                     stats["digest_sent"] += 1
                 else:
                     stats["digest_skipped"] += 1
-                # High-match only if digest did not already consume the daily slot.
-                high_result = send_high_match_for_user(conn, user_id=user_id, when=when)
-                if high_result.get("status") == "sent":
-                    stats["high_match_sent"] += 1
-                else:
-                    stats["high_match_skipped"] += 1
                 if BATCH_PAUSE_EVERY > 0 and (index + 1) % BATCH_PAUSE_EVERY == 0:
                     conn.commit()
             conn.commit()

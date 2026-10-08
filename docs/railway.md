@@ -104,6 +104,9 @@ that file is applied; set them yourself only if you use another bucket):
 | `AI_EMBEDDING_MODEL` | Optional. Default `text-embedding-3-small` (AI #2). |
 | `AI_RERANK_ENABLED` | Optional. Default follows gateway; `0` keeps structured-only matches. |
 | `AI_MATCH_WHY_ENABLED` | Optional. Default follows gateway; `0` skips LLM why sentences. |
+| `VAPID_PUBLIC_KEY` | Optional. Web Push applicationServerKey (API). With private key + subject enables browser push fanout. |
+| `VAPID_PRIVATE_KEY` | Optional. Web Push VAPID private key (API only — never on web). |
+| `VAPID_SUBJECT` | Optional. `mailto:` contact for VAPID claims (e.g. `mailto:ops@example.com`). |
 
 Postgres for AI #2 must support `CREATE EXTENSION vector` (pgvector). Local compose uses `pgvector/pgvector:pg16`. Stock Railway Postgres may need a pgvector-capable image/plugin; without it matches stay structured-only.
 

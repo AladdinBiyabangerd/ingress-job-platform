@@ -20,6 +20,7 @@ from app.email_prefs import (
     parse_unsubscribe_token,
     save_prefs,
 )
+from app.engagement import run_engagement_jobs
 
 router = APIRouter(prefix="/api/v1", tags=["email"])
 
@@ -29,6 +30,9 @@ class EmailPrefsBody(BaseModel):
     digest: bool | None = None
     high_match: bool | None = None
     profile_nudge: bool | None = None
+    match_near: bool | None = None
+    coach_weekly: bool | None = None
+    push_enabled: bool | None = None
     language: str | None = Field(default=None, max_length=8)
     send_weekday: int | None = Field(default=None, ge=0, le=6)
 
@@ -69,6 +73,9 @@ def put_email_prefs(
                 digest=body.digest,
                 high_match=body.high_match,
                 profile_nudge=body.profile_nudge,
+                match_near=body.match_near,
+                coach_weekly=body.coach_weekly,
+                push_enabled=body.push_enabled,
                 language=body.language,
                 send_weekday=body.send_weekday,
                 clear_unsubscribe=body.frequency is not None and body.frequency != "none",
@@ -139,16 +146,30 @@ def email_click_redirect(token: str) -> RedirectResponse:
     return RedirectResponse(url=resolved["redirect"], status_code=302)
 
 
-@router.post("/internal/email-jobs")
-def trigger_email_jobs(
-    x_internal_token: str | None = Header(default=None, alias="X-Internal-Token"),
-    dry_run: bool = Query(default=False),
-) -> dict:
-    """Worker trigger for digests + high-match alerts."""
+def _require_internal_token(x_internal_token: str | None) -> None:
     expected = (os.environ.get("INTERNAL_JOB_TOKEN") or "").strip()
     if not expected:
         raise HTTPException(status_code=503, detail="internal_jobs_disabled")
     provided = (x_internal_token or "").strip()
     if not provided or provided != expected:
         raise HTTPException(status_code=401, detail="unauthorized")
+
+
+@router.post("/internal/email-jobs")
+def trigger_email_jobs(
+    x_internal_token: str | None = Header(default=None, alias="X-Internal-Token"),
+    dry_run: bool = Query(default=False),
+) -> dict:
+    """Worker trigger for digests (high-match lives under engagement-jobs)."""
+    _require_internal_token(x_internal_token)
     return run_email_jobs(dry_run=dry_run)
+
+
+@router.post("/internal/engagement-jobs")
+def trigger_engagement_jobs(
+    x_internal_token: str | None = Header(default=None, alias="X-Internal-Token"),
+    dry_run: bool = Query(default=False),
+) -> dict:
+    """Worker trigger for match_new / match_near engagement fanout."""
+    _require_internal_token(x_internal_token)
+    return run_engagement_jobs(dry_run=dry_run)

@@ -263,6 +263,14 @@ def delete_my_data(*, user_id: str) -> dict:
                 conn.execute("DELETE FROM saved_jobs WHERE user_id = ?", (subject,))
             except Exception:
                 pass
+            try:
+                conn.execute("DELETE FROM push_subscriptions WHERE user_id = ?", (subject,))
+            except Exception:
+                pass
+            try:
+                conn.execute("DELETE FROM engagement_log WHERE user_id = ?", (subject,))
+            except Exception:
+                pass
             conn.execute(
                 """
                 UPDATE applications

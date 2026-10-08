@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { saveEmailPrefs } from "../lib/server/refresh";
+import {
+  disableBrowserPush,
+  enableBrowserPush,
+  pushSupported,
+} from "../lib/web-push";
 import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 import { useInitialMe } from "./me-seed";
@@ -37,6 +42,10 @@ function applyPrefs(data, setters, fallbackLang) {
   setters.setFrequency(data.frequency || "none");
   setters.setDigest(data.digest !== false);
   setters.setHighMatch(data.high_match !== false);
+  setters.setMatchNear(data.match_near !== false);
+  setters.setProfileNudge(data.profile_nudge !== false);
+  setters.setCoachWeekly(data.coach_weekly !== false);
+  setters.setPushEnabled(Boolean(data.push_enabled));
   setters.setLanguage(data.language || fallbackLang);
   setters.setSendWeekday(typeof data.send_weekday === "number" ? data.send_weekday : 0);
 }
@@ -54,6 +63,16 @@ export function EmailSettings({ locale, initialPrefs = null }) {
   const [frequency, setFrequency] = useState(() => (seededPrefs ? initialPrefs.frequency || "none" : "none"));
   const [digest, setDigest] = useState(() => (seededPrefs ? initialPrefs.digest !== false : true));
   const [highMatch, setHighMatch] = useState(() => (seededPrefs ? initialPrefs.high_match !== false : true));
+  const [matchNear, setMatchNear] = useState(() => (seededPrefs ? initialPrefs.match_near !== false : true));
+  const [profileNudge, setProfileNudge] = useState(() =>
+    seededPrefs ? initialPrefs.profile_nudge !== false : true,
+  );
+  const [coachWeekly, setCoachWeekly] = useState(() =>
+    seededPrefs ? initialPrefs.coach_weekly !== false : true,
+  );
+  const [pushEnabled, setPushEnabled] = useState(() =>
+    seededPrefs ? Boolean(initialPrefs.push_enabled) : false,
+  );
   const [language, setLanguage] = useState(() => (seededPrefs ? initialPrefs.language || fallbackLang : fallbackLang));
   const [sendWeekday, setSendWeekday] = useState(() =>
     seededPrefs && typeof initialPrefs.send_weekday === "number" ? initialPrefs.send_weekday : 0,
@@ -61,8 +80,22 @@ export function EmailSettings({ locale, initialPrefs = null }) {
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushNote, setPushNote] = useState("");
+  const [pushSubActive, setPushSubActive] = useState(false);
 
-  const setters = { setPrefs, setFrequency, setDigest, setHighMatch, setLanguage, setSendWeekday };
+  const setters = {
+    setPrefs,
+    setFrequency,
+    setDigest,
+    setHighMatch,
+    setMatchNear,
+    setProfileNudge,
+    setCoachWeekly,
+    setPushEnabled,
+    setLanguage,
+    setSendWeekday,
+  };
 
   useEffect(() => {
     if (initialMe && typeof initialMe === "object") {
@@ -98,6 +131,89 @@ export function EmailSettings({ locale, initialPrefs = null }) {
     };
   }, [me, seededPrefs, fallbackLang]);
 
+  useEffect(() => {
+    if (!me || !(me.candidate || me.staff) || !pushSupported()) return undefined;
+    let cancelled = false;
+    navigator.serviceWorker.ready
+      .then((reg) => reg.pushManager.getSubscription())
+      .then((sub) => {
+        if (!cancelled) setPushSubActive(Boolean(sub));
+      })
+      .catch(() => {
+        if (!cancelled) setPushSubActive(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [me]);
+
+  function pushReasonMessage(reason) {
+    if (reason === "denied" || reason === "permission") return t.emailSettingsPushDenied;
+    if (reason === "unsupported") return t.emailSettingsPushUnsupported;
+    if (reason === "vapid") return t.emailSettingsPushVapid;
+    return t.emailSettingsPushError;
+  }
+
+  async function onEnablePush() {
+    setPushBusy(true);
+    setPushNote("");
+    setError("");
+    try {
+      const result = await enableBrowserPush();
+      if (!result.ok) {
+        setPushEnabled(false);
+        setPushNote(pushReasonMessage(result.reason));
+        return;
+      }
+      setPushSubActive(true);
+      setPushEnabled(true);
+      setPushNote(t.emailSettingsPushOn);
+      const res = await saveEmailPrefs({
+        frequency,
+        digest,
+        high_match: highMatch,
+        match_near: matchNear,
+        profile_nudge: profileNudge,
+        coach_weekly: coachWeekly,
+        push_enabled: true,
+        language,
+        send_weekday: sendWeekday,
+      });
+      if (res.ok) applyPrefs(res.data, setters, fallbackLang);
+    } catch {
+      setPushNote(t.emailSettingsPushError);
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function onDisablePush() {
+    setPushBusy(true);
+    setPushNote("");
+    setError("");
+    try {
+      await disableBrowserPush();
+      setPushSubActive(false);
+      setPushEnabled(false);
+      const res = await saveEmailPrefs({
+        frequency,
+        digest,
+        high_match: highMatch,
+        match_near: matchNear,
+        profile_nudge: profileNudge,
+        coach_weekly: coachWeekly,
+        push_enabled: false,
+        language,
+        send_weekday: sendWeekday,
+      });
+      if (res.ok) applyPrefs(res.data, setters, fallbackLang);
+    } catch {
+      setPushNote(t.emailSettingsPushError);
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
   async function save(event) {
     event.preventDefault();
     setBusy(true);
@@ -108,6 +224,10 @@ export function EmailSettings({ locale, initialPrefs = null }) {
         frequency,
         digest,
         high_match: highMatch,
+        match_near: matchNear,
+        profile_nudge: profileNudge,
+        coach_weekly: coachWeekly,
+        push_enabled: pushEnabled,
         language,
         send_weekday: sendWeekday,
       });
@@ -196,6 +316,60 @@ export function EmailSettings({ locale, initialPrefs = null }) {
                 />
                 <span>{t.emailSettingsHighMatch}</span>
               </label>
+              <label className="profile-span consent-check">
+                <input
+                  type="checkbox"
+                  checked={matchNear}
+                  onChange={(event) => setMatchNear(event.target.checked)}
+                />
+                <span>{t.emailSettingsMatchNear}</span>
+              </label>
+              <label className="profile-span consent-check">
+                <input
+                  type="checkbox"
+                  checked={profileNudge}
+                  onChange={(event) => setProfileNudge(event.target.checked)}
+                />
+                <span>{t.emailSettingsProfileNudge}</span>
+              </label>
+              <label className="profile-span consent-check">
+                <input
+                  type="checkbox"
+                  checked={coachWeekly}
+                  onChange={(event) => setCoachWeekly(event.target.checked)}
+                />
+                <span>{t.emailSettingsCoachWeekly}</span>
+              </label>
+              <label className="profile-span consent-check">
+                <input
+                  type="checkbox"
+                  checked={pushEnabled}
+                  onChange={(event) => setPushEnabled(event.target.checked)}
+                />
+                <span>{t.emailSettingsPush}</span>
+              </label>
+              <p className="hint profile-span">{t.emailSettingsPushHint}</p>
+              {pushNote ? <p className="note profile-span">{pushNote}</p> : null}
+              <div className="ad-actions profile-span">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={pushBusy || !pushSupported()}
+                  onClick={onEnablePush}
+                >
+                  {t.emailSettingsPushEnable}
+                </button>
+                {pushSubActive || pushEnabled ? (
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={pushBusy}
+                    onClick={onDisablePush}
+                  >
+                    {t.emailSettingsPushDisable}
+                  </button>
+                ) : null}
+              </div>
             </div>
             <div className="ad-actions">
               <button type="submit" className="btn primary" disabled={busy}>
