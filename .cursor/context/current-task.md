@@ -1,27 +1,28 @@
 # Current task
 
 ## Completed
-- Recommendations Option D (Bento) implemented
-- Saved Jobs design options A–D (PNG)
-- **Saved Jobs Option B (split) implemented**
+- Applications Option E (columns + detail) implemented + smoke
+- Live smoke: empty, many, withdraw UI, AZ/EN/RU; guest gates on `/applications`
+- Polish: shorter board labels; withdraw note kept on empty; mobile tabs no clip
 
 ## Current state
-- `/saved` is master–detail: scrollable left list + sticky preview (≥960px)
-- Mobile (&lt;960): list ↔ preview swap with “Siyahıya qayıt”
-- Load more via existing `refreshSavedJobs(page)` pagination
-- Preview uses list fields only (no detail fetch)
+- Board labels: `applicationsColSubmitted/Seen/Rejected` (AZ Göndərilib/Baxılıb/Rədd)
+- Empty after last withdraw keeps `appWithdrawn` note above `.h2-empty`
+- Guest `/applications` (az/en/ru) shows gate copy correctly
+- Authenticated withdraw API path not exercised (no session in browser)
 
 ## Decisions
-- Option B chosen; left pane independent scroll + compact truncate so many items don’t break layout
-- No new API; client aggregates not needed (unlike Option D)
+- Option E retained; timeline keeps lowercase `appSubmitted`/`appSeen`/`appRejected`
+- Board/tab headers use Title-case col labels matching design sample
 
 ## Remaining
-- Manual smoke: desktop/mobile, empty, load more, unsave handoff
-- (opsional) polish vs `docs/design-samples/saved-b-split-preview.png`
+- (optional) authenticated live withdraw on `/applications` after login
+- (optional) drop `frontend/.applications-e-smoke.html` once signed off
 
 ## Relevant files
-- `frontend/components/my-saved.js`
-- `frontend/components/saved-job-panel.js`
-- `frontend/app/globals.css` (`.saved-split` …)
-- `frontend/lib/copy.js` (`savedJobsLoadMore`, `savedJobsBackToList`, …)
-- `docs/design-samples/saved-b-split-preview.png`
+- `frontend/components/applications-board.js`
+- `frontend/components/my-applications.js`
+- `frontend/lib/copy.js`
+- `frontend/app/globals.css` (`.apps-e*`)
+- `frontend/.applications-e-smoke.html`
+- `docs/design-samples/_smoke-applications-e*.png`

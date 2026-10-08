@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Müraciətlərim — design options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --brand: #001fff;
+    --brand-deep: #092f84;
+    --brand-soft: #eaefff;
+    --ink: #0b1220;
+    --canvas: #f4f6fb;
+    --surface: #ffffff;
+    --text: #20242b;
+    --muted: #656b75;
+    --border: #dfe1e5;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --shadow-soft: 0 1px 2px rgb(15 23 42 / 6%);
+    --content-max: 1120px;
+    --seen: #0d7a4f;
+    --seen-bg: #e8f6ef;
+    --rejected: #b42318;
+    --rejected-bg: #fef3f2;
+    --submitted: #092f84;
+    --submitted-bg: #eaefff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    background: #e8ebf2;
+    color: var(--text);
+  }
+  .sheet {
+    width: 1280px;
+    margin: 32px auto;
+    background: var(--canvas);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgb(15 23 42 / 12%);
+  }
+  .sheet + .sheet { margin-top: 48px; }
+  .label-bar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 22px;
+    background: var(--ink);
+    color: #fff;
+  }
+  .label-bar strong { font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .label-bar span { font-size: 13px; opacity: 0.75; }
+  .top {
+    height: 56px;
+    background: rgb(255 255 255 / 92%);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 20px;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .brand-mark {
+    width: 22px; height: 22px;
+    background: var(--brand);
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  }
+  .nav { display: flex; gap: 16px; font-size: 14px; color: var(--muted); }
+  .nav b { color: var(--text); font-weight: 600; }
+  .search {
+    flex: 1;
+    max-width: 320px;
+    margin: 0 auto;
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+  }
+  .user { margin-left: auto; font-size: 12px; text-align: right; line-height: 1.25; }
+  .user strong { display: block; font-size: 13px; }
+  .page {
+    max-width: var(--content-max);
+    margin: 0 auto;
+    padding: 22px 24px 28px;
+    min-height: 640px;
+  }
+  .chrome {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+  .chrome-left { display: grid; gap: 6px; }
+  .back { font-size: 13px; color: var(--muted); }
+  h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--brand-soft);
+    color: var(--brand-deep);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .lede { margin: 4px 0 0; font-size: 14px; color: var(--muted); max-width: 48ch; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: none;
+    cursor: default;
+  }
+  .btn.brand { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.ghost { background: transparent; }
+  .btn.danger { color: var(--rejected); border-color: #fecdca; background: #fff; }
+  .btn.link {
+    border: 0;
+    background: transparent;
+    color: var(--brand-deep);
+    padding: 0;
+    min-height: 0;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .pill.submitted { background: var(--submitted-bg); color: var(--submitted); }
+  .pill.seen { background: var(--seen-bg); color: var(--seen); }
+  .pill.rejected { background: var(--rejected-bg); color: var(--rejected); }
+  .avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex: 0 0 auto;
+  }
+  .avatar.lg { width: 48px; height: 48px; font-size: 16px; }
+  .meta { font-size: 12px; color: var(--muted); }
+  .title { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); }
+  .company { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+  .footer-note {
+    margin: 18px 24px 20px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .footer-note a { color: var(--brand); text-decoration: none; }
+
+  /* —— A: Status columns —— */
+  .a-cols {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    min-height: 520px;
+    align-items: stretch;
+  }
+  .a-col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 100%;
+  }
+  .a-col-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .a-col-head strong { font-size: 13px; font-weight: 700; letter-spacing: 0.02em; }
+  .a-col-head .n {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--canvas);
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+  .a-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    background: linear-gradient(180deg, #fff 0%, #f8f9fc 100%);
+    display: grid;
+    gap: 8px;
+  }
+  .a-card-top { display: flex; gap: 10px; align-items: flex-start; }
+  .a-card .when { font-size: 11px; color: var(--muted); }
+  .a-card .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .a-empty {
+    flex: 1;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 24px;
+    text-align: center;
+  }
+
+  /* —— B: Split + timeline —— */
+  .b-split {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    gap: 14px;
+    min-height: 540px;
+    align-items: stretch;
+  }
+  .b-list, .b-detail {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+  }
+  .b-list { display: flex; flex-direction: column; overflow: hidden; }
+  .b-list-scroll { display: flex; flex-direction: column; gap: 2px; padding: 8px; flex: 1; }
+  .b-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+  }
+  .b-item.active {
+    background: var(--brand-soft);
+    border-color: #c9d4ff;
+    box-shadow: inset 3px 0 0 var(--brand);
+  }
+  .b-item .title { font-size: 14px; }
+  .b-detail { padding: 22px 24px; display: flex; flex-direction: column; gap: 18px; }
+  .b-detail-head { display: flex; gap: 14px; align-items: flex-start; }
+  .b-detail-head .grow { flex: 1; min-width: 0; }
+  .b-detail-head h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
+  .b-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .timeline {
+    display: grid;
+    gap: 0;
+    padding: 4px 0;
+  }
+  .t-step {
+    display: grid;
+    grid-template-columns: 18px 1fr auto;
+    gap: 12px;
+    align-items: start;
+    padding: 10px 0;
+    position: relative;
+  }
+  .t-step:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 8px;
+    top: 28px;
+    bottom: -2px;
+    width: 2px;
+    background: var(--border);
+  }
+  .t-dot {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: #fff;
+    margin-top: 2px;
+  }
+  .t-step.done .t-dot { border-color: var(--brand); background: var(--brand); }
+  .t-step.current .t-dot { border-color: var(--seen); background: var(--seen); box-shadow: 0 0 0 4px var(--seen-bg); }
+  .t-step.bad .t-dot { border-color: var(--rejected); background: var(--rejected); }
+  .t-label { font-size: 14px; font-weight: 600; }
+  .t-note { margin: 4px 0 0; font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .t-when { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .b-aside {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .b-tile {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    background: #fafbfe;
+  }
+  .b-tile .k { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  .b-tile .v { margin-top: 6px; font-size: 14px; font-weight: 600; }
+  .b-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: auto; padding-top: 8px; }
+
+  /* —— C: Strip + wide rows —— */
+  .c-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .c-stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px 18px;
+    display: grid;
+    gap: 4px;
+    box-shadow: var(--shadow-soft);
+  }
+  .c-stat .k { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .c-stat .v { font-size: 28px; font-weight: 700; letter-spacing: -0.04em; color: var(--ink); line-height: 1; }
+  .c-stat .h { font-size: 12px; color: var(--muted); }
+  .c-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
+  }
+  .c-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1.4fr) minmax(180px, 1fr) auto auto;
+    gap: 16px;
+    align-items: center;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    min-height: 88px;
+  }
+  .c-row:last-child { border-bottom: 0; }
+  .c-mini {
+    display: flex;
+    gap: 0;
+    align-items: center;
+  }
+  .c-mini span {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: #fff;
+    position: relative;
+  }
+  .c-mini span + span { margin-left: 18px; }
+  .c-mini span + span::before {
+    content: "";
+    position: absolute;
+    right: 10px;
+    top: 3px;
+    width: 18px;
+    height: 2px;
+    background: var(--border);
+  }
+  .c-mini span.on { border-color: var(--brand); background: var(--brand); }
+  .c-mini span.bad { border-color: var(--rejected); background: var(--rejected); }
+  .c-mini span.ok { border-color: var(--seen); background: var(--seen); }
+  .c-actions { display: flex; gap: 8px; }
+
+  /* —— D: Bento board —— */
+  .d-bento {
+    display: grid;
+    grid-template-columns: 1.05fr 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 14px;
+    min-height: 540px;
+  }
+  .d-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    padding: 18px;
+  }
+  .d-overview {
+    grid-row: 1 / 3;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background:
+      linear-gradient(165deg, #eaefff 0%, #ffffff 42%, #f7f9ff 100%);
+  }
+  .d-overview .big {
+    font-size: 56px;
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    color: var(--ink);
+  }
+  .d-overview .sub { margin: 0; font-size: 14px; color: var(--muted); max-width: 28ch; }
+  .d-bars { display: grid; gap: 10px; margin-top: auto; }
+  .d-bar {
+    display: grid;
+    grid-template-columns: 88px 1fr 28px;
+    gap: 10px;
+    align-items: center;
+    font-size: 13px;
+  }
+  .d-bar .track {
+    height: 8px;
+    border-radius: 999px;
+    background: #e6e9f0;
+    overflow: hidden;
+  }
+  .d-bar .fill { height: 100%; border-radius: 999px; background: var(--brand); }
+  .d-bar .fill.seen { background: var(--seen); }
+  .d-bar .fill.rej { background: var(--rejected); }
+  .d-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 180px;
+  }
+  .d-card-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+  .d-card .body { flex: 1; display: grid; gap: 6px; align-content: start; }
+  .d-card .foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: auto; }
+  .d-wide {
+    grid-column: 2 / 4;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+  }
+  .d-wide .mid { display: grid; gap: 4px; }
+  .d-wide h3 { margin: 0; font-size: 16px; font-weight: 600; }
+  .d-note {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* —— E: A+B hybrid (columns + detail) —— */
+  .e-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.85fr);
+    gap: 14px;
+    min-height: 560px;
+    align-items: stretch;
+  }
+  .e-board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    min-height: 100%;
+    align-items: stretch;
+  }
+  .e-col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 100%;
+  }
+  .e-col-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 2px 2px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .e-col-head .n {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--canvas);
+    border-radius: 999px;
+    padding: 2px 7px;
+  }
+  .e-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px;
+    background: linear-gradient(180deg, #fff 0%, #f8f9fc 100%);
+    display: grid;
+    gap: 6px;
+    cursor: default;
+  }
+  .e-card.active {
+    border-color: #a8b8ff;
+    background: var(--brand-soft);
+    box-shadow: inset 0 0 0 1px #c9d4ff;
+  }
+  .e-card-top { display: flex; gap: 8px; align-items: flex-start; }
+  .e-card .avatar { width: 30px; height: 30px; font-size: 11px; }
+  .e-card .title { font-size: 13px; }
+  .e-card .company { font-size: 12px; margin: 1px 0 0; }
+  .e-card .when { font-size: 11px; color: var(--muted); }
+  .e-detail {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    padding: 18px 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .e-detail-head { display: flex; gap: 12px; align-items: flex-start; }
+  .e-detail-head h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
+  .e-detail .b-meta-row { margin-top: 6px; }
+  .e-hint {
+    margin: 0;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== A: Status columns ========== -->
+<section class="sheet" id="opt-a" data-name="applications-a-status-columns">
+  <div class="label-bar">
+    <strong>A · Status sütunları</strong>
+    <span>Göndərilib / Baxılıb / Rədd — status üzrə lövhə, tam en</span>
+  </div>
+  <div class="top">
+    <div class="brand"><span class="brand-mark"></span> Ingress Job</div>
+    <div class="nav"><b>Elanlara bax</b><span>Şirkətlər</span><span>Trendlər</span></div>
+    <div class="search">Axtarış ⌘K</div>
+    <div class="user"><strong>Aladdin Biyabangerd</strong>candidate@…</div>
+  </div>
+  <div class="page">
+    <div class="chrome">
+      <div class="chrome-left">
+        <div class="back">← Elanlar</div>
+        <h1>Müraciətlərim <span class="count">5</span></h1>
+        <p class="lede">Statuslara görə izlə — hər sütun eyni hündürlükdə, səhifə dolu qalır.</p>
+      </div>
+    </div>
+    <div class="a-cols">
+      <div class="a-col">
+        <div class="a-col-head"><strong class="pill submitted">Göndərilib</strong><span class="n">2</span></div>
+        <div class="a-card">
+          <div class="a-card-top">
+            <span class="avatar">N</span>
+            <div>
+              <p class="title">Senior Android Engineer</p>
+              <p class="company">Niuro</p>
+            </div>
+          </div>
+          <div class="when">8 okt 2026 · CV: resume.pdf</div>
+          <div class="actions">
+            <span class="btn link">Elana bax →</span>
+            <span class="btn danger">Geri götür</span>
+          </div>
+        </div>
+        <div class="a-card">
+          <div class="a-card-top">
+            <span class="avatar">T</span>
+            <div>
+              <p class="title">Backend Engineer</p>
+              <p class="company">Telepax</p>
+            </div>
+          </div>
+          <div class="when">5 okt 2026 · CV: cv.pdf</div>
+          <div class="actions">
+            <span class="btn link">Elana bax →</span>
+            <span class="btn danger">Geri götür</span>
+          </div>
+        </div>
+        <div class="a-empty">Yeni müraciətlər burada görünəcək</div>
+      </div>
+      <div class="a-col">
+        <div class="a-col-head"><strong class="pill seen">Baxılıb</strong><span class="n">2</span></div>
+        <div class="a-card">
+          <div class="a-card-top">
+            <span class="avatar">A</span>
+            <div>
+              <p class="title">Product Designer</p>
+              <p class="company">Acme</p>
+            </div>
+          </div>
+          <div class="when">Baxılıb 7 okt · CV var</div>
+          <div class="actions">
+            <span class="btn link">Elana bax →</span>
+            <span class="btn danger">Geri götür</span>
+          </div>
+        </div>
+        <div class="a-card">
+          <div class="a-card-top">
+            <span class="avatar">TF</span>
+            <div>
+              <p class="title">Junior Implementation</p>
+              <p class="company">Telepax Medical</p>
+            </div>
+          </div>
+          <div class="when">Baxılıb 3 okt · CV var</div>
+          <div class="actions">
+            <span class="btn link">Elana bax →</span>
+            <span class="btn danger">Geri götür</span>
+          </div>
+        </div>
+        <div class="a-empty">İşəgötürən baxdıqda buraya keçir</div>
+      </div>
+      <div class="a-col">
+        <div class="a-col-head"><strong class="pill rejected">Rədd edilib</strong><span class="n">1</span></div>
+        <div class="a-card">
+          <div class="a-card-top">
+            <span class="avatar">K</span>
+            <div>
+              <p class="title">QA Engineer</p>
+              <p class="company">Kapital Bank</p>
+            </div>
+          </div>
+          <div class="when">Rədd 2 okt · “Təcrübə uyğun gəlmir”</div>
+          <div class="actions">
+            <span class="btn link">Elana bax →</span>
+          </div>
+        </div>
+        <div class="a-empty">Rədd qeydləri burada saxlanır</div>
+      </div>
+    </div>
+  </div>
+  <p class="footer-note">Ingress ekosisteminin bir hissəsi · <a href="#">Ingress Academy</a></p>
+</section>
+
+<!-- ========== B: Split + timeline ========== -->
+<section class="sheet" id="opt-b" data-name="applications-b-split-timeline">
+  <div class="label-bar">
+    <strong>B · Split + timeline</strong>
+    <span>Sol siyahı · sağda seçilmiş müraciətin timeline / CV / əməliyyat</span>
+  </div>
+  <div class="top">
+    <div class="brand"><span class="brand-mark"></span> Ingress Job</div>
+    <div class="nav"><b>Elanlara bax</b><span>Şirkətlər</span><span>Trendlər</span></div>
+    <div class="search">Axtarış ⌘K</div>
+    <div class="user"><strong>Aladdin Biyabangerd</strong>candidate@…</div>
+  </div>
+  <div class="page">
+    <div class="b-split">
+      <aside class="b-list">
+        <div style="padding:16px 16px 8px">
+          <div class="back">← Elanlar</div>
+          <h1 style="font-size:22px;margin-top:6px">Müraciətlərim <span class="count">5</span></h1>
+        </div>
+        <div class="b-list-scroll">
+          <div class="b-item">
+            <span class="avatar">N</span>
+            <div>
+              <p class="title">Senior Android Engineer</p>
+              <p class="company">Niuro · 8 okt</p>
+            </div>
+            <span class="pill submitted">Göndərilib</span>
+          </div>
+          <div class="b-item active">
+            <span class="avatar">A</span>
+            <div>
+              <p class="title">Product Designer</p>
+              <p class="company">Acme · 6 okt</p>
+            </div>
+            <span class="pill seen">Baxılıb</span>
+          </div>
+          <div class="b-item">
+            <span class="avatar">T</span>
+            <div>
+              <p class="title">Backend Engineer</p>
+              <p class="company">Telepax · 5 okt</p>
+            </div>
+            <span class="pill submitted">Göndərilib</span>
+          </div>
+          <div class="b-item">
+            <span class="avatar">TF</span>
+            <div>
+              <p class="title">Junior Implementation</p>
+              <p class="company">Telepax · 3 okt</p>
+            </div>
+            <span class="pill seen">Baxılıb</span>
+          </div>
+          <div class="b-item">
+            <span class="avatar">K</span>
+            <div>
+              <p class="title">QA Engineer</p>
+              <p class="company">Kapital · 2 okt</p>
+            </div>
+            <span class="pill rejected">Rədd</span>
+          </div>
+        </div>
+      </aside>
+      <article class="b-detail">
+        <div class="b-detail-head">
+          <span class="avatar lg">A</span>
+          <div class="grow">
+            <h2>Product Designer</h2>
+            <div class="b-meta-row">
+              <span class="company" style="margin:0">Acme</span>
+              <span class="pill seen">Baxılıb</span>
+              <span class="meta">Müraciət: 6 okt 2026</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="meta" style="margin:0 0 8px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:11px">Status tarixçəsi</p>
+          <div class="timeline">
+            <div class="t-step done">
+              <span class="t-dot"></span>
+              <div>
+                <div class="t-label">Göndərilib</div>
+              </div>
+              <span class="t-when">6 okt 2026</span>
+            </div>
+            <div class="t-step current">
+              <span class="t-dot"></span>
+              <div>
+                <div class="t-label">Baxılıb</div>
+                <p class="t-note">İşəgötürən müraciətə baxıb.</p>
+              </div>
+              <span class="t-when">7 okt 2026</span>
+            </div>
+            <div class="t-step">
+              <span class="t-dot"></span>
+              <div>
+                <div class="t-label">Rədd / növbəti addım</div>
+                <p class="t-note">Hələ qərar yoxdur.</p>
+              </div>
+              <span class="t-when">—</span>
+            </div>
+          </div>
+        </div>
+        <div class="b-aside">
+          <div class="b-tile">
+            <div class="k">CV</div>
+            <div class="v">portfolio-aladdin.pdf</div>
+          </div>
+          <div class="b-tile">
+            <div class="k">Elan</div>
+            <div class="v">#1284 · açıq</div>
+          </div>
+        </div>
+        <div class="b-actions">
+          <span class="btn brand">Elana bax</span>
+          <span class="btn danger">Müraciəti geri götür</span>
+        </div>
+      </article>
+    </div>
+  </div>
+  <p class="footer-note">Ingress ekosisteminin bir hissəsi · <a href="#">Ingress Academy</a></p>
+</section>
+
+<!-- ========== C: Strip + wide rows ========== -->
+<section class="sheet" id="opt-c" data-name="applications-c-strip-rows">
+  <div class="label-bar">
+    <strong>C · Status strip + geniş sətirlər</strong>
+    <span>Yuxarıda saylar · aşağıda tam en timeline + əməliyyat</span>
+  </div>
+  <div class="top">
+    <div class="brand"><span class="brand-mark"></span> Ingress Job</div>
+    <div class="nav"><b>Elanlara bax</b><span>Şirkətlər</span><span>Trendlər</span></div>
+    <div class="search">Axtarış ⌘K</div>
+    <div class="user"><strong>Aladdin Biyabangerd</strong>candidate@…</div>
+  </div>
+  <div class="page">
+    <div class="chrome">
+      <div class="chrome-left">
+        <div class="back">← Elanlar</div>
+        <h1>Müraciətlərim <span class="count">5</span></h1>
+        <p class="lede">Bütün müraciətlər bir siyahıda — status xülasəsi yuxarıda, detallar sətirdə.</p>
+      </div>
+    </div>
+    <div class="c-strip">
+      <div class="c-stat">
+        <div class="k">Göndərilib</div>
+        <div class="v">2</div>
+        <div class="h">gözləmədə</div>
+      </div>
+      <div class="c-stat">
+        <div class="k">Baxılıb</div>
+        <div class="v">2</div>
+        <div class="h">işəgötürən oxuyub</div>
+      </div>
+      <div class="c-stat">
+        <div class="k">Rədd</div>
+        <div class="v">1</div>
+        <div class="h">qeyd ilə</div>
+      </div>
+    </div>
+    <div class="c-panel">
+      <div class="c-row">
+        <span class="avatar">N</span>
+        <div>
+          <p class="title">Senior Android Engineer</p>
+          <p class="company">Niuro · 8 okt 2026 · CV: resume.pdf</p>
+        </div>
+        <div>
+          <div class="c-mini" title="timeline">
+            <span class="on"></span><span></span><span></span>
+          </div>
+          <div class="meta" style="margin-top:6px">Göndərilib</div>
+        </div>
+        <span class="pill submitted">Göndərilib</span>
+        <div class="c-actions">
+          <span class="btn ghost">Elana bax</span>
+          <span class="btn danger">Geri götür</span>
+        </div>
+      </div>
+      <div class="c-row">
+        <span class="avatar">A</span>
+        <div>
+          <p class="title">Product Designer</p>
+          <p class="company">Acme · 6 okt 2026 · CV var</p>
+        </div>
+        <div>
+          <div class="c-mini">
+            <span class="on"></span><span class="ok"></span><span></span>
+          </div>
+          <div class="meta" style="margin-top:6px">Baxılıb 7 okt</div>
+        </div>
+        <span class="pill seen">Baxılıb</span>
+        <div class="c-actions">
+          <span class="btn ghost">Elana bax</span>
+          <span class="btn danger">Geri götür</span>
+        </div>
+      </div>
+      <div class="c-row">
+        <span class="avatar">T</span>
+        <div>
+          <p class="title">Backend Engineer</p>
+          <p class="company">Telepax · 5 okt 2026 · CV: cv.pdf</p>
+        </div>
+        <div>
+          <div class="c-mini">
+            <span class="on"></span><span></span><span></span>
+          </div>
+          <div class="meta" style="margin-top:6px">Göndərilib</div>
+        </div>
+        <span class="pill submitted">Göndərilib</span>
+        <div class="c-actions">
+          <span class="btn ghost">Elana bax</span>
+          <span class="btn danger">Geri götür</span>
+        </div>
+      </div>
+      <div class="c-row">
+        <span class="avatar">TF</span>
+        <div>
+          <p class="title">Junior Implementation</p>
+          <p class="company">Telepax Medical · 3 okt 2026</p>
+        </div>
+        <div>
+          <div class="c-mini">
+            <span class="on"></span><span class="ok"></span><span></span>
+          </div>
+          <div class="meta" style="margin-top:6px">Baxılıb 3 okt</div>
+        </div>
+        <span class="pill seen">Baxılıb</span>
+        <div class="c-actions">
+          <span class="btn ghost">Elana bax</span>
+          <span class="btn danger">Geri götür</span>
+        </div>
+      </div>
+      <div class="c-row">
+        <span class="avatar">K</span>
+        <div>
+          <p class="title">QA Engineer</p>
+          <p class="company">Kapital Bank · “Təcrübə uyğun gəlmir”</p>
+        </div>
+        <div>
+          <div class="c-mini">
+            <span class="on"></span><span class="ok"></span><span class="bad"></span>
+          </div>
+          <div class="meta" style="margin-top:6px">Rədd 2 okt</div>
+        </div>
+        <span class="pill rejected">Rədd</span>
+        <div class="c-actions">
+          <span class="btn ghost">Elana bax</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="footer-note">Ingress ekosisteminin bir hissəsi · <a href="#">Ingress Academy</a></p>
+</section>
+
+<!-- ========== D: Bento board ========== -->
+<section class="sheet" id="opt-d" data-name="applications-d-bento-board">
+  <div class="label-bar">
+    <strong>D · Bento lövhə</strong>
+    <span>Status xülasəsi + aktiv kartlar + rədd sətri — viewport dolu</span>
+  </div>
+  <div class="top">
+    <div class="brand"><span class="brand-mark"></span> Ingress Job</div>
+    <div class="nav"><b>Elanlara bax</b><span>Şirkətlər</span><span>Trendlər</span></div>
+    <div class="search">Axtarış ⌘K</div>
+    <div class="user"><strong>Aladdin Biyabangerd</strong>candidate@…</div>
+  </div>
+  <div class="page">
+    <div class="chrome">
+      <div class="chrome-left">
+        <div class="back">← Elanlar</div>
+        <h1>Müraciətlərim</h1>
+        <p class="lede">Aktiv və bitmiş müraciətlər bir lövhədə — status payı dərhal görünür.</p>
+      </div>
+    </div>
+    <div class="d-bento">
+      <div class="d-tile d-overview">
+        <div class="big">5</div>
+        <p class="sub">ümumi müraciət · 2 gözləmədə, 2 baxılıb, 1 rədd</p>
+        <div class="d-bars">
+          <div class="d-bar">
+            <span>Göndərilib</span>
+            <div class="track"><div class="fill" style="width:40%"></div></div>
+            <strong>2</strong>
+          </div>
+          <div class="d-bar">
+            <span>Baxılıb</span>
+            <div class="track"><div class="fill seen" style="width:40%"></div></div>
+            <strong>2</strong>
+          </div>
+          <div class="d-bar">
+            <span>Rədd</span>
+            <div class="track"><div class="fill rej" style="width:20%"></div></div>
+            <strong>1</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-tile d-card">
+        <div class="d-card-top">
+          <span class="avatar">N</span>
+          <span class="pill submitted">Göndərilib</span>
+        </div>
+        <div class="body">
+          <p class="title" style="font-size:16px">Senior Android Engineer</p>
+          <p class="company">Niuro · 8 okt · CV var</p>
+        </div>
+        <div class="foot">
+          <span class="btn danger">Geri götür</span>
+          <span class="btn brand">→</span>
+        </div>
+      </div>
+
+      <div class="d-tile d-card">
+        <div class="d-card-top">
+          <span class="avatar">A</span>
+          <span class="pill seen">Baxılıb</span>
+        </div>
+        <div class="body">
+          <p class="title" style="font-size:16px">Product Designer</p>
+          <p class="company">Acme · baxılıb 7 okt</p>
+        </div>
+        <div class="foot">
+          <span class="btn danger">Geri götür</span>
+          <span class="btn brand">→</span>
+        </div>
+      </div>
+
+      <div class="d-tile d-card">
+        <div class="d-card-top">
+          <span class="avatar">T</span>
+          <span class="pill submitted">Göndərilib</span>
+        </div>
+        <div class="body">
+          <p class="title" style="font-size:16px">Backend Engineer</p>
+          <p class="company">Telepax · 5 okt · CV: cv.pdf</p>
+        </div>
+        <div class="foot">
+          <span class="btn danger">Geri götür</span>
+          <span class="btn brand">→</span>
+        </div>
+      </div>
+
+      <div class="d-tile d-card">
+        <div class="d-card-top">
+          <span class="avatar">TF</span>
+          <span class="pill seen">Baxılıb</span>
+        </div>
+        <div class="body">
+          <p class="title" style="font-size:16px">Junior Implementation</p>
+          <p class="company">Telepax Medical · 3 okt</p>
+        </div>
+        <div class="foot">
+          <span class="btn danger">Geri götür</span>
+          <span class="btn brand">→</span>
+        </div>
+      </div>
+
+      <div class="d-tile d-wide">
+        <span class="avatar lg">K</span>
+        <div class="mid">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <h3>QA Engineer · Kapital Bank</h3>
+            <span class="pill rejected">Rədd edilib</span>
+          </div>
+          <p class="d-note">İşəgötürən qeydi: “Təcrübə uyğun gəlmir”. Timeline: göndərilib → baxılıb → rədd (2 okt).</p>
+        </div>
+        <span class="btn ghost">Elana bax</span>
+      </div>
+    </div>
+  </div>
+  <p class="footer-note">Ingress ekosisteminin bir hissəsi · <a href="#">Ingress Academy</a></p>
+</section>
+
+<!-- ========== E: A+B hybrid ========== -->
+<section class="sheet" id="opt-e" data-name="applications-e-columns-detail">
+  <div class="label-bar">
+    <strong>E · A + B qarışıq</strong>
+    <span>Sol: status sütunları · sağ: seçilmiş müraciətin timeline / CV</span>
+  </div>
+  <div class="top">
+    <div class="brand"><span class="brand-mark"></span> Ingress Job</div>
+    <div class="nav"><b>Elanlara bax</b><span>Şirkətlər</span><span>Trendlər</span></div>
+    <div class="search">Axtarış ⌘K</div>
+    <div class="user"><strong>Aladdin Biyabangerd</strong>candidate@…</div>
+  </div>
+  <div class="page">
+    <div class="chrome">
+      <div class="chrome-left">
+        <div class="back">← Elanlar</div>
+        <h1>Müraciətlərim <span class="count">5</span></h1>
+        <p class="lede">Status lövhəsində seç — detallar sağda açılır (sütunlar + timeline).</p>
+      </div>
+    </div>
+    <div class="e-layout">
+      <div class="e-board">
+        <div class="e-col">
+          <div class="e-col-head"><strong class="pill submitted">Göndərilib</strong><span class="n">2</span></div>
+          <div class="e-card">
+            <div class="e-card-top">
+              <span class="avatar">N</span>
+              <div>
+                <p class="title">Senior Android Engineer</p>
+                <p class="company">Niuro</p>
+              </div>
+            </div>
+            <div class="when">8 okt · CV: resume.pdf</div>
+          </div>
+          <div class="e-card">
+            <div class="e-card-top">
+              <span class="avatar">T</span>
+              <div>
+                <p class="title">Backend Engineer</p>
+                <p class="company">Telepax</p>
+              </div>
+            </div>
+            <div class="when">5 okt · CV: cv.pdf</div>
+          </div>
+        </div>
+        <div class="e-col">
+          <div class="e-col-head"><strong class="pill seen">Baxılıb</strong><span class="n">2</span></div>
+          <div class="e-card active">
+            <div class="e-card-top">
+              <span class="avatar">A</span>
+              <div>
+                <p class="title">Product Designer</p>
+                <p class="company">Acme</p>
+              </div>
+            </div>
+            <div class="when">Baxılıb 7 okt</div>
+          </div>
+          <div class="e-card">
+            <div class="e-card-top">
+              <span class="avatar">TF</span>
+              <div>
+                <p class="title">Junior Implementation</p>
+                <p class="company">Telepax Medical</p>
+              </div>
+            </div>
+            <div class="when">Baxılıb 3 okt</div>
+          </div>
+        </div>
+        <div class="e-col">
+          <div class="e-col-head"><strong class="pill rejected">Rədd</strong><span class="n">1</span></div>
+          <div class="e-card">
+            <div class="e-card-top">
+              <span class="avatar">K</span>
+              <div>
+                <p class="title">QA Engineer</p>
+                <p class="company">Kapital Bank</p>
+              </div>
+            </div>
+            <div class="when">Rədd 2 okt</div>
+          </div>
+        </div>
+      </div>
+
+      <article class="e-detail">
+        <div class="e-detail-head">
+          <span class="avatar lg">A</span>
+          <div>
+            <h2>Product Designer</h2>
+            <div class="b-meta-row">
+              <span class="company" style="margin:0">Acme</span>
+              <span class="pill seen">Baxılıb</span>
+            </div>
+          </div>
+        </div>
+        <p class="e-hint">Seçilmiş kartın timeline-ı — status dəyişiklikləri və işəgötürən qeydi burada.</p>
+        <div class="timeline">
+          <div class="t-step done">
+            <span class="t-dot"></span>
+            <div><div class="t-label">Göndərilib</div></div>
+            <span class="t-when">6 okt</span>
+          </div>
+          <div class="t-step current">
+            <span class="t-dot"></span>
+            <div>
+              <div class="t-label">Baxılıb</div>
+              <p class="t-note">İşəgötürən müraciətə baxıb.</p>
+            </div>
+            <span class="t-when">7 okt</span>
+          </div>
+          <div class="t-step">
+            <span class="t-dot"></span>
+            <div>
+              <div class="t-label">Rədd / növbəti</div>
+              <p class="t-note">Hələ qərar yoxdur.</p>
+            </div>
+            <span class="t-when">—</span>
+          </div>
+        </div>
+        <div class="b-aside">
+          <div class="b-tile">
+            <div class="k">CV</div>
+            <div class="v">portfolio.pdf</div>
+          </div>
+          <div class="b-tile">
+            <div class="k">Elan</div>
+            <div class="v">#1284</div>
+          </div>
+        </div>
+        <div class="b-actions">
+          <span class="btn brand">Elana bax</span>
+          <span class="btn danger">Geri götür</span>
+        </div>
+      </article>
+    </div>
+  </div>
+  <p class="footer-note">Ingress ekosisteminin bir hissəsi · <a href="#">Ingress Academy</a></p>
+</section>
+
+</body>
+</html>

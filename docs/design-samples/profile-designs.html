@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Profil — design options</title>
+<style>
+  :root {
+    --brand: #001fff;
+    --brand-deep: #092f84;
+    --brand-soft: #eaefff;
+    --ink: #0b1220;
+    --canvas: #f4f6fb;
+    --surface: #ffffff;
+    --text: #20242b;
+    --muted: #656b75;
+    --border: #dfe1e5;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --shadow-soft: 0 1px 2px rgb(15 23 42 / 6%);
+    --content-max: 1120px;
+    --danger: #b42318;
+    --ok: #0d7a4f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #e8ebf2;
+    color: var(--text);
+  }
+  .sheet {
+    width: 1280px;
+    margin: 32px auto;
+    background: var(--canvas);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgb(15 23 42 / 12%);
+  }
+  .sheet + .sheet { margin-top: 64px; }
+  .label-bar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 22px;
+    background: var(--ink);
+    color: #fff;
+  }
+  .label-bar strong { font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .label-bar span { font-size: 13px; opacity: 0.75; }
+  .top {
+    height: 56px;
+    background: rgb(255 255 255 / 92%);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 20px;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .brand-mark {
+    width: 22px; height: 22px;
+    background: var(--brand);
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  }
+  .nav { display: flex; gap: 16px; font-size: 14px; color: var(--muted); }
+  .nav b { color: var(--text); font-weight: 600; }
+  .search {
+    flex: 1;
+    max-width: 320px;
+    margin: 0 auto;
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+  }
+  .user { margin-left: auto; font-size: 12px; text-align: right; line-height: 1.25; }
+  .user strong { display: block; font-size: 13px; }
+  .page {
+    max-width: var(--content-max);
+    margin: 0 auto;
+    padding: 22px 24px 28px;
+  }
+  .chrome {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .chrome-left { display: grid; gap: 6px; }
+  .back { font-size: 13px; color: var(--muted); }
+  h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+  }
+  .lede { margin: 4px 0 0; font-size: 14px; color: var(--muted); max-width: 48ch; }
+  .linkish { font-size: 13px; color: var(--brand-deep); font-weight: 600; text-decoration: none; }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    padding: 20px;
+  }
+  .field { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink); }
+  .input {
+    height: 42px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: #fafbfe;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-weight: 500;
+    color: var(--text);
+    font-size: 14px;
+  }
+  .hint { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.45; font-weight: 400; }
+  .opt { font-size: 11px; font-weight: 500; color: var(--muted); margin-left: 6px; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .btn.ink { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .btn.ghost { background: transparent; }
+  .btn.danger { color: var(--danger); border-color: #f3c4c0; background: #fff8f7; }
+  .btn.pill {
+    border-radius: 999px;
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #fff;
+    padding: 10px 18px;
+  }
+  .check {
+    width: 18px; height: 18px; border-radius: 4px;
+    border: 2px solid var(--brand);
+    background: var(--brand);
+    flex: 0 0 auto;
+    position: relative;
+  }
+  .check::after {
+    content: "";
+    position: absolute;
+    left: 4px; top: 1px;
+    width: 5px; height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  .check.off { background: #fff; }
+  .check.off::after { display: none; }
+  .sec-title {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  .sec-sub { margin: 0 0 14px; font-size: 13px; color: var(--muted); }
+  .pill-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--brand-deep);
+    background: var(--brand-soft);
+    border: 1px solid #c9d4ff;
+    border-radius: 999px;
+    padding: 5px 10px;
+  }
+  .pill-tag i {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--ok); display: inline-block;
+  }
+
+  /* —— A: Equal split —— */
+  .a-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    gap: 16px;
+    align-items: stretch;
+  }
+  .a-left, .a-right {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 420px;
+  }
+  .a-fields { display: grid; gap: 12px; flex: 1; }
+  .a-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .a-consents { display: grid; gap: 0; flex: 1; }
+  .a-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+    align-items: start;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .a-row:last-child { border-bottom: 0; padding-bottom: 0; }
+  .a-row:first-child { padding-top: 0; }
+  .a-row strong { display: block; font-size: 14px; font-weight: 600; }
+  .a-row span { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; font-weight: 400; line-height: 1.4; }
+  .a-save {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding-top: 4px;
+  }
+  .a-rights {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 12px;
+  }
+  .a-right-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    padding: 14px 16px;
+    display: grid;
+    gap: 10px;
+    align-content: start;
+  }
+  .a-right-card strong { font-size: 14px; }
+  .a-right-card .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* —— B: Identity strip + grid —— */
+  .b-identity {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 18px;
+    align-items: center;
+    padding: 18px 20px;
+    border-radius: var(--radius-lg);
+    border: 1px solid #c9d4ff;
+    background: linear-gradient(120deg, #fff 0%, var(--brand-soft) 100%);
+    margin-bottom: 14px;
+  }
+  .b-avatar {
+    width: 56px; height: 56px; border-radius: 14px;
+    background: var(--brand);
+    color: #fff;
+    font-weight: 700;
+    font-size: 18px;
+    display: grid;
+    place-items: center;
+  }
+  .b-identity h2 { margin: 0; font-size: 18px; letter-spacing: -0.02em; }
+  .b-meta { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 6px; font-size: 13px; color: var(--muted); }
+  .b-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .b-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    background: var(--surface);
+    display: grid;
+    gap: 10px;
+    min-height: 150px;
+  }
+  .b-card .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 10px;
+  }
+  .b-card strong { font-size: 14px; display: block; }
+  .b-card p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .b-form {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 12px;
+  }
+  .b-rights {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .b-right {
+    border: 1px dashed #c9ced8;
+    border-radius: var(--radius-md);
+    padding: 14px;
+    background: #fafbfe;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .b-right strong { display: block; font-size: 13px; }
+  .b-right span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* —— C: Wide rows —— */
+  .c-block + .c-block { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+  .c-contact {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 14px;
+  }
+  .c-rows { display: grid; gap: 0; }
+  .c-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 14px;
+    align-items: center;
+    padding: 14px 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .c-row:last-of-type { border-bottom: 0; }
+  .c-row strong { display: block; font-size: 14px; font-weight: 600; }
+  .c-row span { display: block; margin-top: 3px; font-size: 13px; color: var(--muted); max-width: 70ch; line-height: 1.4; font-weight: 400; }
+  .c-vis {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .c-vis-opt {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: start;
+  }
+  .c-vis-opt.on {
+    border-color: #c9d4ff;
+    background: var(--brand-soft);
+  }
+  .radio {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid var(--brand);
+    margin-top: 2px;
+    position: relative;
+  }
+  .radio.on::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--brand);
+  }
+  .c-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    gap: 12px;
+  }
+  .c-rights { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* —— D: Status rail + board —— */
+  .d-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  .d-rail { display: flex; flex-direction: column; gap: 12px; }
+  .d-stat {
+    padding: 16px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background: linear-gradient(165deg, #fff 0%, var(--brand-soft) 120%);
+  }
+  .d-stat .num {
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    color: var(--brand-deep);
+    line-height: 1;
+  }
+  .d-stat .lbl { margin-top: 6px; font-size: 13px; color: var(--muted); }
+  .d-list {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    padding: 14px 16px;
+    display: grid;
+    gap: 10px;
+    font-size: 13px;
+  }
+  .d-list div {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--muted);
+  }
+  .d-list b { color: var(--text); font-weight: 600; }
+  .d-main { display: grid; gap: 14px; }
+  .d-contact {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 12px;
+  }
+  .d-consents {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .d-consent {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+    align-items: start;
+    min-height: 92px;
+  }
+  .d-consent.wide { grid-column: 1 / -1; }
+  .d-consent strong { display: block; font-size: 14px; }
+  .d-consent span { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+  .d-rights {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .d-right {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    background: #fafbfe;
+    display: grid;
+    gap: 8px;
+  }
+  .d-right strong { font-size: 13px; }
+  .d-save { display: flex; justify-content: flex-end; gap: 8px; }
+</style>
+</head>
+<body>
+
+<!-- ========== OPTION A ========== -->
+<section class="sheet" id="opt-a" data-name="A Equal split">
+  <div class="label-bar">
+    <strong>Option A — Equal split</strong>
+    <span>Sol: əlaqə · Sağ: razılıqlar · Alt: hüquqlar · Boş sütun yoxdur</span>
+  </div>
+  <div class="top">
+    <div class="brand"><span class="brand-mark"></span>Ingress Job</div>
+    <div class="nav"><b>Elanlara bax</b><span>Şirkətlər</span><span>Trendlər</span></div>
+    <div class="search">Axtarış ⌘K</div>
+    <div class="user"><strong>Aladdin Biyabangerd</strong>aladdin@… · AZ</div>
+  </div>
+  <div class="page">
+    <div class="chrome">
+      <div class="chrome-left">
+        <div class="back">← Elanlar</div>
+        <h1>Profil</h1>
+        <p class="lede">Görünən ad, əlaqə və məxfilik — eyni səviyyədə.</p>
+      </div>
+      <button class="btn pill">CV profilini yoxla</button>
+    </div>
+    <div class="a-grid">
+      <div class="panel a-left">
+        <div>
+          <p class="sec-title">Namizəd profili</p>
+          <p class="sec-sub">Job saytında saxlanılan əlaqə məlumatı.</p>
+        </div>
+        <div class="a-fields">
+          <label class="field">Görünən ad
+            <div class="input">Aladdin Biyabangerd</div>
+          </label>
+          <div class="a-pair">
+            <label class="field">Telefon <span class="opt">istəyə bağlı</span>
+              <div class="input">0503106853</div>
+            </label>
+            <label class="field">E-poçt <span class="opt">istəyə bağlı</span>
+              <div class="input">aladdin19.11.21@…</div>
+            </label>
+          </div>
+          <p class="hint">Müraciət forması telefon və ya e-poçt istəsə və sahə boşdursa, buradan doldurulur.</p>
+        </div>
+        <div class="a-save">
+          <span class="hint">Dəyişikliklər saxlanmalıdır</span>
+          <button class="btn ink">Saxla</button>
+        </div>
+      </div>
+      <div class="panel a-right">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:12px">
+          <div>
+            <p class="sec-title">Məxfilik və razılıqlar</p>
+            <p class="sec-sub">CV yükləyəndə də dəyişmək olar.</p>
+          </div>
+          <a class="linkish" href="#">Bildiriş seçimləri</a>
+        </div>
+        <div class="a-consents">
+          <div class="a-row">
+            <div class="check"></div>
+            <div>
+              <strong>CV təhlili və uyğunluq</strong>
+              <span>CV-nin avtomatik təhlili və iş uyğunluğu üçün razılıq (AI).</span>
+            </div>
+          </div>
+          <div class="a-row">
+            <div class="check"></div>
+            <div>
+              <strong>E-poçt dayjestləri</strong>
+              <span>Həftəlik / hadisə əsaslı dayjest və tövsiyə məktubları.</span>
+            </div>
+          </div>
+          <div class="a-row">
+            <div class="check"></div>
+            <div>
+              <strong>İşəgötürən axtarışında görünmə</strong>
+              <span>Təsdiqlənmiş işəgötürənlər namizəd axtarışında sizi tapa bilsin.</span>
+            </div>
+          </div>
+        </div>
+        <div class="a-save">
+          <span class="pill-tag"><i></i> Görünürlük: anonim</span>
+          <button class="btn ink">Saxla</button>
+        </div>
+      </div>
+    </div>
+    <div class="a-rights">
+      <div class="a-right-card">
+        <strong>Məlumatları yüklə</strong>
+        <p class="hint">Profil, CV və razılıqlar — ZIP export.</p>
+        <div class="actions"><button class="btn">Export</button></div>
+      </div>
+      <div class="a-right-card">
+        <strong>Məlumatları sil</strong>
+        <p class="hint">Namizəd profili, CV, razılıqlar silinir.</p>
+        <div class="actions"><button class="btn danger">Sil</button></div>
+      </div>
+      <div class="a-right-card">
+        <strong>Kim baxıb</strong>
+        <p class="hint">Tezliklə — işəgötürən baxışları.</p>
+        <div class="actions"><span class="pill-tag">Tezliklə</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== OPTION B ========== -->
+<section class="sheet" id="opt-b" data-name="B Identity + consent grid">
+  <div class="label-bar">
+    <strong>Option B — Identity strip + consent grid</strong>
+    <span>Üst şəxsiyyət · 3 kolon forma · 3 razılıq kartı · Hüquqlar sırası</span>
+  </div>
+  <div class="top">
+    <div class="brand"><span class="brand-mark"></span>Ingress Job</div>
+    <div class="nav"><b>Elanlara bax</b><span>Şirkətlər</span><span>Trendlər</span></div>
+    <div class="search">Axtarış ⌘K</div>
+    <div class="user"><strong>Aladdin Biyabangerd</strong>aladdin@… · AZ</div>
+  </div>
+  <div class="page">
+    <div class="chrome">
+      <div class="chrome-left">
+        <div class="back">← Elanlar</div>
+        <h1>Profil</h1>
+        <p class="lede">Əlaqə, razılıqlar və hüquqlar eyni eni doldurur.</p>
+      </div>
+      <button class="btn pill">CV profilini yoxla</button>
+    </div>
+    <div class="b-identity">
+      <div class="b-avatar">AB</div>
+      <div>
+        <h2>Aladdin Biyabangerd</h2>
+        <div class="b-meta">
+          <span>0503106853</span>
+          <span>aladdin19.11.21@gmail.com</span>
+          <span class="pill-tag"><i></i> 3/3 razılıq aktiv</span>
+        </div>
+      </div>
+      <a class="linkish" href="#">Bildiriş seçimləri →</a>
+    </div>
+    <div class="panel" style="margin-bottom:12px">
+      <p class="sec-title">Namizəd əlaqəsi</p>
+      <p class="sec-sub">Görünən ad, telefon, e-poçt — bir sətirdə.</p>
+      <div class="b-form">
+        <label class="field">Görünən ad<div class="input">Aladdin Biyabangerd</div></label>
+        <label class="field">Telefon <span class="opt">opsional</span><div class="input">0503106853</div></label>
+        <label class="field">E-poçt <span class="opt">opsional</span><div class="input">aladdin19.11.21@…</div></label>
+        <button class="btn ink">Saxla</button>
+      </div>
+    </div>
+    <div class="b-grid">
+      <div class="b-card">
+        <div class="head">
+          <strong>CV təhlili</strong>
+          <div class="check"></div>
+        </div>
+        <p>CV-nin avtomatik təhlili və iş uyğunluğu (AI).</p>
+      </div>
+      <div class="b-card">
+        <div class="head">
+          <strong>E-poçt dayjestləri</strong>
+          <div class="check"></div>
+        </div>
+        <p>Həftəlik / hadisə əsaslı dayjest və tövsiyələr.</p>
+      </div>
+      <div class="b-card">
+        <div class="head">
+          <strong>İşəgötürən görünməsi</strong>
+          <div class="check"></div>
+        </div>
+        <p>Təsdiqlənmiş işəgötürənlərin axtarışında tapılma.</p>
+      </div>
+    </div>
+    <div class="b-rights">
+      <div class="b-right">
+        <div><strong>Export</strong><span>ZIP yüklə</span></div>
+        <button class="btn">Yüklə</button>
+      </div>
+      <div class="b-right">
+        <div><strong>Sil</strong><span>Bütün namizəd datası</span></div>
+        <button class="btn danger">Sil</button>
+      </div>
+      <div class="b-right">
+        <div><strong>Kim baxıb</strong><span>Tezliklə</span></div>
+        <span class="pill-tag">Soon</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== OPTION C ========== -->
+<section class="sheet" id="opt-c" data-name="C Wide settings sheet">
+  <div class="label-bar">
+    <strong>Option C — Wide settings sheet</strong>
+    <span>Bir panel · Tam en · Sətir-sətir razılıq · Görünürlük kartları</span>
+  </div>
+  <div class="top">
+    <div class="brand"><span class="brand-mark"></span>Ingress Job</div>
+    <div class="nav"><b>Elanlara bax</b><span>Şirkətlər</span><span>Trendlər</span></div>
+    <div class="search">Axtarış ⌘K</div>
+    <div class="user"><strong>Aladdin Biyabangerd</strong>aladdin@… · AZ</div>
+  </div>
+  <div class="page">
+    <div class="chrome">
+      <div class="chrome-left">
+        <div class="back">← Elanlar</div>
+        <h1>Profil</h1>
+        <p class="lede">Əlaqə və məxfilik — oxuma eni boyunca, boş sütun olmadan.</p>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <a class="linkish" href="#">Bildiriş seçimləri</a>
+        <button class="btn pill">CV profilini yoxla</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="c-block">
+        <p class="sec-title">Namizəd profili</p>
+        <p class="sec-sub">Üç sahə eyni sətirdə — eni doldurur.</p>
+        <div class="c-contact">
+          <label class="field">Görünən ad<div class="input">Aladdin Biyabangerd</div></label>
+          <label class="field">Telefon <span class="opt">istəyə bağlı</span><div class="input">0503106853</div></label>
+          <label class="field">E-poçt <span class="opt">istəyə bağlı</span><div class="input">aladdin19.11.21@…</div></label>
+        </div>
+      </div>
+      <div class="c-block">
+        <p class="sec-title">Məxfilik və razılıqlar</p>
+        <p class="sec-sub">Sol mətn, sağ checkbox — tam oxuma eni.</p>
+        <div class="c-rows">
+          <div class="c-row">
+            <div class="check"></div>
+            <div>
+              <strong>CV təhlili və uyğunluq</strong>
+              <span>CV-nin avtomatik təhlili və iş uyğunluğu üçün razılıq. Bu, süni intellekt (AI) istifadə oluna bilər.</span>
+            </div>
+          </div>
+          <div class="c-row">
+            <div class="check"></div>
+            <div>
+              <strong>E-poçt dayjestləri və tövsiyələr</strong>
+              <span>Həftəlik / hadisə əsaslı e-poçt dayjestləri və tövsiyə məktubları.</span>
+            </div>
+          </div>
+          <div class="c-row">
+            <div class="check"></div>
+            <div>
+              <strong>İşəgötürən axtarışında görünmə</strong>
+              <span>Təsdiqlənmiş işəgötürənlər namizəd axtarışında sizi tapa bilsin.</span>
+            </div>
+          </div>
+        </div>
+        <div class="c-vis">
+          <div class="c-vis-opt on">
+            <div class="radio on"></div>
+            <div>
+              <strong style="font-size:14px">Anonim</strong>
+              <p class="hint">Profil axtarışda göstərilmir; yalnız razılıqlarla məhdud paylaşım.</p>
+            </div>
+          </div>
+          <div class="c-vis-opt">
+            <div class="radio"></div>
+            <div>
+              <strong style="font-size:14px">Açıq namizəd</strong>
+              <p class="hint">Təsdiqlənmiş işəgötürənlər sizi tapa bilər.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="c-foot">
+        <div class="c-rights">
+          <button class="btn">Məlumatları yüklə</button>
+          <button class="btn danger">Məlumatları sil</button>
+          <span class="pill-tag">Kim baxıb — tezliklə</span>
+        </div>
+        <button class="btn ink">Saxla</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== OPTION D ========== -->
+<section class="sheet" id="opt-d" data-name="D Status rail + board">
+  <div class="label-bar">
+    <strong>Option D — Status rail + board</strong>
+    <span>Sol: CV / razılıq statusu · Sağ: forma + tor · Alt hüquqlar</span>
+  </div>
+  <div class="top">
+    <div class="brand"><span class="brand-mark"></span>Ingress Job</div>
+    <div class="nav"><b>Elanlara bax</b><span>Şirkətlər</span><span>Trendlər</span></div>
+    <div class="search">Axtarış ⌘K</div>
+    <div class="user"><strong>Aladdin Biyabangerd</strong>aladdin@… · AZ</div>
+  </div>
+  <div class="page">
+    <div class="chrome">
+      <div class="chrome-left">
+        <div class="back">← Elanlar</div>
+        <h1>Profil</h1>
+        <p class="lede">Status rail + əsas board — səhifənin hər tərəfi eyni çəkidə.</p>
+      </div>
+      <a class="linkish" href="#">Bildiriş seçimləri</a>
+    </div>
+    <div class="d-layout">
+      <aside class="d-rail">
+        <div class="d-stat">
+          <div class="num">3/3</div>
+          <div class="lbl">Aktiv razılıq</div>
+          <div style="margin-top:12px"><span class="pill-tag"><i></i> Görünürlük: anonim</span></div>
+        </div>
+        <div class="d-stat" style="background:linear-gradient(165deg,#fff 0%,#eef2f8 120%)">
+          <div class="lbl" style="margin:0 0 8px;font-weight:600;color:var(--ink)">CV profili</div>
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px">Təsdiqlənməyib</div>
+          <p class="hint">CV yükləyin və ya əl ilə doldurun.</p>
+          <button class="btn ink" style="margin-top:12px;width:100%">CV profilini yoxla</button>
+        </div>
+        <div class="d-list">
+          <div><span>Görünən ad</span><b>Dolu</b></div>
+          <div><span>Telefon</span><b>Dolu</b></div>
+          <div><span>E-poçt</span><b>Dolu</b></div>
+          <div><span>Export</span><b>Hazır</b></div>
+        </div>
+      </aside>
+      <div class="d-main">
+        <div class="panel">
+          <p class="sec-title">Namizəd əlaqəsi</p>
+          <p class="sec-sub">Görünən ad, telefon və e-poçt.</p>
+          <div class="d-contact">
+            <label class="field">Görünən ad<div class="input">Aladdin Biyabangerd</div></label>
+            <label class="field">Telefon<div class="input">0503106853</div></label>
+            <label class="field">E-poçt<div class="input">aladdin19.11.21@…</div></label>
+          </div>
+        </div>
+        <div class="panel">
+          <p class="sec-title">Razılıqlar</p>
+          <p class="sec-sub">CV təhlili, dayjestlər və görünmə.</p>
+          <div class="d-consents">
+            <div class="d-consent">
+              <div class="check"></div>
+              <div>
+                <strong>CV təhlili</strong>
+                <span>Avtomatik təhlil və uyğunluq (AI).</span>
+              </div>
+            </div>
+            <div class="d-consent">
+              <div class="check"></div>
+              <div>
+                <strong>E-poçt dayjestləri</strong>
+                <span>Həftəlik / hadisə əsaslı məktublar.</span>
+              </div>
+            </div>
+            <div class="d-consent wide">
+              <div class="check"></div>
+              <div>
+                <strong>İşəgötürən axtarışında görünmə</strong>
+                <span>Təsdiqlənmiş işəgötürənlər namizəd axtarışında sizi tapa bilsin.</span>
+              </div>
+            </div>
+          </div>
+          <div class="d-save" style="margin-top:14px">
+            <button class="btn ink">Saxla</button>
+          </div>
+        </div>
+        <div class="d-rights">
+          <div class="d-right">
+            <strong>Məlumatları yüklə</strong>
+            <p class="hint">Profil, CV və razılıqlar — ZIP.</p>
+            <button class="btn">Export</button>
+          </div>
+          <div class="d-right">
+            <strong>Məlumatları sil</strong>
+            <p class="hint">Namizəd profili və CV silinir.</p>
+            <button class="btn danger">Sil</button>
+          </div>
+          <div class="d-right">
+            <strong>Kim baxıb</strong>
+            <p class="hint">İşəgötürən baxışları — tezliklə.</p>
+            <span class="pill-tag">Soon</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

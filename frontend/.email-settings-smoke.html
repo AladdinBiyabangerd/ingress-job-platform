@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="az"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Email settings Option D smoke</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --brand: #001fff;
+  --brand-deep: #092f84;
+  --brand-soft: #eaefff;
+  --ink: #0b1220;
+  --canvas: #f4f6fb;
+  --surface: #ffffff;
+  --text: #20242b;
+  --muted: #656b75;
+  --border: #dfe1e5;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --header-h: 56px;
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 6%);
+  --content-max: 1280px;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+}
+
+* { box-sizing: border-box; }
+body { margin:0; font-family:"Plus Jakarta Sans",system-ui,sans-serif; background:var(--canvas); color:var(--text); }
+.h2-panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:18px 18px 16px; box-shadow:var(--shadow-soft); min-width:0; }
+.h2-panel-title { margin:0 0 12px; font-size:14px; font-weight:var(--fw-semibold); letter-spacing:-0.02em; color:var(--ink); }
+.hint { margin:0; color:var(--muted); font-size:13px; line-height:1.4; }
+.note { margin:0; font-size:13px; }
+.btn { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:8px 14px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--surface); font-size:14px; font-weight:var(--fw-semibold); color:var(--text); cursor:pointer; }
+.btn.ink { background:var(--ink); border-color:var(--ink); color:#fff; }
+.page-chrome { display:flex; justify-content:space-between; gap:16px; margin-bottom:8px; }
+.page-chrome-back { font-size:13px; color:var(--muted); text-decoration:none; }
+.page-chrome-title { margin:0; font-size:26px; font-weight:var(--fw-semibold); letter-spacing:-0.03em; color:var(--ink); }
+.text-btn { font-size:13px; color:var(--brand-deep); font-weight:var(--fw-semibold); text-decoration:none; }
+.h2-candidate { max-width:1120px; margin:0 auto; padding:22px 24px 40px; display:flex; flex-direction:column; gap:16px; }
+.top { height:56px; background:#fff; border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 24px; font-weight:700; }
+
+/* —— Email / notification settings (Option D) —— */
+.email-settings .es-lede {
+  margin: 4px 0 0;
+  max-width: 48ch;
+  font-size: 14px;
+  font-weight: var(--fw-regular);
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.es-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.es-consent-banner {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--brand-soft);
+}
+
+.es-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.es-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.es-stat {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(165deg, var(--surface) 0%, var(--brand-soft) 120%);
+  box-shadow: var(--shadow-soft);
+}
+
+.es-stat-num {
+  font-size: 36px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.04em;
+  color: var(--brand-deep);
+  line-height: 1;
+}
+
+.es-stat-lbl {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.es-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: var(--fw-semibold);
+  color: var(--muted);
+}
+
+.es-pill i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #c9ced8;
+  display: inline-block;
+}
+
+.es-pill.is-on {
+  border-color: #c9d4ff;
+  color: var(--brand-deep);
+}
+
+.es-pill.is-on i {
+  background: #16a34a;
+}
+
+.es-plan {
+  padding: 14px;
+}
+
+.es-plan .h2-panel-title {
+  margin-bottom: 10px;
+}
+
+.es-plan-list {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.es-plan-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.es-plan-list dt {
+  margin: 0;
+  color: var(--muted);
+  font-weight: var(--fw-regular);
+}
+
+.es-plan-list dd {
+  margin: 0;
+  color: var(--text);
+  font-weight: var(--fw-semibold);
+  text-align: right;
+}
+
+.es-board {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.es-panel .h2-panel-title {
+  margin-bottom: 4px;
+}
+
+.es-sub {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.es-delivery {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: 12px;
+}
+
+.es-field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: var(--fw-semibold);
+  color: var(--ink);
+  min-width: 0;
+}
+
+.es-field select {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fafbfe;
+  color: var(--text);
+  font-weight: var(--fw-medium);
+}
+
+.es-channels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.es-channel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 64px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.es-channel-text {
+  min-width: 0;
+}
+
+.es-channel-text strong {
+  display: block;
+  font-size: 13px;
+  font-weight: var(--fw-semibold);
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.es-channel-text span {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: var(--fw-regular);
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.es-switch {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #c9ced8;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.es-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 18%);
+  transition: transform 0.15s ease;
+}
+
+.es-switch.is-on {
+  background: var(--brand);
+}
+
+.es-switch.is-on::after {
+  transform: translateX(18px);
+}
+
+.es-switch:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.es-push {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fafbfe;
+}
+
+.es-push-copy strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: var(--fw-semibold);
+  color: var(--ink);
+}
+
+.es-push-copy .hint {
+  margin: 0;
+}
+
+.es-push-copy .note {
+  margin: 8px 0 0;
+}
+
+.es-push-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.es-save {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+  .es-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .es-rail {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .es-rail > .hint {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .es-rail {
+    grid-template-columns: 1fr;
+  }
+
+  .es-delivery {
+    grid-template-columns: 1fr;
+  }
+
+  .es-channels {
+    grid-template-columns: 1fr;
+  }
+
+  .es-push {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .es-push-actions {
+    justify-content: stretch;
+  }
+
+  .es-push-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  .es-save {
+    justify-content: stretch;
+  }
+
+  .es-save .btn {
+    width: 100%;
+  }
+}
+
+
+</style></head><body>
+<div class="top">Ingress Job</div>
+<div class="h2-candidate email-settings">
+  <header class="page-chrome">
+    <div>
+      <a class="page-chrome-back" href="#">← Elanlar</a>
+      <h1 class="page-chrome-title">Bildiriş seçimləri</h1>
+      <p class="es-lede">E-poçt dayjesti, uyğunluq xəbərdarlıqları və push. Tranzaksion məktublar ayrıca qalır.</p>
+    </div>
+    <a class="text-btn" href="#">Məxfilik və razılıqlar</a>
+  </header>
+  <form class="es-form">
+    <div class="es-layout">
+      <aside class="es-rail">
+        <div class="es-stat">
+          <div class="es-stat-num">5/6</div>
+          <div class="es-stat-lbl">aktiv bildiriş növü</div>
+          <span class="es-pill is-on"><i></i>Push abunəliyi aktiv</span>
+        </div>
+        <div class="h2-panel es-plan">
+          <p class="h2-panel-title">Cari plan</p>
+          <dl class="es-plan-list">
+            <div><dt>Tezlik</dt><dd>Heç biri</dd></div>
+            <div><dt>Dil</dt><dd>AZ</dd></div>
+            <div><dt>Gün</dt><dd>Bazar ertəsi</dd></div>
+            <div><dt>Razılıq</dt><dd>Açıq</dd></div>
+          </dl>
+        </div>
+      </aside>
+      <div class="es-board">
+        <div class="h2-panel es-panel">
+          <p class="h2-panel-title">Göndərmə</p>
+          <p class="es-sub">Tezlik, dil və gün.</p>
+          <div class="es-delivery">
+            <label class="es-field">Tezlik<select><option>Heç biri</option></select></label>
+            <label class="es-field">E-poçt dili<select><option>AZ</option></select></label>
+            <label class="es-field">Göndərmə günü<select><option>Bazar ertəsi</option></select></label>
+          </div>
+        </div>
+        <div class="h2-panel es-panel">
+          <p class="h2-panel-title">Kanallar</p>
+          <p class="es-sub">Hansı məzmun göndərilsin.</p>
+          <div class="es-channels">
+            <div class="es-channel"><div class="es-channel-text"><strong>Həftəlik / iki həftəlik dayjest</strong><span>Həftəlik / iki həftəlik</span></div><button type="button" class="es-switch is-on" role="switch" aria-checked="true"></button></div>
+            <div class="es-channel"><div class="es-channel-text"><strong>Yüksək uyğunluq xəbərdarlığı</strong><span>Yüksək match xəbərdarlığı</span></div><button type="button" class="es-switch is-on" role="switch" aria-checked="true"></button></div>
+            <div class="es-channel"><div class="es-channel-text"><strong>Yaxın elanlar (skill artımı tövsiyəsi)</strong><span>Skill artımı</span></div><button type="button" class="es-switch is-on" role="switch" aria-checked="true"></button></div>
+            <div class="es-channel"><div class="es-channel-text"><strong>Profil tamamlama xatırlatması</strong><span>Tamamlama xatırlatması</span></div><button type="button" class="es-switch is-on" role="switch" aria-checked="true"></button></div>
+            <div class="es-channel"><div class="es-channel-text"><strong>Həftəlik öyrənmə planı</strong><span>Coach weekly</span></div><button type="button" class="es-switch is-on" role="switch" aria-checked="true"></button></div>
+            <div class="es-channel"><div class="es-channel-text"><strong>Brauzer push bildirişləri (master)</strong><span>Master açar</span></div><button type="button" class="es-switch" role="switch" aria-checked="false"></button></div>
+          </div>
+        </div>
+        <div class="es-push">
+          <div class="es-push-copy"><strong>Push abunəliyi</strong><p class="hint">Brauzer icazəsi və HTTPS lazımdır; iOS-da PWA kimi əlavə edin.</p></div>
+          <div class="es-push-actions"><button type="button" class="btn">Bildiriş icazəsi ver</button><button type="button" class="btn">Push abunəliyini sil</button></div>
+        </div>
+        <div class="es-save"><button type="submit" class="btn ink">Saxla</button></div>
+      </div>
+    </div>
+  </form>
+</div>
+</body></html>

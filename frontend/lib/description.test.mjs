@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { descriptionBlocks, joinBrokenLines, joinLabels, linkParts } from "./description.js";
+import { descriptionBlocks, joinBrokenLines, joinLabels, linkParts, splitDescription } from "./description.js";
 
 // What the old worker cleaner stored for a Djinni ad: every <strong> on its own line.
 const DJINNI_LEGACY = [
@@ -142,4 +142,33 @@ test("links only http(s) URLs and trims trailing punctuation", () => {
     { type: "link", text: "https://example.com/a_(b)", href: "https://example.com/a_(b)" },
     { type: "text", text: ")" },
   ]);
+});
+
+test("splitDescription keeps heading with following list and leaves prose alone", () => {
+  const blocks = [
+    { type: "paragraph", text: "Intro" },
+    { type: "heading", text: "Aufgaben" },
+    { type: "list", ordered: false, items: ["A", "B"] },
+    { type: "paragraph", text: "Outro" },
+  ];
+  const { prose, lists, hasLists } = splitDescription(blocks);
+  assert.equal(hasLists, true);
+  assert.deepEqual(prose, [
+    { type: "paragraph", text: "Intro" },
+    { type: "paragraph", text: "Outro" },
+  ]);
+  assert.deepEqual(lists, [
+    { type: "heading", text: "Aufgaben" },
+    { type: "list", ordered: false, items: ["A", "B"] },
+  ]);
+});
+
+test("splitDescription prose-only has no lists", () => {
+  const { prose, lists, hasLists } = splitDescription([
+    { type: "heading", text: "About" },
+    { type: "paragraph", text: "We build tools." },
+  ]);
+  assert.equal(hasLists, false);
+  assert.equal(lists.length, 0);
+  assert.equal(prose.length, 2);
 });

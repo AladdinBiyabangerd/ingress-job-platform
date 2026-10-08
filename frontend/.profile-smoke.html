@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Profile Option A smoke</title>
+<style>
+  :root {
+    --brand: #001fff;
+    --brand-deep: #092f84;
+    --brand-soft: #eaefff;
+    --ink: #0b1220;
+    --canvas: #f4f6fb;
+    --surface: #ffffff;
+    --text: #20242b;
+    --muted: #656b75;
+    --border: #dfe1e5;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --shadow-soft: 0 1px 2px rgb(15 23 42 / 6%);
+    --fw-semibold: 600;
+    --fw-regular: 400;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    background: var(--canvas);
+    color: var(--text);
+  }
+  .page { max-width: 1120px; margin: 0 auto; padding: 24px; }
+  .page-chrome {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px 20px; margin: 0 0 16px; flex-wrap: wrap;
+  }
+  .page-chrome-main { min-width: 0; flex: 1 1 auto; display: grid; gap: 6px; }
+  .page-chrome-back {
+    display: inline-flex; align-items: center; gap: 6px; width: fit-content;
+    text-decoration: none; color: var(--muted); font-size: 13px; font-weight: 600;
+  }
+  .page-chrome-title { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.03em; color: var(--ink); }
+  .page-chrome-hint { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.35; max-width: 62ch; }
+  .page-chrome-actions { display: flex; align-items: center; gap: 8px; }
+  .h2-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 18px 16px;
+    box-shadow: var(--shadow-soft);
+    min-width: 0;
+  }
+  .h2-panel-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: var(--fw-semibold);
+    color: var(--ink);
+  }
+  .hint { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 40px; padding: 8px 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--surface);
+    font-size: 14px; font-weight: 600;
+  }
+  .btn.small { min-height: 34px; padding: 6px 12px; font-size: 13px; }
+  .btn.ink { background: var(--ink); border-color: var(--ink); color: #fff; }
+  label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; min-width: 0; }
+  input, textarea, select {
+    width: 100%; min-width: 0; height: 40px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 0 10px; font: inherit; background: #fafbfe;
+  }
+  .consent-fields { display: grid; gap: 0; margin: 0; padding: 0; border: 0; min-width: 0; }
+  .consent-item { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .consent-item:first-child { padding-top: 0; }
+  .consent-item:last-child { border-bottom: 0; padding-bottom: 0; }
+  .consent-item .inline { display: flex; align-items: flex-start; gap: 10px; font-weight: 600; }
+  .consent-item input { width: 18px; height: 18px; margin-top: 2px; flex: 0 0 auto; }
+
+  .profile-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    width: 100%;
+    align-items: start;
+  }
+  .profile-layout-a {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    align-items: stretch;
+  }
+  .profile-layout-a .profile-rights { grid-column: 1 / -1; }
+  .profile-page .profile-panel {
+    display: flex; flex-direction: column; gap: 12px; min-width: 0; height: 100%;
+  }
+  .profile-panel-head { display: grid; gap: 4px; min-width: 0; }
+  .profile-panel-sub { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .profile-page .profile-panel .profile-grid,
+  .profile-page .profile-panel .consent-fields { flex: 1 1 auto; }
+  .profile-page .profile-panel-actions {
+    margin-top: auto; padding-top: 4px; display: flex; justify-content: space-between;
+    align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .profile-privacy-head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  }
+  .profile-privacy-head .profile-panel-head { flex: 1 1 auto; min-width: 0; }
+  .profile-privacy-link {
+    flex: 0 0 auto; font-size: 13px; font-weight: 600; color: var(--brand-deep); text-decoration: none; white-space: nowrap;
+  }
+  .profile-grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; align-items: start;
+  }
+  .profile-grid .profile-span { grid-column: 1 / -1; }
+  .profile-visibility-pill {
+    position: relative; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600; color: var(--brand-deep);
+    background: var(--brand-soft); border: 1px solid #c9d4ff; border-radius: 999px; padding: 5px 10px;
+  }
+  .profile-visibility-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: #0d7a4f; flex: 0 0 auto;
+  }
+  .profile-rights { display: grid; gap: 10px; min-width: 0; }
+  .profile-rights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    gap: 12px; min-width: 0;
+  }
+  .profile-right-card {
+    display: grid; gap: 8px; align-content: start; min-width: 0;
+    padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-md);
+    background: var(--surface); box-shadow: var(--shadow-soft);
+  }
+  .profile-right-card strong { font-size: 14px; overflow-wrap: anywhere; }
+  .profile-right-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .profile-right-danger { color: #b42318; border-color: #f3c4c0; background: #fff8f7; }
+  .profile-right-soon {
+    display: inline-flex; font-size: 12px; font-weight: 600; color: var(--brand-deep);
+    background: var(--brand-soft); border: 1px solid #c9d4ff; border-radius: 999px; padding: 5px 10px;
+  }
+  @media (max-width: 959px) {
+    .profile-layout-a {
+      grid-template-columns: minmax(0, 1fr); align-items: start;
+    }
+    .profile-layout-a .profile-rights { grid-column: auto; }
+    .profile-page .profile-panel { height: auto; }
+  }
+  @media (max-width: 720px) {
+    .profile-grid { grid-template-columns: 1fr; }
+    .profile-privacy-head { flex-direction: column; align-items: flex-start; }
+    .profile-privacy-link { white-space: normal; }
+    .profile-right-actions .btn { width: 100%; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="h2-candidate profile-page" id="candidate">
+    <header class="page-chrome">
+      <div class="page-chrome-main">
+        <a class="page-chrome-back" href="#"><span aria-hidden="true">←</span><span>Elanlar</span></a>
+        <h1 class="page-chrome-title">Profil</h1>
+        <p class="page-chrome-hint">Görünən ad, əlaqə və məxfilik — eyni səviyyədə.</p>
+      </div>
+      <div class="page-chrome-actions">
+        <a class="btn small ink" href="#">CV profilini yoxla</a>
+      </div>
+    </header>
+    <div class="profile-layout profile-layout-a">
+      <form class="h2-panel h2-form profile-panel profile-applicant">
+        <div class="profile-panel-head">
+          <h2 class="h2-panel-title">Namizəd profili</h2>
+          <p class="profile-panel-sub">Job saytında saxlanılan əlaqə məlumatı.</p>
+        </div>
+        <div class="profile-grid">
+          <label class="profile-span">Görünən ad<input value="Aladdin Biyabangerd" /></label>
+          <label>Telefon<span class="hint">istəyə bağlı</span><input value="0503106853" /></label>
+          <label>E-poçt<span class="hint">istəyə bağlı</span><input value="aladdin19.11.21@gmail.com" /></label>
+        </div>
+        <p class="hint profile-field-hint">Müraciət forması telefon və ya e-poçt istəsə və sahə boşdursa, buradan doldurulur.</p>
+        <div class="ad-actions profile-panel-actions">
+          <span class="hint profile-save-hint">Dəyişikliklər saxlanmalıdır</span>
+          <button type="button" class="btn ink">Saxla</button>
+        </div>
+      </form>
+      <form class="h2-panel h2-form profile-panel profile-privacy">
+        <div class="profile-privacy-head">
+          <div class="profile-panel-head">
+            <h2 class="h2-panel-title">Məxfilik və razılıqlar</h2>
+            <p class="profile-panel-sub">CV yükləyəndə də dəyişmək olar.</p>
+          </div>
+          <a class="profile-privacy-link" href="#">Bildiriş seçimləri</a>
+        </div>
+        <div class="consent-fields">
+          <div class="consent-item">
+            <label class="inline"><input type="checkbox" checked /> <span>CV təhlili və uyğunluq</span></label>
+            <p class="hint">CV-nin avtomatik təhlili və iş uyğunluğu üçün razılıq (AI).</p>
+          </div>
+          <div class="consent-item">
+            <label class="inline"><input type="checkbox" checked /> <span>E-poçt dayjestləri</span></label>
+            <p class="hint">Həftəlik / hadisə əsaslı dayjest və tövsiyə məktubları.</p>
+          </div>
+          <div class="consent-item">
+            <label class="inline"><input type="checkbox" /> <span>İşəgötürən axtarışında görünmə</span></label>
+            <p class="hint">Təsdiqlənmiş işəgötürənlər namizəd axtarışında sizi tapa bilsin.</p>
+          </div>
+        </div>
+        <div class="ad-actions profile-panel-actions">
+          <span class="profile-visibility-pill">
+            <span class="profile-visibility-dot" aria-hidden="true"></span>
+            <span>Görünürlük: anonim</span>
+          </span>
+          <button type="button" class="btn ink">Saxla</button>
+        </div>
+      </form>
+      <div class="profile-rights">
+        <div class="profile-rights-grid">
+          <div class="profile-right-card">
+            <strong>Məlumatlarımı ixrac et</strong>
+            <p class="hint">Profil, CV və razılıqlar — ZIP export.</p>
+            <div class="profile-right-actions"><button class="btn" type="button">Export</button></div>
+          </div>
+          <div class="profile-right-card">
+            <strong>Məlumatlarımı sil</strong>
+            <p class="hint">Namizəd profili, CV, razılıqlar silinir.</p>
+            <div class="profile-right-actions"><button class="btn profile-right-danger" type="button">Sil</button></div>
+          </div>
+          <div class="profile-right-card">
+            <strong>Profilimə kim baxıb</strong>
+            <p class="hint">Tezliklə — işəgötürən baxışları.</p>
+            <div class="profile-right-actions"><span class="profile-right-soon">Tezliklə</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

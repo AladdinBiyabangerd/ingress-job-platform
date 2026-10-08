@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Apps E smoke — empty / many / withdraw / locales</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --brand: #001fff; --brand-deep: #092f84; --brand-soft: #eaefff;
+  --ink: #0b1220; --canvas: #f4f6fb; --surface: #ffffff;
+  --text: #20242b; --muted: #656b75; --border: #dfe1e5;
+  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+  --header-h: 56px; --shadow-soft: 0 1px 2px rgb(15 23 42 / 6%);
+  --fw-semibold: 600; --fw-bold: 700;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Plus Jakarta Sans", system-ui, sans-serif; background: var(--canvas); color: var(--text); padding: 24px; }
+.h2-candidate { max-width: 1120px; margin: 0 auto 48px; display: flex; flex-direction: column; gap: 16px; }
+h1 { font-size: 26px; margin: 0; font-weight: 600; letter-spacing: -0.03em; }
+.smoke-label { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 8px; }
+.count { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; margin-left: 8px; padding: 0 8px; border-radius: 999px; background: var(--brand-soft); color: var(--brand-deep); font-size: 13px; font-weight: 700; vertical-align: middle; }
+.app-status { display: inline-flex; margin: 0; padding: 3px 9px; border-radius: 999px; background: #eaefff; color: #092F84; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.app-status.live { background: #e8f7ef; color: #0b6b3a; }
+.app-status.rejected { background: #fdecef; color: #b0003a; }
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: #fff; font-size: 13px; font-weight: 600; color: inherit; text-decoration: none; cursor: pointer; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn.red { color: #b0003a; border-color: #f5c2cd; }
+.note { margin: 0; font-size: 13px; color: var(--muted); }
+.h2-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 180px; padding: 28px 20px; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius-lg); color: var(--muted); }
+.h2-empty p { margin: 0; }
+.apps-e-empty { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+</style>
+<link rel="stylesheet" href="./app/globals.css" />
+</head>
+<body>
+
+<!-- EMPTY -->
+<section class="h2-candidate" id="empty" data-smoke="empty">
+  <p class="smoke-label">Empty · AZ</p>
+  <h1>Müraciətlərim</h1>
+  <div class="apps-e-empty">
+    <div class="h2-empty"><p>Hələ müraciət yoxdur.</p></div>
+  </div>
+</section>
+
+<!-- EMPTY AFTER WITHDRAW -->
+<section class="h2-candidate" id="empty-withdrawn" data-smoke="empty-withdrawn">
+  <p class="smoke-label">Empty after withdraw · AZ</p>
+  <h1>Müraciətlərim</h1>
+  <div class="apps-e-empty">
+    <p class="note apps-e-banner">Müraciət geri götürüldü.</p>
+    <div class="h2-empty"><p>Hələ müraciət yoxdur.</p></div>
+  </div>
+</section>
+
+<!-- MANY + DETAIL + WITHDRAW (AZ) -->
+<section class="h2-candidate" id="many-az" data-smoke="many-az">
+  <p class="smoke-label">Many items + detail + withdraw · AZ</p>
+  <h1>Müraciətlərim <span class="count">12</span></h1>
+  <div class="apps-e" id="root-az">
+    <div class="apps-e-board-pane">
+      <div class="apps-e-tabs" role="tablist">
+        <button class="apps-e-tab is-active" type="button"><span class="apps-e-tab-label">Göndərilib</span><span class="apps-e-tab-count">8</span></button>
+        <button class="apps-e-tab" type="button"><span class="apps-e-tab-label">Baxılıb</span><span class="apps-e-tab-count">3</span></button>
+        <button class="apps-e-tab" type="button"><span class="apps-e-tab-label">Rədd</span><span class="apps-e-tab-count">1</span></button>
+      </div>
+      <div class="apps-e-board">
+        <section class="apps-e-col">
+          <header class="apps-e-col-head"><span class="app-status">Göndərilib</span><span class="apps-e-col-count">8</span></header>
+          <div class="apps-e-col-scroll" id="fat-az"></div>
+        </section>
+        <section class="apps-e-col">
+          <header class="apps-e-col-head"><span class="app-status live">Baxılıb</span><span class="apps-e-col-count">3</span></header>
+          <div class="apps-e-col-scroll">
+            <button class="apps-e-card is-selected" type="button"><span class="apps-e-avatar">P</span><span class="apps-e-card-body"><span class="apps-e-card-title">Product Designer</span><span class="apps-e-card-meta">7 okt · CV var</span></span></button>
+            <button class="apps-e-card" type="button"><span class="apps-e-avatar">J</span><span class="apps-e-card-body"><span class="apps-e-card-title">Junior Implementation Engineer with a very long title</span><span class="apps-e-card-meta">3 okt · CV</span></span></button>
+            <button class="apps-e-card" type="button"><span class="apps-e-avatar">B</span><span class="apps-e-card-body"><span class="apps-e-card-title">Backend Engineer</span><span class="apps-e-card-meta">1 okt · CV</span></span></button>
+          </div>
+        </section>
+        <section class="apps-e-col">
+          <header class="apps-e-col-head"><span class="app-status rejected">Rədd</span><span class="apps-e-col-count">1</span></header>
+          <div class="apps-e-col-scroll">
+            <button class="apps-e-card" type="button"><span class="apps-e-avatar">Q</span><span class="apps-e-card-body"><span class="apps-e-card-title">QA Engineer</span><span class="apps-e-card-meta">2 okt · rədd</span></span></button>
+          </div>
+        </section>
+      </div>
+      <div class="apps-e-mobile-list">
+        <div class="apps-e-col-scroll apps-e-mobile-scroll" id="mobile-az"></div>
+      </div>
+    </div>
+    <div class="apps-e-detail-pane">
+      <article class="apps-e-detail">
+        <button type="button" class="apps-e-detail-back text-btn">← Siyahıya qayıt</button>
+        <header class="apps-e-detail-head">
+          <span class="apps-e-avatar apps-e-avatar-lg">P</span>
+          <div class="apps-e-detail-head-text">
+            <h2 class="apps-e-detail-title">Product Designer</h2>
+            <div class="apps-e-detail-meta"><span class="app-status live">Baxılıb</span><time>6 okt 2026</time></div>
+          </div>
+        </header>
+        <p class="note">Timeline · CV · actions</p>
+        <div class="apps-e-tiles">
+          <div class="apps-e-tile"><span class="apps-e-tile-k">CV</span><span class="apps-e-tile-v">portfolio.pdf</span></div>
+          <div class="apps-e-tile"><span class="apps-e-tile-k">Elan</span><span class="apps-e-tile-v">#1284</span></div>
+        </div>
+        <div class="apps-e-detail-actions">
+          <a class="btn primary" href="#">Elana bax</a>
+          <button class="btn red" type="button">Geri götür</button>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- COLUMN EMPTY -->
+<section class="h2-candidate" id="col-empty" data-smoke="col-empty">
+  <p class="smoke-label">Empty column · AZ</p>
+  <h1>Müraciətlərim <span class="count">2</span></h1>
+  <div class="apps-e">
+    <div class="apps-e-board-pane">
+      <div class="apps-e-board">
+        <section class="apps-e-col">
+          <header class="apps-e-col-head"><span class="app-status">Göndərilib</span><span class="apps-e-col-count">2</span></header>
+          <div class="apps-e-col-scroll">
+            <button class="apps-e-card is-selected" type="button"><span class="apps-e-avatar">A</span><span class="apps-e-card-body"><span class="apps-e-card-title">Android Engineer</span><span class="apps-e-card-meta">8 okt · resume.pdf</span></span></button>
+            <button class="apps-e-card" type="button"><span class="apps-e-avatar">B</span><span class="apps-e-card-body"><span class="apps-e-card-title">Backend Engineer</span><span class="apps-e-card-meta">5 okt · cv.pdf</span></span></button>
+          </div>
+        </section>
+        <section class="apps-e-col">
+          <header class="apps-e-col-head"><span class="app-status live">Baxılıb</span><span class="apps-e-col-count">0</span></header>
+          <div class="apps-e-col-scroll"><p class="apps-e-col-empty">Bu statusda müraciət yoxdur.</p></div>
+        </section>
+        <section class="apps-e-col">
+          <header class="apps-e-col-head"><span class="app-status rejected">Rədd</span><span class="apps-e-col-count">0</span></header>
+          <div class="apps-e-col-scroll"><p class="apps-e-col-empty">Bu statusda müraciət yoxdur.</p></div>
+        </section>
+      </div>
+    </div>
+    <div class="apps-e-detail-pane">
+      <article class="apps-e-detail">
+        <header class="apps-e-detail-head">
+          <span class="apps-e-avatar apps-e-avatar-lg">A</span>
+          <div class="apps-e-detail-head-text">
+            <h2 class="apps-e-detail-title">Android Engineer</h2>
+            <div class="apps-e-detail-meta"><span class="app-status">Göndərilib</span><time>8 okt 2026</time></div>
+          </div>
+        </header>
+        <div class="apps-e-detail-actions">
+          <a class="btn primary" href="#">Elana bax</a>
+          <button class="btn red" type="button">Geri götür</button>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- EN -->
+<section class="h2-candidate" id="many-en" data-smoke="many-en" lang="en">
+  <p class="smoke-label">Many + withdraw · EN</p>
+  <h1>My applications <span class="count">12</span></h1>
+  <div class="apps-e">
+    <div class="apps-e-board-pane">
+      <div class="apps-e-tabs" role="tablist">
+        <button class="apps-e-tab is-active" type="button"><span class="apps-e-tab-label">Submitted</span><span class="apps-e-tab-count">8</span></button>
+        <button class="apps-e-tab" type="button"><span class="apps-e-tab-label">Seen</span><span class="apps-e-tab-count">3</span></button>
+        <button class="apps-e-tab" type="button"><span class="apps-e-tab-label">Rejected</span><span class="apps-e-tab-count">1</span></button>
+      </div>
+      <div class="apps-e-board">
+        <section class="apps-e-col">
+          <header class="apps-e-col-head"><span class="app-status">Submitted</span><span class="apps-e-col-count">8</span></header>
+          <div class="apps-e-col-scroll" id="fat-en"></div>
+        </section>
+        <section class="apps-e-col">
+          <header class="apps-e-col-head"><span class="app-status live">Seen</span><span class="apps-e-col-count">3</span></header>
+          <div class="apps-e-col-scroll">
+            <button class="apps-e-card is-selected" type="button"><span class="apps-e-avatar">P</span><span class="apps-e-card-body"><span class="apps-e-card-title">Product Designer</span><span class="apps-e-card-meta">7 Oct · CV on file</span></span></button>
+            <button class="apps-e-card" type="button"><span class="apps-e-avatar">J</span><span class="apps-e-card-body"><span class="apps-e-card-title">Junior Implementation Engineer with a very long title</span><span class="apps-e-card-meta">3 Oct · CV</span></span></button>
+          </div>
+        </section>
+        <section class="apps-e-col">
+          <header class="apps-e-col-head"><span class="app-status rejected">Rejected</span><span class="apps-e-col-count">1</span></header>
+          <div class="apps-e-col-scroll">
+            <button class="apps-e-card" type="button"><span class="apps-e-avatar">Q</span><span class="apps-e-card-body"><span class="apps-e-card-title">QA Engineer</span><span class="apps-e-card-meta">2 Oct · rejected</span></span></button>
+          </div>
+        </section>
+      </div>
+      <div class="apps-e-mobile-list">
+        <div class="apps-e-col-scroll apps-e-mobile-scroll" id="mobile-en"></div>
+      </div>
+    </div>
+    <div class="apps-e-detail-pane">
+      <article class="apps-e-detail">
+        <button type="button" class="apps-e-detail-back text-btn">← Back to list</button>
+        <header class="apps-e-detail-head">
+          <span class="apps-e-avatar apps-e-avatar-lg">P</span>
+          <div class="apps-e-detail-head-text">
+            <h2 class="apps-e-detail-title">Product Designer</h2>
+            <div class="apps-e-detail-meta"><span class="app-status live">Seen</span><time>6 Oct 2026</time></div>
+          </div>
+        </header>
+        <div class="apps-e-tiles">
+          <div class="apps-e-tile"><span class="apps-e-tile-k">CV</span><span class="apps-e-tile-v">portfolio.pdf</span></div>
+          <div class="apps-e-tile"><span class="apps-e-tile-k">Job</span><span class="apps-e-tile-v">#1284</span></div>
+        </div>
+        <div class="apps-e-detail-actions">
+          <a class="btn primary" href="#">View job</a>
+          <button class="btn red" type="button">Withdraw</button>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- RU -->
+<section class="h2-candidate" id="many-ru" data-smoke="many-ru" lang="ru">
+  <p class="smoke-label">Many + withdraw · RU</p>
+  <h1>Мои отклики <span class="count">12</span></h1>
+  <div class="apps-e">
+    <div class="apps-e-board-pane">
+      <div class="apps-e-tabs" role="tablist">
+        <button class="apps-e-tab is-active" type="button"><span class="apps-e-tab-label">Отправлен</span><span class="apps-e-tab-count">8</span></button>
+        <button class="apps-e-tab" type="button"><span class="apps-e-tab-label">Просмотрен</span><span class="apps-e-tab-count">3</span></button>
+        <button class="apps-e-tab" type="button"><span class="apps-e-tab-label">Отклонён</span><span class="apps-e-tab-count">1</span></button>
+      </div>
+      <div class="apps-e-board">
+        <section class="apps-e-col">
+          <header class="apps-e-col-head"><span class="app-status">Отправлен</span><span class="apps-e-col-count">8</span></header>
+          <div class="apps-e-col-scroll" id="fat-ru"></div>
+        </section>
+        <section class="apps-e-col">
+          <header class="apps-e-col-head"><span class="app-status live">Просмотрен</span><span class="apps-e-col-count">3</span></header>
+          <div class="apps-e-col-scroll">
+            <button class="apps-e-card is-selected" type="button"><span class="apps-e-avatar">P</span><span class="apps-e-card-body"><span class="apps-e-card-title">Product Designer</span><span class="apps-e-card-meta">7 окт · CV есть</span></span></button>
+            <button class="apps-e-card" type="button"><span class="apps-e-avatar">J</span><span class="apps-e-card-body"><span class="apps-e-card-title">Junior Implementation Engineer with a very long title</span><span class="apps-e-card-meta">3 окт · CV</span></span></button>
+          </div>
+        </section>
+        <section class="apps-e-col">
+          <header class="apps-e-col-head"><span class="app-status rejected">Отклонён</span><span class="apps-e-col-count">1</span></header>
+          <div class="apps-e-col-scroll">
+            <button class="apps-e-card" type="button"><span class="apps-e-avatar">Q</span><span class="apps-e-card-body"><span class="apps-e-card-title">QA Engineer</span><span class="apps-e-card-meta">2 окт · отклонён</span></span></button>
+          </div>
+        </section>
+      </div>
+      <div class="apps-e-mobile-list">
+        <div class="apps-e-col-scroll apps-e-mobile-scroll" id="mobile-ru"></div>
+      </div>
+    </div>
+    <div class="apps-e-detail-pane">
+      <article class="apps-e-detail">
+        <button type="button" class="apps-e-detail-back text-btn">← К списку</button>
+        <header class="apps-e-detail-head">
+          <span class="apps-e-avatar apps-e-avatar-lg">P</span>
+          <div class="apps-e-detail-head-text">
+            <h2 class="apps-e-detail-title">Product Designer</h2>
+            <div class="apps-e-detail-meta"><span class="app-status live">Просмотрен</span><time>6 окт 2026</time></div>
+          </div>
+        </header>
+        <div class="apps-e-tiles">
+          <div class="apps-e-tile"><span class="apps-e-tile-k">CV</span><span class="apps-e-tile-v">portfolio.pdf</span></div>
+          <div class="apps-e-tile"><span class="apps-e-tile-k">Вакансия</span><span class="apps-e-tile-v">#1284</span></div>
+        </div>
+        <div class="apps-e-detail-actions">
+          <a class="btn primary" href="#">Открыть</a>
+          <button class="btn red" type="button">Отозвать</button>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<script>
+  function fillFat(id, mobileId, titlePrefix, meta) {
+    const fat = document.getElementById(id);
+    const mobile = document.getElementById(mobileId);
+    if (!fat) return;
+    for (let i = 1; i <= 8; i++) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "apps-e-card";
+      b.innerHTML =
+        '<span class="apps-e-avatar">S</span><span class="apps-e-card-body"><span class="apps-e-card-title">' +
+        titlePrefix +
+        " #" +
+        i +
+        ' with long title text</span><span class="apps-e-card-meta">' +
+        meta +
+        "</span></span>";
+      fat.appendChild(b);
+      if (mobile) mobile.appendChild(b.cloneNode(true));
+    }
+    const more = document.createElement("button");
+    more.type = "button";
+    more.className = "btn apps-e-more";
+    more.textContent = id.includes("en") ? "Show more" : id.includes("ru") ? "Ещё" : "Daha çox";
+    fat.appendChild(more);
+    if (mobile) {
+      const moreM = more.cloneNode(true);
+      mobile.appendChild(moreM);
+    }
+  }
+  fillFat("fat-az", "mobile-az", "Senior Android Engineer", "8 okt · resume.pdf");
+  fillFat("fat-en", "mobile-en", "Senior Android Engineer", "8 Oct · resume.pdf");
+  fillFat("fat-ru", "mobile-ru", "Senior Android Engineer", "8 окт · resume.pdf");
+</script>
+</body>
+</html>

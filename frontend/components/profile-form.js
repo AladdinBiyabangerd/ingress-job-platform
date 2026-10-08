@@ -220,10 +220,18 @@ export function ProfileForm({ locale }) {
     }
   }
 
+  const hasPrivacy = Boolean(showApplicant && consentPayload);
+  const privacyRights =
+    hasPrivacy && Array.isArray(consentPayload.privacy_rights) ? consentPayload.privacy_rights : [];
+  const visibilityLevels = Array.isArray(consentPayload?.visibility_levels)
+    ? consentPayload.visibility_levels
+    : [];
+  const visibilityLabel =
+    visibilityLevels.find((level) => level.id === visibility)?.label || visibility;
   const layoutClass = [
     "profile-layout",
     showCompany && showApplicant ? "profile-layout-dual" : "",
-    !showCompany && showApplicant && consentPayload ? "profile-layout-split" : "",
+    !showCompany && hasPrivacy ? "profile-layout-a" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -243,11 +251,16 @@ export function ProfileForm({ locale }) {
                 </a>
               ) : null
             }
-          />
+          >
+            <p className="page-chrome-hint">{t.profileLede}</p>
+          </PageChrome>
           <div className={layoutClass}>
             {showCompany ? (
-              <form className="h2-panel h2-form" onSubmit={saveCompany}>
-                <h2 className="h2-panel-title">{t.companyTitle}</h2>
+              <form className="h2-panel h2-form profile-panel" onSubmit={saveCompany}>
+                <div className="profile-panel-head">
+                  <h2 className="h2-panel-title">{t.companyTitle}</h2>
+                  <p className="profile-panel-sub">{t.profileCompanySub}</p>
+                </div>
                 {companyError ? <p className="note">{companyError}</p> : null}
                 {companyNote ? <p className="note">{companyNote}</p> : null}
                 <div className="profile-grid">
@@ -264,14 +277,18 @@ export function ProfileForm({ locale }) {
                     <textarea value={about} maxLength={400} required rows={3} onChange={(event) => setAbout(event.target.value)} />
                   </label>
                 </div>
-                <div className="ad-actions">
+                <div className="ad-actions profile-panel-actions">
+                  <span className="hint profile-save-hint">{t.profileSaveHint}</span>
                   <button type="submit" className="btn ink">{t.companySave}</button>
                 </div>
               </form>
             ) : null}
             {showApplicant ? (
-              <form className="h2-panel h2-form" onSubmit={saveApplicant}>
-                <h2 className="h2-panel-title">{t.profileApplicantTitle}</h2>
+              <form className="h2-panel h2-form profile-panel profile-applicant" onSubmit={saveApplicant}>
+                <div className="profile-panel-head">
+                  <h2 className="h2-panel-title">{t.profileApplicantTitle}</h2>
+                  <p className="profile-panel-sub">{t.profileApplicantSub}</p>
+                </div>
                 {applicantError ? <p className="note">{applicantError}</p> : null}
                 {applicantNote ? <p className="note">{applicantNote}</p> : null}
                 <div className="profile-grid">
@@ -290,17 +307,24 @@ export function ProfileForm({ locale }) {
                     <input type="email" value={email} maxLength={120} onChange={(event) => setEmail(event.target.value)} />
                   </label>
                 </div>
-                <div className="ad-actions">
+                <p className="hint profile-field-hint">{t.profileApplicantHint}</p>
+                <div className="ad-actions profile-panel-actions">
+                  <span className="hint profile-save-hint">{t.profileSaveHint}</span>
                   <button type="submit" className="btn ink">{t.companySave}</button>
                 </div>
               </form>
             ) : null}
-            {showApplicant && consentPayload ? (
-              <form className="h2-panel h2-form profile-privacy" onSubmit={savePrivacy}>
-                <h2 className="h2-panel-title">{t.privacyTitle}</h2>
-                <p className="hint">
-                  <a href={hrefFor(locale, { mode: "emailSettings" })}>{t.emailSettingsOpen}</a>
-                </p>
+            {hasPrivacy ? (
+              <form className="h2-panel h2-form profile-panel profile-privacy" onSubmit={savePrivacy}>
+                <div className="profile-privacy-head">
+                  <div className="profile-panel-head">
+                    <h2 className="h2-panel-title">{t.privacyTitle}</h2>
+                    <p className="profile-panel-sub">{t.privacySub}</p>
+                  </div>
+                  <a className="profile-privacy-link" href={hrefFor(locale, { mode: "emailSettings" })}>
+                    {t.emailSettingsOpen}
+                  </a>
+                </div>
                 {privacyError ? <p className="note">{privacyError}</p> : null}
                 {privacyNote ? <p className="note">{privacyNote}</p> : null}
                 <ConsentFields
@@ -309,22 +333,51 @@ export function ProfileForm({ locale }) {
                   visibility={visibility}
                   onGrantChange={(kind, value) => setGrants((current) => ({ ...current, [kind]: value }))}
                   onVisibilityChange={setVisibility}
+                  showVisibility={false}
                   idPrefix="profile-consent"
                 />
-                <div className="ad-actions">
+                <div className="ad-actions profile-panel-actions">
+                  {visibilityLevels.length ? (
+                    <label className="profile-visibility-pill">
+                      <span className="profile-visibility-dot" aria-hidden="true" />
+                      <span>
+                        {t.privacyVisibilityLabel}: {visibilityLabel}
+                      </span>
+                      <select
+                        aria-label={t.privacyVisibilityLabel}
+                        value={visibility}
+                        onChange={(event) => setVisibility(event.target.value)}
+                      >
+                        {visibilityLevels.map((level) => (
+                          <option key={level.id} value={level.id}>
+                            {level.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : (
+                    <span className="profile-visibility-pill">
+                      <span className="profile-visibility-dot" aria-hidden="true" />
+                      <span>
+                        {t.privacyVisibilityLabel}: {visibilityLabel}
+                      </span>
+                    </span>
+                  )}
                   <button type="submit" className="btn ink">{t.companySave}</button>
                 </div>
-                {Array.isArray(consentPayload.privacy_rights) && consentPayload.privacy_rights.length ? (
-                  <div className="privacy-rights">
-                    {consentPayload.retention_stub ? (
-                      <p className="hint">{consentPayload.retention_stub}</p>
-                    ) : null}
-                    {consentPayload.privacy_rights.map((right) => (
-                      <div key={right.id} className="privacy-right-item">
-                        <div>
-                          <strong>{right.label}</strong>
-                          {right.description ? <p className="hint">{right.description}</p> : null}
-                        </div>
+              </form>
+            ) : null}
+            {privacyRights.length ? (
+              <div className="profile-rights">
+                {consentPayload.retention_stub ? (
+                  <p className="hint profile-rights-retention">{consentPayload.retention_stub}</p>
+                ) : null}
+                <div className="profile-rights-grid">
+                  {privacyRights.map((right) => (
+                    <div key={right.id} className="profile-right-card">
+                      <strong>{right.label}</strong>
+                      {right.description ? <p className="hint">{right.description}</p> : null}
+                      <div className="profile-right-actions">
                         {right.id === "export" ? (
                           <button
                             type="button"
@@ -332,27 +385,27 @@ export function ProfileForm({ locale }) {
                             disabled={Boolean(privacyBusy)}
                             onClick={downloadExport}
                           >
-                            {right.label}
+                            {t.privacyExportAction}
                           </button>
                         ) : null}
                         {right.id === "delete" ? (
                           <button
                             type="button"
-                            className="btn"
+                            className="btn profile-right-danger"
                             disabled={Boolean(privacyBusy)}
                             onClick={deleteMyData}
                           >
-                            {right.label}
+                            {t.privacyDeleteAction}
                           </button>
                         ) : null}
                         {right.id === "who_viewed" ? (
-                          <p className="hint">{t.privacyWhoViewedSoon}</p>
+                          <span className="profile-right-soon">{t.privacyWhoViewedSoon}</span>
                         ) : null}
                       </div>
-                    ))}
-                  </div>
-                ) : null}
-              </form>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : null}
           </div>
         </div>

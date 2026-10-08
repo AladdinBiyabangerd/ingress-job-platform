@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { refreshMyApplications } from "../lib/server/refresh";
-import { ApplicationList } from "./application-list";
+import { ApplicationsBoard } from "./applications-board";
 import { useInitialMe } from "./me-seed";
 import { PageChrome } from "./page-chrome";
 import { RegisterChoice } from "./register-choice";
@@ -68,9 +68,7 @@ export function MyApplications({ locale, initialItems = null }) {
             count={items.length || undefined}
           />
           {error ? <p className="note">{error}</p> : null}
-          <div className="h2-panel h2-candidate-list">
-            <ApplicationList locale={locale} items={items} mode="candidate" onChanged={load} />
-          </div>
+          <ApplicationsBoard locale={locale} items={items} onChanged={load} />
         </div>
       ) : (
         <div className="h2-candidate">

@@ -13,13 +13,13 @@ export function appStatusLabel(t, status) {
   return t.appSubmitted;
 }
 
-function statusClass(status) {
+export function statusClass(status) {
   if (status === "seen") return "app-status live";
   if (status === "rejected") return "app-status rejected";
   return "app-status";
 }
 
-function buildTimeline(item) {
+export function buildTimeline(item) {
   if (Array.isArray(item.timeline) && item.timeline.length) return item.timeline;
   const steps = [{ status: "submitted", at: item.created_at || "" }];
   if (item.status === "seen" || item.status === "rejected") {
@@ -30,7 +30,7 @@ function buildTimeline(item) {
   return steps;
 }
 
-function ApplicationTimeline({ locale, t, item }) {
+export function ApplicationTimeline({ locale, t, item }) {
   const steps = buildTimeline(item);
   const note = [...steps].reverse().find((step) => step.note)?.note || "";
   return (

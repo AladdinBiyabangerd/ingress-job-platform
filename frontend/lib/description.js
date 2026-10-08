@@ -366,6 +366,35 @@ export function descriptionBlocks(raw, title = "") {
   return out.filter((block) => (block.type === "list" ? block.items.length : /[\p{L}\p{N}]/u.test(block.text)));
 }
 
+/** Split blocks into prose vs list sections (heading immediately before a list stays with the lists). */
+export function splitDescription(blocks) {
+  const prose = [];
+  const lists = [];
+  let i = 0;
+  const items = Array.isArray(blocks) ? blocks : [];
+  while (i < items.length) {
+    const block = items[i];
+    const next = items[i + 1];
+    if (block.type === "heading" && next?.type === "list") {
+      lists.push(block);
+      i += 1;
+      while (i < items.length && items[i].type === "list") {
+        lists.push(items[i]);
+        i += 1;
+      }
+      continue;
+    }
+    if (block.type === "list") {
+      lists.push(block);
+      i += 1;
+      continue;
+    }
+    prose.push(block);
+    i += 1;
+  }
+  return { prose, lists, hasLists: lists.some((b) => b.type === "list") };
+}
+
 const URL_RE = /\b(?:https?:\/\/|www\.)[^\s<>"'«»“”]+/giu;
 
 /** Splits text into plain parts and safe http(s) links. */
