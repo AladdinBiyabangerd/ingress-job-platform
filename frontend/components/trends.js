@@ -1,6 +1,7 @@
 import { LinkPager } from "./companies";
 import { PageChrome } from "./page-chrome";
 import { Shell } from "./shell";
+import { SkillIcon } from "./skill-icon";
 import { hrefFor, text } from "../lib/copy";
 
 /** Cap absurd ratios so a cold-start prior never paints millions %. */
@@ -112,7 +113,10 @@ function TrendRow({ t, locale, item, index }) {
       </span>
       <div className="trend-row-main">
         <div className="trend-row-title">
-          <h2>{item.name}</h2>
+          <span className="trend-row-heading">
+            <SkillIcon name={item.name} />
+            <h2>{item.name}</h2>
+          </span>
           {growth ? (
             <span className={`trends-growth trends-growth-${growth.direction}`}>{growth.label}</span>
           ) : null}
@@ -134,8 +138,9 @@ function TrendRow({ t, locale, item, index }) {
         {companions.length ? (
           <ul className="tech-chips trends-companion-chips" aria-label={t.trendsOftenWith}>
             {companions.map((row) => (
-              <li key={row.name} className="tech-chip">
-                {row.name}
+              <li key={row.name} className="tech-chip trends-companion-chip">
+                <SkillIcon name={row.name} />
+                <span>{row.name}</span>
                 <span className="trends-companion-pct">{row.share}%</span>
               </li>
             ))}

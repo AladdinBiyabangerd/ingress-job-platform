@@ -7075,8 +7075,15 @@ a.h2-trend-stat:focus-visible {
 .trend-row-title {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 8px 10px;
+}
+
+.trend-row-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .trend-row-title h2 {
@@ -7085,6 +7092,23 @@ a.h2-trend-stat:focus-visible {
   font-weight: var(--fw-semibold);
   letter-spacing: -0.02em;
   color: var(--ink);
+}
+
+.trends-companion-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trends-companion-chip .skill-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+}
+
+.trends-companion-chip .skill-icon-img {
+  width: 12px;
+  height: 12px;
 }
 
 .trend-row-share {
