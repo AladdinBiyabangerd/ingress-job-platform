@@ -21,10 +21,12 @@ from app.engagement import (
     fanout_match_event,
     fanout_profile_nudge,
     insights_payload,
+    job_ever_logged,
     log_engagement,
     needs_profile_nudge,
     process_user_engagement,
     profile_nudge_reasons,
+    resolve_match_candidate,
     run_engagement_jobs,
     select_match_near,
     select_match_new,
@@ -540,7 +542,7 @@ class EngagementPhase2Tests(unittest.TestCase):
         conn = _connect()
         try:
             with (
-                patch("app.digests._matches_since", return_value=fake),
+                patch("app.digests._top_matches", return_value=fake),
                 patch("app.digests.send_marketing_email") as send_mock,
             ):
                 result = process_user_engagement(conn, user_id=subject, when=when)
@@ -560,7 +562,7 @@ class EngagementPhase2Tests(unittest.TestCase):
             self.assertGreaterEqual(send_mock.call_count, 1)
             # Dedup on second run.
             with (
-                patch("app.digests._matches_since", return_value=fake),
+                patch("app.digests._top_matches", return_value=fake),
                 patch("app.digests.send_marketing_email") as send_mock2,
             ):
                 again = process_user_engagement(conn, user_id=subject, when=when)
@@ -568,6 +570,102 @@ class EngagementPhase2Tests(unittest.TestCase):
             self.assertEqual(again["match_new"], "skipped")
             self.assertEqual(again["match_near"], "skipped")
             send_mock2.assert_not_called()
+        finally:
+            conn.close()
+
+    def test_process_user_catalog_fallback_no_email(self):
+        """Stale catalog matches still fan out in-app; email stays fresh-only."""
+        subject = "eng-catalog-1"
+        self._seed_profile(subject)
+        self._grant(subject)
+        from app.profiles import remember_contact_email
+
+        remember_contact_email(subject, "catalog@example.com")
+        when = datetime(2026, 10, 8, 15, 0, tzinfo=timezone.utc)
+        stale = [
+            {
+                "job_id": 40,
+                "title": "Senior Backend",
+                "company": "Acme",
+                "score": 0.9,
+                "have": ["Python", "Docker"],
+                "missing": [],
+                "explanation": "strong",
+                "created_at": "2026-09-01T10:00:00+00:00",
+            },
+            {
+                "job_id": 41,
+                "title": "Data Engineer",
+                "company": "Beta",
+                "score": 0.55,
+                "have": ["Python"],
+                "missing": ["Kubernetes"],
+                "explanation": "near",
+                "created_at": "2026-09-02T11:00:00+00:00",
+            },
+        ]
+        conn = _connect()
+        try:
+            with (
+                patch("app.digests._top_matches", return_value=stale),
+                patch("app.digests.send_marketing_email") as send_mock,
+            ):
+                result = process_user_engagement(conn, user_id=subject, when=when)
+                conn.commit()
+            self.assertEqual(result["match_new"], "sent", result)
+            self.assertEqual(result["match_near"], "sent", result)
+            self.assertEqual(result["reasons"].get("match_new"), "catalog")
+            self.assertEqual(result["reasons"].get("match_near"), "catalog")
+            send_mock.assert_not_called()
+            self.assertTrue(
+                job_ever_logged(conn, user_id=subject, kind="match_new", job_id=40)
+            )
+            # Same stale jobs must not re-notify.
+            with (
+                patch("app.digests._top_matches", return_value=stale),
+                patch("app.digests.send_marketing_email") as send_mock2,
+            ):
+                again = process_user_engagement(conn, user_id=subject, when=when)
+            self.assertEqual(again["match_new"], "skipped")
+            self.assertIn(again["reasons"].get("match_new"), {"none", "daily_kind_limit"})
+            send_mock2.assert_not_called()
+        finally:
+            conn.close()
+
+    def test_resolve_match_candidate_prefers_fresh(self):
+        fresh = [
+            {
+                "job_id": 1,
+                "title": "A",
+                "score": 0.9,
+                "have": ["Python"],
+                "missing": [],
+                "created_at": "2026-10-08",
+            }
+        ]
+        catalog = fresh + [
+            {
+                "job_id": 2,
+                "title": "B",
+                "score": 0.95,
+                "have": ["Python"],
+                "missing": [],
+                "created_at": "2026-01-01",
+            }
+        ]
+        conn = _connect()
+        try:
+            ensure_engagement_tables(conn)
+            match, source = resolve_match_candidate(
+                conn,
+                user_id="u-res",
+                kind="match_new",
+                fresh=fresh,
+                catalog=catalog,
+            )
+            self.assertIsNotNone(match)
+            self.assertEqual(match["job_id"], 1)
+            self.assertEqual(source, "fresh")
         finally:
             conn.close()
 
@@ -748,7 +846,7 @@ class EngagementPhase4Tests(unittest.TestCase):
         conn = _connect()
         try:
             with (
-                patch("app.digests._matches_since", return_value=[]),
+                patch("app.digests._top_matches", return_value=[]),
                 patch("app.digests.send_marketing_email"),
             ):
                 result = process_user_engagement(conn, user_id=subject, when=when)

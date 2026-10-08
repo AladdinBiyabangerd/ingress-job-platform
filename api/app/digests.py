@@ -127,13 +127,19 @@ def _recipient(user_id: str) -> str:
     return (contact_email_for(user_id) or "").strip().lower()
 
 
-def _matches_since(conn, *, user_id: str, since: datetime, limit: int, lang: str) -> list[dict]:
+def _top_matches(conn, *, user_id: str, limit: int, lang: str) -> list[dict]:
+    """Best current matches (no freshness filter). Used by digests + engagement."""
     from app.matching import matches_payload
 
     payload = matches_payload(conn, user_id=user_id, limit=max(limit, 20), lang=lang)
     if not payload.get("matching_consent"):
         return []
     items = payload.get("matches") or []
+    return list(items)[:limit]
+
+
+def _matches_since(conn, *, user_id: str, since: datetime, limit: int, lang: str) -> list[dict]:
+    items = _top_matches(conn, user_id=user_id, limit=max(limit, 20), lang=lang)
     since_key = since.date().isoformat()
     fresh: list[dict] = []
     for item in items:

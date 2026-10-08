@@ -5,6 +5,7 @@ import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { markAllNotificationsRead, markNotificationRead, refreshNotifications } from "../lib/server/refresh";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
+import { enableBrowserPush, pushSupported } from "../lib/web-push";
 import { Pager } from "./pager";
 import { useInitialMe } from "./me-seed";
 import { PageChrome } from "./page-chrome";
@@ -205,6 +206,9 @@ export function NotificationsPage({ locale, initialItems = null, initialUnread =
   const [items, setItems] = useState(() => (seededList ? initialItems : []));
   const [unread, setUnread] = useState(() => (seededList ? Number(initialUnread) || 0 : 0));
   const [error, setError] = useState("");
+  const [pushSubActive, setPushSubActive] = useState(null);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushNote, setPushNote] = useState("");
   const { pageItems, currentPage, totalPages, pageSize, total, goToPage } = usePagination(items, LIST_PAGE_SIZE);
 
   async function load() {
@@ -242,6 +246,51 @@ export function NotificationsPage({ locale, initialItems = null, initialUnread =
       cancelled = true;
     };
   }, [me, seededList, t.loadError]);
+
+  useEffect(() => {
+    if (!me?.authenticated || !pushSupported()) {
+      setPushSubActive(false);
+      return undefined;
+    }
+    let cancelled = false;
+    navigator.serviceWorker
+      .register("/sw.js", { scope: "/" })
+      .then((reg) => reg.pushManager.getSubscription())
+      .then((sub) => {
+        if (!cancelled) setPushSubActive(Boolean(sub));
+      })
+      .catch(() => {
+        if (!cancelled) setPushSubActive(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [me]);
+
+  async function onEnablePush() {
+    setPushBusy(true);
+    setPushNote("");
+    try {
+      const result = await enableBrowserPush();
+      if (!result.ok) {
+        if (result.reason === "vapid") setPushNote(t.emailSettingsPushVapid);
+        else if (result.reason === "denied" || result.reason === "permission") {
+          setPushNote(t.emailSettingsPushDenied);
+        } else if (result.reason === "unsupported") {
+          setPushNote(t.emailSettingsPushUnsupported);
+        } else {
+          setPushNote(t.emailSettingsPushError);
+        }
+        return;
+      }
+      setPushSubActive(true);
+      setPushNote(t.notificationsPushCtaDone);
+    } catch {
+      setPushNote(t.emailSettingsPushError);
+    } finally {
+      setPushBusy(false);
+    }
+  }
 
   async function markOne(id) {
     const res = await markNotificationRead(id);
@@ -293,6 +342,21 @@ export function NotificationsPage({ locale, initialItems = null, initialUnread =
             }
           />
           {error ? <p className="note">{error}</p> : null}
+          {pushSupported() && pushSubActive === false ? (
+            <div className="notice-push-cta">
+              <p>{t.notificationsPushCta}</p>
+              <div className="notice-push-cta-actions">
+                <button type="button" className="btn primary" disabled={pushBusy} onClick={onEnablePush}>
+                  {t.notificationsPushCtaBtn}
+                </button>
+                <a className="text-btn" href={hrefFor(locale, { mode: "emailSettings" })}>
+                  {t.notificationsPushCtaSettings}
+                </a>
+              </div>
+              {pushNote ? <p className="note">{pushNote}</p> : null}
+            </div>
+          ) : null}
+          {pushSubActive && pushNote ? <p className="note">{pushNote}</p> : null}
           {items.length === 0 ? (
             <div className="h2-empty">
               <p>{t.notificationsEmpty}</p>

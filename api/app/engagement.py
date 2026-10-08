@@ -5,6 +5,10 @@ in-app + email fanout (high_match email merged into match_new), and run_engageme
 Phase 3 resolves title/body via engagement_copy (AI or soft-fail templates) into payload.
 Phase 4 adds profile_nudge + coach_weekly senders and /me/insights payload helper.
 Phase 5 fans out Web Push when push_enabled + subscriptions (VAPID / pywebpush).
+
+Match selection prefers ads created within ENGAGEMENT_LOOKBACK_HOURS (default 72).
+When none qualify, falls back to best current catalog matches not yet logged for that
+kind (in-app + push only — email stays fresh-only) so confirmed users are not silent.
 """
 
 from __future__ import annotations
@@ -44,7 +48,7 @@ ENGAGEMENT_INAPP_DAILY_MAX = int(os.environ.get("ENGAGEMENT_INAPP_DAILY_MAX") or
 ENGAGEMENT_LOOKBACK_HOURS = int(
     os.environ.get("ENGAGEMENT_LOOKBACK_HOURS")
     or os.environ.get("HIGH_MATCH_LOOKBACK_HOURS")
-    or "26"
+    or "72"
 )
 PROFILE_NUDGE_STALE_DAYS = int(os.environ.get("PROFILE_NUDGE_STALE_DAYS") or "14")
 PROFILE_NUDGE_MIN_SKILLS = int(os.environ.get("PROFILE_NUDGE_MIN_SKILLS") or "3")
@@ -249,6 +253,29 @@ def already_logged(
         WHERE user_id = ? AND kind = ? AND period_key = ? AND job_id = ?
         """,
         ((user_id or "").strip(), kind, period_key, job_key(job_id)),
+    ).fetchone()
+    return row is not None
+
+
+def job_ever_logged(
+    conn,
+    *,
+    user_id: str,
+    kind: str,
+    job_id: int | None,
+) -> bool:
+    """True if this user already got this kind for this job (any period)."""
+    ensure_engagement_tables(conn)
+    jid = job_key(job_id)
+    if jid <= 0:
+        return False
+    row = conn.execute(
+        """
+        SELECT 1 FROM engagement_log
+        WHERE user_id = ? AND kind = ? AND job_id = ?
+        LIMIT 1
+        """,
+        ((user_id or "").strip(), kind, jid),
     ).fetchone()
     return row is not None
 
@@ -647,6 +674,41 @@ def select_match_near(matches: list[dict[str, Any]]) -> dict[str, Any] | None:
         if best is None or score > best["score"]:
             best = item
     return best
+
+
+def resolve_match_candidate(
+    conn,
+    *,
+    user_id: str,
+    kind: str,
+    fresh: list[dict[str, Any]],
+    catalog: list[dict[str, Any]],
+) -> tuple[dict[str, Any] | None, str]:
+    """Pick match_new/near: prefer lookback-fresh jobs, else unseen catalog.
+
+    Returns (match, source) where source is ``fresh``, ``catalog``, or ``""``.
+    Catalog picks skip jobs already logged for this kind (lifetime dedup) so
+    confirmed users still get daily in-app/push when no brand-new ads match.
+    """
+    if kind not in MATCH_ENGINE_KINDS:
+        return None, ""
+    selector = select_match_new if kind == "match_new" else select_match_near
+    picked = selector(fresh)
+    if picked is not None:
+        return picked, "fresh"
+
+    unseen: list[dict[str, Any]] = []
+    for raw in catalog:
+        item = _normalize_match_item(raw)
+        if item is None:
+            continue
+        if job_ever_logged(conn, user_id=user_id, kind=kind, job_id=item["job_id"]):
+            continue
+        unseen.append(raw)
+    picked = selector(unseen)
+    if picked is None:
+        return None, ""
+    return picked, "catalog"
 
 
 def _event_payload(
@@ -1650,7 +1712,6 @@ def process_user_engagement(
     dry_run: bool = False,
 ) -> dict[str, Any]:
     from app.cv_profile import _profile_payload
-    from app.digests import _matches_since
     from app.email_prefs import ensure_email_tables, get_prefs
 
     moment = when or datetime.now(timezone.utc)
@@ -1673,62 +1734,52 @@ def process_user_engagement(
 
     ok, reason, _confirmed = _user_eligible(conn, user_id=user_id)
     if ok:
+        from app.digests import _top_matches
+
         since = moment - timedelta(hours=ENGAGEMENT_LOOKBACK_HOURS)
-        matches = _matches_since(conn, user_id=user_id, since=since, limit=20, lang=lang)
-        match_new = select_match_new(matches)
-        match_near = select_match_near(matches)
+        catalog = _top_matches(conn, user_id=user_id, limit=20, lang=lang)
+        since_key = since.date().isoformat()
+        fresh: list[dict[str, Any]] = []
+        for item in catalog:
+            created = str(item.get("created_at") or "")[:10]
+            if created and created >= since_key:
+                fresh.append(item)
 
-        if match_new is not None:
-            if kind_sent_today(conn, user_id=user_id, kind="match_new", when=moment):
-                out["reasons"]["match_new"] = "daily_kind_limit"
-            elif dry_run:
-                out["match_new"] = "would_send"
-            else:
-                result = fanout_match_event(
-                    conn,
-                    user_id=user_id,
-                    kind="match_new",
-                    match=match_new,
-                    prefs=prefs,
-                    when=moment,
-                    allow_inapp=inapp_left > 0,
-                    allow_email=True,
-                )
-                out["match_new"] = result.get("status") or "skipped"
-                if result.get("reason"):
-                    out["reasons"]["match_new"] = result["reason"]
-                if result.get("ai_applied"):
-                    out["ai_applied"] = int(out["ai_applied"]) + 1
-                if "in_app" in (result.get("channels") or []):
-                    inapp_left = max(0, inapp_left - 1)
-        else:
-            out["reasons"]["match_new"] = "none"
-
-        if match_near is not None:
-            if kind_sent_today(conn, user_id=user_id, kind="match_near", when=moment):
-                out["reasons"]["match_near"] = "daily_kind_limit"
-            elif dry_run:
-                out["match_near"] = "would_send"
-            else:
-                result = fanout_match_event(
-                    conn,
-                    user_id=user_id,
-                    kind="match_near",
-                    match=match_near,
-                    prefs=prefs,
-                    when=moment,
-                    allow_inapp=inapp_left > 0,
-                    allow_email=True,
-                )
-                out["match_near"] = result.get("status") or "skipped"
-                if result.get("reason"):
-                    out["reasons"]["match_near"] = result["reason"]
-                if result.get("ai_applied"):
-                    out["ai_applied"] = int(out["ai_applied"]) + 1
-                if "in_app" in (result.get("channels") or []):
-                    inapp_left = max(0, inapp_left - 1)
-        else:
-            out["reasons"]["match_near"] = "none"
+        for kind in ("match_new", "match_near"):
+            match, source = resolve_match_candidate(
+                conn,
+                user_id=user_id,
+                kind=kind,
+                fresh=fresh,
+                catalog=catalog,
+            )
+            if match is None:
+                out["reasons"][kind] = "none"
+                continue
+            if kind_sent_today(conn, user_id=user_id, kind=kind, when=moment):
+                out["reasons"][kind] = "daily_kind_limit"
+                continue
+            if dry_run:
+                out[kind] = "would_send"
+                out["reasons"][kind] = source
+                continue
+            # Catalog fallback = in-app + push only (email stays for truly fresh ads).
+            result = fanout_match_event(
+                conn,
+                user_id=user_id,
+                kind=kind,
+                match=match,
+                prefs=prefs,
+                when=moment,
+                allow_inapp=inapp_left > 0,
+                allow_email=source == "fresh",
+            )
+            out[kind] = result.get("status") or "skipped"
+            out["reasons"][kind] = result.get("reason") or source
+            if result.get("ai_applied"):
+                out["ai_applied"] = int(out["ai_applied"]) + 1
+            if "in_app" in (result.get("channels") or []):
+                inapp_left = max(0, inapp_left - 1)
 
         coach_ctx = None
         try:

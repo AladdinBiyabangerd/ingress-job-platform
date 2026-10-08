@@ -104,9 +104,12 @@ that file is applied; set them yourself only if you use another bucket):
 | `AI_EMBEDDING_MODEL` | Optional. Default `text-embedding-3-small` (AI #2). |
 | `AI_RERANK_ENABLED` | Optional. Default follows gateway; `0` keeps structured-only matches. |
 | `AI_MATCH_WHY_ENABLED` | Optional. Default follows gateway; `0` skips LLM why sentences. |
-| `VAPID_PUBLIC_KEY` | Optional. Web Push applicationServerKey (API). With private key + subject enables browser push fanout. |
-| `VAPID_PRIVATE_KEY` | Optional. Web Push VAPID private key (API only — never on web). |
-| `VAPID_SUBJECT` | Optional. `mailto:` contact for VAPID claims (e.g. `mailto:ops@example.com`). |
+| `INTERNAL_JOB_TOKEN` | Shared secret for worker → API digests + engagement (`X-Internal-Token`). Set the **same** value on **api** and **worker**. If unset on worker, `engagement_jobs` / `email_jobs` are skipped and users get no hourly match notifications. |
+| `JOB_API_BASE_URL` (worker) | API base the worker POSTs to (private URL on Railway). Required for digests/engagement triggers. |
+| `VAPID_PUBLIC_KEY` | Web Push applicationServerKey (**api**). Generate with `npx web-push generate-vapid-keys`. Without all three VAPID vars, browser push never sends (in-app still works). |
+| `VAPID_PRIVATE_KEY` | Web Push VAPID private key (API only — never on web). |
+| `VAPID_SUBJECT` | `mailto:` contact for VAPID claims (e.g. `mailto:ops@example.com`). |
+| `ENGAGEMENT_LOOKBACK_HOURS` | Optional. Fresh-ad window for match_new/near (default 72). Older strong matches still notify via catalog fallback (in-app + push). |
 
 Postgres for AI #2 must support `CREATE EXTENSION vector` (pgvector). Local compose uses `pgvector/pgvector:pg16`. Stock Railway Postgres may need a pgvector-capable image/plugin; without it matches stay structured-only.
 

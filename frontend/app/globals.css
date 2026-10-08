@@ -8208,6 +8208,25 @@ a.saved-preview-company:hover {
   }
 }
 
+.notice-push-cta {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--brand-soft);
+}
+
+.notice-push-cta p {
+  margin: 0 0 10px;
+}
+
+.notice-push-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
 .h2-notice-list {
   display: flex;
   flex-direction: column;
