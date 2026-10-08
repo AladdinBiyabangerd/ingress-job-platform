@@ -5,6 +5,7 @@ import { loginHref } from "../lib/auth-link";
 import { AcademyCourseLinks, SkillRow, sharePct } from "./skill-gap-bits";
 import { PageChrome } from "./page-chrome";
 import { Shell } from "./shell";
+import { SkillIcon } from "./skill-icon";
 import { useInitialMe } from "./me-seed";
 
 const MAX_DISPLAY_GROWTH = 5;
@@ -203,7 +204,12 @@ export function TrendDetailPage({ locale, data, error }) {
         <PageChrome
           backHref={hrefFor(locale, { mode: "trends" })}
           backLabel={t.trendsTitle}
-          title={data.name}
+          title={
+            <span className="page-chrome-title-with-icon">
+              <SkillIcon name={data.name} />
+              <span>{data.name}</span>
+            </span>
+          }
         />
 
         <KpiStrip t={t} share={share} growth={growth} data={data} salaries={salaries} jobsHref={jobsHref} />

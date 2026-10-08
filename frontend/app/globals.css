@@ -7140,6 +7140,28 @@ a.h2-trend-stat:focus-visible {
 }
 
 /* Trend detail — Variant A: KPI strip + skill cards */
+.h2-trend-detail .page-chrome-title-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.h2-trend-detail .page-chrome-title-with-icon .skill-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.h2-trend-detail .page-chrome-title-with-icon .skill-icon-img {
+  width: 20px;
+  height: 20px;
+}
+
+.h2-trend-detail .page-chrome-title-with-icon .skill-icon-fallback {
+  font-size: 0.72rem;
+}
+
 .h2-trend-detail.td-a {
   gap: 18px;
   max-width: none;
