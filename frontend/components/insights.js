@@ -93,8 +93,26 @@ function CoachSection({ t, locale, coach }) {
   );
 }
 
+function NearMissItem({ t, locale, item }) {
+  const pct = scorePct(item.score);
+  const href = resolveHref(locale, item.cta_href) || hrefFor(locale, { jobId: item.job_id });
+  const title = String(item.job_title || "").trim() || "—";
+  return (
+    <li className="insights-near-item">
+      <div className="insights-near-top">
+        {pct !== null ? <span className="notice-score">{pct}%</span> : null}
+        <a href={href}>
+          <strong>{title}</strong>
+        </a>
+      </div>
+      <RoleSkillParts t={t} have={item.have} missing={item.missing} limit={4} />
+    </li>
+  );
+}
+
 function NearMissSection({ t, locale, items }) {
-  if (!Array.isArray(items) || items.length === 0) {
+  const list = Array.isArray(items) ? items : [];
+  if (!list.length) {
     return (
       <section className="h2-panel">
         <h2 className="h2-panel-title">{t.insightsNearTitle}</h2>
@@ -105,25 +123,11 @@ function NearMissSection({ t, locale, items }) {
   return (
     <section className="h2-panel">
       <h2 className="h2-panel-title">{t.insightsNearTitle}</h2>
-      <ul className="insights-near-list">
-        {items.map((item, index) => {
-          const pct = scorePct(item.score);
-          const href = resolveHref(locale, item.cta_href) || hrefFor(locale, { jobId: item.job_id });
-          const title = String(item.job_title || "").trim() || "—";
-          const key = `${item.job_id || title}-${index}`;
-          return (
-            <li key={key} className="insights-near-item">
-              <div className="insights-near-top">
-                {pct !== null ? <span className="notice-score">{pct}%</span> : null}
-                <a href={href}>
-                  <strong>{title}</strong>
-                </a>
-              </div>
-              <RoleSkillParts t={t} have={item.have} missing={item.missing} />
-            </li>
-          );
-        })}
-      </ul>
+      <div className="insights-links">
+        <a className="btn" href={hrefFor(locale, { mode: "insightsNear" })}>
+          {t.insightsNearOpenCount(list.length)}
+        </a>
+      </div>
     </section>
   );
 }
@@ -267,6 +271,109 @@ export function Insights({ locale, initialInsights = null }) {
           <div className="h2-empty h2-gate">
             <p>{t.insightsGate}</p>
             <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "insights" })} />
+          </div>
+        </div>
+      )}
+    </Shell>
+  );
+}
+
+/** Full near-miss list opened from insights overview. */
+export function InsightsNear({ locale, initialInsights = null }) {
+  const t = text(locale);
+  const initialMe = useInitialMe();
+  const seeded = initialInsights && typeof initialInsights === "object";
+  const [me, setMe] = useState(() => {
+    if (initialMe && typeof initialMe === "object") return initialMe.authenticated ? initialMe : null;
+    return undefined;
+  });
+  const [data, setData] = useState(() => (seeded ? initialInsights : null));
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (initialMe && typeof initialMe === "object") {
+      setMe(initialMe.authenticated ? initialMe : null);
+      return undefined;
+    }
+    let cancelled = false;
+    fetchMe()
+      .then((payload) => {
+        if (!cancelled) setMe(payload?.authenticated ? payload : null);
+      })
+      .catch(() => {
+        if (!cancelled) setMe(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialMe]);
+
+  useEffect(() => {
+    if (!me?.authenticated || !(me.candidate || me.staff)) return undefined;
+    if (seeded) return undefined;
+    let cancelled = false;
+    const lang = locale === "en" || locale === "ru" ? locale : "az";
+    fetch(`/api/auth/me/insights?lang=${encodeURIComponent(lang)}`, { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((payload) => {
+        if (cancelled || !payload) return;
+        setData(payload);
+      })
+      .catch(() => {
+        if (!cancelled) setError(t.loadError);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [me, seeded, locale, t.loadError]);
+
+  const allowed = Boolean(me?.authenticated && (me.candidate || me.staff));
+  const items = Array.isArray(data?.near_misses) ? data.near_misses : [];
+
+  return (
+    <Shell locale={locale} mode="insights">
+      {allowed ? (
+        <div className="h2-candidate insights-page insights-near-page">
+          <PageChrome
+            backHref={hrefFor(locale, { mode: "insights" })}
+            backLabel={t.insightsTitle}
+            title={t.insightsNearTitle}
+            count={items.length || null}
+          />
+          {error ? <p className="note">{error}</p> : null}
+          {data && data.matching_consent === false ? (
+            <p className="hint h2-consent-banner">
+              {t.recommendationsConsent}{" "}
+              <a href={hrefFor(locale, { mode: "profile" })}>{t.recommendationsConsentLink}</a>
+            </p>
+          ) : null}
+          <section className="h2-panel">
+            {!items.length ? (
+              <p className="hint">{t.insightsNearEmpty}</p>
+            ) : (
+              <ul className="insights-near-list">
+                {items.map((item, index) => (
+                  <NearMissItem
+                    key={`${item.job_id || item.job_title || "near"}-${index}`}
+                    t={t}
+                    locale={locale}
+                    item={item}
+                  />
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      ) : me === undefined ? null : (
+        <div className="h2-candidate">
+          <PageChrome
+            backHref={hrefFor(locale, { mode: "insights" })}
+            backLabel={t.insightsTitle}
+            title={t.insightsNearTitle}
+          />
+          <div className="h2-empty h2-gate">
+            <p>{t.insightsGate}</p>
+            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "insightsNear" })} />
           </div>
         </div>
       )}

@@ -11,7 +11,12 @@ function namesFrom(items) {
     .filter(Boolean);
 }
 
-export function RoleSkillParts({ t, have, missing }) {
+function formatNames(list, limit) {
+  if (!limit || list.length <= limit) return list.join(", ");
+  return `${list.slice(0, limit).join(", ")} +${list.length - limit}`;
+}
+
+export function RoleSkillParts({ t, have, missing, limit = 0 }) {
   const haveList = namesFrom(have);
   const missingList = namesFrom(missing);
   if (!haveList.length && !missingList.length) return null;
@@ -21,7 +26,7 @@ export function RoleSkillParts({ t, have, missing }) {
       {haveList.length ? (
         <span className="role-skill-have">
           <span className="role-skill-label">{t.skillsHave}</span>
-          {`: ${haveList.join(", ")}`}
+          {`: ${formatNames(haveList, limit)}`}
         </span>
       ) : null}
       {haveList.length && missingList.length ? (
@@ -32,7 +37,7 @@ export function RoleSkillParts({ t, have, missing }) {
       {missingList.length ? (
         <span className="role-skill-missing">
           <span className="role-skill-label">{t.skillsMissing}</span>
-          {`: ${missingList.join(", ")}`}
+          {`: ${formatNames(missingList, limit)}`}
         </span>
       ) : null}
     </span>

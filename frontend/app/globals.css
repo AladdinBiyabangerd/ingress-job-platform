@@ -2583,9 +2583,52 @@ body:has(.profile-review-page) {
   margin: 0;
 }
 
+.recommendations-jobs-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0 8px;
+}
+
+.recommendations-jobs-cta .btn {
+  text-decoration: none;
+}
+
+.reco-role-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.reco-role-chip {
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border: 1px solid var(--border, #e0e3e8);
+  border-radius: var(--radius-md, 10px);
+  background: var(--surface, #fff);
+  color: inherit;
+  cursor: pointer;
+}
+
+.reco-role-chip:hover,
+.reco-role-chip.on {
+  border-color: var(--brand, #001fff);
+  background: var(--brand-soft, #f0f3ff);
+  color: var(--brand, #001fff);
+}
+
+.recommendations-jobs-list {
+  display: grid;
+  gap: 8px;
+}
+
 .recommendations-jobs {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .recommendations-jobs h3 {
@@ -2615,33 +2658,43 @@ body:has(.profile-review-page) {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 10px;
+  gap: 0;
 }
 
 .reco-job {
   display: grid;
-  gap: 8px;
-  padding: 12px 14px;
-  border: 1px solid #e8eaee;
-  border-radius: 12px;
-  background: #fafbfc;
+  gap: 0;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid #e8eaee;
+  border-radius: 0;
+  background: transparent;
+}
+
+.reco-job:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.reco-job:first-child {
+  padding-top: 0;
 }
 
 .reco-job-top {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 10px 12px;
   align-items: start;
 }
 
 .reco-job-score {
   display: grid;
   place-items: center;
-  min-height: 40px;
-  border-radius: 10px;
+  min-height: 36px;
+  border-radius: 8px;
   background: #eef0f4;
   color: #20242b;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
@@ -2663,15 +2716,25 @@ body:has(.profile-review-page) {
 }
 
 .reco-job-title strong {
-  font-size: 0.98rem;
+  font-size: 0.92rem;
   letter-spacing: -0.01em;
   line-height: 1.3;
 }
 
 .reco-job-body .hint {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   line-height: 1.35;
+}
+
+.reco-job-body .role-skill-parts {
+  margin: 2px 0 0;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .reco-job-explain {
@@ -2683,8 +2746,9 @@ body:has(.profile-review-page) {
 .reco-job-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
+  grid-column: 2;
 }
 
 .reco-job-reason {
@@ -2695,12 +2759,84 @@ body:has(.profile-review-page) {
 
 .reco-job-reason select {
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   padding: 4px 8px;
   border: 1px solid #d5d9e0;
   border-radius: 8px;
   background: #ffffff;
   color: inherit;
+  max-width: 11rem;
+}
+
+.reco-depth {
+  margin: 4px 0 0;
+  border-top: 1px solid #eef0f3;
+  padding-top: 8px;
+}
+
+.reco-depth-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #20242b;
+  padding: 6px 0;
+}
+
+.reco-depth-summary::-webkit-details-marker {
+  display: none;
+}
+
+.reco-depth-summary::before {
+  content: "";
+  width: 0.45em;
+  height: 0.45em;
+  border-right: 2px solid #656b75;
+  border-bottom: 2px solid #656b75;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+  flex: 0 0 auto;
+}
+
+.reco-depth[open] > .reco-depth-summary::before {
+  transform: rotate(45deg);
+}
+
+.reco-depth-meta {
+  margin: 0;
+  font-weight: 500;
+  font-size: 0.78rem;
+}
+
+.reco-depth-body {
+  margin: 0;
+  padding: 4px 0 8px;
+}
+
+.reco-depth .skills-coach {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.reco-depth-empty {
+  margin: 8px 0 0;
+}
+
+@media (min-width: 720px) {
+  .reco-job-top {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .reco-job-actions {
+    grid-column: auto;
+    flex-wrap: nowrap;
+  }
 }
 
 .recommendations-footer {
@@ -2727,7 +2863,11 @@ body:has(.profile-review-page) {
   }
 
   .reco-job-top {
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .reco-job-actions {
+    width: 100%;
   }
 }
 
@@ -6469,7 +6609,7 @@ a.h2-trend-stat:focus-visible {
 }
 
 .h2-candidate .reco-job {
-  padding: 14px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--border);
   border-radius: 0;
   background: transparent;
@@ -6483,6 +6623,15 @@ a.h2-trend-stat:focus-visible {
 
 .h2-candidate .reco-job:first-child {
   padding-top: 0;
+}
+
+.h2-candidate .reco-depth {
+  border-top-color: var(--border);
+}
+
+.h2-candidate .recommendations-detail {
+  display: grid;
+  gap: 12px;
 }
 
 .h2-candidate .insights-links {

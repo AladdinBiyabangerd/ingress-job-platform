@@ -25,26 +25,31 @@ async function loadJson(access, path) {
 }
 
 /**
- * Roles + top-role gap + role-scoped matches for /me/recommendations.
+ * Roles + role-scoped matches (+ optional gap) for /me/recommendations.
  * Skips FastAPI for guests and non-candidates. Deduped within one RSC request.
  */
-export const getRecommendationBundle = cache(async (lang = "az") => {
+export const getRecommendationBundle = cache(async (lang = "az", preferredRole = "", includeGap = true) => {
   const me = await getMe();
   if (!me?.authenticated || !(me.candidate || me.staff)) {
-    return { roles: null, matches: null, gap: null };
+    return { roles: null, matches: null, gap: null, role: "" };
   }
   const access = await sessionAccess();
-  if (!access) return { roles: null, matches: null, gap: null };
+  if (!access) return { roles: null, matches: null, gap: null, role: "" };
   const locale = localeLang(lang);
   const qs = `lang=${encodeURIComponent(locale)}`;
   const roles = await loadJson(access, `/api/v1/me/roles?${qs}`);
-  const topRole = roles?.roles?.[0]?.canonical_name || "";
+  const preferred = String(preferredRole || "").trim();
+  const roleNames = Array.isArray(roles?.roles)
+    ? roles.roles.map((r) => r?.canonical_name).filter(Boolean)
+    : [];
+  const topRole =
+    (preferred && roleNames.includes(preferred) ? preferred : null) || roleNames[0] || "";
   const roleQs = topRole ? `&role=${encodeURIComponent(topRole)}` : "";
   const [matches, gap] = await Promise.all([
     loadJson(access, `/api/v1/me/matches?${qs}&limit=${MATCHES_FETCH_LIMIT}${roleQs}`),
-    topRole
+    includeGap && topRole
       ? loadJson(access, `/api/v1/me/skill-gap?${qs}&role=${encodeURIComponent(topRole)}`)
       : Promise.resolve(null),
   ]);
-  return { roles, matches, gap };
+  return { roles, matches, gap, role: topRole };
 });

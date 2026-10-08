@@ -506,6 +506,8 @@ export const copy = {
     recommendationsRoles: "Uyğun rollar",
     recommendationsSelectedRole: "Seçilmiş rol",
     recommendationsJobs: "Uyğun elanlar",
+    recommendationsJobsOpen: "Uyğun elanlara bax",
+    recommendationsJobsOpenCount: (n) => `Uyğun elanlara bax (${n})`,
     recommendationsEmptyRoles: "Hələ rol təklifi yoxdur. Bacarıqları profilə əlavə edin.",
     recommendationsEmptyJobs: "Hələ uyğun elan yoxdur. Profili tamamlayın və ya bir az sonra yeniləyin.",
     recommendationsScore: (n) => `${Math.round(n * 100)}%`,
@@ -554,6 +556,8 @@ export const copy = {
     insightsCoachRole: (role) => `Rol: ${role}`,
     insightsCoachEmpty: "Hələ koç planı yoxdur. Profili təsdiqləyin və matching razılığını aktiv edin.",
     insightsNearTitle: "Yaxın elanlar",
+    insightsNearOpen: "Yaxın elanlara bax",
+    insightsNearOpenCount: (n) => `Yaxın elanlara bax (${n})`,
     insightsNearEmpty: "Hələ yaxın elan yoxdur.",
     insightsGrowthTitle: "Öyrənmə yolu",
     insightsGrowthEmpty: "Hələ Academy və ya roadmap tövsiyəsi yoxdur.",
@@ -1127,6 +1131,8 @@ export const copy = {
     recommendationsRoles: "Suggested roles",
     recommendationsSelectedRole: "Selected role",
     recommendationsJobs: "Matching jobs",
+    recommendationsJobsOpen: "View matching jobs",
+    recommendationsJobsOpenCount: (n) => `View matching jobs (${n})`,
     recommendationsEmptyRoles: "No role suggestions yet. Add skills to your profile.",
     recommendationsEmptyJobs: "No matching jobs yet. Complete your profile or check back later.",
     recommendationsScore: (n) => `${Math.round(n * 100)}%`,
@@ -1175,6 +1181,8 @@ export const copy = {
     insightsCoachRole: (role) => `Role: ${role}`,
     insightsCoachEmpty: "No coach plan yet. Confirm your profile and turn on matching consent.",
     insightsNearTitle: "Near-miss jobs",
+    insightsNearOpen: "View near-miss jobs",
+    insightsNearOpenCount: (n) => `View near-miss jobs (${n})`,
     insightsNearEmpty: "No near-miss jobs yet.",
     insightsGrowthTitle: "Learning path",
     insightsGrowthEmpty: "No Academy or roadmap tips yet.",
@@ -1749,6 +1757,8 @@ export const copy = {
     recommendationsRoles: "Подходящие роли",
     recommendationsSelectedRole: "Выбранная роль",
     recommendationsJobs: "Подходящие вакансии",
+    recommendationsJobsOpen: "Смотреть подходящие вакансии",
+    recommendationsJobsOpenCount: (n) => `Смотреть подходящие вакансии (${n})`,
     recommendationsEmptyRoles: "Пока нет предложений ролей. Добавьте навыки в профиль.",
     recommendationsEmptyJobs: "Пока нет подходящих вакансий. Заполните профиль или загляните позже.",
     recommendationsScore: (n) => `${Math.round(n * 100)}%`,
@@ -1797,6 +1807,8 @@ export const copy = {
     insightsCoachRole: (role) => `Роль: ${role}`,
     insightsCoachEmpty: "Плана коуча пока нет. Подтвердите профиль и включите согласие на matching.",
     insightsNearTitle: "Почти подходящие вакансии",
+    insightsNearOpen: "Смотреть почти подходящие",
+    insightsNearOpenCount: (n) => `Смотреть почти подходящие (${n})`,
     insightsNearEmpty: "Пока нет почти подходящих вакансий.",
     insightsGrowthTitle: "Путь обучения",
     insightsGrowthEmpty: "Пока нет рекомендаций Academy или roadmap.",
@@ -1917,7 +1929,7 @@ export function languageLabel(locale, code) {
 }
 
 
-export function hrefFor(locale, { mode = "browse", jobId, companySlug, skillId } = {}) {
+export function hrefFor(locale, { mode = "browse", jobId, companySlug, skillId, role } = {}) {
   const base = locale === "az" ? "" : `/${locale}`;
   if (jobId) return `${base}/jobs/${jobId}`;
   if (companySlug) return `${base}/companies/${encodeURIComponent(companySlug)}`;
@@ -1936,8 +1948,14 @@ export function hrefFor(locale, { mode = "browse", jobId, companySlug, skillId }
   if (mode === "talent") return `${base}/talent`;
   if (mode === "profile") return `${base}/profile`;
   if (mode === "profileReview") return `${base}/profile/review`;
+  if (mode === "recommendationJobs") {
+    const path = `${base}/me/recommendations/jobs`;
+    const roleName = String(role || "").trim();
+    return roleName ? `${path}?role=${encodeURIComponent(roleName)}` : path;
+  }
   if (mode === "recommendations") return `${base}/me/recommendations`;
   if (mode === "skills") return `${base}/me/recommendations`;
+  if (mode === "insightsNear") return `${base}/me/insights/near`;
   if (mode === "insights") return `${base}/me/insights`;
   if (mode === "emailSettings") return `${base}/settings/notifications`;
   if (mode === "notifications") return `${base}/notifications`;

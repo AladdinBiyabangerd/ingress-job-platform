@@ -15,6 +15,7 @@ import { useInitialMe } from "./me-seed";
 
 const REASONS = ["location", "seniority", "technology", "salary"];
 const MATCHES_FETCH_LIMIT = 10;
+const SKILL_PREVIEW = 4;
 
 function countSkills(items) {
   if (!Array.isArray(items)) return 0;
@@ -44,7 +45,6 @@ function MatchJob({ t, locale, job, busy, onFeedback }) {
   const score = typeof job.score === "number" ? Math.round(job.score * 100) : null;
   const meta = jobMeta(t, job);
   const votedDown = job.feedback?.vote === "down";
-  const showReason = votedDown || !job.feedback;
 
   return (
     <li className="reco-job">
@@ -57,80 +57,58 @@ function MatchJob({ t, locale, job, busy, onFeedback }) {
             <strong>{job.title}</strong>
           </a>
           {meta ? <span className="hint">{meta}</span> : null}
+          <RoleSkillParts t={t} have={job.have} missing={job.missing} limit={SKILL_PREVIEW} />
         </div>
-      </div>
-
-      {job.explanation ? <p className="hint reco-job-explain">{job.explanation}</p> : null}
-      <RoleSkillParts t={t} have={job.have} missing={job.missing} />
-
-      <div className="reco-job-actions">
-        <button
-          type="button"
-          className={job.feedback?.vote === "up" ? "btn small on" : "btn small"}
-          disabled={busy}
-          onClick={() => onFeedback(job.job_id, "up")}
-        >
-          {t.recommendationsUp}
-        </button>
-        <button
-          type="button"
-          className={votedDown ? "btn small on" : "btn small"}
-          disabled={busy}
-          onClick={() => onFeedback(job.job_id, "down")}
-        >
-          {t.recommendationsDown}
-        </button>
-        {showReason ? (
-          <label className="reco-job-reason">
-            <span className="hint">{t.recommendationsReason}</span>
-            <select
-              value={job.feedback?.reason || ""}
-              disabled={busy}
-              onChange={(event) => {
-                const reason = event.target.value;
-                if (!reason) return;
-                onFeedback(job.job_id, "down", reason);
-              }}
-            >
-              <option value="">—</option>
-              {REASONS.map((reason) => (
-                <option key={reason} value={reason}>
-                  {reasonLabel(t, reason)}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
+        <div className="reco-job-actions">
+          <button
+            type="button"
+            className={job.feedback?.vote === "up" ? "btn small on" : "btn small"}
+            disabled={busy}
+            onClick={() => onFeedback(job.job_id, "up")}
+          >
+            {t.recommendationsUp}
+          </button>
+          <button
+            type="button"
+            className={votedDown ? "btn small on" : "btn small"}
+            disabled={busy}
+            onClick={() => onFeedback(job.job_id, "down")}
+          >
+            {t.recommendationsDown}
+          </button>
+          {votedDown ? (
+            <label className="reco-job-reason">
+              <span className="visually-hidden">{t.recommendationsReason}</span>
+              <select
+                value={job.feedback?.reason || ""}
+                disabled={busy}
+                aria-label={t.recommendationsReason}
+                onChange={(event) => {
+                  const reason = event.target.value;
+                  if (!reason) return;
+                  onFeedback(job.job_id, "down", reason);
+                }}
+              >
+                <option value="">—</option>
+                {REASONS.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {reasonLabel(t, reason)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </div>
       </div>
     </li>
   );
 }
 
-export function Recommendations({
-  locale,
-  initialRoles = null,
-  initialMatches = null,
-  initialGap = null,
-}) {
-  const t = text(locale);
-  const lang = locale === "en" || locale === "ru" ? locale : "az";
-  const initialMe = useInitialMe();
-  const seededCatalog = initialRoles != null && initialMatches != null;
-  const initialTopRole = initialRoles?.roles?.[0]?.canonical_name || "";
-  const seededInitialGap = initialGap != null;
-  const ssrGapPending = useRef(seededInitialGap);
-  const ssrMatchesPending = useRef(seededCatalog);
+function useCandidateMe(initialMe) {
   const [me, setMe] = useState(() => {
     if (initialMe && typeof initialMe === "object") return initialMe.authenticated ? initialMe : null;
     return undefined;
   });
-  const [roles, setRoles] = useState(initialRoles);
-  const [matches, setMatches] = useState(initialMatches);
-  const [activeRole, setActiveRole] = useState(initialTopRole);
-  const [gap, setGap] = useState(initialGap);
-  const [note, setNote] = useState("");
-  const [error, setError] = useState("");
-  const [busyId, setBusyId] = useState(null);
 
   useEffect(() => {
     if (initialMe && typeof initialMe === "object") {
@@ -149,6 +127,43 @@ export function Recommendations({
       cancelled = true;
     };
   }, [initialMe]);
+
+  return me;
+}
+
+function Gate({ locale, title, message, returnTo }) {
+  const t = text(locale);
+  return (
+    <div className="h2-candidate">
+      <PageChrome backHref={hrefFor(locale)} backLabel={t.breadcrumbHome} title={title} />
+      <div className="h2-empty h2-gate">
+        <p>{message}</p>
+        <RegisterChoice locale={locale} returnTo={returnTo} />
+      </div>
+    </div>
+  );
+}
+
+/** Overview: roles + coach/gap + CTA to matching-jobs page. */
+export function Recommendations({
+  locale,
+  initialRoles = null,
+  initialMatches = null,
+  initialGap = null,
+}) {
+  const t = text(locale);
+  const lang = locale === "en" || locale === "ru" ? locale : "az";
+  const initialMe = useInitialMe();
+  const me = useCandidateMe(initialMe);
+  const seededCatalog = initialRoles != null && initialMatches != null;
+  const initialTopRole = initialRoles?.roles?.[0]?.canonical_name || "";
+  const seededInitialGap = initialGap != null;
+  const ssrGapPending = useRef(seededInitialGap);
+  const ssrMatchesPending = useRef(seededCatalog);
+  const [roles, setRoles] = useState(initialRoles);
+  const [matches, setMatches] = useState(initialMatches);
+  const [activeRole, setActiveRole] = useState(initialTopRole);
+  const [gap, setGap] = useState(initialGap);
 
   useEffect(() => {
     if (!me || !(me.candidate || me.staff)) return undefined;
@@ -211,46 +226,7 @@ export function Recommendations({
     };
   }, [me, lang, activeRole, initialTopRole]);
 
-  const jobList = Array.isArray(matches?.matches) ? matches.matches : [];
-  const { pageItems, currentPage, totalPages, pageSize, total, goToPage } = usePagination(
-    jobList,
-    LIST_PAGE_SIZE,
-  );
-
-  async function sendFeedback(jobId, vote, reason = "") {
-    setBusyId(jobId);
-    setNote("");
-    setError("");
-    try {
-      const res = await fetch(`/api/auth/me/matches/${jobId}/feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vote, reason }),
-      });
-      if (!res.ok) {
-        setError(t.recommendationsFeedbackError);
-        return;
-      }
-      const payload = await res.json();
-      setMatches((current) => {
-        if (!current?.matches) return current;
-        return {
-          ...current,
-          matches: current.matches.map((item) =>
-            item.job_id === jobId
-              ? { ...item, feedback: { vote: payload.vote, reason: payload.reason || "" } }
-              : item,
-          ),
-        };
-      });
-      setNote(t.recommendationsFeedbackSaved);
-    } catch {
-      setError(t.recommendationsFeedbackError);
-    } finally {
-      setBusyId(null);
-    }
-  }
-
+  const jobCount = Array.isArray(matches?.matches) ? matches.matches.length : 0;
   const consentOk = roles?.matching_consent !== false && matches?.matching_consent !== false;
   const candidate = Boolean(me?.candidate || me?.staff);
   const roleList = Array.isArray(roles?.roles) ? roles.roles : [];
@@ -265,6 +241,7 @@ export function Recommendations({
   const missing = Array.isArray(gap?.missing) ? gap.missing : [];
   const have = Array.isArray(gap?.have) ? gap.have : [];
   const hasGap = missing.length > 0 || have.length > 0;
+  const jobsHref = hrefFor(locale, { mode: "recommendationJobs", role: activeRole || undefined });
 
   return (
     <Shell locale={locale} mode="recommendations">
@@ -283,9 +260,6 @@ export function Recommendations({
               <a href={hrefFor(locale, { mode: "profile" })}>{t.recommendationsConsentLink}</a>
             </p>
           ) : null}
-
-          {note ? <p className="hint ok">{note}</p> : null}
-          {error ? <p className="hint error">{error}</p> : null}
 
           <div className="recommendations-layout">
             <section className="h2-panel recommendations-roles" aria-label={t.recommendationsRoles}>
@@ -351,6 +325,18 @@ export function Recommendations({
                   </div>
                   <CareerPathLink t={t} pathId={gap?.academy_career_path} />
                 </header>
+              ) : null}
+
+              {selected ? (
+                <div className="recommendations-jobs-cta">
+                  {jobCount ? (
+                    <a className="btn" href={jobsHref}>
+                      {t.recommendationsJobsOpenCount(jobCount)}
+                    </a>
+                  ) : (
+                    <p className="hint">{t.recommendationsEmptyJobs}</p>
+                  )}
+                </div>
               ) : null}
 
               {selected && hasCoach ? (
@@ -430,39 +416,6 @@ export function Recommendations({
                   </div>
                 )
               ) : null}
-
-              <div className="recommendations-jobs">
-                <h3>
-                  {t.recommendationsJobs}
-                  <span className="recommendations-panel-count">{total}</span>
-                </h3>
-                {!total ? (
-                  <p className="hint">{t.recommendationsEmptyJobs}</p>
-                ) : (
-                  <>
-                    <ul className="reco-jobs">
-                      {pageItems.map((job) => (
-                        <MatchJob
-                          key={job.job_id}
-                          t={t}
-                          locale={locale}
-                          job={job}
-                          busy={busyId === job.job_id}
-                          onFeedback={sendFeedback}
-                        />
-                      ))}
-                    </ul>
-                    <Pager
-                      locale={locale}
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      total={total}
-                      pageSize={pageSize}
-                      onPageChange={goToPage}
-                    />
-                  </>
-                )}
-              </div>
             </section>
           </div>
 
@@ -471,17 +424,222 @@ export function Recommendations({
           </p>
         </div>
       ) : (
-        <div className="h2-candidate">
+        <Gate
+          locale={locale}
+          title={t.recommendationsTitle}
+          message={t.recommendationsGate}
+          returnTo={hrefFor(locale, { mode: "recommendations" })}
+        />
+      )}
+    </Shell>
+  );
+}
+
+/** Dedicated matching-jobs list (opened from recommendations overview). */
+export function RecommendationJobs({
+  locale,
+  initialRoles = null,
+  initialMatches = null,
+  initialRole = "",
+}) {
+  const t = text(locale);
+  const lang = locale === "en" || locale === "ru" ? locale : "az";
+  const initialMe = useInitialMe();
+  const me = useCandidateMe(initialMe);
+  const seededCatalog = initialRoles != null && initialMatches != null;
+  const topRole = initialRoles?.roles?.[0]?.canonical_name || "";
+  const seededRole = String(initialRole || "").trim() || topRole;
+  const ssrMatchesPending = useRef(seededCatalog);
+  const [roles, setRoles] = useState(initialRoles);
+  const [matches, setMatches] = useState(initialMatches);
+  const [activeRole, setActiveRole] = useState(seededRole);
+  const [note, setNote] = useState("");
+  const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState(null);
+
+  useEffect(() => {
+    if (!me || !(me.candidate || me.staff)) return undefined;
+    if (seededCatalog) return undefined;
+    let cancelled = false;
+    fetch(`/api/auth/me/roles?lang=${lang}`, { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((rolesPayload) => {
+        if (cancelled) return;
+        setRoles(rolesPayload);
+        if (!activeRole) {
+          setActiveRole(rolesPayload?.roles?.[0]?.canonical_name || "");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setRoles(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [me, lang, seededCatalog, activeRole]);
+
+  useEffect(() => {
+    if (!me || !(me.candidate || me.staff) || !activeRole) {
+      if (!ssrMatchesPending.current) setMatches(null);
+      return undefined;
+    }
+    if (ssrMatchesPending.current && activeRole === seededRole) {
+      ssrMatchesPending.current = false;
+      return undefined;
+    }
+    ssrMatchesPending.current = false;
+    let cancelled = false;
+    fetch(
+      `/api/auth/me/matches?lang=${lang}&limit=${MATCHES_FETCH_LIMIT}&role=${encodeURIComponent(activeRole)}`,
+      { cache: "no-store" },
+    )
+      .then((res) => (res.ok ? res.json() : null))
+      .then((matchesPayload) => {
+        if (!cancelled) setMatches(matchesPayload);
+      })
+      .catch(() => {
+        if (!cancelled) setMatches(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [me, lang, activeRole, seededRole]);
+
+  const jobList = Array.isArray(matches?.matches) ? matches.matches : [];
+  const { pageItems, currentPage, totalPages, pageSize, total, goToPage } = usePagination(
+    jobList,
+    LIST_PAGE_SIZE,
+  );
+
+  async function sendFeedback(jobId, vote, reason = "") {
+    setBusyId(jobId);
+    setNote("");
+    setError("");
+    try {
+      const res = await fetch(`/api/auth/me/matches/${jobId}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vote, reason }),
+      });
+      if (!res.ok) {
+        setError(t.recommendationsFeedbackError);
+        return;
+      }
+      const payload = await res.json();
+      setMatches((current) => {
+        if (!current?.matches) return current;
+        return {
+          ...current,
+          matches: current.matches.map((item) =>
+            item.job_id === jobId
+              ? { ...item, feedback: { vote: payload.vote, reason: payload.reason || "" } }
+              : item,
+          ),
+        };
+      });
+      setNote(t.recommendationsFeedbackSaved);
+    } catch {
+      setError(t.recommendationsFeedbackError);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const consentOk = roles?.matching_consent !== false && matches?.matching_consent !== false;
+  const candidate = Boolean(me?.candidate || me?.staff);
+  const roleList = Array.isArray(roles?.roles) ? roles.roles : [];
+
+  function pickRole(roleName) {
+    setActiveRole(roleName);
+    if (typeof window !== "undefined") {
+      const next = hrefFor(locale, { mode: "recommendationJobs", role: roleName });
+      window.history.replaceState(null, "", next);
+    }
+  }
+
+  return (
+    <Shell locale={locale} mode="recommendations">
+      {me === undefined ? null : candidate ? (
+        <div className="h2-candidate recommendations-page recommendations-jobs-page">
           <PageChrome
-            backHref={hrefFor(locale)}
-            backLabel={t.breadcrumbHome}
-            title={t.recommendationsTitle}
+            backHref={hrefFor(locale, { mode: "recommendations" })}
+            backLabel={t.recommendationsTitle}
+            title={t.recommendationsJobs}
+            count={total || null}
           />
-          <div className="h2-empty h2-gate">
-            <p>{t.recommendationsGate}</p>
-            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "recommendations" })} />
-          </div>
+          <p className="hint recommendations-disclaimer">{t.recommendationsDisclaimer}</p>
+
+          {!consentOk ? (
+            <p className="hint h2-consent-banner">
+              {t.recommendationsConsent}{" "}
+              <a href={hrefFor(locale, { mode: "profile" })}>{t.recommendationsConsentLink}</a>
+            </p>
+          ) : null}
+
+          {note ? <p className="hint ok">{note}</p> : null}
+          {error ? <p className="hint error">{error}</p> : null}
+
+          {roleList.length ? (
+            <div className="h2-panel reco-role-switch" role="tablist" aria-label={t.recommendationsRoles}>
+              {roleList.map((role) => {
+                const on = activeRole === role.canonical_name;
+                return (
+                  <button
+                    key={role.canonical_name}
+                    type="button"
+                    role="tab"
+                    aria-selected={on}
+                    className={on ? "reco-role-chip on" : "reco-role-chip"}
+                    onClick={() => pickRole(role.canonical_name)}
+                  >
+                    {role.canonical_name}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="hint">
+              {t.recommendationsEmptyRoles}{" "}
+              <a href={hrefFor(locale, { mode: "profileReview" })}>{t.profileReviewOpen}</a>
+            </p>
+          )}
+
+          <section className="h2-panel recommendations-jobs-list">
+            {!total ? (
+              <p className="hint">{t.recommendationsEmptyJobs}</p>
+            ) : (
+              <>
+                <ul className="reco-jobs">
+                  {pageItems.map((job) => (
+                    <MatchJob
+                      key={job.job_id}
+                      t={t}
+                      locale={locale}
+                      job={job}
+                      busy={busyId === job.job_id}
+                      onFeedback={sendFeedback}
+                    />
+                  ))}
+                </ul>
+                <Pager
+                  locale={locale}
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  total={total}
+                  pageSize={pageSize}
+                  onPageChange={goToPage}
+                />
+              </>
+            )}
+          </section>
         </div>
+      ) : (
+        <Gate
+          locale={locale}
+          title={t.recommendationsJobs}
+          message={t.recommendationsGate}
+          returnTo={hrefFor(locale, { mode: "recommendationJobs" })}
+        />
       )}
     </Shell>
   );
