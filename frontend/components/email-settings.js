@@ -45,7 +45,7 @@ function applyPrefs(data, setters, fallbackLang) {
   setters.setMatchNear(data.match_near !== false);
   setters.setProfileNudge(data.profile_nudge !== false);
   setters.setCoachWeekly(data.coach_weekly !== false);
-  setters.setPushEnabled(Boolean(data.push_enabled));
+  setters.setPushEnabled(data.push_enabled !== false);
   setters.setLanguage(data.language || fallbackLang);
   setters.setSendWeekday(typeof data.send_weekday === "number" ? data.send_weekday : 0);
 }
@@ -71,7 +71,7 @@ export function EmailSettings({ locale, initialPrefs = null }) {
     seededPrefs ? initialPrefs.coach_weekly !== false : true,
   );
   const [pushEnabled, setPushEnabled] = useState(() =>
-    seededPrefs ? Boolean(initialPrefs.push_enabled) : false,
+    seededPrefs ? initialPrefs.push_enabled !== false : true,
   );
   const [language, setLanguage] = useState(() => (seededPrefs ? initialPrefs.language || fallbackLang : fallbackLang));
   const [sendWeekday, setSendWeekday] = useState(() =>

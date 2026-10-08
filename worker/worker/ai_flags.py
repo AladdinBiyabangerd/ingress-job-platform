@@ -161,7 +161,8 @@ def feature_on(feature: str, conn=None) -> bool:
         return bool(stored[feature])
     if env is True:
         return True
-    if feature in {"gateway", "job_tidy"}:
+    # Notification engagement copy defaults on with the key (same as gateway).
+    if feature in {"gateway", "job_tidy", "engagement_copy"}:
         return key_configured()
     return feature_on("gateway", conn)
 

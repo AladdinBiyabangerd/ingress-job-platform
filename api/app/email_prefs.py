@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS email_prefs (
     updated_at TEXT NOT NULL,
     match_near INTEGER NOT NULL DEFAULT 1,
     coach_weekly INTEGER NOT NULL DEFAULT 1,
-    push_enabled INTEGER NOT NULL DEFAULT 0
+    push_enabled INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS email_log (
@@ -49,7 +49,7 @@ CREATE INDEX IF NOT EXISTS email_log_kind_period ON email_log(kind, period_key);
 _PREF_COLUMNS = {
     "match_near": "INTEGER NOT NULL DEFAULT 1",
     "coach_weekly": "INTEGER NOT NULL DEFAULT 1",
-    "push_enabled": "INTEGER NOT NULL DEFAULT 0",
+    "push_enabled": "INTEGER NOT NULL DEFAULT 1",
 }
 
 
@@ -159,7 +159,7 @@ def _row_prefs(row) -> dict:
             "profile_nudge": True,
             "match_near": True,
             "coach_weekly": True,
-            "push_enabled": False,
+            "push_enabled": True,
             "language": "az",
             "send_weekday": 0,
             "unsubscribed_at": "",
@@ -172,7 +172,7 @@ def _row_prefs(row) -> dict:
         "profile_nudge": _bool_col(row, "profile_nudge", default=True),
         "match_near": _bool_col(row, "match_near", default=True),
         "coach_weekly": _bool_col(row, "coach_weekly", default=True),
-        "push_enabled": _bool_col(row, "push_enabled", default=False),
+        "push_enabled": _bool_col(row, "push_enabled", default=True),
         "language": _normalize_language(row["language"] if "language" in row.keys() else row[5]),
         "send_weekday": _normalize_weekday(row["send_weekday"] if "send_weekday" in row.keys() else row[6]),
         "unsubscribed_at": str(

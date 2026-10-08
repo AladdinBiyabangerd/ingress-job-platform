@@ -183,7 +183,7 @@ class EngagementPhase1Tests(unittest.TestCase):
         self.assertTrue(prefs["match_near"])
         self.assertTrue(prefs["coach_weekly"])
         self.assertTrue(prefs["profile_nudge"])
-        self.assertFalse(prefs["push_enabled"])
+        self.assertTrue(prefs["push_enabled"])
 
         with self._auth("job:candidate", subject):
             saved = self.client.put(
@@ -194,7 +194,7 @@ class EngagementPhase1Tests(unittest.TestCase):
                     "match_near": False,
                     "coach_weekly": True,
                     "profile_nudge": False,
-                    "push_enabled": True,
+                    "push_enabled": False,
                 },
             )
         self.assertEqual(saved.status_code, 200, saved.text)
@@ -202,7 +202,7 @@ class EngagementPhase1Tests(unittest.TestCase):
         self.assertFalse(body["match_near"])
         self.assertTrue(body["coach_weekly"])
         self.assertFalse(body["profile_nudge"])
-        self.assertTrue(body["push_enabled"])
+        self.assertFalse(body["push_enabled"])
 
 
 class EngagementPhase2Tests(unittest.TestCase):

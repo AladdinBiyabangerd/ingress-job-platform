@@ -1,8 +1,8 @@
 """Staff-controlled AI flow flags in the shared jobs DB.
 
 Env still hard-offs a feature when set to 0/false/off. A DB row then wins.
-With no row, behaviour matches today (gateway on when OPENAI_API_KEY is set;
-other flows follow gateway except job tidy, which follows the key).
+With no row: gateway / job_tidy / engagement_copy default on when OPENAI_API_KEY
+is set; other flows follow gateway.
 """
 
 from __future__ import annotations
@@ -172,7 +172,8 @@ def feature_on(feature: str, conn=None) -> bool:
         return bool(stored[feature])
     if env is True:
         return True
-    if feature in {"gateway", "job_tidy"}:
+    # Notification engagement copy defaults on with the key (same as gateway).
+    if feature in {"gateway", "job_tidy", "engagement_copy"}:
         return key_configured()
     return feature_on("gateway", conn)
 
