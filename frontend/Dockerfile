@@ -2,7 +2,7 @@ FROM node:22-slim
 
 ENV NEXT_TELEMETRY_DISABLED=1 \
     PORT=3010 \
-    NODE_OPTIONS="--dns-result-order=ipv6first"
+    NODE_OPTIONS="--dns-result-order=ipv4first"
 
 WORKDIR /app
 

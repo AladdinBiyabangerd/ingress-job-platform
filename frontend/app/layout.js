@@ -1,16 +1,16 @@
 import { headers } from "next/headers";
 import "./globals.css";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import "@fontsource/plus-jakarta-sans/latin-400.css";
+import "@fontsource/plus-jakarta-sans/latin-500.css";
+import "@fontsource/plus-jakarta-sans/latin-600.css";
+import "@fontsource/plus-jakarta-sans/latin-700.css";
+import "@fontsource/plus-jakarta-sans/latin-ext-400.css";
+import "@fontsource/plus-jakarta-sans/latin-ext-500.css";
+import "@fontsource/plus-jakarta-sans/latin-ext-600.css";
+import "@fontsource/plus-jakarta-sans/latin-ext-700.css";
 import { MeSeed } from "../components/me-seed";
 import { getMe } from "../lib/server/me";
 import { SITE, homeMetadata, siteOrigin } from "../lib/seo";
-
-const sans = Plus_Jakarta_Sans({
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-  fallback: ["system-ui", "sans-serif"],
-});
 
 const defaults = homeMetadata("az");
 
@@ -55,7 +55,7 @@ export default async function RootLayout({ children }) {
   const locale = headerList.get("x-locale") || "az";
   const me = await getMe();
   return (
-    <html lang={locale} className={sans.className}>
+    <html lang={locale}>
       <body>
         <MeSeed me={me}>{children}</MeSeed>
       </body>
