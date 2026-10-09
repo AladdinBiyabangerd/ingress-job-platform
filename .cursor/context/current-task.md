@@ -1,28 +1,23 @@
 # Current task
 
 ## Completed
-- Notifications Design C (triptych) implemented — not deployed/committed yet
-- Prior: engagement `inapp_count_today` LIKE/`%i` fix (awaiting deploy)
+- Browser tab title unread badge: `(N) …` via `document.title` (like Instagram/YouTube)
+- Prior (uncommitted): Notifications Design C + growth rail
 
 ## Current state
-- `/notifications` uses 3-zone layout: filters | feed | growth rail
-- Growth rail upgraded from plain bullet list → journey: hero + match ring + skill pills + vertical path spine + course CTA
-- Filter + client pagination for large lists; mobile opens rail as detail pane
+- Logged-in users with unread > 0 get `(2) Ingress Job — …` in the Chrome tab
+- Bell + notifications page stay in sync via `ingress:unread-notifications` event
+- Title prefix survives Next.js client navigations (MutationObserver on `<title>`)
 
 ## Decisions
-- Filter buckets map to existing kinds (matches / learning / profile / apps)
-- Öyrənmə filter = `coach_weekly` only (`match_near` stays under Fürsətlər)
-- No new API fields — payload `learning_roadmap` + `roadmap` + skills only
-- Rail reuses roadmap SkillPills + check styles; path is timeline not nested cards
+- Prefix only; no favicon badge
+- Cap display at `99+` (matches bell UI)
 
 ## Remaining
-1. User visual review of richer growth rail (live `/notifications`)
-2. Commit when user asks
-3. Still open from prior: deploy engagement SQL fix + worker re-run
+1. User verify live: tab shows `(2)` when bell shows 2; clears after mark-all-read
+2. Commit when user asks (includes prior Design C + this title badge if desired)
 
 ## Relevant files
-- `frontend/components/notifications-page.js` (`GrowthRail`, `RailMatchRing`)
-- `frontend/components/roadmap.js` (exported `SkillPills`)
-- `frontend/app/globals.css` (`.notes-c-rail*`)
-- Preview: `.cursor/context/designs/notes-c-rail-journey.png`
-- Design refs: `.cursor/context/designs/notifications-design-c-triptych.png`
+- `frontend/lib/unread-document-title.js`
+- `frontend/components/notifications-bell.js`
+- `frontend/components/notifications-page.js` (publish on unread change)

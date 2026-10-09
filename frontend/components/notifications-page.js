@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { markAllNotificationsRead, markNotificationRead, refreshNotifications } from "../lib/server/refresh";
+import { publishUnreadNotifications } from "../lib/unread-document-title";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
 import { enableBrowserPush, pushSupported } from "../lib/web-push";
 import { Pager } from "./pager";
@@ -467,6 +468,10 @@ export function NotificationsPage({ locale, initialItems = null, initialUnread =
     setItems(data.items);
     setUnread(data.unread);
   }
+
+  useEffect(() => {
+    publishUnreadNotifications(unread);
+  }, [unread]);
 
   useEffect(() => {
     if (initialMe && typeof initialMe === "object") {

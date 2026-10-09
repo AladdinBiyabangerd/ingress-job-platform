@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
+import {
+  UNREAD_NOTIFICATIONS_EVENT,
+  applyUnreadDocumentTitle,
+  stripUnreadTitlePrefix,
+} from "../lib/unread-document-title";
 
 /** Badge uses SSR /me.unread_notifications when present — skips /api/auth/notifications. */
 export function NotificationsBell({ locale, initialUnread }) {
@@ -27,6 +32,35 @@ export function NotificationsBell({ locale, initialUnread }) {
       cancelled = true;
     };
   }, [initialUnread]);
+
+  useEffect(() => {
+    function onUnread(event) {
+      const next = Number(event?.detail?.unread);
+      if (Number.isFinite(next)) setUnread(Math.max(0, Math.floor(next)));
+    }
+    window.addEventListener(UNREAD_NOTIFICATIONS_EVENT, onUnread);
+    return () => window.removeEventListener(UNREAD_NOTIFICATIONS_EVENT, onUnread);
+  }, []);
+
+  useEffect(() => {
+    applyUnreadDocumentTitle(unread);
+
+    const titleEl = document.querySelector("title");
+    if (!titleEl || typeof MutationObserver === "undefined") {
+      return undefined;
+    }
+
+    const observer = new MutationObserver(() => {
+      // Next.js client navigations rewrite <title>; keep the unread prefix.
+      if (unread > 0 && !/^\((\d+\+?)\)\s+/.test(document.title)) {
+        applyUnreadDocumentTitle(unread);
+      } else if (unread <= 0 && /^\((\d+\+?)\)\s+/.test(document.title)) {
+        document.title = stripUnreadTitlePrefix(document.title);
+      }
+    });
+    observer.observe(titleEl, { childList: true, characterData: true, subtree: true });
+    return () => observer.disconnect();
+  }, [unread]);
 
   const label = unread > 0 ? t.notificationsUnread(unread) : t.notifications;
 
