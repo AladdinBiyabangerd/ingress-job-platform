@@ -1,25 +1,26 @@
 # Current task
 
 ## Completed
-- Worker `JOB_API_BASE_URL` fixed (connectivity)
-- Root cause of engagement 500 found and fixed locally
+- Notifications Design C (triptych) implemented — not deployed/committed yet
+- Prior: engagement `inapp_count_today` LIKE/`%i` fix (awaiting deploy)
 
 ## Current state
-- **Bug:** `inapp_count_today` used `LIKE '%in_app%'` → psycopg saw `%i` as placeholder → `ProgrammingError`
-- **Fix:** parameterized `LIKE ?` + `translate_sql` doubles `%` inside SQL string literals
-- Awaiting deploy + worker re-run to verify `/notifications`
+- `/notifications` uses 3-zone layout: filters | feed | growth rail
+- Feed cards are compact; roadmap/`this_week` lives in sticky right rail
+- Filter + client pagination for large lists; mobile opens rail as detail pane
 
 ## Decisions
-- Escape `%` in quoted SQL for Postgres adapter (psycopg requirement)
-- Prefer bind params for LIKE patterns
+- Filter buckets map to existing kinds (matches / learning / profile / apps)
+- `match_near` appears under both Fürsətlər and Öyrənmə
+- No new API fields — payload `learning_roadmap` + `roadmap` + skills only
 
 ## Remaining
-1. Commit/deploy API fix
-2. Re-trigger worker / engagement-jobs
-3. Verify `/notifications` + optional email
-4. AI quota (gemini 429 / groq 403) is separate — soft-fail for copy; not the 500
+1. Visual QA on desktop / tablet / mobile with many notifications
+2. Commit when user asks
+3. Still open from prior: deploy engagement SQL fix + worker re-run
 
 ## Relevant files
-- `api/app/engagement.py` (`inapp_count_today`)
-- `api/app/jobs_db.py` (`translate_sql`)
-- `api/tests/test_jobs_db.py`, `api/tests/test_engagement.py`
+- `frontend/components/notifications-page.js`
+- `frontend/app/globals.css` (`.notes-c*`)
+- `frontend/lib/copy.js` (filter/growth strings az/en/ru)
+- Design refs: `.cursor/context/designs/notifications-design-c-triptych.png`
