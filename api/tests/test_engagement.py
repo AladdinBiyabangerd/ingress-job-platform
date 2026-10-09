@@ -357,28 +357,46 @@ class EngagementPhase2Tests(unittest.TestCase):
         self._grant(subject, emails=False, matching=True)
         conn = _connect()
         try:
-            academy = build_growth_cta(
-                conn,
-                user_id=subject,
-                missing_skills=["Kubernetes", "Spark"],
-                lang="en",
-            )
+            with patch("app.learning_roadmap.complete_json") as ai:
+                from app.ai_gateway import GatewayResult
+
+                ai.return_value = GatewayResult(ok=False, error="disabled")
+                academy = build_growth_cta(
+                    conn,
+                    user_id=subject,
+                    missing_skills=["Kubernetes", "Spark"],
+                    lang="en",
+                    allow_ai_provider=False,
+                )
             self.assertTrue(academy["academy_courses"])
             self.assertEqual(academy["academy_courses"][0]["slug"], "k8s-fundamentals")
             self.assertIn("utm_medium=notification", academy["academy_courses"][0]["url"])
-            self.assertEqual(academy["roadmap"], [])
+            # Course + AI/template fill for uncovered Spark → hybrid rich shape.
+            rich = academy.get("learning_roadmap") or {}
+            self.assertTrue(rich)
+            self.assertIn(rich.get("source"), {"academy", "hybrid", "ai"})
+            self.assertTrue(rich.get("milestones"))
+            # Legacy list still covers unmapped Spark.
+            spark_rows = [r for r in (academy.get("roadmap") or []) if r.get("skill") == "Spark"]
+            self.assertTrue(spark_rows)
 
-            roadmap = build_growth_cta(
-                conn,
-                user_id=subject,
-                missing_skills=["Spark"],
-                lang="en",
-            )
+            with patch("app.learning_roadmap.complete_json") as ai:
+                from app.ai_gateway import GatewayResult
+
+                ai.return_value = GatewayResult(ok=False, error="disabled")
+                roadmap = build_growth_cta(
+                    conn,
+                    user_id=subject,
+                    missing_skills=["Spark"],
+                    lang="en",
+                    allow_ai_provider=False,
+                )
             # Spark has no course; career path may also be empty without taxonomy → roadmap.
             if not roadmap.get("academy_courses") and not roadmap.get("career_path"):
                 self.assertTrue(roadmap["roadmap"])
                 self.assertTrue(roadmap["roadmap"][0]["coming_soon"])
                 self.assertEqual(roadmap["roadmap"][0]["skill"], "Spark")
+                self.assertEqual((roadmap.get("learning_roadmap") or {}).get("source"), "ai")
         finally:
             conn.close()
 

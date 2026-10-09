@@ -13,6 +13,7 @@ const FLOWS = [
   ["llm_rerank", "adminAiLlmRerank"],
   ["match_why", "adminAiWhy"],
   ["role_coach", "adminAiRoleCoach"],
+  ["learning_roadmap", "adminAiLearningRoadmap"],
   ["digest_intro", "adminAiDigest"],
   ["engagement_copy", "adminAiEngagement"],
 ];

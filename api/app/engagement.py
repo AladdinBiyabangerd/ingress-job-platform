@@ -81,21 +81,22 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 CREATE INDEX IF NOT EXISTS push_sub_user ON push_subscriptions(user_id);
 """
 
+# Kept for locale validation + email fallback; rich steps live in learning_roadmap.
 ROADMAP_STEPS = {
     "az": (
         "Əsas anlayışları və rəsmi sənədləri öyrən",
         "Kiçik layihədə və ya lab-da tətbiq et",
-        "Ingress training tezliklə əlavə olunacaq",
+        "Nəticəni CV və müraciətdə göstər",
     ),
     "en": (
         "Learn the core concepts and official docs",
         "Practice in a small project or lab",
-        "Ingress training coming soon",
+        "Show the result on your CV and applications",
     ),
     "ru": (
         "Изучите основы и официальную документацию",
         "Закрепите на небольшом проекте или в лаборатории",
-        "Обучение Ingress скоро будет добавлено",
+        "Покажите результат в CV и откликах",
     ),
 }
 
@@ -109,7 +110,7 @@ NEAR_EMAIL_COPY = {
             "Baxın: {url}"
         ),
         "growth_academy": "Öyrən: {skills} → {href}",
-        "growth_roadmap": "Öyrənmə yolu: {skills}. Ingress training tezliklə əlavə olunacaq.",
+        "growth_roadmap": "Öyrənmə yolu: {skills}. Tam yol: /me/insights/roadmap",
     },
     "en": {
         "subject": "Almost a match — grow a skill: {title}",
@@ -120,7 +121,7 @@ NEAR_EMAIL_COPY = {
             "View: {url}"
         ),
         "growth_academy": "Learn: {skills} → {href}",
-        "growth_roadmap": "Learning path: {skills}. Ingress training coming soon.",
+        "growth_roadmap": "Learning path: {skills}. Full path: /me/insights/roadmap",
     },
     "ru": {
         "subject": "Почти совпадение — подтяните навык: {title}",
@@ -131,7 +132,7 @@ NEAR_EMAIL_COPY = {
             "Смотреть: {url}"
         ),
         "growth_academy": "Учить: {skills} → {href}",
-        "growth_roadmap": "План обучения: {skills}. Обучение Ingress скоро будет добавлено.",
+        "growth_roadmap": "План обучения: {skills}. Полный путь: /me/insights/roadmap",
     },
 }
 
@@ -575,8 +576,15 @@ def build_growth_cta(
     user_id: str,
     missing_skills: list[str] | list[dict[str, Any]],
     lang: str | None = None,
+    have_skills: list[str] | list[dict[str, Any]] | None = None,
+    role: str = "",
+    near_titles: list[str] | None = None,
+    allow_ai_provider: bool = True,
+    week_key: str = "",
 ) -> dict[str, Any]:
-    """Academy course → career-path → roadmap stub for near-miss / growth emails."""
+    """Academy course + career-path together, then AI/template roadmap fill."""
+    from app.learning_roadmap import build_learning_roadmap, legacy_roadmap_steps
+
     locale = _lang(lang)
     names: list[str] = []
     for item in missing_skills or []:
@@ -584,26 +592,44 @@ def build_growth_cta(
             name = str(item.get("name") or "").strip()
         else:
             name = str(item or "").strip()
-        if name:
+        if name and name not in names:
             names.append(name)
-    courses = _academy_courses_for_skills(conn, names)
-    career = _career_path_for_user(conn, user_id=user_id, lang=locale) if not courses else {}
-    roadmap: list[dict[str, Any]] = []
-    if not courses and not career:
-        steps = list(ROADMAP_STEPS[locale])
-        for name in names[:3]:
-            roadmap.append({"skill": name, "steps": steps, "coming_soon": True})
+    rich = build_learning_roadmap(
+        conn,
+        user_id=user_id,
+        missing_skills=names,
+        have_skills=have_skills or [],
+        role=role,
+        lang=locale,
+        near_titles=near_titles,
+        week_key=week_key or week_period_key(),
+        allow_ai_provider=allow_ai_provider,
+        utm_medium="notification",
+    )
+    courses = list(rich.get("academy_courses") or [])
+    career = rich.get("career_path") if isinstance(rich.get("career_path"), dict) else {}
+    # Course + path together (no longer mutually exclusive).
+    if not career:
+        career = _career_path_for_user(conn, user_id=user_id, lang=locale)
+    roadmap = legacy_roadmap_steps(
+        list(rich.get("milestones") or []),
+        locale=locale,
+        missing=names,
+    )
     secondary = ""
     if courses:
         secondary = courses[0]["url"]
-    elif career:
+    elif isinstance(career, dict) and career.get("url"):
         secondary = career["url"]
+    elif rich.get("cta_primary"):
+        secondary = str(rich["cta_primary"])
     return {
         "academy_courses": courses,
         "career_path": career or None,
         "roadmap": roadmap,
+        "learning_roadmap": rich,
         "cta_secondary_href": secondary or "/me/recommendations",
-        "missing_names": names,
+        "missing_names": names or list(rich.get("missing_names") or []),
     }
 
 
@@ -731,6 +757,8 @@ def _event_payload(
             payload["academy_courses"] = growth["academy_courses"]
         if growth.get("roadmap"):
             payload["roadmap"] = growth["roadmap"]
+        if growth.get("learning_roadmap"):
+            payload["learning_roadmap"] = growth["learning_roadmap"]
         secondary = str(growth.get("cta_secondary_href") or "").strip()
         if secondary:
             payload["cta_secondary_href"] = secondary
@@ -1117,6 +1145,7 @@ def build_coach_weekly_context(
     *,
     user_id: str,
     lang: str | None = None,
+    allow_ai_provider: bool = True,
 ) -> dict[str, Any] | None:
     """Top role + skill gap (+ optional coach) for coach_weekly / insights."""
     from app.role_suggestions import suggest_roles_payload
@@ -1136,7 +1165,7 @@ def build_coach_weekly_context(
         role=role_name,
         top=5,
         lang=locale,
-        allow_ai_provider=True,
+        allow_ai_provider=allow_ai_provider,
     )
     must_learn = [
         str(item.get("name") or "").strip()
@@ -1152,7 +1181,11 @@ def build_coach_weekly_context(
         conn,
         user_id=user_id,
         missing_skills=must_learn,
+        have_skills=already_strong,
+        role=role_name,
         lang=locale,
+        allow_ai_provider=allow_ai_provider,
+        week_key=week_period_key(),
     )
     coach = gap.get("coach") if isinstance(gap.get("coach"), dict) else None
     return {
@@ -1183,10 +1216,16 @@ def _coach_event_payload(ctx: dict[str, Any]) -> dict[str, Any]:
         payload["academy_courses"] = growth["academy_courses"]
     if growth.get("roadmap"):
         payload["roadmap"] = growth["roadmap"]
+    if growth.get("learning_roadmap"):
+        payload["learning_roadmap"] = growth["learning_roadmap"]
     secondary = str(growth.get("cta_secondary_href") or "").strip()
     if secondary and secondary != "/me/recommendations":
         payload["cta_secondary_href"] = secondary
     path_id = str(ctx.get("academy_career_path") or "").strip()
+    if not path_id:
+        career = growth.get("career_path") or {}
+        if isinstance(career, dict):
+            path_id = str(career.get("path_id") or "").strip()
     if path_id:
         payload["academy_career_path"] = path_id
     coach = ctx.get("coach")
@@ -1605,7 +1644,8 @@ def insights_payload(
         "near_misses": [],
         "academy_courses": [],
         "roadmap": [],
-        "cta_href": "/me/recommendations",
+        "learning_roadmap": None,
+        "cta_href": "/me/insights/roadmap",
     }
     if not matching:
         return base
@@ -1614,7 +1654,12 @@ def insights_payload(
     live_ctx = None
     if str(profile.get("status") or "") == "confirmed":
         try:
-            live_ctx = build_coach_weekly_context(conn, user_id=user_id, lang=locale)
+            live_ctx = build_coach_weekly_context(
+                conn,
+                user_id=user_id,
+                lang=locale,
+                allow_ai_provider=False,
+            )
         except Exception:
             live_ctx = None
 
@@ -1628,6 +1673,7 @@ def insights_payload(
             "ai_body": stored_coach.get("ai_body") or "",
             "academy_courses": stored_coach.get("academy_courses") or [],
             "roadmap": stored_coach.get("roadmap") or [],
+            "learning_roadmap": stored_coach.get("learning_roadmap"),
             "academy_career_path": stored_coach.get("academy_career_path") or "",
             "cta_href": stored_coach.get("cta_href") or "/me/insights",
         }
@@ -1637,6 +1683,9 @@ def insights_payload(
         for step in stored_coach.get("roadmap") or []:
             if isinstance(step, dict):
                 base["roadmap"].append(step)
+        stored_lr = stored_coach.get("learning_roadmap")
+        if isinstance(stored_lr, dict) and str(stored_lr.get("week_key") or "") == base["week_key"]:
+            base["learning_roadmap"] = stored_lr
     elif live_ctx:
         live_payload = _coach_event_payload(live_ctx)
         base["coach"] = {
@@ -1648,21 +1697,28 @@ def insights_payload(
             "ai_body": "",
             "academy_courses": live_payload.get("academy_courses") or [],
             "roadmap": live_payload.get("roadmap") or [],
+            "learning_roadmap": live_payload.get("learning_roadmap"),
             "academy_career_path": live_payload.get("academy_career_path") or "",
-            "cta_href": "/me/recommendations",
+            "cta_href": "/me/insights/roadmap",
             "coach_detail": live_ctx.get("coach"),
         }
         base["academy_courses"] = list(live_payload.get("academy_courses") or [])
         base["roadmap"] = list(live_payload.get("roadmap") or [])
+        if isinstance(live_payload.get("learning_roadmap"), dict):
+            base["learning_roadmap"] = live_payload["learning_roadmap"]
 
     near_notes = _recent_near_notifications(conn, user_id=user_id, limit=5)
+    near_titles: list[str] = []
     if near_notes:
         for note in near_notes:
             pl = note.get("payload") or {}
+            title = str(note.get("job_title") or pl.get("job_title") or "").strip()
+            if title:
+                near_titles.append(title)
             base["near_misses"].append(
                 {
                     "job_id": note.get("job_id") or pl.get("job_id"),
-                    "job_title": note.get("job_title") or pl.get("job_title") or "",
+                    "job_title": title,
                     "score": pl.get("score"),
                     "have": pl.get("have") or [],
                     "missing": pl.get("missing") or [],
@@ -1687,12 +1743,18 @@ def insights_payload(
                 conn,
                 user_id=user_id,
                 missing_skills=near.get("missing") or [],
+                have_skills=near.get("have") or [],
                 lang=locale,
+                near_titles=[str(near.get("title") or "").strip()] if near.get("title") else None,
+                allow_ai_provider=False,
             )
+            title = str(near.get("title") or "").strip()
+            if title:
+                near_titles.append(title)
             base["near_misses"].append(
                 {
                     "job_id": near["job_id"],
-                    "job_title": near.get("title") or "",
+                    "job_title": title,
                     "score": near.get("score"),
                     "have": near.get("have") or [],
                     "missing": [{"name": n} for n in (near.get("missing") or [])],
@@ -1707,6 +1769,48 @@ def insights_payload(
                 base["academy_courses"] = list(growth["academy_courses"])
             if not base["roadmap"] and growth.get("roadmap"):
                 base["roadmap"] = list(growth["roadmap"])
+            if not base["learning_roadmap"] and growth.get("learning_roadmap"):
+                base["learning_roadmap"] = growth["learning_roadmap"]
+
+    # Fresh rich roadmap for Insights when coach payload lacked one (or to refresh).
+    if not base["learning_roadmap"] and str(profile.get("status") or "") == "confirmed":
+        try:
+            role = ""
+            must: list[str] = []
+            have: list[str] = []
+            if live_ctx:
+                role = str(live_ctx.get("role") or "")
+                must = list(live_ctx.get("must_learn") or [])
+                have = list(live_ctx.get("already_strong") or [])
+            elif base.get("coach"):
+                role = str(base["coach"].get("role") or "")
+                must = [
+                    str(x.get("name") if isinstance(x, dict) else x).strip()
+                    for x in (base["coach"].get("must_learn") or [])
+                ]
+                have = [
+                    str(x.get("name") if isinstance(x, dict) else x).strip()
+                    for x in (base["coach"].get("already_strong") or [])
+                ]
+            if must or have or role:
+                growth = build_growth_cta(
+                    conn,
+                    user_id=user_id,
+                    missing_skills=[n for n in must if n],
+                    have_skills=[n for n in have if n],
+                    role=role,
+                    lang=locale,
+                    near_titles=near_titles,
+                    allow_ai_provider=False,
+                    week_key=base["week_key"],
+                )
+                base["learning_roadmap"] = growth.get("learning_roadmap")
+                if not base["academy_courses"] and growth.get("academy_courses"):
+                    base["academy_courses"] = list(growth["academy_courses"])
+                if not base["roadmap"] and growth.get("roadmap"):
+                    base["roadmap"] = list(growth["roadmap"])
+        except Exception:
+            pass
 
     return base
 

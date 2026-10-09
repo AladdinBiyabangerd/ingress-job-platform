@@ -98,32 +98,46 @@ function scorePct(payload) {
   return Math.round(score * 100);
 }
 
-function RoadmapBlock({ t, roadmap }) {
-  if (!Array.isArray(roadmap) || roadmap.length === 0) return null;
+function RoadmapBlock({ t, locale, roadmap, learningRoadmap }) {
+  const rich = learningRoadmap && typeof learningRoadmap === "object" ? learningRoadmap : null;
+  const heroTitle = String(rich?.hero?.title || "").trim();
+  const list = Array.isArray(roadmap) ? roadmap : [];
+  if (!heroTitle && list.length === 0) return null;
   return (
     <div className="notice-roadmap">
       <p className="hint notice-roadmap-title">{t.noticeRoadmapTitle}</p>
-      <ul className="notice-roadmap-list">
-        {roadmap.slice(0, 3).map((entry, index) => {
-          const skill = String(entry?.skill || "").trim();
-          const steps = Array.isArray(entry?.steps) ? entry.steps.filter(Boolean) : [];
-          return (
-            <li key={skill || `roadmap-${index}`}>
-              {skill ? <strong>{skill}</strong> : null}
-              {entry?.coming_soon ? (
-                <span className="hint"> — {t.noticeComingSoon}</span>
-              ) : null}
-              {steps.length ? (
-                <ol>
-                  {steps.slice(0, 3).map((step) => (
-                    <li key={String(step)}>{String(step)}</li>
-                  ))}
-                </ol>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
+      {heroTitle ? (
+        <p className="notice-roadmap-hero">
+          <strong className="notice-roadmap-hero-title">{heroTitle}</strong>
+          {rich?.hero?.lede ? <span className="hint"> — {String(rich.hero.lede)}</span> : null}
+        </p>
+      ) : null}
+      {list.length ? (
+        <ul className="notice-roadmap-list">
+          {list.slice(0, 3).map((entry, index) => {
+            const skill = String(entry?.skill || "").trim();
+            const steps = Array.isArray(entry?.steps) ? entry.steps.filter(Boolean) : [];
+            return (
+              <li key={skill || `roadmap-${index}`}>
+                {skill ? <strong>{skill}</strong> : null}
+                {entry?.coming_soon ? (
+                  <span className="hint"> — {t.noticeComingSoon}</span>
+                ) : null}
+                {steps.length ? (
+                  <ol>
+                    {steps.slice(0, 3).map((step) => (
+                      <li key={String(step)}>{String(step)}</li>
+                    ))}
+                  </ol>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      <a className="btn small" href={hrefFor(locale, { mode: "insightsRoadmap" })}>
+        {t.roadmapOpenFull}
+      </a>
     </div>
   );
 }
@@ -147,7 +161,12 @@ function EngagementCard({ t, locale, item, onMark }) {
         </div>
       </div>
       <RoleSkillParts t={t} have={payload.have} missing={payload.missing || payload.must_learn} />
-      <RoadmapBlock t={t} roadmap={payload.roadmap} />
+      <RoadmapBlock
+        t={t}
+        locale={locale}
+        roadmap={payload.roadmap}
+        learningRoadmap={payload.learning_roadmap}
+      />
       <div className="notice-actions">
         <a className="btn small ink" href={primary}>
           {item.kind === "profile_nudge"

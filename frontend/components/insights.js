@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { RoleSkillParts } from "./role-skill-parts";
+import { RoadmapPreview } from "./roadmap";
 import { CareerPathLink } from "./skill-gap-bits";
 import { PageChrome } from "./page-chrome";
 import { RegisterChoice } from "./register-choice";
@@ -136,10 +137,12 @@ function NearMissSection({ t, locale, items }) {
   );
 }
 
-function GrowthSection({ t, courses, roadmap }) {
+function GrowthSection({ t, locale, courses, roadmap, learningRoadmap }) {
   const list = Array.isArray(courses) ? courses : [];
   const roads = Array.isArray(roadmap) ? roadmap : [];
-  if (!list.length && !roads.length) {
+  const rich = learningRoadmap && typeof learningRoadmap === "object" ? learningRoadmap : null;
+  const hasRich = Boolean(rich && (rich.hero || (rich.milestones || []).length));
+  if (!list.length && !roads.length && !hasRich) {
     return (
       <section className="h2-panel">
         <h2 className="h2-panel-title">{t.insightsGrowthTitle}</h2>
@@ -150,9 +153,10 @@ function GrowthSection({ t, courses, roadmap }) {
   return (
     <section className="h2-panel">
       <h2 className="h2-panel-title">{t.insightsGrowthTitle}</h2>
-      {list.length ? (
+      {hasRich ? <RoadmapPreview t={t} locale={locale} roadmap={rich} /> : null}
+      {!hasRich && list.length ? (
         <ul className="insights-course-list">
-          {list.map((course) => {
+          {list.slice(0, 4).map((course) => {
             const url = String(course?.url || "").trim();
             const label = String(course?.skill || course?.slug || t.recommendationsGapCourse).trim();
             if (!url) return null;
@@ -166,13 +170,13 @@ function GrowthSection({ t, courses, roadmap }) {
           })}
         </ul>
       ) : null}
-      {roads.length ? (
+      {!hasRich && roads.length ? (
         <div className="notice-roadmap">
           {list.length ? (
             <p className="hint notice-roadmap-title">{t.noticeRoadmapTitle}</p>
           ) : null}
           <ul className="notice-roadmap-list">
-            {roads.slice(0, 5).map((entry) => {
+            {roads.slice(0, 3).map((entry) => {
               const skill = String(entry?.skill || "").trim();
               const steps = Array.isArray(entry?.steps) ? entry.steps.filter(Boolean) : [];
               return (
@@ -190,6 +194,13 @@ function GrowthSection({ t, courses, roadmap }) {
               );
             })}
           </ul>
+        </div>
+      ) : null}
+      {!hasRich ? (
+        <div className="insights-links">
+          <a className="btn small ink" href={hrefFor(locale, { mode: "insightsRoadmap" })}>
+            {t.roadmapOpenFull}
+          </a>
         </div>
       ) : null}
     </section>
@@ -268,7 +279,13 @@ export function Insights({ locale, initialInsights = null }) {
             </div>
             <aside className="insights-aside">
               <NearMissSection t={t} locale={locale} items={data?.near_misses} />
-              <GrowthSection t={t} courses={data?.academy_courses} roadmap={data?.roadmap} />
+              <GrowthSection
+                t={t}
+                locale={locale}
+                courses={data?.academy_courses}
+                roadmap={data?.roadmap}
+                learningRoadmap={data?.learning_roadmap}
+              />
             </aside>
           </div>
           <p className="hint h2-candidate-footer">
