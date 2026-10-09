@@ -61,6 +61,27 @@ class RoleCoachSkillCardTests(unittest.TestCase):
         )
         self.assertEqual(backend, shuffled)
 
+    def test_azerbaijani_prompt_requires_orthography(self):
+        from app.role_coach import _build_user
+
+        az = _build_user(
+            lang="az",
+            role_name="Java Developer",
+            have=[{"name": "Java", "weight": 1.0}],
+            missing=[{"name": "Kafka", "weight": 0.9}],
+            profile={"seniority": "middle", "skills": [{"name": "Java"}]},
+        )
+        en = _build_user(
+            lang="en",
+            role_name="Java Developer",
+            have=[{"name": "Java", "weight": 1.0}],
+            missing=[{"name": "Kafka", "weight": 0.9}],
+            profile={"seniority": "middle", "skills": [{"name": "Java"}]},
+        )
+        self.assertIn("tələblərə", az)
+        self.assertIn("Language: Azerbaijani", az)
+        self.assertNotIn("tələblərə", en)
+
 
 class RoleCoachValidateTests(unittest.TestCase):
     def setUp(self):
@@ -244,23 +265,29 @@ class SkillGapCoachWireTests(unittest.TestCase):
                                         "app.role_coach.build_role_coach",
                                         return_value=(fake_coach, ""),
                                     ):
-                                        with patch.dict(
-                                            os.environ,
-                                            {"AI_ROLE_COACH_ENABLED": "1"},
-                                            clear=False,
-                                        ):
-                                            out = skill_gap_payload(
-                                                FakeConn(),
-                                                user_id="u1",
-                                                role="Java Backend Developer",
-                                                lang="en",
-                                            )
+                                        with patch(
+                                            "app.ai_warm.schedule_skill_gap_sibling_langs"
+                                        ) as siblings:
+                                            with patch.dict(
+                                                os.environ,
+                                                {"AI_ROLE_COACH_ENABLED": "1"},
+                                                clear=False,
+                                            ):
+                                                out = skill_gap_payload(
+                                                    FakeConn(),
+                                                    user_id="u1",
+                                                    role="Java Backend Developer",
+                                                    lang="en",
+                                                )
         self.assertTrue(out["ai_coach"])
         self.assertEqual(out["coach_error"], "")
         self.assertEqual(out["coach"]["fit_summary"], fake_coach["fit_summary"])
         self.assertIn("+role_coach", out["source"])
         self.assertEqual(out["have"][0]["name"], "Java")
         self.assertEqual(out["missing"][0]["name"], "Kafka")
+        siblings.assert_called_once()
+        self.assertEqual(siblings.call_args.kwargs["lang"], "en")
+        self.assertEqual(siblings.call_args.kwargs["user_id"], "u1")
 
     def test_payload_surfaces_coach_error(self):
         from app.skill_gap import skill_gap_payload

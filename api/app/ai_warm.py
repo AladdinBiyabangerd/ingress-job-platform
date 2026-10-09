@@ -5,6 +5,10 @@ cache hits. Cache misses return ai_pending and schedule a daemon thread that
 re-runs the same payload with providers enabled, filling ai_cache for the
 next poll / request.
 
+After the current-language role coach is ready, sibling locales (az/en/ru)
+are warmed in the background so a language switch hits cache instead of
+waiting for a new generation.
+
 After a warm attempt fails, a short cooldown surfaces the real error so the
 UI stops polling instead of looping forever while providers are down.
 """
@@ -18,19 +22,33 @@ import time
 log = logging.getLogger("ingress-job.api.ai_warm")
 
 _FAIL_COOLDOWN_SEC = 90.0
+# Avoid re-scheduling sibling-lang warms on every recommendations poll.
+_SIBLING_COOLDOWN_SEC = 3600.0
+_COACH_LANGS = ("az", "en", "ru")
 
 _lock = threading.Lock()
 _inflight: set[str] = set()
 # key → (monotonic_ts, error_code) after an unsuccessful warm
 _last_fail: dict[str, tuple[float, str]] = {}
+# siblings:{user}:{role}:{top} → monotonic_ts when sibling warm was scheduled
+_sibling_scheduled: dict[str, float] = {}
 
 
 def _gap_key(*, user_id: str, role: str, lang: str, top: int | None) -> str:
     return f"gap:{user_id}:{role}:{lang}:{top}"
 
 
+def _siblings_key(*, user_id: str, role: str, top: int | None) -> str:
+    return f"siblings:{user_id}:{role}:{top}"
+
+
 def _matches_key(*, user_id: str, role: str, lang: str, limit: int | None) -> str:
     return f"matches:{user_id}:{role}:{lang}:{limit}"
+
+
+def _pick_locale(lang: str) -> str:
+    text = (lang or "").strip().lower()[:2]
+    return text if text in _COACH_LANGS else "az"
 
 
 def _track(key: str) -> bool:
@@ -104,19 +122,66 @@ def matches_warm_fail_code(
     )
 
 
-def schedule_skill_gap_ai_warm(
+def schedule_skill_gap_sibling_langs(
     *,
     user_id: str,
     role: str,
     lang: str,
     top: int | None = None,
 ) -> bool:
+    """Warm other coach locales once the current language is ready.
+
+    Returns True if at least one sibling warm was scheduled.
+    """
+    subject = (user_id or "").strip()
+    role_name = (role or "").strip()
+    if not subject or not role_name:
+        return False
+    locale = _pick_locale(lang)
+    sk = _siblings_key(user_id=subject, role=role_name, top=top)
+    now = time.monotonic()
+    with _lock:
+        prev = _sibling_scheduled.get(sk)
+        if prev is not None and now - prev < _SIBLING_COOLDOWN_SEC:
+            return False
+        _sibling_scheduled[sk] = now
+
+    started = False
+    for other in _COACH_LANGS:
+        if other == locale:
+            continue
+        if schedule_skill_gap_ai_warm(
+            user_id=subject,
+            role=role_name,
+            lang=other,
+            top=top,
+            warm_siblings=False,
+        ):
+            started = True
+    if started:
+        log.info(
+            "skill_gap sibling warm scheduled user=%s role=%s from=%s",
+            subject,
+            role_name,
+            locale,
+        )
+    return started
+
+
+def schedule_skill_gap_ai_warm(
+    *,
+    user_id: str,
+    role: str,
+    lang: str,
+    top: int | None = None,
+    warm_siblings: bool = True,
+) -> bool:
     """Start background warm. Returns False if skipped (in-flight or cooldown)."""
     subject = (user_id or "").strip()
     role_name = (role or "").strip()
     if not subject or not role_name:
         return False
-    locale = (lang or "az").strip().lower()[:2] or "az"
+    locale = _pick_locale(lang)
     key = _gap_key(user_id=subject, role=role_name, lang=locale, top=top)
     if recent_fail_code(key):
         return False
@@ -144,6 +209,13 @@ def schedule_skill_gap_ai_warm(
                     conn.close()
             if payload.get("ai_coach"):
                 _clear_fail(key)
+                if warm_siblings:
+                    schedule_skill_gap_sibling_langs(
+                        user_id=subject,
+                        role=role_name,
+                        lang=locale,
+                        top=top,
+                    )
             else:
                 err = str(payload.get("coach_error") or "ai_failed").strip() or "ai_failed"
                 if err == "ai_pending":

@@ -16,9 +16,10 @@ from app.ai_gateway import complete_json
 log = logging.getLogger("ingress-job.api.role_coach")
 
 PURPOSE = "role_coach"
-# v4: include market share/growth on skill cards (daily metric refresh may
-# regenerate once; same-day page refresh still hits ai_cache).
-PROMPT_VERSION = "role-coach-v4"
+# v5: Azerbaijani orthography (ə/ı/…) + sibling-lang warm after ready.
+# v4: market share/growth on skill cards (daily metric refresh may regenerate
+# once; same-day page refresh still hits ai_cache).
+PROMPT_VERSION = "role-coach-v5"
 
 _LANG_NAME = {"az": "Azerbaijani", "en": "English", "ru": "Russian"}
 
@@ -35,6 +36,9 @@ _SYSTEM = (
     "Voice: second person only (you / your; Azerbaijani: siz / sizin; "
     "Russian: вы / ваш). Never third person about a 'candidate', 'namizəd', "
     "'applicant', or 'they'. The reader is the person in the profile.\n"
+    "Spelling: write the requested language with correct orthography. For "
+    "Azerbaijani use ə, ı, ö, ü, ğ, ş, ç — e.g. tələb/tələblər (not "
+    "talab/talablar), təcrübə (not tecrube), mövqei/mövqe (not movqe).\n"
     "Output:\n"
     "- fit_summary: 2–3 sentences in the requested language, addressing the "
     "reader directly.\n"
@@ -185,20 +189,26 @@ def _build_user(
     years = profile.get("total_years")
     years_s = str(years) if isinstance(years, (int, float)) else ""
     role = str(role_name or "").strip()
-    return "\n".join(
-        [
-            f"Language: {_LANG_NAME[locale]}",
-            f"Role: {role}",
-            f"YourSeniority: {str(profile.get('seniority') or '').strip() or '(none)'}",
-            f"YourYears: {years_s or '(unknown)'}",
-            "TopSkills: " + (", ".join(top) if top else "(none)"),
-            "HaveSkills: " + json.dumps(_skill_card(have), ensure_ascii=False),
-            "MissingSkills: " + json.dumps(_skill_card(missing), ensure_ascii=False),
-            "Write fit_summary, why, and note in second person to the learner.",
-            "Tailor advice specifically to this Role; do not reuse another role's plan.",
-            "Respond with fit_summary, must_learn, already_strong, transferable.",
-        ]
+    lines = [
+        f"Language: {_LANG_NAME[locale]}",
+        f"Role: {role}",
+        f"YourSeniority: {str(profile.get('seniority') or '').strip() or '(none)'}",
+        f"YourYears: {years_s or '(unknown)'}",
+        "TopSkills: " + (", ".join(top) if top else "(none)"),
+        "HaveSkills: " + json.dumps(_skill_card(have), ensure_ascii=False),
+        "MissingSkills: " + json.dumps(_skill_card(missing), ensure_ascii=False),
+        "Write fit_summary, why, and note in second person to the learner.",
+        "Tailor advice specifically to this Role; do not reuse another role's plan.",
+    ]
+    if locale == "az":
+        lines.append(
+            "Azerbaijani orthography required: ə ı ö ü ğ ş ç. "
+            "Correct: tələblərə, təcrübə, mövqe. Incorrect: talablara, tecrube, movqe."
+        )
+    lines.append(
+        "Respond with fit_summary, must_learn, already_strong, transferable."
     )
+    return "\n".join(lines)
 
 
 def _validate_coach(data: dict, *, have: list[dict], missing: list[dict]) -> dict | None:

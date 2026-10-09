@@ -331,6 +331,20 @@ def skill_gap_payload(
         src = str(base.get("source") or "role_skill_weight")
         if "+role_coach" not in src:
             base["source"] = f"{src}+role_coach"
+        # Current locale ready (cache hit or provider) → prefetch az/en/ru siblings
+        # so a language switch does not wait on a new generation.
+        if not allow_ai_provider:
+            try:
+                from app.ai_warm import schedule_skill_gap_sibling_langs
+
+                schedule_skill_gap_sibling_langs(
+                    user_id=user_id,
+                    role=str(base["role"] or ""),
+                    lang=locale,
+                    top=chosen_top,
+                )
+            except Exception as exc:
+                log.warning("role_coach sibling warm schedule failed: %s", exc)
     else:
         base["coach"] = None
         base["ai_coach"] = False
