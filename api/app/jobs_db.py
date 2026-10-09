@@ -80,7 +80,12 @@ def translate_sql(sql: str) -> str:
     while i < n:
         ch = sql[i]
         if in_str:
-            out.append(ch)
+            # psycopg still treats % as placeholders inside SQL string literals
+            # (e.g. LIKE '%in_app%' → "%i"), so double them even in quotes.
+            if ch == "%":
+                out.append("%%")
+            else:
+                out.append(ch)
             if ch == "'":
                 if i + 1 < n and sql[i + 1] == "'":
                     out.append("'")

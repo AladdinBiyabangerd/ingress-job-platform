@@ -22,7 +22,12 @@ class JobsDbSqlTests(unittest.TestCase):
             translate_sql("INSERT INTO crawl_sources (name) VALUES (:name)"),
             "INSERT INTO crawl_sources (name) VALUES (%(name)s)",
         )
-        self.assertEqual(translate_sql("SELECT '100%'"), "SELECT '100%'")
+        # % inside quotes must still be doubled for psycopg (LIKE / literals).
+        self.assertEqual(translate_sql("SELECT '100%'"), "SELECT '100%%'")
+        self.assertEqual(
+            translate_sql("SELECT 1 WHERE channels LIKE '%in_app%'"),
+            "SELECT 1 WHERE channels LIKE '%%in_app%%'",
+        )
 
     def test_postgres_casts_are_not_named_placeholders(self):
         self.assertEqual(

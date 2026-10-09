@@ -366,9 +366,9 @@ def inapp_count_today(conn, *, user_id: str, when: datetime) -> int:
         WHERE user_id = ?
           AND kind IN ({placeholders})
           AND substr(created_at, 1, 10) = ?
-          AND channels LIKE '%in_app%'
+          AND channels LIKE ?
         """,
-        ((user_id or "").strip(), *kinds, day),
+        ((user_id or "").strip(), *kinds, day, "%in_app%"),
     ).fetchone()
     try:
         return int(row[0] if row else 0)

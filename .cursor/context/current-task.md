@@ -1,28 +1,25 @@
 # Current task
 
 ## Completed
-- Roadmap path-only empty fix (backend `_sections` + path-aware hero/week/next)
-- Path-only unit test + existing learning_roadmap tests green
-- `/me/insights` → redirect `/me/insights/roadmap` (az/en/ru)
-- Nav / command palette / notifications / engagement `cta_href` → roadmap
-- Roadmap UI gates (profile/consent) + empty copy separation; course fallback for week
+- Worker `JOB_API_BASE_URL` fixed (connectivity)
+- Root cause of engagement 500 found and fixed locally
 
 ## Current state
-- Learning Roadmap is the insights hub (overview page removed via redirect)
-- Path-only users see actionable week/next + Academy path, not “confirm profile” empty hero
+- **Bug:** `inapp_count_today` used `LIKE '%in_app%'` → psycopg saw `%i` as placeholder → `ProgrammingError`
+- **Fix:** parameterized `LIKE ?` + `translate_sql` doubles `%` inside SQL string literals
+- Awaiting deploy + worker re-run to verify `/notifications`
 
 ## Decisions
-- Hub URL retired; API `GET /api/v1/me/insights` kept as data
-- `/me/insights/near` kept; back → roadmap
-- Roadmap back → recommendations
+- Escape `%` in quoted SQL for Postgres adapter (psycopg requirement)
+- Prefer bind params for LIKE patterns
 
 ## Remaining
-- Manual smoke on Railway after deploy
-- Commit/PR when requested
+1. Commit/deploy API fix
+2. Re-trigger worker / engagement-jobs
+3. Verify `/notifications` + optional email
+4. AI quota (gemini 429 / groq 403) is separate — soft-fail for copy; not the 500
 
 ## Relevant files
-- `api/app/learning_roadmap.py`, `api/app/engagement.py`
-- `api/tests/test_learning_roadmap.py`, `api/tests/test_engagement.py`
-- `frontend/components/roadmap.js`, `frontend/lib/copy.js`
-- `frontend/app/{,en/,ru/}me/insights/page.js` (redirects)
-- `frontend/components/{shell,account-bar,command-palette,notifications-page,insights}.js`
+- `api/app/engagement.py` (`inapp_count_today`)
+- `api/app/jobs_db.py` (`translate_sql`)
+- `api/tests/test_jobs_db.py`, `api/tests/test_engagement.py`

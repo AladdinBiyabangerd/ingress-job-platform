@@ -20,6 +20,7 @@ from app.engagement import (
     fanout_coach_weekly,
     fanout_match_event,
     fanout_profile_nudge,
+    inapp_count_today,
     insights_payload,
     job_ever_logged,
     log_engagement,
@@ -130,6 +131,10 @@ class EngagementPhase1Tests(unittest.TestCase):
                 channels=["in_app", "email"],
             )
             self.assertFalse(again)
+            self.assertEqual(
+                inapp_count_today(conn, user_id="u1", when=datetime.now(timezone.utc)),
+                1,
+            )
             conn.commit()
         finally:
             conn.close()
