@@ -1,8 +1,8 @@
 """Staff-controlled AI flow flags in the shared jobs DB.
 
 Env still hard-offs a feature when set to 0/false/off. A DB row then wins.
-With no row: gateway / job_tidy / engagement_copy default on when OPENAI_API_KEY
-is set; other flows follow gateway.
+With no row: gateway / job_tidy / engagement_copy default on when any AI provider
+key is set (Gemini/Groq/NVIDIA/OpenRouter/OpenAI); other flows follow gateway.
 """
 
 from __future__ import annotations
@@ -69,7 +69,13 @@ class FlagError(Exception):
 
 
 def key_configured() -> bool:
-    return bool(os.environ.get("OPENAI_API_KEY", "").strip())
+    return bool(
+        os.environ.get("GEMINI_API_KEY", "").strip()
+        or os.environ.get("GROQ_API_KEY", "").strip()
+        or os.environ.get("NVIDIA_API_KEY", "").strip()
+        or os.environ.get("OPENROUTER_API_KEY", "").strip()
+        or os.environ.get("OPENAI_API_KEY", "").strip()
+    )
 
 
 def invalidate_flag_cache() -> None:

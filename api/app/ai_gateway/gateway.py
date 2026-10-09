@@ -3,6 +3,9 @@
 Mirrors worker/worker/ai_gateway for digest AI #4 and future API callers.
 Same jobs-DB tables (ai_cache, ai_usage_daily) share the daily budget with
 CV AI #1 on the worker. Soft-fails when disabled / over budget / provider errors.
+
+Chat providers (default order): gemini → groq → nvidia → openrouter → openai.
+Embed providers (default order): nvidia → openai.
 """
 
 from __future__ import annotations
@@ -11,6 +14,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import sqlite3
 import time
 import urllib.error
@@ -46,10 +50,14 @@ CREATE TABLE IF NOT EXISTS ai_usage_daily (
 
 DEFAULT_MODEL = "gpt-4.1-nano"
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
+DEFAULT_NVIDIA_EMBED_MODEL = "nvidia/nemotron-3-embed-1b"
+CACHE_MODEL_TAG = "multi-v1"
 # Rough small-model list prices (USD / 1M tokens); used only for budget logs.
 _DEFAULT_INPUT_PER_M = 0.10
 _DEFAULT_OUTPUT_PER_M = 0.40
 _DEFAULT_EMBED_PER_M = 0.02
+
+_FENCE_RE = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
 
 
 @contextmanager
@@ -83,20 +91,57 @@ class EmbedResult:
     meta: dict = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class _ChatProvider:
+    name: str
+    key: str
+    base_url: str
+    model: str
+    json_mode: str  # schema | object | prompt
+    extra_headers: tuple[tuple[str, str], ...] = ()
+
+
+@dataclass(frozen=True)
+class _EmbedProvider:
+    name: str
+    key: str
+    base_url: str
+    model: str
+
+
 def enabled(conn: sqlite3.Connection | None = None) -> bool:
     from app.ai_flags import feature_on
 
     return feature_on("gateway", conn)
 
 
+def any_provider_key() -> bool:
+    return bool(
+        os.environ.get("GEMINI_API_KEY", "").strip()
+        or os.environ.get("GROQ_API_KEY", "").strip()
+        or os.environ.get("NVIDIA_API_KEY", "").strip()
+        or os.environ.get("OPENROUTER_API_KEY", "").strip()
+        or os.environ.get("OPENAI_API_KEY", "").strip()
+    )
+
+
 def model_name() -> str:
+    """Preferred model label (first configured chat provider, else OpenAI default)."""
+    providers = _chat_providers()
+    if providers:
+        return providers[0].model
     return (os.environ.get("AI_GATEWAY_MODEL") or DEFAULT_MODEL).strip() or DEFAULT_MODEL
 
 
 def embedding_model_name() -> str:
-    return (
-        os.environ.get("AI_EMBEDDING_MODEL") or DEFAULT_EMBEDDING_MODEL
-    ).strip() or DEFAULT_EMBEDDING_MODEL
+    explicit = (os.environ.get("AI_EMBEDDING_MODEL") or "").strip()
+    if explicit:
+        return explicit
+    if os.environ.get("NVIDIA_API_KEY", "").strip():
+        return (
+            os.environ.get("NVIDIA_EMBED_MODEL") or DEFAULT_NVIDIA_EMBED_MODEL
+        ).strip() or DEFAULT_NVIDIA_EMBED_MODEL
+    return DEFAULT_EMBEDDING_MODEL
 
 
 def daily_call_limit() -> int:
@@ -136,14 +181,15 @@ def complete_json(
     if not enabled(conn):
         result.error = "ai_disabled"
         return result
-    key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if not key:
+    if not any_provider_key():
         result.error = "ai_no_key"
         return result
 
     redacted_user = mask_pii(user, known=known_pii)
     redacted_system = mask_pii(system, known=known_pii)
-    cache_key = _cache_key(purpose, prompt_version, model_name(), redacted_system, redacted_user)
+    cache_key = _cache_key(
+        purpose, prompt_version, CACHE_MODEL_TAG, redacted_system, redacted_user
+    )
 
     with _span(f"ai_gateway.{purpose}"):
         ensure_ai_tables(conn)
@@ -161,9 +207,7 @@ def complete_json(
 
         started = time.monotonic()
         try:
-            raw = _openai_json(
-                key=key,
-                model=model_name(),
+            raw = _call_chat_json(
                 system=redacted_system,
                 user=redacted_user,
                 schema=schema,
@@ -187,15 +231,28 @@ def complete_json(
 
         _cache_put(conn, cache_key, purpose, prompt_version, data)
         _usage_add(conn, purpose, prompt_tokens, completion_tokens, cost)
+        # Read-only callers (skill-gap, matches) close without commit — persist
+        # cache/usage here so the next request can skip the provider.
+        _commit(conn)
 
         result.ok = True
         result.data = data
+        result.model = str(raw.get("model") or result.model)
         result.prompt_tokens = prompt_tokens
         result.completion_tokens = completion_tokens
         result.cost_usd = cost
         result.meta["latency_ms"] = int((time.monotonic() - started) * 1000)
         result.meta["cache"] = "miss"
+        result.meta["provider"] = str(raw.get("provider") or "")
         return result
+
+
+def _commit(conn: sqlite3.Connection | None) -> None:
+    if conn is None:
+        return
+    commit = getattr(conn, "commit", None)
+    if callable(commit):
+        commit()
 
 
 def _cache_key(purpose: str, prompt_version: str, model: str, system: str, user: str) -> str:
@@ -313,7 +370,7 @@ def embed(
     conn: sqlite3.Connection | None = None,
     timeout: float = 60.0,
 ) -> EmbedResult:
-    """Budget → OpenAI embeddings → cost log. Soft-fails. No PII redact (caller strips)."""
+    """Budget → embedding providers (fallback) → cost log. Soft-fails."""
     purpose = (purpose or "embed")[:80]
     model = embedding_model_name()
     result = EmbedResult(ok=False, model=model)
@@ -325,8 +382,7 @@ def embed(
     if not enabled(conn):
         result.error = "ai_disabled"
         return result
-    key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if not key:
+    if not any_provider_key():
         result.error = "ai_no_key"
         return result
 
@@ -337,7 +393,7 @@ def embed(
             return result
         started = time.monotonic()
         try:
-            raw = _openai_embed(key=key, model=model, texts=cleaned, timeout=timeout)
+            raw = _call_embed(texts=cleaned, timeout=timeout)
         except Exception as exc:
             result.error = f"ai_provider_error:{type(exc).__name__}"
             log.warning("ai_gateway embed %s failed: %s", purpose, exc)
@@ -350,38 +406,301 @@ def embed(
         prompt_tokens = int(usage.get("prompt_tokens") or usage.get("total_tokens") or 0)
         cost = _estimate_embed_cost(prompt_tokens)
         _usage_add(conn, purpose, prompt_tokens, 0, cost)
+        _commit(conn)
         result.ok = True
         result.vectors = vectors
+        result.model = str(raw.get("model") or model)
         result.prompt_tokens = prompt_tokens
         result.cost_usd = cost
         result.meta["latency_ms"] = int((time.monotonic() - started) * 1000)
+        result.meta["provider"] = str(raw.get("provider") or "")
         return result
 
 
-def _openai_embed(
+def _provider_order(env_name: str, default: str) -> list[str]:
+    raw = (os.environ.get(env_name) or default).strip()
+    return [p.strip().lower() for p in raw.split(",") if p.strip()]
+
+
+def _chat_providers() -> list[_ChatProvider]:
+    out: list[_ChatProvider] = []
+    for name in _provider_order(
+        "AI_CHAT_PROVIDERS", "gemini,groq,nvidia,openrouter,openai"
+    ):
+        if name == "gemini":
+            key = os.environ.get("GEMINI_API_KEY", "").strip()
+            if not key:
+                continue
+            model = (
+                os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
+            ).strip() or "gemini-2.5-flash"
+            out.append(
+                _ChatProvider(
+                    name="gemini",
+                    key=key,
+                    base_url="https://generativelanguage.googleapis.com/v1beta/openai",
+                    model=model,
+                    json_mode="schema",
+                )
+            )
+        elif name == "groq":
+            key = os.environ.get("GROQ_API_KEY", "").strip()
+            if not key:
+                continue
+            model = (
+                os.environ.get("GROQ_MODEL") or "openai/gpt-oss-20b"
+            ).strip() or "openai/gpt-oss-20b"
+            out.append(
+                _ChatProvider(
+                    name="groq",
+                    key=key,
+                    base_url="https://api.groq.com/openai/v1",
+                    model=model,
+                    json_mode="object",
+                )
+            )
+        elif name == "nvidia":
+            key = os.environ.get("NVIDIA_API_KEY", "").strip()
+            if not key:
+                continue
+            model = (
+                os.environ.get("NVIDIA_CHAT_MODEL") or "meta/llama-3.1-8b-instruct"
+            ).strip() or "meta/llama-3.1-8b-instruct"
+            out.append(
+                _ChatProvider(
+                    name="nvidia",
+                    key=key,
+                    base_url="https://integrate.api.nvidia.com/v1",
+                    model=model,
+                    json_mode="prompt",
+                )
+            )
+        elif name == "openrouter":
+            key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+            if not key:
+                continue
+            model = (
+                os.environ.get("OPENROUTER_MODEL")
+                or "meta-llama/llama-3.3-70b-instruct:free"
+            ).strip() or "meta-llama/llama-3.3-70b-instruct:free"
+            referer = (
+                os.environ.get("OPENROUTER_HTTP_REFERER")
+                or os.environ.get("APP_URL")
+                or "https://ingress.job"
+            ).strip()
+            title = (os.environ.get("OPENROUTER_APP_TITLE") or "Ingress Job").strip()
+            out.append(
+                _ChatProvider(
+                    name="openrouter",
+                    key=key,
+                    base_url="https://openrouter.ai/api/v1",
+                    model=model,
+                    json_mode="object",
+                    extra_headers=(
+                        ("HTTP-Referer", referer),
+                        ("X-Title", title),
+                    ),
+                )
+            )
+        elif name == "openai":
+            key = os.environ.get("OPENAI_API_KEY", "").strip()
+            if not key:
+                continue
+            model = (
+                os.environ.get("AI_GATEWAY_MODEL") or DEFAULT_MODEL
+            ).strip() or DEFAULT_MODEL
+            out.append(
+                _ChatProvider(
+                    name="openai",
+                    key=key,
+                    base_url="https://api.openai.com/v1",
+                    model=model,
+                    json_mode="schema",
+                )
+            )
+    return out
+
+
+def _embed_providers() -> list[_EmbedProvider]:
+    out: list[_EmbedProvider] = []
+    for name in _provider_order("AI_EMBED_PROVIDERS", "nvidia,openai"):
+        if name == "nvidia":
+            key = os.environ.get("NVIDIA_API_KEY", "").strip()
+            if not key:
+                continue
+            model = embedding_model_name()
+            if model.startswith("text-embedding"):
+                model = (
+                    os.environ.get("NVIDIA_EMBED_MODEL") or DEFAULT_NVIDIA_EMBED_MODEL
+                ).strip() or DEFAULT_NVIDIA_EMBED_MODEL
+            out.append(
+                _EmbedProvider(
+                    name="nvidia",
+                    key=key,
+                    base_url="https://integrate.api.nvidia.com/v1",
+                    model=model,
+                )
+            )
+        elif name == "openai":
+            key = os.environ.get("OPENAI_API_KEY", "").strip()
+            if not key:
+                continue
+            model = (
+                os.environ.get("AI_EMBEDDING_MODEL") or DEFAULT_EMBEDDING_MODEL
+            ).strip() or DEFAULT_EMBEDDING_MODEL
+            if model.startswith("nvidia/"):
+                model = DEFAULT_EMBEDDING_MODEL
+            out.append(
+                _EmbedProvider(
+                    name="openai",
+                    key=key,
+                    base_url="https://api.openai.com/v1",
+                    model=model,
+                )
+            )
+    return out
+
+
+def _call_chat_json(
+    *,
+    system: str,
+    user: str,
+    schema: dict[str, Any],
+    schema_name: str,
+    timeout: float,
+) -> dict[str, Any]:
+    providers = _chat_providers()
+    if not providers:
+        raise RuntimeError("no_chat_provider")
+    errors: list[str] = []
+    for provider in providers:
+        try:
+            raw = _chat_json(
+                provider=provider,
+                system=system,
+                user=user,
+                schema=schema,
+                schema_name=schema_name,
+                timeout=timeout,
+            )
+            raw["provider"] = provider.name
+            raw["model"] = provider.model
+            return raw
+        except Exception as exc:
+            msg = f"{provider.name}:{type(exc).__name__}:{exc}"
+            errors.append(msg[:180])
+            log.warning("ai_gateway chat provider failed: %s", msg)
+    raise RuntimeError("; ".join(errors[:4]) or "all_chat_providers_failed")
+
+
+def _call_embed(*, texts: list[str], timeout: float) -> dict[str, Any]:
+    providers = _embed_providers()
+    if not providers:
+        raise RuntimeError("no_embed_provider")
+    errors: list[str] = []
+    for provider in providers:
+        try:
+            raw = _openai_compat_embed(
+                key=provider.key,
+                base_url=provider.base_url,
+                model=provider.model,
+                texts=texts,
+                timeout=timeout,
+            )
+            raw["provider"] = provider.name
+            raw["model"] = provider.model
+            return raw
+        except Exception as exc:
+            msg = f"{provider.name}:{type(exc).__name__}:{exc}"
+            errors.append(msg[:180])
+            log.warning("ai_gateway embed provider failed: %s", msg)
+    raise RuntimeError("; ".join(errors[:4]) or "all_embed_providers_failed")
+
+
+def _chat_json(
+    *,
+    provider: _ChatProvider,
+    system: str,
+    user: str,
+    schema: dict[str, Any],
+    schema_name: str,
+    timeout: float,
+) -> dict[str, Any]:
+    schema_hint = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
+    system_with_schema = (
+        system
+        + "\n\nReturn ONLY a valid JSON object (no markdown) matching this schema:\n"
+        + schema_hint
+    )
+    body: dict[str, Any] = {
+        "model": provider.model,
+        "temperature": 0,
+        "messages": [
+            {"role": "system", "content": system_with_schema},
+            {"role": "user", "content": user},
+        ],
+    }
+    if provider.json_mode == "schema":
+        body["response_format"] = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": schema_name[:64] or "result",
+                "strict": True,
+                "schema": schema,
+            },
+        }
+    elif provider.json_mode == "object":
+        body["response_format"] = {"type": "json_object"}
+    if provider.name == "nvidia":
+        # Disable reasoning/thinking so JSON parse stays clean.
+        body["chat_template_kwargs"] = {"enable_thinking": False}
+
+    url = provider.base_url.rstrip("/") + "/chat/completions"
+    headers = {
+        "Authorization": "Bearer " + provider.key,
+        "Content-Type": "application/json",
+    }
+    for hk, hv in provider.extra_headers:
+        headers[hk] = hv
+
+    payload = _http_json(url, body=body, headers=headers, timeout=timeout)
+    choices = payload.get("choices") or []
+    if not choices:
+        raise RuntimeError("empty_choices")
+    message = (choices[0] or {}).get("message") or {}
+    content = message.get("content") or ""
+    if isinstance(content, list):
+        # Some OpenAI-compat APIs return content parts.
+        parts = []
+        for part in content:
+            if isinstance(part, dict) and part.get("type") == "text":
+                parts.append(str(part.get("text") or ""))
+            elif isinstance(part, str):
+                parts.append(part)
+        content = "".join(parts)
+    data = _loads_json_object(str(content))
+    return {"data": data, "usage": payload.get("usage") or {}}
+
+
+def _openai_compat_embed(
     *,
     key: str,
+    base_url: str,
     model: str,
     texts: list[str],
     timeout: float,
 ) -> dict[str, Any]:
     body = {"model": model, "input": texts}
-    req = urllib.request.Request(
-        "https://api.openai.com/v1/embeddings",
-        data=json.dumps(body).encode("utf-8"),
+    url = base_url.rstrip("/") + "/embeddings"
+    payload = _http_json(
+        url,
+        body=body,
         headers={
             "Authorization": "Bearer " + key,
             "Content-Type": "application/json",
         },
-        method="POST",
+        timeout=timeout,
     )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as res:
-            payload = json.loads(res.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")[:300]
-        raise RuntimeError(f"HTTP {exc.code}: {detail}") from exc
-
     data = payload.get("data") or []
     if not isinstance(data, list) or not data:
         raise RuntimeError("empty_embeddings")
@@ -395,6 +714,54 @@ def _openai_embed(
     return {"vectors": vectors, "usage": payload.get("usage") or {}}
 
 
+def _http_json(
+    url: str,
+    *,
+    body: dict[str, Any],
+    headers: dict[str, str],
+    timeout: float,
+) -> dict[str, Any]:
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as res:
+            return json.loads(res.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:300]
+        raise RuntimeError(f"HTTP {exc.code}: {detail}") from exc
+
+
+def _loads_json_object(content: str) -> dict[str, Any]:
+    text = (content or "").strip()
+    if not text:
+        raise RuntimeError("empty_content")
+    candidates = [text]
+    m = _FENCE_RE.search(text)
+    if m:
+        candidates.insert(0, m.group(1).strip())
+    # Truncate to outermost object if the model added prose.
+    start = text.find("{")
+    end = text.rfind("}")
+    if start >= 0 and end > start:
+        candidates.append(text[start : end + 1])
+    last_err: Exception | None = None
+    for cand in candidates:
+        try:
+            data = json.loads(cand)
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            last_err = exc
+            continue
+        if isinstance(data, dict):
+            return data
+        last_err = RuntimeError("non_object_json")
+    raise RuntimeError(f"bad_json:{type(last_err).__name__ if last_err else 'unknown'}")
+
+
+# Back-compat aliases for older tests/patches.
 def _openai_json(
     *,
     key: str,
@@ -405,43 +772,34 @@ def _openai_json(
     schema_name: str,
     timeout: float,
 ) -> dict[str, Any]:
-    body = {
-        "model": model,
-        "temperature": 0,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": {
-                "name": schema_name[:64] or "result",
-                "strict": True,
-                "schema": schema,
-            },
-        },
-    }
-    req = urllib.request.Request(
-        "https://api.openai.com/v1/chat/completions",
-        data=json.dumps(body).encode("utf-8"),
-        headers={
-            "Authorization": "Bearer " + key,
-            "Content-Type": "application/json",
-        },
-        method="POST",
+    provider = _ChatProvider(
+        name="openai",
+        key=key,
+        base_url="https://api.openai.com/v1",
+        model=model,
+        json_mode="schema",
     )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as res:
-            payload = json.loads(res.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")[:300]
-        raise RuntimeError(f"HTTP {exc.code}: {detail}") from exc
+    return _chat_json(
+        provider=provider,
+        system=system,
+        user=user,
+        schema=schema,
+        schema_name=schema_name,
+        timeout=timeout,
+    )
 
-    choices = payload.get("choices") or []
-    if not choices:
-        raise RuntimeError("empty_choices")
-    content = (((choices[0] or {}).get("message") or {}).get("content")) or ""
-    data = json.loads(content)
-    if not isinstance(data, dict):
-        raise RuntimeError("non_object_json")
-    return {"data": data, "usage": payload.get("usage") or {}}
+
+def _openai_embed(
+    *,
+    key: str,
+    model: str,
+    texts: list[str],
+    timeout: float,
+) -> dict[str, Any]:
+    return _openai_compat_embed(
+        key=key,
+        base_url="https://api.openai.com/v1",
+        model=model,
+        texts=texts,
+        timeout=timeout,
+    )

@@ -6,7 +6,24 @@ import os
 import unittest
 from unittest.mock import patch
 
-from app.role_coach import PROMPT_VERSION, _validate_coach, build_role_coach
+from app.role_coach import PROMPT_VERSION, _skill_card, _validate_coach, build_role_coach
+
+
+class RoleCoachSkillCardTests(unittest.TestCase):
+    def test_omits_volatile_share_from_prompt_card(self):
+        cards = _skill_card(
+            [
+                {"name": "Java", "weight": 1.0, "share": 0.42, "years": 3},
+                {"name": "Kafka", "weight": 0.9, "share": 0.11},
+            ]
+        )
+        self.assertEqual(
+            cards,
+            [
+                {"name": "Java", "weight": 1.0, "years": 3},
+                {"name": "Kafka", "weight": 0.9},
+            ],
+        )
 
 
 class RoleCoachValidateTests(unittest.TestCase):

@@ -780,9 +780,12 @@ def list_matches(
     with _LOCK:
         conn = _connect()
         try:
-            return matches_payload(
+            payload = matches_payload(
                 conn, user_id=subject, limit=limit, lang=lang, role=role
             )
+            # LLM why / rerank may have written ai_cache; keep across close.
+            conn.commit()
+            return payload
         finally:
             conn.close()
 

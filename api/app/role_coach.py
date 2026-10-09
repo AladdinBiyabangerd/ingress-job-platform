@@ -83,6 +83,7 @@ def _pick_locale(lang: str) -> str:
 
 
 def _skill_card(items: list[dict], *, limit: int = 15) -> list[dict]:
+    """Stable prompt fields only — omit trend share so cache keys survive daily metrics."""
     out: list[dict] = []
     for item in items[:limit]:
         if not isinstance(item, dict):
@@ -91,8 +92,6 @@ def _skill_card(items: list[dict], *, limit: int = 15) -> list[dict]:
         if not name:
             continue
         card: dict[str, Any] = {"name": name, "weight": item.get("weight")}
-        if item.get("share") is not None:
-            card["share"] = item.get("share")
         if item.get("years") is not None:
             card["years"] = item.get("years")
         out.append(card)

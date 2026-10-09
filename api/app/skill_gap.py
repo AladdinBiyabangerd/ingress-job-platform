@@ -349,12 +349,15 @@ def skill_gap(
     with _LOCK:
         conn = _connect()
         try:
-            return skill_gap_payload(
+            payload = skill_gap_payload(
                 conn,
                 user_id=subject,
                 role=role,
                 top=top,
                 lang=lang,
             )
+            # Role coach / gateway may have written ai_cache; keep it across close.
+            conn.commit()
+            return payload
         finally:
             conn.close()

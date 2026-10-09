@@ -99,9 +99,21 @@ that file is applied; set them yourself only if you use another bucket):
 | `OIDC_AUTHORIZE_URL` | Same name the API already uses. |
 | `OIDC_TOKEN_URL` | Same name the API already uses. |
 | `OIDC_REDIRECT_URIS` | Include the deployed web callback. |
-| `OPENAI_API_KEY` | Optional. Enables `ai_gateway` (CV AI #1, digest intro, embeddings, match why). |
+| `GEMINI_API_KEY` | Optional. Free-tier chat (primary). Enables `ai_gateway` when any provider key is set. |
+| `GROQ_API_KEY` | Optional. Free-tier chat fallback. |
+| `NVIDIA_API_KEY` | Optional. Free-tier chat + embeddings (`nemotron-3-embed-1b`, 2048-dim). |
+| `OPENROUTER_API_KEY` | Optional. Free-model chat fallback (`:free` models). |
+| `OPENAI_API_KEY` | Optional. Last-resort chat/embed when you have credits. |
 | `AI_GATEWAY_ENABLED` | Optional. `0` forces AI off even when a key is set. Staff can also toggle flows in Moderasiya without changing env. |
-| `AI_EMBEDDING_MODEL` | Optional. Default `text-embedding-3-small` (AI #2). |
+| `AI_CHAT_PROVIDERS` | Optional. Comma order, default `gemini,groq,nvidia,openrouter,openai`. |
+| `AI_EMBED_PROVIDERS` | Optional. Comma order, default `nvidia,openai`. |
+| `GEMINI_MODEL` | Optional. Default `gemini-2.5-flash`. |
+| `GROQ_MODEL` | Optional. Default `openai/gpt-oss-20b`. |
+| `NVIDIA_CHAT_MODEL` | Optional. Default `meta/llama-3.1-8b-instruct`. |
+| `NVIDIA_EMBED_MODEL` | Optional. Default `nvidia/nemotron-3-embed-1b`. |
+| `OPENROUTER_MODEL` | Optional. Default `meta-llama/llama-3.3-70b-instruct:free`. |
+| `AI_EMBEDDING_MODEL` | Optional. Overrides embed model id. With NVIDIA key defaults to `nvidia/nemotron-3-embed-1b`. |
+| `AI_EMBEDDING_DIMS` | Optional. Vector size for pgvector column. NVIDIA embed = `2048`; OpenAI small = `1536`. Set explicitly when switching. If the `embeddings` table already exists with the old size, drop/recreate it once. |
 | `AI_RERANK_ENABLED` | Optional. Default follows gateway; `0` keeps structured-only matches. |
 | `AI_MATCH_WHY_ENABLED` | Optional. Default follows gateway; `0` skips LLM why sentences. |
 | `INTERNAL_JOB_TOKEN` | Shared secret for worker → API digests + engagement (`X-Internal-Token`). Set the **same** value on **api** and **worker**. If unset on worker, `engagement_jobs` / `email_jobs` are skipped and users get no hourly match notifications. |

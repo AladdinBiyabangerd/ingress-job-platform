@@ -17,13 +17,36 @@ log = logging.getLogger("ingress-job.worker.embeddings")
 
 ENTITY_JOB = "job"
 ENTITY_PROFILE = "profile"
+# OpenAI text-embedding-3-small=1536; NVIDIA nemotron-3-embed-1b=2048.
 DEFAULT_DIMS = 1536
 _VECTOR_RE = re.compile(r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?")
 _pgvector_ready: bool | None = None
 
 
 def embedding_model() -> str:
-    return (os.environ.get("AI_EMBEDDING_MODEL") or "text-embedding-3-small").strip() or "text-embedding-3-small"
+    explicit = (os.environ.get("AI_EMBEDDING_MODEL") or "").strip()
+    if explicit:
+        return explicit
+    if os.environ.get("NVIDIA_API_KEY", "").strip():
+        return (
+            os.environ.get("NVIDIA_EMBED_MODEL") or "nvidia/nemotron-3-embed-1b"
+        ).strip() or "nvidia/nemotron-3-embed-1b"
+    return "text-embedding-3-small"
+
+
+def embedding_dims() -> int:
+    raw = (os.environ.get("AI_EMBEDDING_DIMS") or "").strip()
+    if raw:
+        try:
+            return max(1, int(raw))
+        except ValueError:
+            pass
+    model = embedding_model().lower()
+    if "nv-embed-v1" in model:
+        return 4096
+    if "nemotron-3-embed" in model or "nvidia/" in model:
+        return 2048
+    return DEFAULT_DIMS
 
 
 def content_hash(model: str, text: str) -> str:
@@ -208,7 +231,7 @@ def ensure_embedding_tables(conn) -> bool:
                 model TEXT NOT NULL,
                 content_hash TEXT NOT NULL,
                 dims INTEGER NOT NULL,
-                embedding vector({DEFAULT_DIMS}) NOT NULL,
+                embedding vector({embedding_dims()}) NOT NULL,
                 updated_at TEXT NOT NULL,
                 PRIMARY KEY (entity_type, entity_id, model)
             )

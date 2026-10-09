@@ -58,7 +58,13 @@ _CACHE_AT = 0.0
 
 
 def key_configured() -> bool:
-    return bool(os.environ.get("OPENAI_API_KEY", "").strip())
+    return bool(
+        os.environ.get("GEMINI_API_KEY", "").strip()
+        or os.environ.get("GROQ_API_KEY", "").strip()
+        or os.environ.get("NVIDIA_API_KEY", "").strip()
+        or os.environ.get("OPENROUTER_API_KEY", "").strip()
+        or os.environ.get("OPENAI_API_KEY", "").strip()
+    )
 
 
 def invalidate_flag_cache() -> None:
