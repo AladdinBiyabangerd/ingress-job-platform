@@ -599,7 +599,11 @@ export const copy = {
     roadmapAcademyPath: "Academy yolu",
     roadmapPending: "Şəxsi yol hazırlanır…",
     roadmapEmptyTitle: "Bu həftənin öyrənmə yolu",
-    roadmapEmptyLede: "Profili təsdiqləyin və matching razılığını aktiv edin — şəxsi roadmap hazırlayaq.",
+    roadmapEmptyLede: "Hələ şəxsi addım yoxdur — tövsiyələrdən rol seçin və ya profili tamamlayın.",
+    roadmapGateTitle: "Şəxsi roadmap üçün profil lazımdır",
+    roadmapGateLede: "Profili təsdiqləyin və matching razılığını aktiv edin — sonra şəxsi öyrənmə yolunu hazırlayaq.",
+    roadmapGateProfileCta: "Profili tamamla",
+    roadmapGateConsentCta: "Məxfilik ayarları",
     roadmapSectionEmpty: "Hələ addım yoxdur.",
     roadmapPathEmpty: "Bu rol üçün Academy yolu hələ uyğunlaşmayıb.",
     roadmapFooter: "Ingress ekosisteminin bir hissəsi —",
@@ -1295,7 +1299,11 @@ export const copy = {
     roadmapAcademyPath: "Academy path",
     roadmapPending: "Building your path…",
     roadmapEmptyTitle: "This week’s learning path",
-    roadmapEmptyLede: "Confirm your profile and turn on matching consent so we can build a personal roadmap.",
+    roadmapEmptyLede: "No personal steps yet — pick a role in recommendations or complete your profile.",
+    roadmapGateTitle: "Confirm your profile for a personal roadmap",
+    roadmapGateLede: "Confirm your profile and turn on matching consent — then we can build your learning path.",
+    roadmapGateProfileCta: "Complete profile",
+    roadmapGateConsentCta: "Privacy settings",
     roadmapSectionEmpty: "No steps yet.",
     roadmapPathEmpty: "No Academy path mapped for this role yet.",
     roadmapFooter: "Part of the Ingress ecosystem —",
@@ -1992,7 +2000,11 @@ export const copy = {
     roadmapAcademyPath: "Путь Academy",
     roadmapPending: "Собираем ваш путь…",
     roadmapEmptyTitle: "Путь обучения на эту неделю",
-    roadmapEmptyLede: "Подтвердите профиль и включите согласие на matching — соберём личный roadmap.",
+    roadmapEmptyLede: "Пока нет личных шагов — выберите роль в рекомендациях или заполните профиль.",
+    roadmapGateTitle: "Для личного roadmap нужен профиль",
+    roadmapGateLede: "Подтвердите профиль и включите согласие на matching — затем соберём путь обучения.",
+    roadmapGateProfileCta: "Заполнить профиль",
+    roadmapGateConsentCta: "Настройки конфиденциальности",
     roadmapSectionEmpty: "Пока нет шагов.",
     roadmapPathEmpty: "Для этой роли путь Academy ещё не сопоставлен.",
     roadmapFooter: "Часть экосистемы Ingress —",
@@ -2170,7 +2182,8 @@ export function hrefFor(locale, { mode = "browse", jobId, companySlug, skillId, 
   if (mode === "skills") return `${base}/me/recommendations`;
   if (mode === "insightsNear") return `${base}/me/insights/near`;
   if (mode === "insightsRoadmap") return `${base}/me/insights/roadmap`;
-  if (mode === "insights") return `${base}/me/insights`;
+  // Hub removed — insights mode lands on the roadmap page.
+  if (mode === "insights") return `${base}/me/insights/roadmap`;
   if (mode === "emailSettings") return `${base}/settings/notifications`;
   if (mode === "notifications") return `${base}/notifications`;
   return base || "/";

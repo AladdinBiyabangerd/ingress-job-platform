@@ -50,7 +50,7 @@ function destination(locale, item) {
     return hrefFor(locale, { mode: "profileReview" });
   }
   if (item.kind === "coach_weekly") {
-    return hrefFor(locale, { mode: "insights" });
+    return hrefFor(locale, { mode: "insightsRoadmap" });
   }
   if (item.kind === "application_seen" || item.kind === "application_rejected") {
     return hrefFor(locale, { mode: "applications" });
@@ -72,7 +72,7 @@ function secondaryHref(locale, item) {
     return first.url;
   }
   if (item.kind === "match_near" || item.kind === "coach_weekly") {
-    return hrefFor(locale, { mode: "insights" });
+    return hrefFor(locale, { mode: "insightsRoadmap" });
   }
   return "";
 }

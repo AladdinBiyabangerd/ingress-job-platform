@@ -1,10 +1,5 @@
-import { Insights } from "../../../../components/insights";
-import { getInsightsBundle } from "../../../../lib/server/insights";
-import { privatePageMetadata } from "../../../../lib/seo";
+import { redirect } from "next/navigation";
 
-export const metadata = privatePageMetadata;
-
-export default async function Page() {
-  const initial = await getInsightsBundle("en");
-  return <Insights locale="en" initialInsights={initial.insights} />;
+export default function Page() {
+  redirect("/en/me/insights/roadmap");
 }

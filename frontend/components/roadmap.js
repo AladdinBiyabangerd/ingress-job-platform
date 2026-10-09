@@ -194,23 +194,82 @@ function PathCard({ t, locale, section }) {
   );
 }
 
-function RoadmapBento({ t, locale, roadmap }) {
+function courseFallbackWeek(courses) {
+  const list = Array.isArray(courses) ? courses : [];
+  const items = list
+    .slice(0, 4)
+    .map((course) => {
+      const text = String(course?.skill || course?.slug || "").trim();
+      return text ? { text, done: false, milestone_id: "" } : null;
+    })
+    .filter(Boolean);
+  if (!items.length) return null;
+  const first = list[0];
+  const href = typeof first?.url === "string" ? first.url : "";
+  return {
+    items,
+    cta: href
+      ? { label: items[0].text, href, external: href.startsWith("http") }
+      : null,
+  };
+}
+
+function RoadmapBento({ t, locale, roadmap, insights = null }) {
+  const profileStatus = String(insights?.profile_status || "").trim();
+  const matchingConsent = insights?.matching_consent !== false;
+  const needsProfile = Boolean(insights) && profileStatus && profileStatus !== "confirmed";
+  const needsConsent = Boolean(insights) && insights.matching_consent === false;
+
+  if (needsProfile || needsConsent) {
+    return (
+      <section className="roadmap-hero roadmap-hero-empty">
+        <div className="roadmap-hero-copy">
+          <h2 className="roadmap-hero-title">{t.roadmapGateTitle}</h2>
+          <p className="hint">{t.roadmapGateLede}</p>
+          <div className="roadmap-preview-actions">
+            {needsProfile ? (
+              <a className="btn ink" href={hrefFor(locale, { mode: "profileReview" })}>
+                {t.roadmapGateProfileCta}
+              </a>
+            ) : null}
+            {needsConsent ? (
+              <a className="btn" href={hrefFor(locale, { mode: "profile" })}>
+                {t.roadmapGateConsentCta}
+              </a>
+            ) : null}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   const hero = roadmap?.hero && typeof roadmap.hero === "object" ? roadmap.hero : {};
   const pending = roadmap?.status === "pending";
   const empty = !roadmap || roadmap.status === "empty";
 
   if (empty) {
+    const emptyHref = matchingConsent
+      ? hrefFor(locale, { mode: "recommendations" })
+      : hrefFor(locale, { mode: "profile" });
+    const emptyLabel = matchingConsent ? t.recommendationsOpen : t.roadmapGateConsentCta;
     return (
       <section className="roadmap-hero roadmap-hero-empty">
         <div className="roadmap-hero-copy">
           <h2 className="roadmap-hero-title">{t.roadmapEmptyTitle}</h2>
           <p className="hint">{t.roadmapEmptyLede}</p>
-          <a className="btn ink" href={hrefFor(locale, { mode: "recommendations" })}>
-            {t.recommendationsOpen}
+          <a className="btn ink" href={emptyHref}>
+            {emptyLabel}
           </a>
         </div>
       </section>
     );
+  }
+
+  let weekSection = roadmap.this_week;
+  const weekItems = Array.isArray(weekSection?.items) ? weekSection.items : [];
+  if (!weekItems.length) {
+    const fallback = courseFallbackWeek(insights?.academy_courses || roadmap?.academy_courses);
+    if (fallback) weekSection = fallback;
   }
 
   return (
@@ -227,7 +286,7 @@ function RoadmapBento({ t, locale, roadmap }) {
         <RoadmapArt />
       </section>
       <div className="roadmap-grid">
-        <WeekCard t={t} locale={locale} section={roadmap.this_week} />
+        <WeekCard t={t} locale={locale} section={weekSection} />
         <NextCard t={t} locale={locale} section={roadmap.next} />
         <PathCard t={t} locale={locale} section={roadmap.academy_path} />
       </div>
@@ -289,14 +348,20 @@ export function InsightsRoadmap({ locale, initialInsights = null }) {
     };
   }, [me, seeded, locale, t.loadError]);
 
-  // Poll while AI roadmap is pending (cache warm).
+  // Brief poll only when roadmap is empty/pending (no readable milestones yet).
   useEffect(() => {
     if (!me?.authenticated || !(me.candidate || me.staff)) return undefined;
-    const status = data?.learning_roadmap?.status;
-    if (status !== "pending") return undefined;
+    const lr = data?.learning_roadmap;
+    if (!lr || lr.status !== "pending") return undefined;
     let cancelled = false;
+    let tries = 0;
     const lang = locale === "en" || locale === "ru" ? locale : "az";
     const timer = setInterval(() => {
+      tries += 1;
+      if (tries > 4) {
+        clearInterval(timer);
+        return;
+      }
       fetch(`/api/auth/me/insights?lang=${encodeURIComponent(lang)}`, { cache: "no-store" })
         .then((res) => (res.ok ? res.json() : null))
         .then((payload) => {
@@ -304,7 +369,7 @@ export function InsightsRoadmap({ locale, initialInsights = null }) {
           setData(payload);
         })
         .catch(() => {});
-    }, 2500);
+    }, 2000);
     return () => {
       cancelled = true;
       clearInterval(timer);
@@ -319,24 +384,18 @@ export function InsightsRoadmap({ locale, initialInsights = null }) {
       {allowed ? (
         <div className="h2-candidate insights-page roadmap-page">
           <PageChrome
-            backHref={hrefFor(locale, { mode: "insights" })}
-            backLabel={t.insightsTitle}
+            backHref={hrefFor(locale, { mode: "recommendations" })}
+            backLabel={t.recommendationsOpen}
             title={t.roadmapTitle}
           />
           {error ? <p className="note">{error}</p> : null}
-          {data && data.matching_consent === false ? (
-            <p className="hint h2-consent-banner">
-              {t.recommendationsConsent}{" "}
-              <a href={hrefFor(locale, { mode: "profile" })}>{t.recommendationsConsentLink}</a>
-            </p>
-          ) : null}
-          <RoadmapBento t={t} locale={locale} roadmap={roadmap} />
+          <RoadmapBento t={t} locale={locale} roadmap={roadmap} insights={data} />
         </div>
       ) : me === undefined ? null : (
         <div className="h2-candidate">
           <PageChrome
-            backHref={hrefFor(locale, { mode: "insights" })}
-            backLabel={t.insightsTitle}
+            backHref={hrefFor(locale, { mode: "recommendations" })}
+            backLabel={t.recommendationsOpen}
             title={t.roadmapTitle}
           />
           <div className="h2-empty h2-gate">

@@ -850,7 +850,7 @@ class EngagementPhase4Tests(unittest.TestCase):
             self.assertEqual(row[0], "coach_weekly")
             self.assertEqual(row[1], "Backend Developer")
             payload = json.loads(row[2] or "{}")
-            self.assertEqual(payload.get("cta_href"), "/me/insights")
+            self.assertEqual(payload.get("cta_href"), "/me/insights/roadmap")
             self.assertEqual(payload.get("role"), "Backend Developer")
             self.assertIn("Kubernetes", payload.get("must_learn") or [])
         finally:
@@ -903,7 +903,7 @@ class EngagementPhase4Tests(unittest.TestCase):
                     "role": "Backend Developer",
                     "must_learn": ["Kubernetes"],
                     "already_strong": ["Python"],
-                    "cta_href": "/me/insights",
+                    "cta_href": "/me/insights/roadmap",
                     "ai_title": "Bu həftənin planı: Backend Developer",
                     "ai_body": "Kubernetes öyrən.",
                 },

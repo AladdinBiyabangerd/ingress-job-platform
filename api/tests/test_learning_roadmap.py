@@ -150,6 +150,42 @@ class LearningRoadmapTests(unittest.TestCase):
         finally:
             conn.close()
 
+    def test_path_only_fills_week_and_next(self):
+        """Career path without missing skills must not look empty."""
+        subject = "path-only"
+        self._seed_profile(subject)
+        conn = _connect()
+        try:
+            with patch("app.learning_roadmap.complete_json") as ai:
+                from app.ai_gateway import GatewayResult
+
+                ai.return_value = GatewayResult(ok=False, error="disabled")
+                rich = build_learning_roadmap(
+                    conn,
+                    user_id=subject,
+                    missing_skills=[],
+                    have_skills=["Java"],
+                    role="Java Developer",
+                    lang="az",
+                    allow_ai_provider=False,
+                    week_key="2026-W41",
+                )
+            self.assertEqual(rich.get("status"), "ready")
+            self.assertTrue(rich.get("academy_career_path") or rich.get("career_path"))
+            hero = rich.get("hero") or {}
+            self.assertTrue(hero.get("title"))
+            self.assertNotIn("təsdiqləyin", (hero.get("lede") or "").lower())
+            self.assertNotIn("confirm", (hero.get("lede") or "").lower())
+            week = (rich.get("this_week") or {}).get("items") or []
+            nxt = (rich.get("next") or {}).get("items") or []
+            self.assertTrue(week, "this_week should have path starter steps")
+            self.assertTrue(nxt, "next should have follow-up steps")
+            path = rich.get("academy_path") or {}
+            self.assertTrue(path.get("steps"))
+            self.assertTrue((path.get("cta") or {}).get("href"))
+        finally:
+            conn.close()
+
     def test_ai_applied_milestones(self):
         subject = "ai-user"
         self._seed_profile(subject)

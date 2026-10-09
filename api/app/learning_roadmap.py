@@ -59,22 +59,31 @@ _HERO = {
         "title": "Bu həftənin addımı: {skill}",
         "lede": "{skill} biliklərinizi gücləndirmək üçün indi ən uyğun vaxtdır.",
         "motivation": "Bir konkret addım — sonra növbəti skill.",
+        "path_title": "{role} öyrənmə yolu",
+        "path_lede": "Academy yolu ilə rolunuza doğru konkret addımlar atın.",
+        "path_motivation": "Bu həftə path-ə başlayın — sonra praktikaya keçin.",
         "empty_title": "Bu həftənin öyrənmə yolu",
-        "empty_lede": "Profilinizi təsdiqləyin ki, şəxsi roadmap hazırlayaq.",
+        "empty_lede": "Hələ şəxsi addım yoxdur — tövsiyələrdən rol seçin və ya profili tamamlayın.",
     },
     "en": {
         "title": "This week’s step: {skill}",
         "lede": "Now is a strong time to level up {skill} for your target role.",
         "motivation": "One concrete move — then the next skill.",
+        "path_title": "{role} learning path",
+        "path_lede": "Take concrete steps toward your role with the Academy path.",
+        "path_motivation": "Start the path this week — then practice.",
         "empty_title": "This week’s learning path",
-        "empty_lede": "Confirm your profile so we can build a personal roadmap.",
+        "empty_lede": "No personal steps yet — pick a role in recommendations or complete your profile.",
     },
     "ru": {
         "title": "Шаг этой недели: {skill}",
         "lede": "Сейчас удачное время усилить {skill} под вашу целевую роль.",
         "motivation": "Один конкретный шаг — затем следующий навык.",
+        "path_title": "Путь обучения: {role}",
+        "path_lede": "Сделайте конкретные шаги к роли по пути Academy.",
+        "path_motivation": "Начните путь на этой неделе — затем практику.",
         "empty_title": "Путь обучения на эту неделю",
-        "empty_lede": "Подтвердите профиль, чтобы мы собрали личный roadmap.",
+        "empty_lede": "Пока нет личных шагов — выберите роль в рекомендациях или заполните профиль.",
     },
 }
 
@@ -97,9 +106,60 @@ _PRACTICE_STEPS = {
 }
 
 _PATH_STEPS = {
-    "az": ("Əsaslar", "Praktik axın", "İrəli səviyyə"),
-    "en": ("Basics", "Practical stream", "Advanced"),
-    "ru": ("Основы", "Практика", "Продвинутый уровень"),
+    "az": ("Academy yolunu aç", "Həftəlik praktik tapşırıq", "CV və müraciətdə göstər"),
+    "en": ("Open the Academy path", "Weekly practice task", "Show it on CV and applications"),
+    "ru": ("Открыть путь Academy", "Недельная практика", "Показать в CV и откликах"),
+}
+
+_PATH_WEEK_STEPS = {
+    "az": (
+        "Academy yoluna bax və ilk moduldan başla",
+        "Rol üçün əsas anlayışları möhkəmlət",
+        "Nəticəni CV və müraciətdə göstər",
+    ),
+    "en": (
+        "Open the Academy path and start the first module",
+        "Strengthen the core concepts for your role",
+        "Show the result on your CV and applications",
+    ),
+    "ru": (
+        "Откройте путь Academy и начните первый модуль",
+        "Укрепите базовые понятия для роли",
+        "Покажите результат в CV и откликах",
+    ),
+}
+
+_PATH_NEXT_STEPS = {
+    "az": (
+        {
+            "title": "Praktik axına keç",
+            "body": "Öyrəndiyinizi kiçik layihə və ya lab-da tətbiq edin.",
+        },
+        {
+            "title": "Rol uyğun elanlara bax",
+            "body": "Yaxın elanlarda eyni skill-ləri axtarın və müraciət edin.",
+        },
+    ),
+    "en": (
+        {
+            "title": "Move into practice",
+            "body": "Apply what you learned in a small project or lab.",
+        },
+        {
+            "title": "Browse matching jobs",
+            "body": "Find near-miss roles that ask for the same skills and apply.",
+        },
+    ),
+    "ru": (
+        {
+            "title": "Перейти к практике",
+            "body": "Закрепите изученное на небольшом проекте или в лаборатории.",
+        },
+        {
+            "title": "Смотреть подходящие вакансии",
+            "body": "Найдите почти подходящие роли с теми же навыками и откликнитесь.",
+        },
+    ),
 }
 
 _WHY_NOW = {
@@ -720,6 +780,12 @@ def _sections(
 ) -> dict[str, Any]:
     pack = _cta_pack(locale)
     hero_pack = _HERO[locale]
+    has_path_or_course = bool(career or courses)
+    role_label = (
+        str(career.get("role") or "").strip()
+        or str(role or "").strip()
+        or "Academy"
+    )
     focus = ""
     for item in milestones:
         if item.get("kind") == "academy_course" and item.get("skill"):
@@ -748,8 +814,8 @@ def _sections(
         }
     else:
         primary_cta = {
-            "label": pack["open_roadmap"],
-            "href": "/me/insights/roadmap",
+            "label": pack["recommendations"],
+            "href": "/me/recommendations",
             "external": False,
         }
 
@@ -761,6 +827,10 @@ def _sections(
         hero_title = hero_pack["title"].format(skill=focus)
         hero_lede = hero_pack["lede"].format(skill=focus)
         hero_motivation = hero_pack["motivation"]
+    elif has_path_or_course:
+        hero_title = hero_pack["path_title"].format(role=role_label)
+        hero_lede = hero_pack["path_lede"]
+        hero_motivation = hero_pack["path_motivation"]
     else:
         hero_title = hero_pack["empty_title"]
         hero_lede = hero_pack["empty_lede"]
@@ -782,6 +852,9 @@ def _sections(
     if not week_items and focus:
         for step in _PRACTICE_STEPS[locale][:3]:
             week_items.append({"text": step, "done": False, "milestone_id": ""})
+    if not week_items and has_path_or_course:
+        for step in _PATH_WEEK_STEPS[locale][:3]:
+            week_items.append({"text": step, "done": False, "milestone_id": ""})
 
     next_pool = practice_ms[1:] if len(practice_ms) > 1 else practice_ms
     if course_ms:
@@ -800,16 +873,43 @@ def _sections(
             next_items.append(
                 {
                     "title": _clamp(item.get("title") or "", limit=80),
-                    "body": _clamp(item.get("body") or "", limit=160),
+                    "body": _clamp(item.get("body") or item.get("why_now") or "", limit=160),
                     "milestone_id": item.get("id") or "",
                 }
             )
+    if not next_items and has_path_or_course:
+        for item in _PATH_NEXT_STEPS[locale][:2]:
+            next_items.append(
+                {
+                    "title": _clamp(item["title"], limit=80),
+                    "body": _clamp(item["body"], limit=160),
+                    "milestone_id": "",
+                }
+            )
 
-    path_steps = [{"n": i + 1, "title": title} for i, title in enumerate(_PATH_STEPS[locale])]
+    path_steps: list[dict[str, Any]] = []
+    if courses:
+        for i, course in enumerate(courses[:5]):
+            title = str(course.get("skill") or course.get("slug") or "").strip()
+            if title:
+                path_steps.append({"n": i + 1, "title": title})
+    if not path_steps and path_ms:
+        path_title = str(path_ms[0].get("title") or role_label).strip()
+        if path_title:
+            path_steps = [
+                {"n": 1, "title": path_title},
+                *[{"n": i + 2, "title": t} for i, t in enumerate(_PATH_STEPS[locale][1:])],
+            ]
+    if not path_steps and has_path_or_course:
+        path_steps = [
+            {"n": 1, "title": role_label},
+            *[{"n": i + 2, "title": t} for i, t in enumerate(_PATH_STEPS[locale][1:])],
+        ]
+
     path_cta = None
     if career.get("url"):
         path_cta = {
-            "label": pack["view_courses"],
+            "label": pack["view_path"],
             "href": career["url"],
             "external": True,
         }
@@ -819,28 +919,27 @@ def _sections(
             "href": courses[0]["url"],
             "external": True,
         }
-    if path_ms:
-        path_title = str(path_ms[0].get("title") or career.get("role") or "").strip()
-        if path_title:
-            path_steps = [
-                {"n": 1, "title": path_title},
-                *[{"n": i + 2, "title": t} for i, t in enumerate(_PATH_STEPS[locale][1:])],
-            ]
 
     week_cta = primary_cta if primary_cta.get("external") else {
         "label": pack["weekly_tasks"],
-        "href": primary_cta.get("href") or "/me/insights/roadmap",
+        "href": primary_cta.get("href") or "/me/recommendations",
         "external": False,
     }
     if courses and courses[0].get("url"):
         week_cta = {
-            "label": pack["weekly_tasks"],
+            "label": pack["start_course"],
             "href": courses[0]["url"],
+            "external": True,
+        }
+    elif career.get("url"):
+        week_cta = {
+            "label": pack["view_path"],
+            "href": career["url"],
             "external": True,
         }
 
     next_cta = {
-        "label": pack["next_step"],
+        "label": pack["recommendations"],
         "href": "/me/recommendations",
         "external": False,
     }
@@ -850,6 +949,12 @@ def _sections(
             "label": pack["next_step"],
             "href": cta0["href"],
             "external": bool(cta0.get("external")),
+        }
+    elif career.get("url") and not next_pool:
+        next_cta = {
+            "label": pack["next_step"],
+            "href": career["url"],
+            "external": True,
         }
 
     return {
@@ -873,10 +978,10 @@ def _sections(
         "academy_path": {
             "path_id": career.get("path_id") or "",
             "role": career.get("role") or role,
-            "steps": path_steps if (career or courses) else [],
+            "steps": path_steps if has_path_or_course else [],
             "cta": path_cta,
         }
-        if (career or courses)
+        if has_path_or_course
         else None,
     }
 
@@ -1011,9 +1116,10 @@ def build_learning_roadmap(
     source = _source_of(milestones) if milestones else "ai"
     status = "ready"
     if not milestones and not courses and not career:
-        status = "empty"
-    elif ai_status == "ai_pending" and source != "academy":
-        status = "pending"
+        # Only block the UI when there is nothing readable to show yet.
+        status = "pending" if ai_status == "ai_pending" else "empty"
+    # Template/Academy milestones are enough for first paint; do not keep
+    # status=pending (that caused 2.5s Insights polling while AI warms).
 
     pack = _cta_pack(locale)
     cta_primary = sections["hero"]["cta"]["href"] if sections.get("hero") else "/me/insights/roadmap"

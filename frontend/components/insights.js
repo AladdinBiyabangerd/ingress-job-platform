@@ -299,7 +299,7 @@ export function Insights({ locale, initialInsights = null }) {
           <PageChrome backHref={hrefFor(locale)} backLabel={t.breadcrumbHome} title={t.insightsTitle} />
           <div className="h2-empty h2-gate">
             <p>{t.insightsGate}</p>
-            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "insights" })} />
+            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "insightsRoadmap" })} />
           </div>
         </div>
       )}
@@ -364,8 +364,8 @@ export function InsightsNear({ locale, initialInsights = null }) {
       {allowed ? (
         <div className="h2-candidate insights-page insights-near-page">
           <PageChrome
-            backHref={hrefFor(locale, { mode: "insights" })}
-            backLabel={t.insightsTitle}
+            backHref={hrefFor(locale, { mode: "insightsRoadmap" })}
+            backLabel={t.roadmapTitle}
             title={t.insightsNearTitle}
             count={items.length || null}
           />
@@ -396,8 +396,8 @@ export function InsightsNear({ locale, initialInsights = null }) {
       ) : me === undefined ? null : (
         <div className="h2-candidate">
           <PageChrome
-            backHref={hrefFor(locale, { mode: "insights" })}
-            backLabel={t.insightsTitle}
+            backHref={hrefFor(locale, { mode: "insightsRoadmap" })}
+            backLabel={t.roadmapTitle}
             title={t.insightsNearTitle}
           />
           <div className="h2-empty h2-gate">

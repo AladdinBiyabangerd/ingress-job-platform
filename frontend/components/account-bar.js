@@ -126,8 +126,8 @@ export function AccountBar({ locale, returnTo, onMe }) {
                   </a>
                 ) : null}
                 {me.candidate || me.staff ? (
-                  <a role="menuitem" href={hrefFor(locale, { mode: "insights" })} onClick={() => setOpen(false)}>
-                    {t.insightsOpen}
+                  <a role="menuitem" href={hrefFor(locale, { mode: "insightsRoadmap" })} onClick={() => setOpen(false)}>
+                    {t.roadmapTitle}
                   </a>
                 ) : null}
                 {me.candidate || me.staff ? (

@@ -30,7 +30,6 @@ function buildItems(locale, me, t) {
     items.push(
       { id: "profileReview", label: t.profileReviewOpen, href: hrefFor(locale, { mode: "profileReview" }), group: "account" },
       { id: "recommendations", label: t.recommendationsOpen, href: hrefFor(locale, { mode: "recommendations" }), group: "account" },
-      { id: "insights", label: t.insightsOpen, href: hrefFor(locale, { mode: "insights" }), group: "account" },
       { id: "roadmap", label: t.roadmapTitle, href: hrefFor(locale, { mode: "insightsRoadmap" }), group: "account" },
       { id: "emailSettings", label: t.emailSettingsOpen, href: hrefFor(locale, { mode: "emailSettings" }), group: "account" },
       { id: "applications", label: t.myApplications, href: hrefFor(locale, { mode: "applications" }), group: "account" },

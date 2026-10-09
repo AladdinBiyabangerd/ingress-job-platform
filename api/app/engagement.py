@@ -1209,7 +1209,7 @@ def _coach_event_payload(ctx: dict[str, Any]) -> dict[str, Any]:
         "already_strong": have_objs,
         "have": have_objs,
         "missing": missing_objs,
-        "cta_href": "/me/insights",
+        "cta_href": "/me/insights/roadmap",
         "cta_secondary_href": "/me/recommendations",
     }
     if growth.get("academy_courses"):
@@ -1321,7 +1321,7 @@ def _send_coach_weekly_email(
     pack = COACH_EMAIL_COPY[lang]
     footer = COPY[lang]
     unsub = unsubscribe_url(user_id, lang=lang)
-    url = _app_url("/me/insights", lang=lang)
+    url = _app_url("/me/insights/roadmap", lang=lang)
     role = str(ctx.get("role") or "").strip() or "—"
     must = ", ".join((ctx.get("must_learn") or [])[:5]) or "—"
     strong = ", ".join((ctx.get("already_strong") or [])[:5]) or "—"
@@ -1541,7 +1541,7 @@ def fanout_coach_weekly(
         prefs=prefs,
         title=copy["title"],
         body=copy["body"],
-        url_path=str(payload.get("cta_href") or "/me/insights"),
+        url_path=str(payload.get("cta_href") or "/me/insights/roadmap"),
         tag=f"coach_weekly:{period}",
         lang=lang,
     ):
@@ -1630,7 +1630,6 @@ def insights_payload(
 ) -> dict[str, Any]:
     """Candidate growth hub: coach summary, near-misses, academy/roadmap."""
     from app.cv_profile import _profile_payload
-    from app.digests import _matches_since
     from app.role_suggestions import _matching_granted
 
     locale = _lang(lang)
@@ -1651,8 +1650,18 @@ def insights_payload(
         return base
 
     stored_coach = _latest_notification_payload(conn, user_id=user_id, kind="coach_weekly")
+    stored_lr = stored_coach.get("learning_roadmap") if isinstance(stored_coach, dict) else None
+    has_week_lr = (
+        isinstance(stored_lr, dict)
+        and str(stored_lr.get("week_key") or "") == base["week_key"]
+    )
+
+    # Avoid rebuilding coach+roadmap on every refresh when this week's snapshot exists.
     live_ctx = None
-    if str(profile.get("status") or "") == "confirmed":
+    need_live = str(profile.get("status") or "") == "confirmed" and (
+        not stored_coach or not has_week_lr
+    )
+    if need_live:
         try:
             live_ctx = build_coach_weekly_context(
                 conn,
@@ -1675,7 +1684,7 @@ def insights_payload(
             "roadmap": stored_coach.get("roadmap") or [],
             "learning_roadmap": stored_coach.get("learning_roadmap"),
             "academy_career_path": stored_coach.get("academy_career_path") or "",
-            "cta_href": stored_coach.get("cta_href") or "/me/insights",
+            "cta_href": stored_coach.get("cta_href") or "/me/insights/roadmap",
         }
         for course in stored_coach.get("academy_courses") or []:
             if isinstance(course, dict) and course not in base["academy_courses"]:
@@ -1683,8 +1692,7 @@ def insights_payload(
         for step in stored_coach.get("roadmap") or []:
             if isinstance(step, dict):
                 base["roadmap"].append(step)
-        stored_lr = stored_coach.get("learning_roadmap")
-        if isinstance(stored_lr, dict) and str(stored_lr.get("week_key") or "") == base["week_key"]:
+        if has_week_lr:
             base["learning_roadmap"] = stored_lr
     elif live_ctx:
         live_payload = _coach_event_payload(live_ctx)
@@ -1707,72 +1715,33 @@ def insights_payload(
         if isinstance(live_payload.get("learning_roadmap"), dict):
             base["learning_roadmap"] = live_payload["learning_roadmap"]
 
+    # Near-misses: notifications only. Live matches_payload is too heavy for Insights SSR
+    # (often multi-second) and was the main cause of 5–10s roadmap waits.
     near_notes = _recent_near_notifications(conn, user_id=user_id, limit=5)
     near_titles: list[str] = []
-    if near_notes:
-        for note in near_notes:
-            pl = note.get("payload") or {}
-            title = str(note.get("job_title") or pl.get("job_title") or "").strip()
-            if title:
-                near_titles.append(title)
-            base["near_misses"].append(
-                {
-                    "job_id": note.get("job_id") or pl.get("job_id"),
-                    "job_title": title,
-                    "score": pl.get("score"),
-                    "have": pl.get("have") or [],
-                    "missing": pl.get("missing") or [],
-                    "cta_href": pl.get("cta_href") or (
-                        f"/jobs/{note['job_id']}" if note.get("job_id") else "/me/recommendations"
-                    ),
-                    "academy_courses": pl.get("academy_courses") or [],
-                    "roadmap": pl.get("roadmap") or [],
-                    "created_at": note.get("created_at") or "",
-                    "source": "notification",
-                }
-            )
-    elif str(profile.get("status") or "") == "confirmed":
-        since = datetime.now(timezone.utc) - timedelta(hours=ENGAGEMENT_LOOKBACK_HOURS)
-        try:
-            matches = _matches_since(conn, user_id=user_id, since=since, limit=20, lang=locale)
-            near = select_match_near(matches)
-        except Exception:
-            near = None
-        if near:
-            growth = build_growth_cta(
-                conn,
-                user_id=user_id,
-                missing_skills=near.get("missing") or [],
-                have_skills=near.get("have") or [],
-                lang=locale,
-                near_titles=[str(near.get("title") or "").strip()] if near.get("title") else None,
-                allow_ai_provider=False,
-            )
-            title = str(near.get("title") or "").strip()
-            if title:
-                near_titles.append(title)
-            base["near_misses"].append(
-                {
-                    "job_id": near["job_id"],
-                    "job_title": title,
-                    "score": near.get("score"),
-                    "have": near.get("have") or [],
-                    "missing": [{"name": n} for n in (near.get("missing") or [])],
-                    "cta_href": f"/jobs/{near['job_id']}",
-                    "academy_courses": growth.get("academy_courses") or [],
-                    "roadmap": growth.get("roadmap") or [],
-                    "created_at": near.get("created_at") or "",
-                    "source": "live",
-                }
-            )
-            if not base["academy_courses"] and growth.get("academy_courses"):
-                base["academy_courses"] = list(growth["academy_courses"])
-            if not base["roadmap"] and growth.get("roadmap"):
-                base["roadmap"] = list(growth["roadmap"])
-            if not base["learning_roadmap"] and growth.get("learning_roadmap"):
-                base["learning_roadmap"] = growth["learning_roadmap"]
+    for note in near_notes:
+        pl = note.get("payload") or {}
+        title = str(note.get("job_title") or pl.get("job_title") or "").strip()
+        if title:
+            near_titles.append(title)
+        base["near_misses"].append(
+            {
+                "job_id": note.get("job_id") or pl.get("job_id"),
+                "job_title": title,
+                "score": pl.get("score"),
+                "have": pl.get("have") or [],
+                "missing": pl.get("missing") or [],
+                "cta_href": pl.get("cta_href") or (
+                    f"/jobs/{note['job_id']}" if note.get("job_id") else "/me/recommendations"
+                ),
+                "academy_courses": pl.get("academy_courses") or [],
+                "roadmap": pl.get("roadmap") or [],
+                "created_at": note.get("created_at") or "",
+                "source": "notification",
+            }
+        )
 
-    # Fresh rich roadmap for Insights when coach payload lacked one (or to refresh).
+    # Fresh rich roadmap when coach snapshot lacked one for this week.
     if not base["learning_roadmap"] and str(profile.get("status") or "") == "confirmed":
         try:
             role = ""

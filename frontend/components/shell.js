@@ -149,8 +149,8 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
           ) : null}
           {me.candidate || me.staff ? (
             <li>
-              <a href={hrefFor(locale, { mode: "insights" })} aria-current={mode === "insights" ? "page" : undefined}>
-                {t.insightsOpen}
+              <a href={hrefFor(locale, { mode: "insightsRoadmap" })} aria-current={mode === "insights" ? "page" : undefined}>
+                {t.roadmapTitle}
               </a>
             </li>
           ) : null}
