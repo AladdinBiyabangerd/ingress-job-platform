@@ -11,6 +11,7 @@ import { useInitialMe } from "./me-seed";
 import { PageChrome } from "./page-chrome";
 import { RegisterChoice } from "./register-choice";
 import { RoleSkillParts } from "./role-skill-parts";
+import { SkillPills } from "./roadmap";
 import { Shell } from "./shell";
 
 const LINES = {
@@ -156,6 +157,34 @@ function unreadForFilter(items, filter) {
   return list.filter((item) => !item.read).length;
 }
 
+function RailMatchRing({ pct }) {
+  if (pct === null) return null;
+  const r = 18;
+  const c = 2 * Math.PI * r;
+  const offset = c * (1 - Math.min(100, Math.max(0, pct)) / 100);
+  return (
+    <div className="notes-c-rail-ring" aria-label={`${pct}%`}>
+      <svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true">
+        <circle cx="24" cy="24" r={r} fill="none" stroke="rgb(0 31 255 / 12%)" strokeWidth="5" />
+        <circle
+          className="notes-c-rail-ring-arc"
+          cx="24"
+          cy="24"
+          r={r}
+          fill="none"
+          stroke="var(--brand)"
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+          transform="rotate(-90 24 24)"
+        />
+      </svg>
+      <span className="notes-c-rail-ring-pct">{pct}%</span>
+    </div>
+  );
+}
+
 function GrowthRail({ t, locale, item, onBack }) {
   if (!item) {
     return (
@@ -174,11 +203,16 @@ function GrowthRail({ t, locale, item, onBack }) {
 
   const payload = payloadOf(item);
   const rich = payload.learning_roadmap && typeof payload.learning_roadmap === "object" ? payload.learning_roadmap : null;
-  const heroTitle = String(rich?.hero?.title || "").trim();
-  const heroLede = String(rich?.hero?.lede || "").trim();
-  const weekSkill = String(rich?.hero?.skill || payload.roadmap?.[0]?.skill || "").trim();
+  const hero = rich?.hero && typeof rich.hero === "object" ? rich.hero : null;
+  const heroTitle = String(hero?.title || "").trim();
+  const heroLede = String(hero?.lede || hero?.motivation || "").trim();
+  const weekSkill = String(hero?.skill || payload.roadmap?.[0]?.skill || "").trim();
   const weekItems = Array.isArray(rich?.this_week?.items) ? rich.this_week.items : [];
+  const pathSteps = Array.isArray(rich?.academy_path?.steps) ? rich.academy_path.steps : [];
   const roadmap = Array.isArray(payload.roadmap) ? payload.roadmap : [];
+  const haveSkills = hero?.have || payload.have;
+  const missingSkills = hero?.missing || payload.missing || payload.must_learn;
+  const pct = scorePct(payload);
   const courses = Array.isArray(payload.academy_courses)
     ? payload.academy_courses
     : Array.isArray(rich?.academy_courses)
@@ -187,7 +221,30 @@ function GrowthRail({ t, locale, item, onBack }) {
   const primary = destination(locale, item);
   const secondary = secondaryHref(locale, item);
   const externalSecondary = secondary.startsWith("http");
-  const showGrowth = Boolean(heroTitle || roadmap.length || weekSkill || weekItems.length);
+  const showGrowth = Boolean(heroTitle || roadmap.length || weekSkill || weekItems.length || pathSteps.length);
+
+  const upcoming = (pathSteps.length
+    ? pathSteps.slice(0, 5).map((step, index) => {
+        const title = String(step?.title || "").trim();
+        if (!title) return null;
+        return { key: `${step?.n || index}-${title}`, title, soon: false };
+      })
+    : roadmap.slice(0, 5).map((entry, index) => {
+        const skill = String(entry?.skill || "").trim();
+        if (!skill) return null;
+        return {
+          key: skill || `rail-${index}`,
+          title: skill,
+          soon: Boolean(entry?.coming_soon),
+        };
+      })
+  ).filter(Boolean);
+
+  const weekKey = weekSkill.toLowerCase();
+  const journeyTail = upcoming
+    .filter((step) => !weekKey || step.title.toLowerCase() !== weekKey)
+    .slice(0, 4);
+  const hasJourney = Boolean(weekSkill || weekItems.length || journeyTail.length);
 
   return (
     <aside className="notes-c-rail" aria-label={t.notificationsGrowthTitle}>
@@ -209,50 +266,74 @@ function GrowthRail({ t, locale, item, onBack }) {
         </div>
       ) : (
         <div className="notes-c-rail-card">
-          <p className="notes-c-rail-kicker">{t.notificationsGrowthTitle}</p>
-          {heroTitle ? <h2 className="notes-c-rail-title">{heroTitle}</h2> : null}
-          {heroLede ? <p className="hint notes-c-rail-lede">{heroLede}</p> : null}
-          {weekSkill ? (
-            <p className="notes-c-rail-week">
-              <span className="hint">{t.roadmapThisWeek}: </span>
-              <strong>{weekSkill}</strong>
-            </p>
-          ) : null}
-          <RoleSkillParts t={t} have={payload.have} missing={payload.missing || payload.must_learn} limit={6} />
-          {weekItems.length ? (
-            <ul className="notes-c-rail-list">
-              {weekItems.slice(0, 4).map((entry, index) => {
-                const textLine = String(entry?.text || "").trim();
-                if (!textLine) return null;
-                return <li key={`week-${index}`}>{textLine}</li>;
-              })}
-            </ul>
-          ) : roadmap.length ? (
-            <ul className="notes-c-rail-list">
-              {roadmap.slice(0, 4).map((entry, index) => {
-                const skill = String(entry?.skill || "").trim();
-                const steps = Array.isArray(entry?.steps) ? entry.steps.filter(Boolean) : [];
-                return (
-                  <li key={skill || `rail-${index}`}>
-                    {skill ? <strong>{skill}</strong> : null}
-                    {entry?.coming_soon ? <span className="hint"> — {t.noticeComingSoon}</span> : null}
-                    {steps.length ? (
-                      <ol>
-                        {steps.slice(0, 3).map((step) => (
-                          <li key={String(step)}>{String(step)}</li>
-                        ))}
-                      </ol>
+          <div className="notes-c-rail-hero">
+            <div className="notes-c-rail-hero-top">
+              <div className="notes-c-rail-hero-copy">
+                <p className="notes-c-rail-kicker">{t.roadmapTitle}</p>
+                {heroTitle ? <h2 className="notes-c-rail-title">{heroTitle}</h2> : null}
+                {heroLede ? <p className="hint notes-c-rail-lede">{heroLede}</p> : null}
+              </div>
+              <RailMatchRing pct={pct} />
+            </div>
+            {weekSkill ? (
+              <p className="notes-c-rail-focus">
+                <span className="notes-c-rail-focus-dot" aria-hidden="true" />
+                <span className="notes-c-rail-focus-label">{t.roadmapThisWeek}</span>
+                <span className="notes-c-rail-focus-skill">{weekSkill}</span>
+              </p>
+            ) : null}
+            <SkillPills have={haveSkills} missing={missingSkills} limit={6} />
+          </div>
+
+          {hasJourney ? (
+            <ol className="notes-c-rail-journey" aria-label={t.roadmapAcademyPath}>
+              {weekSkill || weekItems.length ? (
+                <li className="notes-c-rail-step is-current">
+                  <span className="notes-c-rail-node" aria-hidden="true" />
+                  <div className="notes-c-rail-step-body">
+                    <p className="notes-c-rail-step-title">
+                      {t.roadmapThisWeek}
+                      {weekSkill ? <span className="notes-c-rail-step-skill"> · {weekSkill}</span> : null}
+                    </p>
+                    {weekItems.length ? (
+                      <ul className="roadmap-check-list notes-c-rail-checks">
+                        {weekItems.slice(0, 3).map((entry, index) => {
+                          const textLine = String(entry?.text || "").trim();
+                          if (!textLine) return null;
+                          return (
+                            <li key={`week-${index}`}>
+                              <span className="roadmap-check" aria-hidden="true" />
+                              <span className="roadmap-check-text">{textLine}</span>
+                            </li>
+                          );
+                        })}
+                      </ul>
                     ) : null}
-                  </li>
-                );
-              })}
-            </ul>
+                  </div>
+                </li>
+              ) : null}
+              {journeyTail.map((step, index) => (
+                <li key={step.key} className="notes-c-rail-step">
+                  <span className="notes-c-rail-node" aria-hidden="true" />
+                  <div className="notes-c-rail-step-body">
+                    <p className="notes-c-rail-step-title">
+                      <span className="notes-c-rail-step-n">{index + (weekSkill || weekItems.length ? 2 : 1)}</span>
+                      {step.title}
+                      {step.soon ? <span className="hint"> — {t.noticeComingSoon}</span> : null}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
           ) : null}
+
           {courses[0]?.url ? (
-            <a className="text-btn notes-c-rail-course" href={courses[0].url} target="_blank" rel="noreferrer">
-              {courses[0].title || t.noticeCtaLearn}
+            <a className="notes-c-rail-course" href={courses[0].url} target="_blank" rel="noreferrer">
+              <span className="notes-c-rail-course-label">{t.noticeCtaLearn}</span>
+              <span className="notes-c-rail-course-title">{courses[0].title || t.noticeCtaLearn}</span>
             </a>
           ) : null}
+
           <div className="notes-c-rail-actions">
             <a className="btn small ink" href={hrefFor(locale, { mode: "insightsRoadmap" })}>
               {t.roadmapOpenFull}

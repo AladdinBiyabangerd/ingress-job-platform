@@ -38,7 +38,7 @@ function CtaLink({ locale, cta, className = "btn ink", children }) {
   );
 }
 
-function SkillPills({ have = [], missing = [], limit = 8 }) {
+export function SkillPills({ have = [], missing = [], limit = 8 }) {
   const haveList = (Array.isArray(have) ? have : []).map(String).filter(Boolean).slice(0, limit);
   const missList = (Array.isArray(missing) ? missing : []).map(String).filter(Boolean).slice(0, limit);
   if (!haveList.length && !missList.length) return null;

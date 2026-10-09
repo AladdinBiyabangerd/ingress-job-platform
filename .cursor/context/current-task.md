@@ -6,21 +6,23 @@
 
 ## Current state
 - `/notifications` uses 3-zone layout: filters | feed | growth rail
-- Feed cards are compact; roadmap/`this_week` lives in sticky right rail
+- Growth rail upgraded from plain bullet list → journey: hero + match ring + skill pills + vertical path spine + course CTA
 - Filter + client pagination for large lists; mobile opens rail as detail pane
 
 ## Decisions
 - Filter buckets map to existing kinds (matches / learning / profile / apps)
 - Öyrənmə filter = `coach_weekly` only (`match_near` stays under Fürsətlər)
 - No new API fields — payload `learning_roadmap` + `roadmap` + skills only
+- Rail reuses roadmap SkillPills + check styles; path is timeline not nested cards
 
 ## Remaining
-1. Visual QA on desktop / tablet / mobile with many notifications
+1. User visual review of richer growth rail (live `/notifications`)
 2. Commit when user asks
 3. Still open from prior: deploy engagement SQL fix + worker re-run
 
 ## Relevant files
-- `frontend/components/notifications-page.js`
-- `frontend/app/globals.css` (`.notes-c*`)
-- `frontend/lib/copy.js` (filter/growth strings az/en/ru)
+- `frontend/components/notifications-page.js` (`GrowthRail`, `RailMatchRing`)
+- `frontend/components/roadmap.js` (exported `SkillPills`)
+- `frontend/app/globals.css` (`.notes-c-rail*`)
+- Preview: `.cursor/context/designs/notes-c-rail-journey.png`
 - Design refs: `.cursor/context/designs/notifications-design-c-triptych.png`
