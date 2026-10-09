@@ -11,7 +11,7 @@
 
 ## Decisions
 - Filter buckets map to existing kinds (matches / learning / profile / apps)
-- `match_near` appears under both Fürsətlər and Öyrənmə
+- Öyrənmə filter = `coach_weekly` only (`match_near` stays under Fürsətlər)
 - No new API fields — payload `learning_roadmap` + `roadmap` + skills only
 
 ## Remaining

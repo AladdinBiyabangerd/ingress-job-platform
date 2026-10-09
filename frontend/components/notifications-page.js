@@ -28,7 +28,7 @@ const LINES = {
 
 const ENGAGEMENT_KINDS = new Set(["match_new", "match_near", "profile_nudge", "coach_weekly"]);
 const MATCH_KINDS = new Set(["match_new", "match_near"]);
-const LEARNING_KINDS = new Set(["coach_weekly", "match_near"]);
+const LEARNING_KINDS = new Set(["coach_weekly"]);
 const APP_KINDS = new Set([
   "application_new",
   "application_seen",
