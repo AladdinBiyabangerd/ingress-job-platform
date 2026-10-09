@@ -109,9 +109,9 @@ that file is applied; set them yourself only if you use another bucket):
 | `AI_EMBED_PROVIDERS` | Optional. Comma order, default `nvidia,openai`. |
 | `GEMINI_MODEL` | Optional. Default `gemini-3.8-flash`. |
 | `GROQ_MODEL` | Optional. Default `openai/gpt-oss-20b`. |
-| `NVIDIA_CHAT_MODEL` | Optional. Default `meta/llama-3.3-70b-instruct` (3.1-8b EOL). |
+| `NVIDIA_CHAT_MODEL` | Optional. Default `nvidia/nemotron-3-super-120b-a12b` (Meta Llama 3.x instruct IDs are EOL on NIM). |
 | `NVIDIA_EMBED_MODEL` | Optional. Default `nvidia/nemotron-3-embed-1b`. |
-| `OPENROUTER_MODEL` | Optional. Default `google/gemma-4-26b-a4b-it:free` (`llama-3.3-70b:free` retired). |
+| `OPENROUTER_MODEL` | Optional. Default `openrouter/free` (routes across live `:free` models; single-model free tiers often 429). |
 | `AI_EMBEDDING_MODEL` | Optional. Overrides embed model id. With NVIDIA key defaults to `nvidia/nemotron-3-embed-1b`. |
 | `AI_EMBEDDING_DIMS` | Optional. Vector size for pgvector column. NVIDIA embed = `2048`; OpenAI small = `1536`. Set explicitly when switching. If the `embeddings` table already exists with the old size, drop/recreate it once. |
 | `AI_RERANK_ENABLED` | Optional. Default follows gateway; `0` keeps structured-only matches. |
