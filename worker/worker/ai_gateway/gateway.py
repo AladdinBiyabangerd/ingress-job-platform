@@ -50,7 +50,11 @@ CREATE TABLE IF NOT EXISTS ai_usage_daily (
 
 DEFAULT_MODEL = "gpt-4.1-nano"
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
+DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
+DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b"
+DEFAULT_NVIDIA_CHAT_MODEL = "meta/llama-3.3-70b-instruct"
 DEFAULT_NVIDIA_EMBED_MODEL = "nvidia/nemotron-3-embed-1b"
+DEFAULT_OPENROUTER_MODEL = "google/gemma-4-26b-a4b-it:free"
 CACHE_MODEL_TAG = "multi-v1"
 # Rough small-model list prices (USD / 1M tokens); used only for budget logs.
 _DEFAULT_INPUT_PER_M = 0.10
@@ -424,8 +428,8 @@ def _chat_providers() -> list[_ChatProvider]:
             if not key:
                 continue
             model = (
-                os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
-            ).strip() or "gemini-2.5-flash"
+                os.environ.get("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
+            ).strip() or DEFAULT_GEMINI_MODEL
             out.append(
                 _ChatProvider(
                     name="gemini",
@@ -440,8 +444,8 @@ def _chat_providers() -> list[_ChatProvider]:
             if not key:
                 continue
             model = (
-                os.environ.get("GROQ_MODEL") or "openai/gpt-oss-20b"
-            ).strip() or "openai/gpt-oss-20b"
+                os.environ.get("GROQ_MODEL") or DEFAULT_GROQ_MODEL
+            ).strip() or DEFAULT_GROQ_MODEL
             out.append(
                 _ChatProvider(
                     name="groq",
@@ -456,8 +460,8 @@ def _chat_providers() -> list[_ChatProvider]:
             if not key:
                 continue
             model = (
-                os.environ.get("NVIDIA_CHAT_MODEL") or "meta/llama-3.1-8b-instruct"
-            ).strip() or "meta/llama-3.1-8b-instruct"
+                os.environ.get("NVIDIA_CHAT_MODEL") or DEFAULT_NVIDIA_CHAT_MODEL
+            ).strip() or DEFAULT_NVIDIA_CHAT_MODEL
             out.append(
                 _ChatProvider(
                     name="nvidia",
@@ -472,9 +476,8 @@ def _chat_providers() -> list[_ChatProvider]:
             if not key:
                 continue
             model = (
-                os.environ.get("OPENROUTER_MODEL")
-                or "meta-llama/llama-3.3-70b-instruct:free"
-            ).strip() or "meta-llama/llama-3.3-70b-instruct:free"
+                os.environ.get("OPENROUTER_MODEL") or DEFAULT_OPENROUTER_MODEL
+            ).strip() or DEFAULT_OPENROUTER_MODEL
             referer = (
                 os.environ.get("OPENROUTER_HTTP_REFERER")
                 or os.environ.get("APP_URL")

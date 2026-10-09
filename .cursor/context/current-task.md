@@ -2,19 +2,22 @@
 
 ## Completed
 - Multi-provider `ai_gateway` (api + worker): chat fallback gemini→groq→nvidia→openrouter→openai; embed nvidia→openai
-- `key_configured` accepts any provider key
-- Embeddings default to NVIDIA `nemotron-3-embed-1b` (2048) when `NVIDIA_API_KEY` set; `AI_EMBEDDING_DIMS` override
-- Docs: `docs/railway.md` variable list; frontend copy for no-key messages
-- Tests: patch `_call_chat_json`; failover unit test
+- Default chat models refreshed after provider EOL/404s (2026-10):
+  - Gemini `gemini-3.8-flash` (was `gemini-2.5-flash`)
+  - NVIDIA chat `meta/llama-3.3-70b-instruct` (was `llama-3.1-8b-instruct` EOL)
+  - OpenRouter `google/gemma-4-26b-a4b-it:free` (was `llama-3.3-70b-instruct:free`)
+- Embeddings default NVIDIA `nemotron-3-embed-1b` (2048); docs + tests
 
 ## Current state
-- Code ready locally; needs deploy + Railway env vars on **api** and **worker**
-- Rotate keys previously pasted in chat before setting on Railway
+- Code defaults fixed locally; **redeploy api + worker**
+- If Railway sets `GEMINI_MODEL` / `NVIDIA_CHAT_MODEL` / `OPENROUTER_MODEL` to old IDs, clear or update those vars
+- Still need valid keys: OpenAI 401 = bad key; Groq 403/1010 = Cloudflare often blocks datacenter IPs (not a model id fix)
 
 ## Remaining
-- Set Railway vars (see list below)
-- If Postgres already has `embeddings` as `vector(1536)`, drop/recreate once for 2048
-- Deploy api + worker; smoke Rol koçu + match embed
+- Deploy api + worker with new defaults
+- Clear stale model env overrides on Railway if any
+- Fix/rotate `OPENAI_API_KEY` if used; treat Groq as optional if Railway IP stays blocked
+- Smoke Rol koçu + matches after deploy
 
 ## Railway variables (api + worker)
 ```
@@ -28,6 +31,4 @@ Optional: `OPENAI_API_KEY`, `AI_CHAT_PROVIDERS`, `AI_EMBED_PROVIDERS`, `GEMINI_M
 
 ## Relevant files
 - `api/app/ai_gateway/gateway.py`, `worker/worker/ai_gateway/gateway.py`
-- `api/app/ai_flags.py`, `worker/worker/ai_flags.py`
-- `api/app/embeddings.py`, `worker/worker/embeddings.py`
-- `docs/railway.md`, `frontend/lib/copy.js`
+- `docs/railway.md`
