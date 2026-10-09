@@ -1149,7 +1149,7 @@ def build_coach_weekly_context(
 ) -> dict[str, Any] | None:
     """Top role + skill gap (+ optional coach) for coach_weekly / insights."""
     from app.role_suggestions import suggest_roles_payload
-    from app.skill_gap import skill_gap_payload
+    from app.skill_gap import DEFAULT_TOP, skill_gap_payload
 
     locale = _lang(lang)
     roles = suggest_roles_payload(conn, user_id=user_id, limit=1, lang=locale)
@@ -1159,11 +1159,14 @@ def build_coach_weekly_context(
     role_name = str(top.get("canonical_name") or "").strip()
     if not role_name:
         return None
+    # Use DEFAULT_TOP (not a tiny top=N): OR-groups like Backend "lang" can
+    # consume the first few weighted skills, leaving complementary gaps
+    # (SQL/Docker/Kafka) outside a top=5 window and emptying must_learn.
     gap = skill_gap_payload(
         conn,
         user_id=user_id,
         role=role_name,
-        top=5,
+        top=DEFAULT_TOP,
         lang=locale,
         allow_ai_provider=allow_ai_provider,
     )

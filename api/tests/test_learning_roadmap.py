@@ -1,4 +1,4 @@
-"""Academy-first learning roadmap builder."""
+"""Skill-first learning roadmap builder."""
 
 import json
 import sqlite3
@@ -151,7 +151,7 @@ class LearningRoadmapTests(unittest.TestCase):
             conn.close()
 
     def test_path_only_fills_week_and_next(self):
-        """Career path without missing skills must not look empty."""
+        """Career path without missing skills must not look empty (practice, not Academy spam)."""
         subject = "path-only"
         self._seed_profile(subject)
         conn = _connect()
@@ -176,13 +176,65 @@ class LearningRoadmapTests(unittest.TestCase):
             self.assertTrue(hero.get("title"))
             self.assertNotIn("təsdiqləyin", (hero.get("lede") or "").lower())
             self.assertNotIn("confirm", (hero.get("lede") or "").lower())
+            # Skill-first: path-only copy must not funnel the week checklist to Academy.
             week = (rich.get("this_week") or {}).get("items") or []
             nxt = (rich.get("next") or {}).get("items") or []
-            self.assertTrue(week, "this_week should have path starter steps")
+            self.assertTrue(week, "this_week should have practice starter steps")
             self.assertTrue(nxt, "next should have follow-up steps")
+            week_blob = " ".join(str(i.get("text") or "") for i in week).lower()
+            self.assertNotIn("academy yoluna", week_blob)
+            hero_cta = (hero.get("cta") or {}).get("href") or ""
+            self.assertFalse(
+                str(hero_cta).startswith("http"),
+                "hero CTA should stay on-product when there is no skill gap",
+            )
             path = rich.get("academy_path") or {}
             self.assertTrue(path.get("steps"))
+            # Academy deep-dive stays on the path card only.
             self.assertTrue((path.get("cta") or {}).get("href"))
+        finally:
+            conn.close()
+
+    def test_missing_skills_drive_week_and_hero(self):
+        """Concrete gaps must appear as skills to learn, not Academy path steps."""
+        subject = "gap-user"
+        self._seed_profile(subject)
+        conn = _connect()
+        try:
+            with patch("app.learning_roadmap.complete_json") as ai:
+                from app.ai_gateway import GatewayResult
+
+                ai.return_value = GatewayResult(ok=False, error="disabled")
+                rich = build_learning_roadmap(
+                    conn,
+                    user_id=subject,
+                    missing_skills=["Kafka", "Spark"],
+                    have_skills=["Java"],
+                    role="Java Developer",
+                    lang="az",
+                    allow_ai_provider=False,
+                    week_key="2026-W41",
+                )
+            hero = rich.get("hero") or {}
+            self.assertIn("Kafka", hero.get("missing") or [])
+            self.assertIn("Kafka", hero.get("title") or "")
+            self.assertIn("Öyrən: Kafka", (hero.get("cta") or {}).get("label") or "")
+            week_texts = [
+                str(i.get("text") or "")
+                for i in ((rich.get("this_week") or {}).get("items") or [])
+            ]
+            self.assertTrue(any("Kafka" in t for t in week_texts), week_texts)
+            path_titles = [
+                str(s.get("title") or "")
+                for s in ((rich.get("academy_path") or {}).get("steps") or [])
+            ]
+            self.assertIn("Kafka", path_titles)
+            self.assertIn("Spark", path_titles)
+            week_cta = ((rich.get("this_week") or {}).get("cta") or {}).get("href") or ""
+            self.assertFalse(
+                str(week_cta).startswith("http"),
+                "week CTA should not jump to Academy when gaps have no mapped course",
+            )
         finally:
             conn.close()
 

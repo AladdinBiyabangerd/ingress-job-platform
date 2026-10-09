@@ -15,6 +15,7 @@ from app.cabinet_store import _connect, ensure_schema
 from app.cv_queue import ensure_cv_queue_tables
 from app.engagement import (
     already_logged,
+    build_coach_weekly_context,
     build_growth_cta,
     ensure_engagement_tables,
     fanout_coach_weekly,
@@ -807,6 +808,117 @@ class EngagementPhase4Tests(unittest.TestCase):
             payload = json.loads(row[1] or "{}")
             self.assertEqual(payload.get("cta_href"), "/profile/review")
             self.assertTrue(payload.get("ai_title"))
+        finally:
+            conn.close()
+
+    def test_coach_context_uses_default_top_for_lang_or_group(self):
+        """Backend Engineer + Java must still surface complementary gaps (not empty → Academy-only)."""
+        subject = "coach-java-backend"
+        with sqlite3.connect(self.db) as conn:
+            for name in (
+                "Java",
+                "Python",
+                "Go",
+                "Node.js",
+                ".NET",
+                "SQL",
+                "Docker",
+                "Kafka",
+                "Redis",
+            ):
+                conn.execute(
+                    """
+                    INSERT OR IGNORE INTO skill_dictionary (
+                        canonical_name, synonyms, category_hint, academy_course_ids, updated_at
+                    ) VALUES (?, '[]', '', '[]', '2026-10-08T12:00:00+00:00')
+                    """,
+                    (name,),
+                )
+            ids = {
+                row[0]: row[1]
+                for row in conn.execute(
+                    "SELECT canonical_name, id FROM skill_dictionary"
+                )
+            }
+            conn.execute(
+                """
+                INSERT INTO role_taxonomy (
+                    canonical_name, category, synonyms, academy_career_path_id, updated_at
+                ) VALUES (?, 'Backend', ?, ?, '2026-10-08T12:00:00+00:00')
+                """,
+                (
+                    "Backend Engineer",
+                    json.dumps(["Backend Developer"]),
+                    "backend-developer",
+                ),
+            )
+            role_id = conn.execute(
+                "SELECT id FROM role_taxonomy WHERE canonical_name = 'Backend Engineer'"
+            ).fetchone()[0]
+            for skill, weight, group in (
+                ("Java", 0.7, "lang"),
+                ("Python", 0.7, "lang"),
+                ("Go", 0.65, "lang"),
+                ("Node.js", 0.65, "lang"),
+                (".NET", 0.6, "lang"),
+                ("SQL", 0.55, ""),
+                ("Docker", 0.4, ""),
+                ("Kafka", 0.35, ""),
+                ("Redis", 0.35, ""),
+            ):
+                conn.execute(
+                    """
+                    INSERT INTO role_skill_weight (role_id, skill_id, weight, group_key)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (role_id, ids[skill], weight, group),
+                )
+            ensure_cv_queue_tables(conn)
+            profile = {
+                "headline": "Backend Engineer",
+                "skills": [{"name": "Java", "years": 3}],
+                "seniority": "middle",
+                "total_years": 3,
+            }
+            conn.execute(
+                """
+                INSERT INTO candidate_profile (
+                    user_id, cv_file_key, data, headline, seniority, total_years,
+                    status, parse_method, confidence, visibility, updated_at
+                ) VALUES (?, '', ?, 'Backend Engineer', 'middle', 3, 'confirmed', 'rules', 0.8, 'anonymous', ?)
+                """,
+                (subject, json.dumps(profile), "2026-10-08T12:00:00+00:00"),
+            )
+            conn.commit()
+        self._grant(subject)
+        conn = _connect()
+        try:
+            ctx = build_coach_weekly_context(
+                conn,
+                user_id=subject,
+                lang="en",
+                allow_ai_provider=False,
+            )
+            self.assertIsNotNone(ctx)
+            self.assertEqual(ctx.get("role"), "Backend Engineer")
+            must = set(ctx.get("must_learn") or [])
+            self.assertTrue(
+                must & {"SQL", "Docker", "Kafka", "Redis"},
+                f"expected complementary gaps, got {must}",
+            )
+            self.assertNotIn("Python", must)
+            self.assertNotIn("Go", must)
+            lr = (ctx.get("growth") or {}).get("learning_roadmap") or {}
+            hero_missing = set((lr.get("hero") or {}).get("missing") or [])
+            self.assertTrue(hero_missing & must)
+            week_texts = " ".join(
+                str(i.get("text") or "")
+                for i in ((lr.get("this_week") or {}).get("items") or [])
+            )
+            self.assertTrue(
+                any(name in week_texts for name in must),
+                f"this_week should name a missing skill, got {week_texts!r}",
+            )
         finally:
             conn.close()
 

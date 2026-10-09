@@ -42,15 +42,16 @@ export function SkillPills({ have = [], missing = [], limit = 8 }) {
   const haveList = (Array.isArray(have) ? have : []).map(String).filter(Boolean).slice(0, limit);
   const missList = (Array.isArray(missing) ? missing : []).map(String).filter(Boolean).slice(0, limit);
   if (!haveList.length && !missList.length) return null;
+  // Missing first — skill-first roadmap / coach cards lead with what to learn.
   return (
     <ul className="roadmap-pills">
-      {haveList.map((name) => (
-        <li key={`have-${name}`} className="roadmap-pill is-have">
+      {missList.map((name) => (
+        <li key={`miss-${name}`} className="roadmap-pill is-missing">
           <span className="roadmap-pill-text">{name}</span>
         </li>
       ))}
-      {missList.map((name) => (
-        <li key={`miss-${name}`} className="roadmap-pill is-missing">
+      {haveList.map((name) => (
+        <li key={`have-${name}`} className="roadmap-pill is-have">
           <span className="roadmap-pill-text">{name}</span>
         </li>
       ))}

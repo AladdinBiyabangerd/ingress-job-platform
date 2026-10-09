@@ -1,23 +1,25 @@
 # Current task
 
 ## Completed
-- Browser tab title unread badge: `(N) …` via `document.title` (like Instagram/YouTube)
-- Prior (uncommitted): Notifications Design C + growth rail
+- Skill-first roadmap (Academy funnel fix)
 
 ## Current state
-- Logged-in users with unread > 0 get `(2) Ingress Job — …` in the Chrome tab
-- Bell + notifications page stay in sync via `ingress:unread-notifications` event
-- Title prefix survives Next.js client navigations (MutationObserver on `<title>`)
+- Coach/insights skill-gap uses `DEFAULT_TOP` (15), not `top=5`
+- Roadmap hero/week/path lead with missing skill names; Academy CTA only on path card
+- Path-only copy is practice-oriented (no “Academy yoluna bax” checklist)
 
 ## Decisions
-- Prefix only; no favicon badge
-- Cap display at `99+` (matches bell UI)
+- Academy links stay as secondary (path card + footer), not removed
+- Digests `top=3` left unchanged (out of scope)
 
 ## Remaining
-1. User verify live: tab shows `(2)` when bell shows 2; clears after mark-all-read
-2. Commit when user asks (includes prior Design C + this title badge if desired)
+1. User verify live `/me/insights/roadmap` for Backend Engineer + Java shows SQL/Docker/Kafka etc.
+2. Commit when asked
 
 ## Relevant files
-- `frontend/lib/unread-document-title.js`
-- `frontend/components/notifications-bell.js`
-- `frontend/components/notifications-page.js` (publish on unread change)
+- `api/app/engagement.py`
+- `api/app/learning_roadmap.py`
+- `frontend/components/roadmap.js`
+- `frontend/lib/copy.js`
+- `api/tests/test_learning_roadmap.py`
+- `api/tests/test_engagement.py`
