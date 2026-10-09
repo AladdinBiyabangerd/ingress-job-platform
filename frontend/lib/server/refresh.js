@@ -286,14 +286,14 @@ export async function markAllNotificationsRead() {
 }
 
 /** Skill-gap for a picked role on /me/recommendations. Hits FastAPI, not the BFF.
- *  Role coach LLM may take up to ~30s — keep client wait above that so coach:null
- *  is a real soft-fail, not a truncated response.
+ *  Role coach is cache-only on the request path (AI warms in background); keep
+ *  the timeout short so the UI stays responsive.
  */
 export async function loadSkillGap(lang, role) {
   const name = typeof role === "string" ? role.trim() : "";
   if (!name) throw new Error("load");
   const qs = new URLSearchParams({ lang: localeLang(lang), role: name });
-  return loadJson(`/api/v1/me/skill-gap?${qs}`, 35_000);
+  return loadJson(`/api/v1/me/skill-gap?${qs}`, 12_000);
 }
 
 export async function saveEmailPrefs(payload) {

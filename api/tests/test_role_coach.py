@@ -10,20 +10,56 @@ from app.role_coach import PROMPT_VERSION, _skill_card, _validate_coach, build_r
 
 
 class RoleCoachSkillCardTests(unittest.TestCase):
-    def test_omits_volatile_share_from_prompt_card(self):
+    def test_includes_rounded_share_and_growth(self):
         cards = _skill_card(
             [
-                {"name": "Java", "weight": 1.0, "share": 0.42, "years": 3},
+                {"name": "Java", "weight": 1.0, "share": 0.42004, "growth": 0.12345, "years": 3},
                 {"name": "Kafka", "weight": 0.9, "share": 0.11},
             ]
         )
         self.assertEqual(
             cards,
             [
-                {"name": "Java", "weight": 1.0, "years": 3},
-                {"name": "Kafka", "weight": 0.9},
+                {"name": "Java", "weight": 1.0, "years": 3, "share": 0.42, "growth": 0.1235},
+                {"name": "Kafka", "weight": 0.9, "share": 0.11},
             ],
         )
+
+    def test_stable_sort_ignores_trend_display_order(self):
+        """UI may rank by share; card order stays weight×name (metrics still embedded)."""
+        cards = _skill_card(
+            [
+                {"name": "ZooKeeper", "weight": 0.5, "share": 0.99},
+                {"name": "Kafka", "weight": 0.9, "share": 0.01},
+                {"name": "Java", "weight": 1.0, "share": 0.5},
+            ]
+        )
+        self.assertEqual([c["name"] for c in cards], ["Java", "Kafka", "ZooKeeper"])
+        self.assertEqual(cards[0]["share"], 0.5)
+
+    def test_different_roles_build_different_user_prompts(self):
+        from app.role_coach import _build_user
+
+        common = dict(
+            lang="en",
+            have=[{"name": "Java", "weight": 1.0}],
+            missing=[{"name": "Kafka", "weight": 0.9}],
+            profile={"seniority": "middle", "skills": [{"name": "Java"}, {"name": "SQL"}]},
+        )
+        backend = _build_user(role_name="Backend Engineer", **common)
+        frontend = _build_user(role_name="Frontend Engineer", **common)
+        self.assertIn("Role: Backend Engineer", backend)
+        self.assertIn("Role: Frontend Engineer", frontend)
+        self.assertNotEqual(backend, frontend)
+        # TopSkills sorted — list order in profile must not matter.
+        shuffled = _build_user(
+            role_name="Backend Engineer",
+            lang="en",
+            have=[{"name": "Java", "weight": 1.0}],
+            missing=[{"name": "Kafka", "weight": 0.9}],
+            profile={"seniority": "middle", "skills": [{"name": "SQL"}, {"name": "Java"}]},
+        )
+        self.assertEqual(backend, shuffled)
 
 
 class RoleCoachValidateTests(unittest.TestCase):
@@ -288,6 +324,77 @@ class SkillGapCoachWireTests(unittest.TestCase):
         self.assertFalse(out["ai_coach"])
         self.assertIsNone(out["coach"])
         self.assertEqual(out["coach_error"], "ai_no_key")
+
+    def test_payload_schedules_warm_on_ai_pending(self):
+        from app.skill_gap import skill_gap_payload
+
+        class FakeConn:
+            def execute(self, *a, **k):
+                raise AssertionError("should be mocked before SQL")
+
+        with patch("app.skill_gap.ensure_profile_tables"):
+          with patch("app.skill_gap._matching_granted", return_value=True):
+            with patch(
+                "app.skill_gap._profile_payload",
+                return_value={
+                    "exists": True,
+                    "status": "ready",
+                    "profile": {"skills": [{"name": "Java"}]},
+                },
+            ):
+                with patch(
+                    "app.skill_gap.resolve_taxonomy_role",
+                    return_value={
+                        "id": 1,
+                        "canonical_name": "Java Backend Developer",
+                        "category": "Backend",
+                        "academy_career_path_id": "",
+                    },
+                ):
+                    with patch(
+                        "app.skill_gap._role_target_skills",
+                        return_value=[
+                            {
+                                "skill_id": 10,
+                                "name": "Java",
+                                "weight": 1.0,
+                                "share": None,
+                                "growth": None,
+                                "academy_courses": [],
+                                "group_key": "",
+                            },
+                        ],
+                    ):
+                        with patch("app.trends.trend_metrics_for_skills", return_value={}):
+                            with patch(
+                                "app.skill_gap._candidate_skills",
+                                return_value={10: {"years": 3}},
+                            ):
+                                with patch(
+                                    "app.skill_gap._build_skill_lookup",
+                                    return_value={},
+                                ):
+                                    with patch(
+                                        "app.role_coach.build_role_coach",
+                                        return_value=(None, "ai_pending"),
+                                    ):
+                                        with patch(
+                                            "app.ai_warm.skill_gap_warm_fail_code",
+                                            return_value=None,
+                                        ):
+                                            with patch(
+                                                "app.ai_warm.schedule_skill_gap_ai_warm"
+                                            ) as warm:
+                                                out = skill_gap_payload(
+                                                    FakeConn(),
+                                                    user_id="u1",
+                                                    role="Java Backend Developer",
+                                                    lang="en",
+                                                )
+        self.assertEqual(out["coach_error"], "ai_pending")
+        warm.assert_called_once()
+        self.assertEqual(warm.call_args.kwargs["user_id"], "u1")
+        self.assertEqual(warm.call_args.kwargs["role"], "Java Backend Developer")
 
 
 if __name__ == "__main__":

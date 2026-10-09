@@ -228,13 +228,14 @@ class LlmRerankTests(unittest.TestCase):
     def test_flag_off_noop(self):
         pool = [{"job_id": 1, "score": 0.8, "components": {}, "have": ["Java"], "missing": []}]
         with patch.dict(os.environ, {"AI_LLM_RERANK_ENABLED": "0"}, clear=False):
-            ok = apply_llm_rerank(
+            ok, deferred = apply_llm_rerank(
                 None,
                 matches=pool,
                 profile={"seniority": "senior", "skills": [{"name": "Java"}]},
                 profile_version="v1",
             )
         self.assertFalse(ok)
+        self.assertFalse(deferred)
         self.assertEqual(pool[0]["score"], 0.8)
         self.assertNotIn("ai_llm_rerank", pool[0])
 
@@ -272,13 +273,14 @@ class LlmRerankTests(unittest.TestCase):
         )
         with patch.dict(os.environ, {"AI_LLM_RERANK_ENABLED": "1"}, clear=False):
             with patch("app.match_llm_rerank.complete_json", return_value=fake):
-                ok = apply_llm_rerank(
+                ok, deferred = apply_llm_rerank(
                     None,
                     matches=pool,
                     profile={"seniority": "senior", "skills": [{"name": "Java"}], "total_years": 5},
                     profile_version="v1",
                 )
         self.assertTrue(ok)
+        self.assertFalse(deferred)
         # 0.55*0.8 + 0.45*(5/5) = 0.44 + 0.45 = 0.89
         self.assertEqual(pool[0]["score"], round(W_BLENDED * 0.8 + W_RELEVANCE * 1.0, 4))
         self.assertEqual(pool[0]["components"]["llm_relevance"], 5)
@@ -295,13 +297,14 @@ class LlmRerankTests(unittest.TestCase):
                 "app.match_llm_rerank.complete_json",
                 return_value=GatewayResult(ok=False, error="ai_provider_error"),
             ):
-                ok = apply_llm_rerank(
+                ok, deferred = apply_llm_rerank(
                     None,
                     matches=pool,
                     profile={"skills": [{"name": "Java"}]},
                     profile_version="v1",
                 )
         self.assertFalse(ok)
+        self.assertFalse(deferred)
         self.assertEqual(pool[0]["score"], 0.77)
 
     def test_feedback_demotion(self):

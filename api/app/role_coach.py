@@ -16,20 +16,33 @@ from app.ai_gateway import complete_json
 log = logging.getLogger("ingress-job.api.role_coach")
 
 PURPOSE = "role_coach"
-PROMPT_VERSION = "role-coach-v1"
+# v4: include market share/growth on skill cards (daily metric refresh may
+# regenerate once; same-day page refresh still hits ai_cache).
+PROMPT_VERSION = "role-coach-v4"
 
 _LANG_NAME = {"az": "Azerbaijani", "en": "English", "ru": "Russian"}
 
 _SYSTEM = (
-    "You are a career coach for one target role. Use ONLY the skill names and "
-    "facts in the user message. Do not invent skill names — every skill in "
-    "must_learn / already_strong / transferable must come from the provided "
-    "MissingSkills or HaveSkills lists.\n"
+    "You are a career coach speaking directly to the learner who will read "
+    "this advice. Use ONLY the skill names and facts in the user message. Do "
+    "not invent skill names — every skill in must_learn / already_strong / "
+    "transferable must come from the provided MissingSkills or HaveSkills "
+    "lists.\n"
+    "When share (market demand fraction) or growth (recent demand change) is "
+    "present on a skill, prefer higher share / positive growth for must_learn "
+    "priority and mention demand briefly in why when useful. Ignore missing "
+    "share/growth fields.\n"
+    "Voice: second person only (you / your; Azerbaijani: siz / sizin; "
+    "Russian: вы / ваш). Never third person about a 'candidate', 'namizəd', "
+    "'applicant', or 'they'. The reader is the person in the profile.\n"
     "Output:\n"
-    "- fit_summary: 2–3 sentences in the requested language.\n"
-    "- must_learn: up to 5 items from MissingSkills only {skill, why, priority}.\n"
+    "- fit_summary: 2–3 sentences in the requested language, addressing the "
+    "reader directly.\n"
+    "- must_learn: up to 5 items from MissingSkills only {skill, why, priority}; "
+    "why addresses the reader (why you should learn it).\n"
     "- already_strong: up to 5 skill names from HaveSkills only.\n"
-    "- transferable: up to 3 {from, to, note} where from∈HaveSkills and to∈MissingSkills.\n"
+    "- transferable: up to 3 {from, to, note} where from∈HaveSkills and "
+    "to∈MissingSkills; note addresses the reader.\n"
     "priority is an integer 1–5 (1 = highest). No PII."
 )
 
@@ -82,20 +95,46 @@ def _pick_locale(lang: str) -> str:
     return text if text in _LANG_NAME else "az"
 
 
+def _metric_float(raw: object, *, digits: int = 4) -> float | None:
+    if raw is None:
+        return None
+    try:
+        return round(float(raw), digits)
+    except (TypeError, ValueError):
+        return None
+
+
 def _skill_card(items: list[dict], *, limit: int = 15) -> list[dict]:
-    """Stable prompt fields only — omit trend share so cache keys survive daily metrics."""
-    out: list[dict] = []
-    for item in items[:limit]:
+    """Prompt cards for HaveSkills / MissingSkills.
+
+    Includes market share/growth when present (better coaching). Sorted by
+    role weight desc, then name, so list reshuffles alone do not change the
+    cache key. Rounded metrics keep same-day refreshes cache-stable; a daily
+    trends refresh may regenerate once — that is intentional.
+    """
+    scored: list[tuple[float, str, dict[str, Any]]] = []
+    for item in items or []:
         if not isinstance(item, dict):
             continue
         name = str(item.get("name") or "").strip()
         if not name:
             continue
-        card: dict[str, Any] = {"name": name, "weight": item.get("weight")}
+        try:
+            weight = float(item.get("weight"))
+        except (TypeError, ValueError):
+            weight = 0.0
+        card: dict[str, Any] = {"name": name, "weight": weight}
         if item.get("years") is not None:
             card["years"] = item.get("years")
-        out.append(card)
-    return out
+        share = _metric_float(item.get("share"))
+        if share is not None:
+            card["share"] = share
+        growth = _metric_float(item.get("growth"))
+        if growth is not None:
+            card["growth"] = growth
+        scored.append((-weight, name.lower(), card))
+    scored.sort(key=lambda row: (row[0], row[1]))
+    return [row[2] for row in scored[:limit]]
 
 
 def _name_set(items: list[dict]) -> set[str]:
@@ -128,6 +167,7 @@ def _build_user(
     locale = _pick_locale(lang)
     skills = profile.get("skills") if isinstance(profile.get("skills"), list) else []
     top: list[str] = []
+    seen: set[str] = set()
     for item in skills:
         if isinstance(item, str):
             name = item.strip()
@@ -135,21 +175,27 @@ def _build_user(
             name = str(item.get("name") or "").strip()
         else:
             continue
-        if name and name not in top:
-            top.append(name)
-        if len(top) >= 12:
-            break
+        key = name.lower()
+        if not name or key in seen:
+            continue
+        seen.add(key)
+        top.append(name)
+    # Alphabetical — profile list order must not bust the per-role cache key.
+    top = sorted(top, key=str.lower)[:12]
     years = profile.get("total_years")
     years_s = str(years) if isinstance(years, (int, float)) else ""
+    role = str(role_name or "").strip()
     return "\n".join(
         [
             f"Language: {_LANG_NAME[locale]}",
-            f"Role: {role_name}",
-            f"CandidateSeniority: {str(profile.get('seniority') or '').strip() or '(none)'}",
-            f"CandidateYears: {years_s or '(unknown)'}",
+            f"Role: {role}",
+            f"YourSeniority: {str(profile.get('seniority') or '').strip() or '(none)'}",
+            f"YourYears: {years_s or '(unknown)'}",
             "TopSkills: " + (", ".join(top) if top else "(none)"),
             "HaveSkills: " + json.dumps(_skill_card(have), ensure_ascii=False),
             "MissingSkills: " + json.dumps(_skill_card(missing), ensure_ascii=False),
+            "Write fit_summary, why, and note in second person to the learner.",
+            "Tailor advice specifically to this Role; do not reuse another role's plan.",
             "Respond with fit_summary, must_learn, already_strong, transferable.",
         ]
     )
@@ -238,8 +284,12 @@ def build_role_coach(
     missing: list[dict],
     profile: dict,
     lang: str,
+    allow_provider: bool = True,
 ) -> tuple[dict | None, str]:
-    """Return (validated coach payload, error_code). error_code is '' on success."""
+    """Return (validated coach payload, error_code). error_code is '' on success.
+
+    allow_provider=False: cache-only (miss → ``ai_pending``) for non-blocking HTTP.
+    """
     if not coach_enabled(conn):
         return _fail(role_name, "role_coach_disabled")
     if not role_name or (not have and not missing):
@@ -260,9 +310,12 @@ def build_role_coach(
         known_pii=None,
         conn=conn,
         timeout=30.0,
+        allow_provider=allow_provider,
     )
     if not result.ok or not isinstance(result.data, dict):
         code = str(result.error or "ai_failed").strip() or "ai_failed"
+        if code == "ai_pending":
+            return None, "ai_pending"
         return _fail(role_name, code[:80])
     validated = _validate_coach(result.data, have=have, missing=missing)
     if validated is None:

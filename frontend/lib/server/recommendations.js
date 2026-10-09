@@ -51,7 +51,7 @@ export const getRecommendationBundle = cache(async (lang = "az", preferredRole =
       ? loadJson(
           access,
           `/api/v1/me/skill-gap?${qs}&role=${encodeURIComponent(topRole)}`,
-          35_000,
+          12_000,
         )
       : Promise.resolve(null),
   ]);

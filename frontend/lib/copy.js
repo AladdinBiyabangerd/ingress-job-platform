@@ -570,6 +570,7 @@ export const copy = {
     skillsCoachTransferEmpty: "Hələ keçid tövsiyəsi yoxdur.",
     skillsCoachEmpty:
       "Koç məsləhəti hələ hazır deyil. Bir az sonra yeniləyin və ya profili tamamlayın.",
+    skillsCoachPending: "Koç məsləhəti hazırlanır…",
     skillsCoachErrorNoKey: "AI açarı API-də oxunmur (GEMINI/GROQ/NVIDIA/OpenRouter/OpenAI).",
     skillsCoachErrorOff: "Rol koçu və ya AI gateway sönülüdür.",
     skillsCoachErrorBudget: "AI günlük limiti dolub. Bir az sonra yeniləyin.",
@@ -1253,6 +1254,7 @@ export const copy = {
     skillsCoachTransferEmpty: "No transferable tips yet.",
     skillsCoachEmpty:
       "Coach advice is not ready yet. Refresh shortly or complete your profile.",
+    skillsCoachPending: "Preparing coach advice…",
     skillsCoachErrorNoKey: "The API cannot read an AI provider key (GEMINI/GROQ/NVIDIA/OpenRouter/OpenAI).",
     skillsCoachErrorOff: "Role coach or the AI gateway is turned off.",
     skillsCoachErrorBudget: "The daily AI budget is used up. Try again later.",
@@ -1937,6 +1939,7 @@ export const copy = {
     skillsCoachTransferEmpty: "Пока нет подсказок по переносу.",
     skillsCoachEmpty:
       "Совет коуча пока не готов. Обновите позже или заполните профиль.",
+    skillsCoachPending: "Готовим совет коуча…",
     skillsCoachErrorNoKey: "API не читает ключ AI (GEMINI/GROQ/NVIDIA/OpenRouter/OpenAI).",
     skillsCoachErrorOff: "Коуч роли или AI gateway выключен.",
     skillsCoachErrorBudget: "Дневной лимит AI исчерпан. Попробуйте позже.",

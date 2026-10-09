@@ -102,12 +102,17 @@ def append_why_sentences(
     profile_version: str,
     top_n: int = DEFAULT_TOP,
     candidate: dict | None = None,
-) -> None:
-    """Mutate matches[:top_n] explanations in place when AI succeeds."""
+    allow_provider: bool = True,
+) -> bool:
+    """Mutate matches[:top_n] explanations in place when AI succeeds.
+
+    Returns True when at least one call was deferred (``ai_pending``).
+    """
     if not why_enabled(conn) or not matches:
-        return
+        return False
     n = max(0, min(int(top_n or DEFAULT_TOP), len(matches)))
     version = (profile_version or "v0")[:80]
+    deferred = False
     for item in matches[:n]:
         if not isinstance(item, dict):
             continue
@@ -126,8 +131,11 @@ def append_why_sentences(
             known_pii=None,
             conn=conn,
             timeout=20.0,
+            allow_provider=allow_provider,
         )
         if not result.ok or not isinstance(result.data, dict):
+            if str(result.error or "") == "ai_pending":
+                deferred = True
             continue
         why = " ".join(str(result.data.get("why") or "").split())
         if len(why) < 12:
@@ -137,3 +145,4 @@ def append_why_sentences(
         base = str(item.get("explanation") or "").strip()
         item["explanation"] = f"{base} · {why}" if base else why
         item["ai_why"] = True
+    return deferred

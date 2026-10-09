@@ -76,6 +76,41 @@ class AiGatewayCachePersistTests(unittest.TestCase):
             self.assertTrue(second.cached)
             self.assertIn("Cached role coach", second.data["fit_summary"])
 
+    def test_allow_provider_false_returns_pending_on_miss(self):
+        schema = {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {"fit_summary": {"type": "string"}},
+            "required": ["fit_summary"],
+        }
+        env = {
+            "OPENAI_API_KEY": "sk-test",
+            "AI_GATEWAY_ENABLED": "1",
+            "AI_GATEWAY_DAILY_CALL_LIMIT": "100",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "jobs.sqlite"
+            conn = sqlite3.connect(path)
+            try:
+                ensure_ai_tables(conn)
+                with patch.dict(os.environ, env, clear=False):
+                    with patch("app.ai_gateway.gateway._call_chat_json") as api:
+                        result = complete_json(
+                            purpose="role_coach",
+                            prompt_version="role-coach-v1",
+                            system="sys",
+                            user="Role: Backend\nHaveSkills: []",
+                            schema=schema,
+                            schema_name="role_coach",
+                            conn=conn,
+                            allow_provider=False,
+                        )
+                api.assert_not_called()
+            finally:
+                conn.close()
+        self.assertFalse(result.ok)
+        self.assertEqual(result.error, "ai_pending")
+
 
 if __name__ == "__main__":
     unittest.main()

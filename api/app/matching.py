@@ -568,6 +568,7 @@ def matches_payload(
     limit: int | None = None,
     lang: str | None = None,
     role: str | None = None,
+    allow_ai_provider: bool = False,
 ) -> dict:
     ensure_profile_tables(conn)
     ensure_match_tables(conn)
@@ -589,6 +590,7 @@ def matches_payload(
         "skill_count": skill_count,
         "ai_rerank": False,
         "ai_llm_rerank": False,
+        "ai_pending": False,
         "role": role_name or "",
     }
     if not matching:
@@ -642,17 +644,20 @@ def matches_payload(
 
     profile_version = str(profile_payload.get("updated_at") or "")[:80] or "v0"
     used_llm = False
+    llm_deferred = False
     try:
         from app.match_llm_rerank import apply_llm_rerank
 
-        used_llm = apply_llm_rerank(
+        used_llm, llm_deferred = apply_llm_rerank(
             conn,
             matches=pool,
             profile=profile,
             profile_version=profile_version,
+            allow_provider=allow_ai_provider,
         )
     except Exception:
         used_llm = False
+        llm_deferred = False
     if used_llm:
         pool.sort(key=lambda row: (-row["score"], -row["job_id"]))
         base["ai_llm_rerank"] = True
@@ -660,19 +665,43 @@ def matches_payload(
     _apply_feedback_demotion(pool)
     pool.sort(key=lambda row: (-row["score"], -row["job_id"]))
     matches = pool[:chosen_limit]
-    if used_rerank or used_llm:
+    why_deferred = False
+    if used_rerank or used_llm or llm_deferred:
         try:
             from app.match_why import append_why_sentences
 
-            append_why_sentences(
+            why_deferred = append_why_sentences(
                 conn,
                 matches=matches,
                 lang=locale,
                 profile_version=profile_version,
                 candidate=profile,
+                allow_provider=allow_ai_provider,
             )
         except Exception:
-            pass
+            why_deferred = False
+    if (llm_deferred or why_deferred) and not allow_ai_provider:
+        try:
+            from app.ai_warm import matches_warm_fail_code, schedule_matches_ai_warm
+
+            sticky = matches_warm_fail_code(
+                user_id=user_id,
+                lang=locale,
+                role=role_name,
+                limit=chosen_limit,
+            )
+            if sticky:
+                base["ai_pending"] = False
+            else:
+                base["ai_pending"] = True
+                schedule_matches_ai_warm(
+                    user_id=user_id,
+                    lang=locale,
+                    role=role_name,
+                    limit=chosen_limit,
+                )
+        except Exception:
+            base["ai_pending"] = True
     base["matches"] = matches
     return base
 

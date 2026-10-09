@@ -1130,7 +1130,14 @@ def build_coach_weekly_context(
     role_name = str(top.get("canonical_name") or "").strip()
     if not role_name:
         return None
-    gap = skill_gap_payload(conn, user_id=user_id, role=role_name, top=5, lang=locale)
+    gap = skill_gap_payload(
+        conn,
+        user_id=user_id,
+        role=role_name,
+        top=5,
+        lang=locale,
+        allow_ai_provider=True,
+    )
     must_learn = [
         str(item.get("name") or "").strip()
         for item in (gap.get("missing") or [])

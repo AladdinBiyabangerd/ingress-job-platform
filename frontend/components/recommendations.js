@@ -76,6 +76,7 @@ function coachTransferItems(list) {
 function coachEmptyMessage(t, coachError) {
   const code = String(coachError || "").trim();
   if (!code) return t.skillsCoachEmpty;
+  if (code === "ai_pending") return t.skillsCoachPending || t.skillsCoachEmpty;
   if (code === "ai_no_key") return t.skillsCoachErrorNoKey;
   if (code === "ai_disabled" || code === "role_coach_disabled") return t.skillsCoachErrorOff;
   if (code === "ai_budget_exceeded") return t.skillsCoachErrorBudget;
@@ -312,6 +313,44 @@ export function Recommendations({
     };
   }, [me, lang, activeRole, initialTopRole]);
 
+  // AI coach / match LLM warm in a background thread — poll until ready.
+  useEffect(() => {
+    if (!me || !(me.candidate || me.staff) || !activeRole) return undefined;
+    const coachPending = String(gap?.coach_error || "").trim() === "ai_pending";
+    const matchesPending = Boolean(matches?.ai_pending);
+    if (!coachPending && !matchesPending) return undefined;
+    let cancelled = false;
+    let attempts = 0;
+    const roleQs = `&role=${encodeURIComponent(activeRole)}`;
+    const tick = () => {
+      attempts += 1;
+      if (attempts > 20 || cancelled) return;
+      if (coachPending) {
+        loadSkillGap(lang, activeRole)
+          .then((gapPayload) => {
+            if (!cancelled && gapPayload) setGap(gapPayload);
+          })
+          .catch(() => {});
+      }
+      if (matchesPending) {
+        fetch(`/api/auth/me/matches?lang=${lang}&limit=${MATCHES_FETCH_LIMIT}${roleQs}`, {
+          cache: "no-store",
+        })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((matchesPayload) => {
+            if (!cancelled && matchesPayload) setMatches(matchesPayload);
+          })
+          .catch(() => {});
+      }
+    };
+    const id = setInterval(tick, 2500);
+    tick();
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [me, lang, activeRole, gap?.coach_error, matches?.ai_pending]);
+
   const jobCount = Array.isArray(matches?.matches) ? matches.matches.length : 0;
   const consentOk = roles?.matching_consent !== false && matches?.matching_consent !== false;
   const candidate = Boolean(me?.candidate || me?.staff);
@@ -509,9 +548,13 @@ export function Recommendations({
                   </div>
                 </>
               ) : (
-                <div className="recommendations-coach-empty">
+                <div
+                  className="recommendations-coach-empty"
+                  role={coachError === "ai_pending" ? "status" : undefined}
+                  aria-live={coachError === "ai_pending" ? "polite" : undefined}
+                >
                   <p className="hint">{coachEmptyMessage(t, coachError)}</p>
-                  {coachError ? (
+                  {coachError && coachError !== "ai_pending" ? (
                     <p className="hint recommendations-coach-error-code">{coachError}</p>
                   ) : null}
                 </div>

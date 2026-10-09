@@ -182,6 +182,7 @@ def skill_gap_payload(
     role: str | None,
     top: int | None = None,
     lang: str | None = None,
+    allow_ai_provider: bool = False,
 ) -> dict:
     ensure_profile_tables(conn)
     chosen_top = clamp_top(top)
@@ -318,6 +319,7 @@ def skill_gap_payload(
             missing=missing,
             profile=profile,
             lang=locale,
+            allow_provider=allow_ai_provider,
         )
     except Exception as exc:
         log.warning("role_coach exception role=%s: %s", base.get("role") or "-", exc)
@@ -332,7 +334,32 @@ def skill_gap_payload(
     else:
         base["coach"] = None
         base["ai_coach"] = False
-        base["coach_error"] = str(coach_error or "ai_failed")[:80]
+        err = str(coach_error or "ai_failed")[:80]
+        if err == "ai_pending" and not allow_ai_provider:
+            try:
+                from app.ai_warm import (
+                    schedule_skill_gap_ai_warm,
+                    skill_gap_warm_fail_code,
+                )
+
+                sticky = skill_gap_warm_fail_code(
+                    user_id=user_id,
+                    role=str(base["role"] or ""),
+                    lang=locale,
+                    top=chosen_top,
+                )
+                if sticky:
+                    err = sticky
+                else:
+                    schedule_skill_gap_ai_warm(
+                        user_id=user_id,
+                        role=str(base["role"] or ""),
+                        lang=locale,
+                        top=chosen_top,
+                    )
+            except Exception as exc:
+                log.warning("role_coach warm schedule failed: %s", exc)
+        base["coach_error"] = err
     return base
 
 

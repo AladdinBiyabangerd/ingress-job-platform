@@ -124,16 +124,21 @@ def apply_llm_rerank(
     profile: dict,
     profile_version: str,
     top_n: int = DEFAULT_TOP,
-) -> bool:
-    """Mutate top-N match scores with LLM relevance. Returns True if any applied."""
+    allow_provider: bool = True,
+) -> tuple[bool, bool]:
+    """Mutate top-N match scores with LLM relevance.
+
+    Returns ``(applied, deferred)``. ``deferred`` is True on cache miss when
+    ``allow_provider`` is False (``ai_pending``).
+    """
     if not llm_rerank_enabled(conn) or not matches:
-        return False
+        return False, False
     n = max(0, min(int(top_n or DEFAULT_TOP), len(matches)))
     if n == 0:
-        return False
+        return False, False
     subset = [m for m in matches[:n] if isinstance(m, dict) and m.get("job_id") is not None]
     if not subset:
-        return False
+        return False, False
 
     result = complete_json(
         purpose=PURPOSE,
@@ -149,13 +154,14 @@ def apply_llm_rerank(
         known_pii=None,
         conn=conn,
         timeout=30.0,
+        allow_provider=allow_provider,
     )
     if not result.ok or not isinstance(result.data, dict):
-        return False
+        return False, str(result.error or "") == "ai_pending"
 
     raw_scores = result.data.get("scores")
     if not isinstance(raw_scores, list):
-        return False
+        return False, False
 
     by_id: dict[int, dict] = {}
     for row in raw_scores:
@@ -172,7 +178,7 @@ def apply_llm_rerank(
         by_id[jid] = {"relevance": rel, "note": note}
 
     if not by_id:
-        return False
+        return False, False
 
     applied = False
     for item in subset:
@@ -195,4 +201,4 @@ def apply_llm_rerank(
         item["score"] = final
         item["ai_llm_rerank"] = True
         applied = True
-    return applied
+    return applied, False
