@@ -4615,9 +4615,42 @@ body:has(.profile-review-page) {
     linear-gradient(160deg, var(--brand-soft) 0%, #f8f9ff 70%);
 }
 
+.roadmap-pill-groups {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.roadmap-pill-group {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.roadmap-pill-group-label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted, #5c6578);
+}
+
+.roadmap-pill-group.is-missing .roadmap-pill-group-label {
+  color: #9a4a12;
+}
+
+.roadmap-pill-group.is-have .roadmap-pill-group-label {
+  color: #1b5e3a;
+}
+
+.roadmap-pill-group.is-have {
+  opacity: 0.88;
+}
+
 .roadmap-pills {
   list-style: none;
-  margin: 2px 0 0;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
@@ -4641,12 +4674,34 @@ body:has(.profile-review-page) {
   color: #9a4a12;
 }
 
+.roadmap-pill.is-have {
+  background: #e8f6ee;
+  color: #1b5e3a;
+}
+
 .roadmap-pill-text {
   display: block;
   max-width: 14ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.roadmap-card-head {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.roadmap-no-gap,
+.roadmap-week-learn {
+  margin: 0;
+}
+
+.roadmap-week-learn {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #9a4a12;
 }
 
 .roadmap-grid {
@@ -8927,6 +8982,14 @@ a.saved-preview-company:hover {
   font-size: 13px;
   font-weight: var(--fw-bold);
   color: var(--brand-deep);
+}
+
+.notes-c-rail .roadmap-pill-groups {
+  gap: 8px;
+}
+
+.notes-c-rail .roadmap-pill-group-label {
+  font-size: 10px;
 }
 
 .notes-c-rail .roadmap-pills {

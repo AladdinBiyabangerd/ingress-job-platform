@@ -606,6 +606,10 @@ export const copy = {
     roadmapGateConsentCta: "Məxfilik ayarları",
     roadmapSectionEmpty: "Hələ addım yoxdur.",
     roadmapPathEmpty: "Bu rol üçün hələ konkret öyrənmə addımları yoxdur.",
+    roadmapLearnLabel: "Öyrən",
+    roadmapWeekLearn: "Bu həftə öyrən",
+    roadmapNoGapHint:
+      "Bu rol üçün əsas çatışmayan skill yoxdur — güclü tərəflərini praktikada göstər.",
     roadmapFooter: "Ingress ekosisteminin bir hissəsi —",
     noticeCtaOpen: "Bax",
     noticeCtaLearn: "Öyrən",
@@ -1314,6 +1318,10 @@ export const copy = {
     roadmapGateConsentCta: "Privacy settings",
     roadmapSectionEmpty: "No steps yet.",
     roadmapPathEmpty: "No concrete learning steps for this role yet.",
+    roadmapLearnLabel: "Learn next",
+    roadmapWeekLearn: "Learn this week",
+    roadmapNoGapHint:
+      "No major skill gaps for this role — show your strengths in practice.",
     roadmapFooter: "Part of the Ingress ecosystem —",
     noticeCtaOpen: "Open",
     noticeCtaLearn: "Learn",
@@ -2023,6 +2031,10 @@ export const copy = {
     roadmapGateConsentCta: "Настройки конфиденциальности",
     roadmapSectionEmpty: "Пока нет шагов.",
     roadmapPathEmpty: "Для этой роли пока нет конкретных шагов обучения.",
+    roadmapLearnLabel: "Изучить",
+    roadmapWeekLearn: "Изучить на этой неделе",
+    roadmapNoGapHint:
+      "Для этой роли нет крупных пробелов — покажите сильные навыки на практике.",
     roadmapFooter: "Часть экосистемы Ingress —",
     noticeCtaOpen: "Открыть",
     noticeCtaLearn: "Учить",

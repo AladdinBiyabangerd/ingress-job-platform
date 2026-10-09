@@ -283,7 +283,7 @@ function GrowthRail({ t, locale, item, onBack }) {
                 <span className="notes-c-rail-focus-skill">{weekSkill}</span>
               </p>
             ) : null}
-            <SkillPills have={haveSkills} missing={missingSkills} limit={6} />
+            <SkillPills t={t} have={haveSkills} missing={missingSkills} limit={6} />
           </div>
 
           {hasJourney ? (

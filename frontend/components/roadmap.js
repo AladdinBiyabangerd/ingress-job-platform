@@ -38,24 +38,34 @@ function CtaLink({ locale, cta, className = "btn ink", children }) {
   );
 }
 
-export function SkillPills({ have = [], missing = [], limit = 8 }) {
+function PillGroup({ label, names, tone }) {
+  if (!names.length) return null;
+  return (
+    <div className={`roadmap-pill-group is-${tone}`}>
+      {label ? <p className="roadmap-pill-group-label">{label}</p> : null}
+      <ul className="roadmap-pills">
+        {names.map((name) => (
+          <li key={`${tone}-${name}`} className={`roadmap-pill is-${tone}`}>
+            <span className="roadmap-pill-text">{name}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Labeled have / learn skill chips. Pass `t` so groups read as “Learn” vs “You have”. */
+export function SkillPills({ t = null, have = [], missing = [], limit = 8 }) {
   const haveList = (Array.isArray(have) ? have : []).map(String).filter(Boolean).slice(0, limit);
   const missList = (Array.isArray(missing) ? missing : []).map(String).filter(Boolean).slice(0, limit);
   if (!haveList.length && !missList.length) return null;
-  // Missing first — skill-first roadmap / coach cards lead with what to learn.
+  const learnLabel = t?.roadmapLearnLabel || t?.skillsMissing || "";
+  const haveLabel = t?.skillsHave || "";
   return (
-    <ul className="roadmap-pills">
-      {missList.map((name) => (
-        <li key={`miss-${name}`} className="roadmap-pill is-missing">
-          <span className="roadmap-pill-text">{name}</span>
-        </li>
-      ))}
-      {haveList.map((name) => (
-        <li key={`have-${name}`} className="roadmap-pill is-have">
-          <span className="roadmap-pill-text">{name}</span>
-        </li>
-      ))}
-    </ul>
+    <div className="roadmap-pill-groups">
+      <PillGroup label={learnLabel} names={missList} tone="missing" />
+      <PillGroup label={haveLabel} names={haveList} tone="have" />
+    </div>
   );
 }
 
@@ -111,7 +121,10 @@ function WeekCard({ t, locale, section }) {
   const items = Array.isArray(section?.items) ? section.items : [];
   return (
     <section className="roadmap-card">
-      <h2 className="roadmap-card-title">{t.roadmapThisWeek}</h2>
+      <div className="roadmap-card-head">
+        <h2 className="roadmap-card-title">{t.roadmapThisWeek}</h2>
+        {items.length ? <p className="hint roadmap-week-learn">{t.roadmapWeekLearn}</p> : null}
+      </div>
       {items.length ? (
         <ul className="roadmap-check-list">
           {items.slice(0, 5).map((item, index) => {
@@ -273,6 +286,10 @@ function RoadmapBento({ t, locale, roadmap, insights = null }) {
     if (fallback) weekSection = fallback;
   }
 
+  const heroHave = Array.isArray(hero.have) ? hero.have : [];
+  const heroMissing = Array.isArray(hero.missing) ? hero.missing : [];
+  const showNoGapHint = !heroMissing.length && heroHave.length > 0;
+
   return (
     <div className="roadmap-bento">
       <section className="roadmap-hero">
@@ -281,7 +298,8 @@ function RoadmapBento({ t, locale, roadmap, insights = null }) {
           <h2 className="roadmap-hero-title">{String(hero.title || t.roadmapTitle)}</h2>
           {hero.lede ? <p className="roadmap-hero-lede">{hero.lede}</p> : null}
           {hero.motivation ? <p className="hint roadmap-hero-motivation">{hero.motivation}</p> : null}
-          <SkillPills have={hero.have} missing={hero.missing} />
+          {showNoGapHint ? <p className="hint roadmap-no-gap">{t.roadmapNoGapHint}</p> : null}
+          <SkillPills t={t} have={heroHave} missing={heroMissing} />
           <CtaLink locale={locale} cta={hero.cta} className="btn ink roadmap-hero-cta" />
         </div>
         <RoadmapArt />
