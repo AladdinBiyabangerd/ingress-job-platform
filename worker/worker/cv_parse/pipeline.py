@@ -114,9 +114,22 @@ def _join_wrapped_dates(text: str) -> str:
         r"(?i)^(н\.?\s*в\.?|н/в|present|current|now|hazırda|hazirda|indi|"
         r"настоящее(?:\s+время)?)\s*$"
     )
+    start_cont = re.compile(
+        r"(?i)^(?:[a-zа-яəöüğçşı]{3,9}\.?\s*)?(?:19|20)\d{2}(?:\s*\S.{0,30})?$"
+    )
     for line in lines[1:]:
         prev = out[-1].rstrip()
         cur = line.strip()
+        if (
+            prev
+            and re.search(r"[–—-]\s*$", prev)
+            and len(prev) < 45
+            and find_ranges(prev + " " + cur)
+            and not find_ranges(prev)
+            and start_cont.match(cur)
+        ):
+            out[-1] = prev + " " + cur
+            continue
         if prev and re.search(r"[–—-]\s*$", prev) and present_cont.match(cur):
             out[-1] = prev + " " + cur
             continue
@@ -124,9 +137,20 @@ def _join_wrapped_dates(text: str) -> str:
     return "\n".join(out)
 
 
+_SINCE = re.compile(
+    r"(?i)\b(?:since|seit|с)\s+((?:0?[1-9]|1[0-2])[\./](?:19|20)\d{2}|"
+    r"(?:[a-zа-я]{3,9}\.?\s+)?(?:19|20)\d{2})(?=\s|$)"
+)
+
+
+def _since_to_present(text: str) -> str:
+    """"Since 02/1807" -> "02/1807 – Present" so open-ended jobs get a date range."""
+    return _SINCE.sub(lambda m: f"{m.group(1)} – Present", text)
+
+
 def parse_text(text: str) -> dict:
     """Rules-only parse of already-extracted CV text → profile JSON."""
-    body = _join_wrapped_dates((text or "").strip())
+    body = _join_wrapped_dates(_since_to_present((text or "").strip()))
     sections = split_sections(body) if body else {}
     # Re-join inside sections too (PDF wraps often land inside a section body).
     sections = {key: _join_wrapped_dates(val) for key, val in sections.items()}

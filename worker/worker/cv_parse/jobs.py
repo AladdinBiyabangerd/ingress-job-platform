@@ -151,7 +151,51 @@ def normalize_experience(text: str) -> str:
         return "\n".join(lines)
     if _trailing_mode(lines, anchors):
         return "\n".join(_normalize_trailing(lines, anchors))
+    if _date_first_mode(lines, anchors):
+        return "\n".join(_normalize_date_first(lines, anchors))
     return "\n".join(_normalize_leading(lines, anchors))
+
+
+def _date_only(line: str) -> bool:
+    span = _date_span(line)
+    if not span:
+        return False
+    rest = clean_line(line[: span[0]] + " " + line[span[1] :]).strip(" |–—-,()")
+    return not rest or bool(_LOC_ONLY.match(rest))
+
+
+def _titleish(line: str) -> bool:
+    return _header_candidate(line) and not _is_bullet(line) and bool(_ROLE.search(line))
+
+
+def _date_first_mode(lines: list[str], anchors: list[int]) -> bool:
+    """Date on its own line, title/company on the line(s) *below* it (Arthur/AltaCV-photo style)."""
+    below = above = 0
+    for idx in anchors:
+        if not _date_only(lines[idx]):
+            return False
+        if idx + 1 < len(lines) and _titleish(lines[idx + 1]):
+            below += 1
+        if idx > 0 and _titleish(lines[idx - 1]) and not _wrapped_bullet_tail(lines, idx - 1):
+            above += 1
+    return below >= max(1, len(anchors) // 2 + len(anchors) % 2) and below > above
+
+
+def _normalize_date_first(lines: list[str], anchors: list[int]) -> list[str]:
+    out: list[str] = list(lines[: anchors[0]])
+    for pos, idx in enumerate(anchors):
+        stop = anchors[pos + 1] if pos + 1 < len(anchors) else len(lines)
+        span = _date_span(lines[idx])
+        date_text = span[2] if span else lines[idx]
+        block = lines[idx + 1 : stop]
+        headers = [block[0]] if block else []
+        body = block[1:]
+        if body and _header_candidate(body[0]) and not _is_bullet(body[0]) and not _titleish(body[0]) and len(headers) == 1 and not _ROLE.search(headers[0]):
+            headers.append(body[0])
+            body = body[1:]
+        title, company = _title_company(headers)
+        out.extend(_emit(title, company, date_text, [b for b in body if not _DURATION.match(b)]))
+    return out
 
 
 def _normalize_trailing(lines: list[str], anchors: list[int]) -> list[str]:

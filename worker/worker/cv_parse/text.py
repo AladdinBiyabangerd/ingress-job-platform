@@ -161,6 +161,8 @@ def _repair_glyphs(text: str) -> str:
         text = text.replace(lig, rep)
     text = _PUA.sub("", text)
     text = _HYPHEN_WRAP.sub("", text)
+    text = re.sub(r"\b([A-Z][a-z]{2}) \.(?=\s*(?:19|20)\d{2})", r"\1.", text)  # "Mar . 2020"
+    text = re.sub(r"((?:19|20)\d{2})(?=[A-Z][a-z])", r"\1 ", text)  # "2014 - 2016IT Consultant"
     return _KERN_GAP.sub(r"\1", text)
 
 
