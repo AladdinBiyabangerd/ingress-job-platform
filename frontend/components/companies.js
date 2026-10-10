@@ -1,9 +1,8 @@
-import { CompanyAvatar, Popularity, companyHref } from "./company-bits";
-import { PageChrome } from "./page-chrome";
+import { BoardAcademyPromo, BoardSideNav } from "./board-side-nav";
+import { CompanyBoardCard } from "./company-board-card";
 import { Shell } from "./shell";
 import { SortSelect } from "./sort-select";
-import { categoryLabel, hrefFor, text } from "../lib/copy";
-import { calendarDate } from "../lib/dates";
+import { hrefFor, text } from "../lib/copy";
 
 export const COMPANY_SORTS = ["jobs", "newest", "name", "applications"];
 
@@ -29,7 +28,7 @@ export function LinkPager({ locale, page, pages, hrefOf }) {
   const t = text(locale);
   if (pages <= 1) return null;
   return (
-    <nav className="pager" aria-label={t.pageOf(page, pages)}>
+    <nav className="home-board-pager pager" aria-label={t.pageOf(page, pages)}>
       {page > 1 ? (
         <a className="pager-btn" href={hrefOf(page - 1)} rel="prev">
           {t.pagePrev}
@@ -53,68 +52,12 @@ export function LinkPager({ locale, page, pages, hrefOf }) {
   );
 }
 
-function CompanyRow({ locale, company }) {
-  const t = text(locale);
-  const category = company.top_categories?.[0];
-  const tech = (company.top_tech || []).slice(0, 3);
-  const latest = calendarDate(company.latest_posted, locale);
-  const href = companyHref(locale, company.slug);
-
+function SearchIcon() {
   return (
-    <article className="company-row">
-      <div className="company-row-main">
-        <CompanyAvatar name={company.name} slug={company.slug} />
-        <div className="company-row-title">
-          <a className="company-row-link" href={href}>
-            {company.name}
-          </a>
-          <p className="company-row-jobs">{t.openJobs(company.open_jobs)}</p>
-        </div>
-      </div>
-      <div className="company-row-tags">
-        {category ? <span className="category-tag">{categoryLabel(locale, category.name)}</span> : null}
-        {tech.map((item) => (
-          <span key={item.name} className="tech-chip">
-            {item.name}
-          </span>
-        ))}
-        {company.remote_jobs ? (
-          <span className="company-badge remote">{t.remoteJobs(company.remote_jobs)}</span>
-        ) : null}
-        {company.relocation_jobs ? (
-          <span className="company-badge relocation">{t.relocationJobs(company.relocation_jobs)}</span>
-        ) : null}
-      </div>
-      <div className="company-row-stats">
-        {company.onsite_jobs ? (
-          <>
-            <span className="company-row-apps" title={t.applicationsNote}>
-              {t.applicationsCount(company.applications)}
-              <span className="company-row-apps-sub">
-                {t.statPerJob}: {company.applications_per_job}
-              </span>
-            </span>
-            <Popularity locale={locale} share={company.application_share} compact />
-          </>
-        ) : null}
-        {latest ? (
-          <time className="company-row-latest" dateTime={company.latest_posted}>
-            {latest}
-          </time>
-        ) : null}
-      </div>
-      <a className="company-row-open" href={href} aria-label={company.name}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-          <path
-            d="M6 3.5 10.5 8 6 12.5"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </a>
-    </article>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.5-3.5" />
+    </svg>
   );
 }
 
@@ -123,68 +66,102 @@ export function CompaniesPage({ locale, data, error, q, sort }) {
   const items = data?.items || [];
   const page = data?.page || 1;
   const pages = data?.pages || 1;
-  const total = data?.total;
+  const total = data?.total ?? 0;
 
   return (
     <Shell locale={locale} mode="companies">
-      <div className="h2-public">
-        <PageChrome
-          backHref={hrefFor(locale)}
-          backLabel={t.breadcrumbHome}
-          title={t.companiesTitle}
-          count={total != null ? String(total) : null}
-        />
+      <div className="home home-board companies-board">
+        <div className="home-board-shell companies-board-shell">
+          <BoardSideNav locale={locale} />
 
-        <form
-          className="h2-tools"
-          role="search"
-          method="get"
-          action={hrefFor(locale, { mode: "companies" })}
-        >
-          <label className="h2-tools-search">
-            <span className="visually-hidden">{t.companiesSearch}</span>
-            <input
-              type="search"
-              name="q"
-              defaultValue={q}
-              maxLength={100}
-              placeholder={t.companiesSearch}
-              autoComplete="off"
-            />
-          </label>
-          <label className="h2-tools-sort">
-            <span className="visually-hidden">{t.sort}</span>
-            <SortSelect name="sort" value={sort} options={sortOptions(t)} label={t.sort} id="companies-sort" />
-          </label>
-          <button type="submit" className="btn ink">
-            {t.companiesSearchButton}
-          </button>
-        </form>
+          <div className="home-board-main">
+            <div className="home-board-front">
+              <section className="home-board-hero-copy" aria-labelledby="companies-front-title">
+                <p className="home-board-eyebrow">{t.companiesEyebrow}</p>
+                <p className="home-board-brand">{t.homeBrand}</p>
+                <h1 id="companies-front-title" className="home-board-title">
+                  {t.companiesTitle}
+                </h1>
+                <p className="home-board-lede">{t.companiesLede}</p>
+              </section>
 
-        {error ? <p className="note">{t.loadError}</p> : null}
-        {!error && items.length === 0 ? (
-          <div className="h2-empty">
-            <p>{q ? t.companiesEmpty : t.companiesEmptyAll}</p>
-            {q ? (
-              <a className="back" href={hrefFor(locale, { mode: "companies" })}>
-                {t.companiesReset}
-              </a>
-            ) : null}
-          </div>
-        ) : null}
+              <BoardAcademyPromo locale={locale} />
 
-        {items.length ? (
-          <>
-            <div className="company-row-list">
-              {items.map((company) => (
-                <CompanyRow key={company.slug} locale={locale} company={company} />
-              ))}
+              <form
+                className="home-board-search companies-board-search"
+                role="search"
+                method="get"
+                action={hrefFor(locale, { mode: "companies" })}
+              >
+                <label className="home-board-search-field home-board-search-q">
+                  <SearchIcon />
+                  <span className="visually-hidden">{t.companiesSearch}</span>
+                  <input
+                    type="search"
+                    name="q"
+                    defaultValue={q}
+                    maxLength={100}
+                    placeholder={t.companiesSearch}
+                    autoComplete="off"
+                  />
+                </label>
+                <label className="home-board-search-field companies-board-sort-field">
+                  <span className="visually-hidden">{t.sort}</span>
+                  <SortSelect name="sort" value={sort} options={sortOptions(t)} label={t.sort} id="companies-sort" />
+                </label>
+                <button type="submit" className="btn primary home-board-search-submit">
+                  {t.companiesSearchButton}
+                </button>
+              </form>
             </div>
-            <p className="h2-help">{t.popularityHelp}</p>
-          </>
-        ) : null}
 
-        <LinkPager locale={locale} page={page} pages={pages} hrefOf={(next) => listHref(locale, { q, sort, page: next })} />
+            {error ? (
+              <div className="note home-board-load-error" role="alert">
+                <p>{t.loadError}</p>
+              </div>
+            ) : null}
+
+            <section className="home-board-results" aria-labelledby="companies-results-heading">
+              <div className="home-board-results-head">
+                <div className="home-board-results-titles">
+                  <p className="home-board-catalogue-kicker">{t.companiesTitle}</p>
+                  <h2 id="companies-results-heading" className="home-board-results-count">
+                    {t.companiesCount(total)}
+                  </h2>
+                </div>
+              </div>
+
+              {!error && items.length === 0 ? (
+                <div className="job-empty">
+                  <p className="job-empty-copy">{q ? t.companiesEmpty : t.companiesEmptyAll}</p>
+                  {q ? (
+                    <a className="btn job-empty-clear" href={hrefFor(locale, { mode: "companies" })}>
+                      {t.companiesReset}
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {items.length ? (
+                <>
+                  <div className="home-board-card-list">
+                    {items.map((company) => (
+                      <CompanyBoardCard key={company.slug} locale={locale} company={company} />
+                    ))}
+                  </div>
+                  <p className="companies-board-help">{t.popularityHelp}</p>
+                </>
+              ) : null}
+
+              <LinkPager
+                locale={locale}
+                page={page}
+                pages={pages}
+                hrefOf={(next) => listHref(locale, { q, sort, page: next })}
+              />
+            </section>
+          </div>
+        </div>
       </div>
     </Shell>
   );
@@ -194,17 +171,33 @@ export function CompaniesLoading({ locale }) {
   const t = text(locale);
   return (
     <Shell locale={locale} mode="companies">
-      <div className="h2-public companies-loading" role="status" aria-live="polite">
+      <div className="home home-board companies-board companies-loading" role="status" aria-live="polite">
         <span className="visually-hidden">{t.companiesLoading}</span>
-        <div className="skeleton skeleton-hero" />
-        <div className="company-row-list">
-          {Array.from({ length: 6 }, (_, index) => (
-            <div key={index} className="company-row skeleton-card" aria-hidden="true">
-              <span className="skeleton skeleton-avatar" />
-              <span className="skeleton skeleton-line" />
-              <span className="skeleton skeleton-line short" />
+        <div className="home-board-shell companies-board-shell">
+          <BoardSideNav locale={locale} />
+          <div className="home-board-main">
+            <div className="home-board-front">
+              <section className="home-board-hero-copy">
+                <span className="skeleton skeleton-line short" />
+                <span className="skeleton skeleton-line" />
+                <span className="skeleton skeleton-line short" />
+              </section>
             </div>
-          ))}
+            <div className="home-board-card-list">
+              {Array.from({ length: 5 }, (_, index) => (
+                <div key={index} className="job-board-card job-board-card-skeleton" aria-hidden="true">
+                  <div className="job-board-card-main">
+                    <span className="skeleton job-board-skel-logo" />
+                    <div className="job-board-card-body">
+                      <span className="skeleton skeleton-line short" />
+                      <span className="skeleton skeleton-line" />
+                      <span className="skeleton skeleton-line short" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </Shell>

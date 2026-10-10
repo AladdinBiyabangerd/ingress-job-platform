@@ -31,18 +31,24 @@ def _row_get(row: Any, key: str, index: int):
 
 def off_market_reason(title: str, place: str, text: str, *, remote: bool, relocation: bool) -> str:
     """Empty string when the ad may stay; otherwise a short reject reason."""
+    from worker.techstack import foreign_locked_remote
+
     kw_remote = remote or remote_flag(title, place, text)
     kw_reloc = relocation or relocation_flag(title, place, text)
+    # Use stored remote for geo-lock: connectors often set remote=1 with a
+    # country-scoped city even when keywords are thin.
+    if (remote or kw_remote) and foreign_locked_remote(title, place, text):
+        return "foreign_locked_remote"
     if foreign_office_without_offer(title, place, text):
         return "foreign_office"
-    if not kw_remote and not kw_reloc:
+    if not kw_remote and not kw_reloc and not remote and not relocation:
         return "no_remote_or_reloc"
     if not az_market_relevant(
         title,
         place,
         text,
-        remote=kw_remote,
-        relocation=kw_reloc,
+        remote=bool(remote or kw_remote),
+        relocation=bool(relocation or kw_reloc),
     ):
         return "foreign_locked_remote"
     return ""

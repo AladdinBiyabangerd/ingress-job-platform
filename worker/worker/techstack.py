@@ -718,12 +718,12 @@ _FOREIGN_GEO = (
     r"denmark|finland|switzerland|austria|belgium|australia|new\s+zealand|"
     r"japan|korea|singapore|india|brazil|mexico|argentina|chile|"
     r"israel|tel\s*aviv|dubai|uae|united\s+arab\s+emirates|saudi|riyadh|"
-    r"latam|latin\s+america|apac|north\s+america|south\s+america|"
+    r"malta|sliema|latam|latin\s+america|apac|north\s+america|south\s+america|"
     r"california|texas|florida|ontario|british\s+columbia|quebec|"
     r"london|toronto|vancouver|montreal|berlin|munich|münchen|hamburg|"
     r"amsterdam|dublin|paris|stockholm|oslo|copenhagen|sydney|melbourne|"
     r"tokyo|bangalore|bengaluru|são\s+paulo|sao\s+paulo|mexico\s+city|"
-    r"deutschland"
+    r"deutschland|cambridge|karlsruhe|nantes|barcelona"
 )
 
 # Bare "worldwide" in company blurbs ("orgs worldwide") must NOT open the gate.
@@ -740,9 +740,15 @@ _OPEN_MARKET = re.compile(
     re.IGNORECASE,
 )
 
+# US/CA state-style pins often appear as "Remote - MA" / "Remote, NY".
+_US_STATE_PIN = (
+    r"A[LKZR]|C[AOT]|D[EC]|F[LM]|G[AU]|HI|I[DLNA]|K[SY]|L[A]|M[EDAINSOT]|"
+    r"N[EVHJMY]|O[HKR]|P[ARW]|RI|S[CD]|T[NX]|UT|V[AIT]|W[AVIY]"
+)
+
 _REMOTE_FOREIGN_PAIR = re.compile(
-    rf"(?i)(?:\bremote\b.{{0,48}}(?:{_FOREIGN_GEO}|\bCA\b)|"
-    rf"(?:{_FOREIGN_GEO}|\bCA\b).{{0,48}}\bremote\b)"
+    rf"(?i)(?:\bremote\b.{{0,48}}(?:{_FOREIGN_GEO}|\bCA\b|\b(?:{_US_STATE_PIN})\b)|"
+    rf"(?:{_FOREIGN_GEO}|\bCA\b|\b(?:{_US_STATE_PIN})\b).{{0,48}}\bremote\b)"
 )
 
 _FOREIGN_GEO_RE = re.compile(rf"(?i)\b(?:{_FOREIGN_GEO})\b")
@@ -755,19 +761,24 @@ _RESIDENCY_LOCK = re.compile(
     rf"(?:candidates?|applicants?)\s+must\s+(?:be|have|live)\b|"
     rf"(?:right|authorization|authorisation|eligibility|eligible)\s+to\s+work\s+in\b|"
     rf"remote\s+(?:within|across|from|in)\s+(?:the\s+)?(?:{_FOREIGN_GEO})\b|"
-    rf"\b(?:us|usa|uk|canada|eu|europe)[\s-]+only\b|"
+    # Avoid benefits like "401k match (US only)".
+    rf"(?:remote|candidates?|applicants?|hiring|roles?|positions?|openings?)"
+    rf"[^\n.]{{0,40}}\b(?:us|usa|uk|canada|eu|europe)[\s-]+only\b|"
+    rf"\b(?:us|usa|uk|canada|eu|europe)[\s-]+only\b(?!\s*\))|"
     rf"\bonly\s+(?:in\s+)?(?:the\s+)?(?:{_FOREIGN_GEO})\b"
     rf")"
 )
 
 # US-only remote often says "US based" / clearance without "must be located in".
+# Skip compensation boilerplate: "For US-based employees, the cash compensation…".
 _US_MARKET_LOCK = re.compile(
     r"(?i)(?:"
-    r"\bus[\s-]?based\b|"
-    r"\bu\.?s\.?a?\.?\s*based\b|"
+    r"(?<!\bfor\s)\bus[\s-]?based\b(?!\s+employees?\b)|"
+    r"(?<!\bfor\s)\bu\.?s\.?a?\.?\s*based\b(?!\s+employees?\b)|"
     r"locations?\s*\(\s*us\s+based\s*\)|"
     r"(?:candidates?|applicants?|consider(?:ed|ing)?)\s+[^\n.]{0,60}\bus\s+based\b|"
     r"(?:right|authorized|authorised|eligible)\s+to\s+work\s+in\s+the\s+u\.?s|"
+    r"must\s+reside\s+in\s+(?:the\s+)?u\.?s|"
     r"u\.?s\.?\s+gov(?:ernment)?\s+(?:secret\s+)?clearance|"
     r"(?:active|current)\s+(?:or\s+current\s+)?u\.?s\.?\s+gov|"
     r"(?:secret|top[\s-]?secret)\s+clearance|"
@@ -793,7 +804,37 @@ _COUNTRY_REMOTE_LOCK = re.compile(
 
 _PLACE_NOISE = re.compile(
     r"(?i)\b(?:remote|hybrid|onsite|on[\s-]?site|wfh|distributed|telecommute|"
-    r"full[\s-]?time|part[\s-]?time|contract)\b"
+    r"full[\s-]?time|part[\s-]?time|contract|possible|mövcud|mümkün)\b"
+)
+
+_LOCAL_OK_PLACE = re.compile(
+    r"(?i)\b(?:azerbaijan|azərbaycan|azerbaycan|\bbaku\b|\bbakı\b)\b"
+)
+
+_PLACE_OPEN_WORDS = re.compile(
+    r"(?i)\b(?:remote|anywhere|worldwide|world[\s-]?wide|global|emea|cis|"
+    r"caucasus|central\s+asia|home\s*based|homebased)\b"
+)
+
+# "Americas" / AMER-only remote is not AZ-reachable (EMEA alone is OK).
+_AMERICAS_LOCK = re.compile(
+    r"(?i)\b(?:americas?|latam|north\s+america|south\s+america|AMER)\b"
+)
+
+# Hybrid / travel / customer-site work is not AZ-reachable "remote".
+# Do not match casual "travel to meet colleagues at sprints".
+_ONSITE_HEAVY = re.compile(
+    r"(?i)(?:"
+    r"\bon[\s-]?site\b|"
+    r"customer\s+sites?|"
+    r"at\s+(?:the\s+)?customer\s+sites?|"
+    r"physical\s+installation|"
+    r"\bwiring\b|"
+    r"(?:must|required|willingness)\s+to\s+travel|"
+    r"travel\s+(?:required|expectations)|"
+    r"remote\s*/\s*office|"
+    r"office\s+phases?"
+    r")"
 )
 
 
@@ -801,27 +842,68 @@ def _sample_head(title: str, place: str, text: str) -> str:
     return f"{title}\n{place}\n{(text or '')[:8000]}"
 
 
-def _place_foreign_remote_lock(place: str) -> bool:
-    """True when the location field pins remote work to a foreign geo."""
+def _garbage_place(place: str) -> bool:
+    """Mojibake / undecoded location strings from broken feed encodings."""
+    raw = place or ""
+    if not raw.strip():
+        return False
+    if "\ufffd" in raw or re.search(r"Ù.|Ø.|Ã.|Â.|ð.|ñ\x83", raw):
+        return True
+    letters = re.findall(r"[A-Za-zÀ-ÿƏəİıĞğŞşÇçÖöÜü]", raw)
+    if len(raw) >= 10 and len(letters) < max(3, int(len(raw) * 0.25)):
+        return True
+    return False
+
+
+def _named_foreign_place(place: str) -> bool:
+    """True when location names a concrete place abroad (e.g. Cincinnati, Tel Aviv).
+
+    Pure \"Remote\" / worldwide / EMEA is not a named foreign place.
+    \"Remote Roles - EMEA; Sliema, Malta\" still counts (city remains).
+    """
     raw = (place or "").strip()
-    if not raw:
+    if not raw or _LOCAL_OK_PLACE.search(raw):
         return False
-    if _OPEN_MARKET.search(raw):
-        return False
+    if _garbage_place(raw):
+        return True
     if _REMOTE_FOREIGN_PAIR.search(raw):
         return True
-    stripped = _PLACE_NOISE.sub(" ", raw)
-    stripped = re.sub(r"[\s,;|/–\-:()]+", " ", stripped).strip()
+    # Strip open-market + noise; leftover geo/city ⇒ foreign pin.
+    stripped = _PLACE_OPEN_WORDS.sub(" ", raw)
+    stripped = _PLACE_NOISE.sub(" ", stripped)
+    stripped = re.sub(r"(?i)\broles?\b", " ", stripped)
+    stripped = re.sub(r"[\s,;|/–\-:()·]+", " ", stripped).strip()
     if not stripped:
         return False
-    return bool(_FOREIGN_GEO_RE.search(stripped))
+    if _FOREIGN_GEO_RE.search(stripped):
+        return True
+    if re.search(rf"(?i)^\b(?:{_US_STATE_PIN})\b$", stripped):
+        return True
+    if len(stripped) >= 3 and re.search(r"[A-Za-zÀ-ÿ]{3,}", stripped):
+        return True
+    return False
+
+
+def _place_foreign_remote_lock(place: str) -> bool:
+    """True when the location field pins remote work to a foreign geo."""
+    return _named_foreign_place(place)
+
+
+def _place_fully_open(place: str) -> bool:
+    """True when place is only open-market wording (Remote / EMEA / worldwide)."""
+    raw = (place or "").strip()
+    if not raw or not _OPEN_MARKET.search(raw):
+        return False
+    return not _named_foreign_place(raw)
 
 
 def foreign_locked_remote(title: str, place: str, text: str) -> bool:
     """Remote role restricted to a foreign country/region (not AZ-reachable)."""
     head = f"{title} | {place}"
-    # Place/title open wins; body "orgs worldwide" must not unlock a CA/US place.
-    if _OPEN_MARKET.search(place or "") or _OPEN_MARKET.search(title or ""):
+    if _garbage_place(place):
+        return True
+    # Pure Remote EMEA / worldwide opens; EMEA + Malta city does not.
+    if _place_fully_open(place):
         return False
     if _place_foreign_remote_lock(place):
         return True
@@ -833,11 +915,63 @@ def foreign_locked_remote(title: str, place: str, text: str) -> bool:
         return True
     if _COUNTRY_REMOTE_LOCK.search(sample):
         return True
+    # Americas/AMER pin in place or title (e.g. "Engineer (AMER)").
+    if _AMERICAS_LOCK.search(place or "") and not re.search(
+        r"(?i)\beméa\b|\bemea\b|worldwide|anywhere", place or ""
+    ):
+        return True
+    if re.search(
+        r"(?i)\(\s*AMER\s*\)|(?:^|[\s\-–/])AMER(?:\s|$|\))|"
+        r"\bmiddle\s+east\b|\bMENA\b|\bAPAC\b|\bLATAM\b",
+        title or "",
+    ):
+        if not _place_fully_open(place) and not re.search(
+            r"(?i)\beméa\b|\bemea\b|worldwide|anywhere", place or ""
+        ):
+            return True
     if _positive(_RESIDENCY_LOCK, sample) and _FOREIGN_GEO_RE.search(sample):
         return True
+    # "Remote possible" + on-site/customer travel is not worldwide remote.
+    if _ONSITE_HEAVY.search(sample) and not _OPEN_MARKET.search(f"{place}\n{text[:4000]}"):
+        return True
+    # Body/title open (worldwide / work from anywhere) only when place is not pinned.
     if _OPEN_MARKET.search(sample):
         return False
     return False
+
+
+_INTL_RELOC = re.compile(
+    r"(?i)(?:"
+    r"visa\s+sponsor\w*|sponsor\w*\s+(?:a\s+|your\s+|the\s+|work\s+|employment\s+)?visas?|"
+    r"visa\s+(?:support|assistance|help|provided|available|sponsorship)|"
+    r"work\s+(?:permit|visa)\s+(?:support|sponsorship|assistance)|"
+    r"\bEU\s+Blue\s+Card\b|"
+    r"flight\s+(?:ticket|support|allowance)|"
+    r"relocati(?:on|ng|e)\s+from\s+(?:abroad|overseas)|"
+    r"international\s+relocation|"
+    r"overseas\s+candidates?|"
+    r"candidates?\s+from\s+(?:abroad|overseas)|"
+    r"japan\s+relocation|"
+    r"relocation\s+(?:package|support|bonus|budget|allowance|offer)|"
+    r"full\s+relocation|"
+    r"\brelocati(?:on|ng)\s+offer\b"
+    r")"
+)
+
+
+def international_reloc_offer(title: str, place: str, text: str) -> bool:
+    """True visa / international relocation — not domestic 'relocation assistance' alone."""
+    sample = f"{title}\n{place}\n{(text or '')[:15000]}"
+    if _HN_VISA.search(title or ""):
+        return True
+    if not _positive(_INTL_RELOC, sample):
+        return False
+    # H-1B / green card on a US-remote pin is work-auth for the US, not AZ reloc.
+    if foreign_locked_remote(title, place, text) and re.search(
+        r"(?i)\bh-?1b\b|green\s+card|ead\s+holders?", sample
+    ):
+        return False
+    return True
 
 
 def foreign_office_without_offer(title: str, place: str, text: str) -> bool:
@@ -845,17 +979,19 @@ def foreign_office_without_offer(title: str, place: str, text: str) -> bool:
 
     These must not reach AI (and must not be kept): e.g. Tel Aviv + #LI-Hybrid.
     """
-    if relocation_flag(title, place, text):
+    if international_reloc_offer(title, place, text):
         return False
-    if remote_flag(title, place, text):
+    if remote_flag(title, place, text) and not _named_foreign_place(place):
         return False
     head = f"{title}\n{place}"
     sample = f"{head}\n{(text or '')[:4000]}"
     hybrid = bool(_HYBRID.search(head) or re.search(r"(?i)#\s*LI\s*-?\s*Hybrid\b", sample))
-    foreign_place = bool(_FOREIGN_GEO_RE.search(place or ""))
-    if foreign_place and (hybrid or not re.search(r"(?i)\bremote\b", place or "")):
-        return True
-    if hybrid and foreign_place:
+    foreign_place = _named_foreign_place(place)
+    if foreign_place and (
+        hybrid
+        or not re.search(r"(?i)\bremote\b", place or "")
+        or _ONSITE_HEAVY.search(sample)
+    ):
         return True
     return False
 
@@ -870,16 +1006,26 @@ def az_market_relevant(
 ) -> bool:
     """Keep ads useful for Azerbaijan candidates.
 
-    Relocation (move abroad) stays. Unrestricted / worldwide / EMEA remote
-    stays. Remote locked to Canada, US, UK, EU-only, etc. is dropped.
+    Geo-locked remote (US/UK/Germany/Canada/…) is always dropped — even when a
+    noisy relocation/visa keyword exists (e.g. H-1B on a US-remote ad).
+    Foreign office/hybrid keeps only with clear international visa/reloc offer.
     """
-    if relocation:
-        return True
-    if foreign_office_without_offer(title, place, text):
-        return False
     if remote and foreign_locked_remote(title, place, text):
         return False
-    return True
+
+    named_office = _named_foreign_place(place) and not re.search(
+        r"(?i)\bremote\b", place or ""
+    )
+    if named_office:
+        return international_reloc_offer(title, place, text)
+
+    if foreign_office_without_offer(title, place, text):
+        return False
+    if remote:
+        return True
+    if relocation and international_reloc_offer(title, place, text):
+        return True
+    return False
 
 
 def enrich(item: dict, *, remote_default: bool = False, relocation_default: bool = False) -> dict:

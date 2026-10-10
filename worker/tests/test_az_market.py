@@ -78,7 +78,8 @@ class AzMarketRemoteTest(unittest.TestCase):
                 relocation=True,
             )
         )
-        self.assertTrue(
+        # Country-scoped remote is never saved by a relocation keyword (H-1B noise).
+        self.assertFalse(
             az_market_relevant(
                 "Backend Engineer",
                 "Remote, Canada",
@@ -86,6 +87,112 @@ class AzMarketRemoteTest(unittest.TestCase):
                 remote=True,
                 relocation=True,
             )
+        )
+
+    def test_emea_in_title_does_not_unlock_germany_remote(self):
+        self.assertTrue(
+            foreign_locked_remote(
+                "Customer Success Application Engineer (EMEA)",
+                "Remote (Germany)",
+                "Hybrid role supporting EMEA customers.",
+            )
+        )
+        self.assertFalse(
+            az_market_relevant(
+                "Customer Success Application Engineer (EMEA)",
+                "Remote (Germany)",
+                "Hybrid role supporting EMEA customers.",
+                remote=True,
+                relocation=False,
+            )
+        )
+
+    def test_us_remote_not_saved_by_h1b_keyword(self):
+        text = (
+            "Remote (United States). H-1B transfer candidates are encouraged to apply. "
+            "We sponsor visas for eligible US workers."
+        )
+        self.assertFalse(
+            az_market_relevant(
+                "Senior Full Stack Software Engineer (Java)",
+                "Remote (United States)",
+                text,
+                remote=True,
+                relocation=True,
+            )
+        )
+
+    def test_berlin_domestic_reloc_assistance_rejected(self):
+        text = (
+            "Join our Berlin team. Benefits include club subsidy, Kita placement, "
+            "relocation assistance, subsidised office lunches."
+        )
+        self.assertFalse(
+            az_market_relevant(
+                "Senior CRM Administrator",
+                "Berlin",
+                text,
+                remote=False,
+                relocation=True,
+            )
+        )
+
+    def test_tokyo_visa_relocation_kept(self):
+        text = (
+            "Tokyo office role. Japan Relocation Support: Visa sponsorship, "
+            "flight ticket support, and housing allowance."
+        )
+        self.assertTrue(
+            az_market_relevant(
+                "Platform Engineer",
+                "Tokyo",
+                text,
+                remote=False,
+                relocation=True,
+            )
+        )
+
+    def test_remote_us_state_abbrev_locked(self):
+        self.assertTrue(foreign_locked_remote("Security Engineer", "Remote - MA", ""))
+        self.assertFalse(
+            az_market_relevant(
+                "Sr Offensive AI Security Engineer II",
+                "Remote - MA",
+                "US remote role.",
+                remote=True,
+                relocation=False,
+            )
+        )
+
+    def test_us_based_employees_comp_boilerplate_does_not_lock(self):
+        text = (
+            "Fully remote. Work from anywhere. "
+            "For US-based employees, the cash compensation range for this role is $150k. "
+            "401k retirement plan + company match (US only)."
+        )
+        self.assertFalse(foreign_locked_remote("Software Architect", "", text))
+        self.assertTrue(
+            az_market_relevant(
+                "Software Architect",
+                "",
+                text,
+                remote=True,
+                relocation=False,
+            )
+        )
+
+    def test_emea_plus_malta_city_locked(self):
+        self.assertTrue(
+            foreign_locked_remote(
+                "Principal Product Manager",
+                "Remote Roles - EMEA; Sliema, Malta",
+                "Trading tools.",
+            )
+        )
+
+    def test_amer_in_title_locked(self):
+        self.assertTrue(
+            foreign_locked_remote("OrioleDB Deployment Engineer (AMER)", "", "Postgres role.")
         )
 
     def test_california_remote_not_opened_by_company_worldwide(self):
@@ -151,6 +258,23 @@ class AzMarketRemoteTest(unittest.TestCase):
             az_market_relevant(
                 "Senior Product Designer",
                 "Remote; Hamburg; Berlin; München",
+                text,
+                remote=True,
+                relocation=False,
+            )
+        )
+
+    def test_cincinnati_onsite_remote_possible_not_kept(self):
+        text = (
+            "Across both on-site and remote/office phases of the project lifecycle. "
+            "Lead software commissioning at customer sites. "
+            "Own full-scope installation including wiring and physical installation."
+        )
+        self.assertTrue(foreign_locked_remote("Software Deployment Engineer", "Cincinnati", text))
+        self.assertFalse(
+            az_market_relevant(
+                "Software Deployment Engineer",
+                "Cincinnati",
                 text,
                 remote=True,
                 relocation=False,

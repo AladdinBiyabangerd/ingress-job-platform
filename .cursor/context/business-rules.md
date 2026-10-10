@@ -8,6 +8,14 @@
 - **Reject** remote ads geo-locked to a foreign country or region (e.g. “Remote, Canada”, “US only”, “Remote - California”, “US based”, US clearance).
 - **Reject** foreign onsite/hybrid office (e.g. Tel Aviv + `#LI-Hybrid`) with no remote/reloc/visa — before AI; mark `crawl_rejects`.
 - **Reject** country-scoped remote (e.g. Germany-wide, US-based, Remote + Hamburg/Berlin).
+- **Reject** named foreign city + “remote possible” / on-site·customer travel (e.g. Cincinnati hybrid) — not AZ-reachable remote.
+- Title `(EMEA)` must **not** unlock `Remote (Germany|UK|…)`.
+- `Remote EMEA; Sliema, Malta` (EMEA + concrete city) → reject.
+- Title region pins `(AMER)`, Middle East, MENA, APAC, LATAM → reject unless place is worldwide/EMEA-open.
+- Geo-locked remote wins over noisy `relocation`/H-1B flags.
+- Foreign **office/hybrid** keeps only with clear **international** visa/reloc (not domestic “relocation assistance”).
+- Ignore compensation boilerplate (“For US-based employees…”, “401k (US only)”).
+- Mojibake/garbage city strings → reject.
 - Company blurb “organizations worldwide” does **not** open a US/CA-locked remote.
 - ATS boards (`require_remote_or_relocation`): only remote or relocation.
 - **Keep** true work-from-anywhere / remote-worldwide / EMEA / CIS / Azerbaijan-open remote.

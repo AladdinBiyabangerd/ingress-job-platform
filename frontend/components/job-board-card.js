@@ -28,7 +28,7 @@ function langCodes(job) {
 /**
  * Board mockup job card — compact row with bookmark save and View details CTA.
  */
-export function JobBoardCard({ locale, job, featured = false }) {
+export function JobBoardCard({ locale, job, featured = false, showCompany = true }) {
   const t = text(locale);
   const company = job.company || t.noCompany;
   const salary = String(job.salary || "").trim();
@@ -43,17 +43,19 @@ export function JobBoardCard({ locale, job, featured = false }) {
       {featured ? <span className="job-board-card-badge">{t.featuredBadge}</span> : null}
       <div className="job-board-card-main">
         <span className="job-board-card-logo" aria-hidden="true">
-          {companyInitial(company)}
+          {companyInitial(showCompany ? company : job.title)}
         </span>
         <div className="job-board-card-body">
           <div className="job-board-card-titles">
-            {job.company_slug ? (
-              <a className="job-board-card-company" href={hrefFor(locale, { companySlug: job.company_slug })}>
-                {company}
-              </a>
-            ) : (
-              <span className="job-board-card-company">{company}</span>
-            )}
+            {showCompany ? (
+              job.company_slug ? (
+                <a className="job-board-card-company" href={hrefFor(locale, { companySlug: job.company_slug })}>
+                  {company}
+                </a>
+              ) : (
+                <span className="job-board-card-company">{company}</span>
+              )
+            ) : null}
             <h3 className="job-board-card-title">
               <a href={jobHref}>{job.title}</a>
             </h3>
