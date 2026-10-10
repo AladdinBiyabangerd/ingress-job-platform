@@ -1,6 +1,9 @@
 import { hrefFor, text } from "./copy";
 import { relativePosted } from "./dates";
 import { descriptionBlocks } from "./description";
+import { benefitsFromSections, firstIntro, sectionsFromBlocks } from "./job-detail-sections";
+
+export { sectionsFromBlocks } from "./job-detail-sections";
 
 function companyInitial(name) {
   const s = String(name || "").trim();
@@ -13,92 +16,6 @@ function jobTypeLabel(t, jobType) {
   if (jobType === "uzaqdan") return t.jobRemoteType;
   if (jobType === "full-time") return t.jdFullTime || "Full-time";
   return "";
-}
-
-function normalizeHeading(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[:：]+$/u, "");
-}
-
-const ABOUT_KEYS = new Set(["about the role", "about", "rol haqqında", "о роли", "о вакансии"]);
-const RESP_KEYS = new Set([
-  "key responsibilities",
-  "responsibilities",
-  "əsas vəzifələr",
-  "vəzifələr",
-  "обязанности",
-]);
-const REQ_KEYS = new Set(["requirements", "tələblər", "требования"]);
-const NICE_KEYS = new Set(["nice to have", "üstünlük", "будет плюсом", "желательно"]);
-const BENEFIT_KEYS = new Set(["benefits", "imkanlar", "льготы", "что мы предлагаем"]);
-
-function sectionKind(title) {
-  const key = normalizeHeading(title);
-  if (ABOUT_KEYS.has(key)) return "about";
-  if (RESP_KEYS.has(key)) return "responsibilities";
-  if (REQ_KEYS.has(key)) return "requirements";
-  if (NICE_KEYS.has(key)) return "nice";
-  if (BENEFIT_KEYS.has(key)) return "benefits";
-  return "other";
-}
-
-/** Turn description blocks into titled sections for the detail layout. */
-export function sectionsFromBlocks(blocks) {
-  const sections = [];
-  let current = null;
-
-  function start(title, id) {
-    current = { id, title, type: "prose", paragraphs: [], items: [] };
-    sections.push(current);
-  }
-
-  for (const block of blocks || []) {
-    if (block.type === "heading") {
-      const kind = sectionKind(block.text);
-      start(block.text, kind === "other" ? `sec-${sections.length}` : kind);
-      continue;
-    }
-    if (!current) start("", `sec-${sections.length}`);
-    if (block.type === "list") {
-      current.type = "list";
-      current.items.push(...(block.items || []));
-    } else if (block.text) {
-      if (current.type === "list" && current.items.length) {
-        start("", `sec-${sections.length}`);
-      }
-      current.type = "prose";
-      current.paragraphs.push(block.text);
-    }
-  }
-
-  return sections.filter((sec) => sec.paragraphs.length || sec.items.length);
-}
-
-function benefitsFromSections(sections) {
-  const benefit = (sections || []).find((sec) => sec.id === "benefits");
-  if (!benefit || !benefit.items?.length) return [];
-  if (benefit.items.some((item) => String(item).length > 80)) return [];
-  return benefit.items.slice(0, 6).map((label, index) => ({
-    id: `b-${index}`,
-    label,
-    icon: ["clock", "heart", "book", "globe", "shield", "star"][index % 6],
-  }));
-}
-
-function firstIntro(blocks, sections) {
-  const about = (sections || []).find((sec) => sec.id === "about");
-  if (about?.paragraphs?.[0]) {
-    const text = about.paragraphs[0].trim();
-    if (text.length <= 220) return text;
-    return `${text.slice(0, 200).trim()}…`;
-  }
-  const first = (blocks || []).find((b) => b.type !== "heading" && b.type !== "list" && b.text);
-  if (!first?.text) return "";
-  const text = first.text.trim();
-  if (text.length <= 220) return text;
-  return `${text.slice(0, 200).trim()}…`;
 }
 
 /**
@@ -144,8 +61,11 @@ export function jobToDetailViewModel({ locale, job, authState = "guest", company
   };
 
   const stack = Array.isArray(job.tech_stack) ? job.tech_stack.filter(Boolean) : [];
+  const benefitSection = (sections || []).find((sec) => sec.id === "benefits");
   const benefits = benefitsFromSections(sections);
-  const displaySections = sections.filter((sec) => sec.id !== "benefits");
+  const displaySections = benefits.length
+    ? sections.filter((sec) => sec.id !== "benefits")
+    : sections;
 
   return {
     preview: false,
@@ -169,6 +89,7 @@ export function jobToDetailViewModel({ locale, job, authState = "guest", company
     skills: stack,
     sections: displaySections,
     benefits,
+    benefitsTitle: benefitSection?.title || t.jdBenefits || "Benefits",
     hasOriginal: Boolean(job.has_original),
     form: job.form || null,
     returnTo: jobHref,

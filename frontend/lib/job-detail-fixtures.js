@@ -158,6 +158,7 @@ export function fixtureViewModel(state) {
     skills: ["React", "TypeScript", "Next.js", "Tailwind CSS", "Git", "Jest", "REST APIs"],
     sections: external ? TECHGLOBAL_SECTIONS : NIMBUS_SECTIONS,
     benefits: NIMBUS_BENEFITS,
+    benefitsTitle: "Benefits",
     hasOriginal: true,
     form: null,
     returnTo: "/design/job-detail",

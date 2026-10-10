@@ -37,16 +37,21 @@ function SectionBlock({ section }) {
   );
 }
 
-export function JobDetailDescription({ sections, benefits }) {
+export function JobDetailDescription({ sections, benefits, benefitsTitle = "Benefits" }) {
   const list = Array.isArray(sections) ? sections : [];
+  const why = list.find((s) => s.id === "why");
+  const about = list.find((s) => s.id === "about");
+  const resp = list.find((s) => s.id === "responsibilities");
   const req = list.find((s) => s.id === "requirements");
   const nice = list.find((s) => s.id === "nice");
-  const rest = list.filter((s) => s.id !== "requirements" && s.id !== "nice");
+  const known = new Set(["why", "about", "responsibilities", "requirements", "nice"]);
+  const rest = list.filter((s) => !known.has(s.id));
   const pair = Boolean(req && nice);
+  const ordered = [why, about, resp].filter(Boolean);
 
   return (
     <div className="jd-description">
-      {rest.map((section) => (
+      {ordered.map((section) => (
         <SectionBlock key={section.id || section.title} section={section} />
       ))}
       {pair ? (
@@ -60,9 +65,12 @@ export function JobDetailDescription({ sections, benefits }) {
           {nice ? <SectionBlock section={nice} /> : null}
         </>
       )}
+      {rest.map((section) => (
+        <SectionBlock key={section.id || section.title} section={section} />
+      ))}
       {Array.isArray(benefits) && benefits.length ? (
-        <section className="jd-benefits" aria-label="Benefits">
-          <h2 className="jd-desc-heading">Benefits</h2>
+        <section className="jd-benefits" aria-label={benefitsTitle}>
+          <h2 className="jd-desc-heading">{benefitsTitle}</h2>
           <ul className="jd-benefits-grid">
             {benefits.map((item) => (
               <li key={item.id} className="jd-benefit">

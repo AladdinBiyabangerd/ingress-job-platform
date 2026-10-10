@@ -32,7 +32,7 @@ compose.yaml
 
 ## Domains
 
-- Public job list / search / detail (guest: no original URL); `GET /api/v1/jobs` is paginated (`page`/`per_page`, filters, `facets`/`catalog_total`); Home SSR loads page 1, client refetches via `/api/jobs` BFF; list SQL LEFT JOINs first `job_sources` row (`MIN(id)`) + `crawl_sources`, not per-row subqueries; facets GROUP BY stored language/category and only title-scan rows without az|en|ru language; facets+catalog_total are process-cached until the published catalog fingerprint (count/max id/created_at, sqlite mtime) changes
+- Public job list / search / detail (guest: no original URL); `GET /api/v1/jobs` is paginated (`page`/`per_page`, filters, `facets`/`catalog_total`); Home SSR loads page 1, client refetches via `/api/jobs` BFF; list SQL LEFT JOINs first `job_sources` row (`MIN(id)`) + `crawl_sources`, not per-row subqueries; facets GROUP BY stored language/category and only title-scan rows without az|en|ru language; city facets use `app.place` (drop Remote/Worldwide/Uzaqdan noise, merge Tokyo≈Tokyo Japan); city filter matches all aliases for the same place_key; facets+catalog_total are process-cached until the published catalog fingerprint (count/max id/created_at, sqlite mtime) changes
 - Company directory (`GET /api/v1/companies`, `/companies/{slug}`) groups published jobs in Python (slug from name); catalog SQL skips `job_sources`; company page hydrates only the current job page with the list JOIN; grouped summaries are process-cached until catalog or applications fingerprint changes
 - Skill trends (`GET /api/v1/trends`): current+prior skill/job counts in one scan each; job denom uses `created_at` range (not `substr`) for `jobs_public_list`; trend DDL ensure is process-cached (no PRAGMA/ALTER per request)
 - Company jobs (moderation: pending → published); `/company` RSC hydrates the profile form from `GET /me` so first paint skips the me BFF; save is a FastAPI POST server action. `/post` RSC hydrates owner jobs + applications so first paint skips the list BFF; create/edit/close and list refresh are FastAPI server actions
@@ -74,6 +74,7 @@ compose.yaml
 - Object storage for uploads (when configured)
 - Optional `JOOBLE_API_KEY`, `REED_API_KEY`, `HH_API_KEY`
 - Optional AI keys: `GEMINI_API_KEY` / `GROQ_API_KEY` / `NVIDIA_API_KEY` / `OPENROUTER_API_KEY` / `OPENAI_API_KEY` (job tidy + CV AI #1 + engagement_copy + embeddings via `ai_gateway`)
+- Job tidy (`worker/tidy.py`, flag `job_tidy`): after market rules pass, messy published ads are reformatted for detail UI (headings + bullets) into `cleaned_text` — **no new facts**. Sync path uses `ai_gateway.complete_json` (`job-tidy-v2`); OpenAI Batch remains a backlog fallback. API serves `COALESCE(cleaned_text, text)`; frontend `descriptionBlocks` + `sectionsFromBlocks` map Relocue-style sections (why / do / requirements / nice / benefits)
 - Optional Web Push: `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` (API `pywebpush`; public key also exposed to browser via `/me/push-vapid-key`)
 
 ## Notes

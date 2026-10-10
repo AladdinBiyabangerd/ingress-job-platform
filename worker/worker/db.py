@@ -350,7 +350,10 @@ class Store:
     def upsert(self, item: dict) -> str:
         title = str(item["title"]).strip()
         company = str(item.get("company") or "").strip()
-        city = str(item.get("city") or "").strip()
+        from worker.place import is_remote_place, normalize_city
+
+        raw_city = str(item.get("city") or "").strip()
+        city = normalize_city(raw_city)
         text = str(item.get("text") or "").strip()
         url = str(item["source_url"]).strip()
         source_name = str(item["source_name"]).strip()
@@ -358,7 +361,7 @@ class Store:
         credit = str(item.get("credit_note") or "")
         stack = item.get("tech_stack") or []
         stack_json = json.dumps([str(x) for x in stack][:12], ensure_ascii=False)
-        remote = 1 if item.get("remote") else 0
+        remote = 1 if item.get("remote") or is_remote_place(raw_city) else 0
         relocation = 1 if item.get("relocation") else 0
         category = str(item.get("job_category") or "")[:40]
         salary = str(item.get("salary") or "").strip()[:120]
@@ -504,6 +507,36 @@ class Store:
                 from worker.skills import sync_job_skills
 
                 sync_job_skills(self.conn, int(row["id"]), stack)
+                done += 1
+        return done
+
+    def normalize_cities(self, limit: int = 2000) -> int:
+        """Collapse remote labels and alias cities on scraped rows."""
+        from worker.place import is_remote_place, normalize_city
+
+        rows = self.conn.execute(
+            """
+            SELECT id, city, COALESCE(remote, 0) AS remote
+            FROM jobs
+            WHERE COALESCE(owner_subject, '') = ''
+              AND TRIM(COALESCE(city, '')) != ''
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        done = 0
+        with self.conn:
+            for row in rows:
+                raw = str(row["city"] or "")
+                cleaned = normalize_city(raw)
+                remote = 1 if int(row["remote"] or 0) or is_remote_place(raw) else int(row["remote"] or 0)
+                if cleaned == raw and remote == int(row["remote"] or 0):
+                    continue
+                self.conn.execute(
+                    "UPDATE jobs SET city = ?, remote = ? WHERE id = ?",
+                    (cleaned, remote, row["id"]),
+                )
                 done += 1
         return done
 

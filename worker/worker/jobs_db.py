@@ -139,6 +139,7 @@ _NO_ID_TABLES = {
     "ai_feature_flags",
     "ai_usage_daily",
     "api_usage",
+    "crawl_rejects",
     "embeddings",
     "job_skill",
     "maintenance_steps",
@@ -254,6 +255,10 @@ class PostgresConnection:
                 cur.executemany(adapted, list(seq))
                 n = int(cur.rowcount or 0)
         except Exception as exc:
+            try:
+                self._conn.rollback()
+            except Exception:
+                pass
             _reraise(exc)
         return _Cursor([], None, rowcount=n)
 
@@ -296,6 +301,13 @@ class PostgresConnection:
             rows = [Row(columns, tuple(item)) for item in cur.fetchall()]
             return _Cursor(rows, None, rowcount=n if n else len(rows))
         except Exception as exc:
+            # Postgres aborts the whole transaction on the first error; clear it
+            # so callers that catch and continue (sqlite-style) can keep using
+            # the same connection.
+            try:
+                self._conn.rollback()
+            except Exception:
+                pass
             _reraise(exc)
         raise AssertionError("unreachable")
 

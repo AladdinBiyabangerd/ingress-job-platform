@@ -23,6 +23,7 @@ from threading import Lock
 
 from app.apply_form import parse_stored
 from app.companies import application_count, application_counts, company_slug
+from app.place import aggregate_cities, is_remote_place, matching_stored_cities
 
 def _db_path() -> Path:
     configured = os.environ.get("JOBS_DB_PATH", "").strip()
@@ -473,6 +474,7 @@ def _build_sql_filters(
     q: str,
     company: str,
     city: str = "",
+    city_values: list[str] | None = None,
     remote: bool,
     relocation: bool,
     onsite: bool = False,
@@ -489,10 +491,16 @@ def _build_sql_filters(
     if company_q:
         clauses.append("LOWER(j.company) LIKE ?")
         params.append(f"%{company_q}%")
-    city_q = city.strip().lower()
-    if city_q:
-        clauses.append("LOWER(TRIM(COALESCE(j.city, ''))) = ?")
-        params.append(city_q)
+    variants = [v.strip() for v in (city_values or []) if str(v).strip()]
+    if variants:
+        placeholders = ",".join("?" * len(variants))
+        clauses.append(f"LOWER(TRIM(COALESCE(j.city, ''))) IN ({placeholders})")
+        params.extend(v.lower() for v in variants)
+    else:
+        city_q = city.strip().lower()
+        if city_q:
+            clauses.append("LOWER(TRIM(COALESCE(j.city, ''))) = ?")
+            params.append(city_q)
     if remote:
         clauses.append("(COALESCE(j.remote, 0) = 1 OR LOWER(COALESCE(j.job_type, '')) = 'uzaqdan')")
     if relocation:
@@ -645,7 +653,7 @@ def _build_facets(conn) -> dict:
         key=lambda item: (-item["total"], item["name"]),
     )
 
-    city_counts: Counter[str] = Counter()
+    city_rows: list[tuple[str, int]] = []
     for row in conn.execute(
         f"""
         SELECT TRIM(COALESCE(j.city, '')) AS city, COUNT(*) AS total
@@ -656,11 +664,9 @@ def _build_facets(conn) -> dict:
     ).fetchall():
         name = (row["city"] or "").strip()
         if name:
-            city_counts[name] += int(row["total"] or 0)
-    cities = sorted(
-        [{"name": name, "total": total} for name, total in city_counts.items()],
-        key=lambda item: (-item["total"], item["name"].lower()),
-    )
+            city_rows.append((name, int(row["total"] or 0)))
+    # Remote/worldwide labels are covered by remote_total; merge Tokyo ≈ Tokyo, Japan.
+    cities = aggregate_cities(city_rows, limit=24)
 
     remote_row = conn.execute(
         f"""
@@ -794,20 +800,40 @@ def query_jobs(
         or salary_max is not None
         or when in {"today", "week"}
     )
-
-    where, params = _build_sql_filters(
-        q=q,
-        company=company,
-        city=city,
-        remote=remote,
-        relocation=relocation,
-        onsite=onsite,
-        categories=cat_filter,
-    )
+    city_filter = (city or "").strip()
+    if city_filter and is_remote_place(city_filter):
+        # Old facet values like "Remote (Worldwide)" → use the Remote flag.
+        remote = True
+        city_filter = ""
     order = _order_sql(sort)
 
     conn = _connect()
     try:
+        city_values: list[str] = []
+        if city_filter:
+            stored = [
+                str(row["city"] or "").strip()
+                for row in conn.execute(
+                    f"""
+                    SELECT DISTINCT TRIM(COALESCE(j.city, '')) AS city
+                    {_PUBLISHED_WHERE}
+                      AND TRIM(COALESCE(j.city, '')) != ''
+                    """
+                ).fetchall()
+                if str(row["city"] or "").strip()
+            ]
+            city_values = matching_stored_cities(city_filter, stored)
+
+        where, params = _build_sql_filters(
+            q=q,
+            company=company,
+            city=city_filter,
+            city_values=city_values,
+            remote=remote,
+            relocation=relocation,
+            onsite=onsite,
+            categories=cat_filter,
+        )
         facets, catalog_total = _catalog_facets(conn)
 
         if needs_python:

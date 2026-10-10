@@ -10519,10 +10519,11 @@ a.saved-preview-company:hover {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 4px 0 8px;
+  padding: 8px 16px 12px 0;
   border-right: 1px solid var(--border);
-  padding-right: 20px;
   min-width: 0;
+  max-height: calc(100vh - var(--header-h) - 32px);
+  overflow: auto;
 }
 
 .home-board-nav-list,
@@ -10718,7 +10719,7 @@ a.saved-preview-company:hover {
 
 .home-board-search {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 0.9fr)) auto auto;
+  grid-template-columns: minmax(8rem, 1.4fr) repeat(3, minmax(5.5rem, 0.9fr)) max-content max-content;
   gap: 0;
   align-items: stretch;
   background: var(--surface);
@@ -10726,6 +10727,7 @@ a.saved-preview-company:hover {
   border-radius: var(--board-radius);
   box-shadow: 0 8px 28px rgb(15 23 42 / 6%);
   overflow: hidden;
+  font-size: 0.875rem;
 }
 
 .home-board-search-field {
@@ -10735,6 +10737,7 @@ a.saved-preview-company:hover {
   min-width: 0;
   padding: 0 12px;
   border-right: 1px solid var(--board-border);
+  overflow: hidden;
 }
 
 .home-board-search-field input,
@@ -10746,6 +10749,8 @@ a.saved-preview-company:hover {
   color: var(--text);
   outline: none;
   min-width: 0;
+  font-size: inherit;
+  text-overflow: ellipsis;
 }
 
 .home-board-search-field select {
@@ -10804,15 +10809,34 @@ a.saved-preview-company:hover {
 .home-board-more {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   border: 0;
   background: transparent;
   padding: 0 14px;
   color: var(--muted);
+  font: inherit;
   font-weight: var(--fw-medium);
+  line-height: 1.2;
   cursor: pointer;
   white-space: nowrap;
   border-right: 1px solid var(--board-border);
+  min-width: max-content;
+  flex-shrink: 0;
+}
+
+.home-board-more .filter-icon {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.home-board-more-label {
+  display: inline-block;
+  min-width: 0;
+}
+
+.home-board-more .filters-badge {
+  flex: 0 0 auto;
 }
 
 .home-board-more:hover {
@@ -10822,9 +10846,12 @@ a.saved-preview-company:hover {
 
 .home-board-search-submit {
   border-radius: 0;
-  padding: 0 22px;
+  padding: 0 18px;
   min-height: 48px;
   border: 0;
+  font-size: inherit;
+  white-space: nowrap;
+  min-width: max-content;
 }
 
 .home-board-chips {
@@ -11202,6 +11229,8 @@ a.saved-preview-company:hover {
   background: var(--surface);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
   box-shadow: 0 16px 48px rgb(15 23 42 / 18%);
 }
 
@@ -11254,12 +11283,10 @@ a.saved-preview-company:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex: 0 0 auto;
   padding: 14px 16px;
   border-bottom: 1px solid var(--board-border);
-  position: sticky;
-  top: 0;
   background: var(--surface);
-  z-index: 1;
 }
 
 .home-board-drawer-head h2 {
@@ -11270,24 +11297,54 @@ a.saved-preview-company:hover {
 .home-board-drawer-body {
   padding: 16px;
   overflow: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 18px;
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .home-board-drawer-actions {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+  flex: 0 0 auto;
   padding: 12px 16px;
   border-top: 1px solid var(--board-border);
-  position: sticky;
-  bottom: 0;
   background: var(--surface);
+  z-index: 1;
+  box-shadow: 0 -8px 16px rgb(255 255 255 / 90%);
 }
 
-@media (max-width: 1199px) {
+/* 6-col search needs ~860px; stack before icon/label collide (az “Daha çox filtr”). */
+@media (max-width: 1279px) {
+  .home-board-search {
+    grid-template-columns: 1fr 1fr;
+  }
+  .home-board-search-q {
+    grid-column: 1 / -1;
+    border-right: 0;
+    border-bottom: 1px solid var(--board-border);
+  }
+  .home-board-search-field {
+    border-right: 0;
+    border-bottom: 1px solid var(--board-border);
+  }
+  .home-board-more {
+    border-right: 0;
+    border-bottom: 1px solid var(--board-border);
+    justify-content: center;
+    padding: 12px 14px;
+  }
+  .home-board-search-submit {
+    grid-column: 1 / -1;
+    min-height: 44px;
+  }
+}
+
+/* Right filters need ~260px; keep them off until the search row has ~860px. */
+@media (max-width: 1399px) {
   .home-board-shell {
     grid-template-columns: 200px minmax(0, 1fr);
   }
@@ -11324,28 +11381,6 @@ a.saved-preview-company:hover {
   }
   .home-board-hero-copy .home-board-title {
     font-size: 1.4rem;
-  }
-  .home-board-search {
-    grid-template-columns: 1fr 1fr;
-  }
-  .home-board-search-q {
-    grid-column: 1 / -1;
-    border-right: 0;
-    border-bottom: 1px solid var(--board-border);
-  }
-  .home-board-search-field {
-    border-right: 0;
-    border-bottom: 1px solid var(--board-border);
-  }
-  .home-board-more {
-    border-right: 0;
-    border-bottom: 1px solid var(--board-border);
-    justify-content: center;
-    padding: 12px;
-  }
-  .home-board-search-submit {
-    grid-column: 1 / -1;
-    min-height: 44px;
   }
   .home-board-tabs {
     gap: 6px;

@@ -87,7 +87,11 @@ export function JobDetailView({ locale, model: baseModel }) {
             ) : null}
 
             <JobDetailSkills locale={locale} skills={model.skills} />
-            <JobDetailDescription sections={model.sections} benefits={model.benefits} />
+            <JobDetailDescription
+              sections={model.sections}
+              benefits={model.benefits}
+              benefitsTitle={model.benefitsTitle}
+            />
 
             {showApplyForm ? (
               <JobDetailApplyForm

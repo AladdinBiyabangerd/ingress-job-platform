@@ -1,34 +1,25 @@
 # Current task
 
-## Completed (this chat)
-- **Job Detail mockup rebuild** — old `.h2-detail` / PageChrome ribbon layout removed.
-- Shared components under `frontend/components/job-detail/`.
-- Design preview: `/design/job-detail?state=company_signed_in|company_guest|external_signed_in|external_guest`
-- Production `/jobs/[id]` (+ en/ru) uses the same view model + components.
-- CTAs: Apply / Sign in to apply / Open original listing; Save + Share; guest gate; onsite form reveals on Apply.
-- Board bottom nav hidden when `jobId` is set (avoids clash with mobile sticky CTA).
-- Screenshots: `.design/job-detail-qa/` (`desktop-signed-in`, `desktop-guest`, `desktop-external`, `mobile-signed-in`, `mobile-guest`).
+## Completed
+- **Location facet cleanup** (this chat): Yer filter no longer lists Remote/Worldwide/Uzaqdan variants; merges Tokyo≈Tokyo, Japan etc.
+  - `api/app/place.py` — remote detection, place_key, aggregate_cities, filter variant matching
+  - `api/app/sqlite_jobs.py` — facets + city filter use normalization; remote-looking city query → `remote=true`
+  - `worker/worker/place.py` + `Store.normalize_cities` / upsert — storage cleanup on crawl
+- Prior: worker Postgres `crawl_rejects` RETURNING fix; AI job tidy; board shell IA (uncommitted frontend bits may remain)
 
 ## Current state
-- Visual fidelity is close to the reference collage; global Shell nav still differs from mockup (Jobs / For Employers / Academy vs mockup’s Companies / Learning) — intentional out of scope.
-- Live jobs omit missing fields (size / industry / cover / experience / languages); fixtures carry full sample content.
+- Facet cleanup is immediate on API restart (no crawl required).
+- DB city backfill runs on next `./scripts/dev-worker.sh once` (`city normalize: N`).
+- Restart local API if it was already running so facet cache refreshes.
 
 ## Decisions
-- Apply reveals existing onsite form (not always-visible form).
-- Preview fixtures for pixel QA; production maps API → same UI.
-- Plain CSS `.jd-*` (no Tailwind).
+- Remote labels belong only under the Remote checkbox (`remote_total`), not as city chips.
+- City filter matches all stored aliases sharing `place_key`.
 
-## Remaining work (other chats)
-1. Jobs shell IA — 3-col board + tokens (from prior home plan)
-2. Job cards / tabs polish
-3. Home front door vs `/jobs`
-4. Me page
-5. Optional: tighter pixel pass on job detail after board header matches mockup
+## Remaining work
+1. Confirm Yer list in UI after API restart (+ optional worker once for DB cleanup)
+2. Job cards / tabs polish, home front door, Me page
 
 ## Relevant files
-- `frontend/components/job-detail.js` + `frontend/components/job-detail/*`
-- `frontend/lib/job-detail-view-model.js`, `job-detail-fixtures.js`
-- `frontend/app/design/job-detail/page.js`
-- `frontend/app/globals.css` (`.jd-*` block)
-- `frontend/lib/copy.js` (jd* keys)
-- QA: `.design/job-detail-qa/*.png`
+- `api/app/place.py`, `api/app/sqlite_jobs.py`, `api/tests/test_place.py`
+- `worker/worker/place.py`, `worker/worker/db.py`, `worker/worker/runner.py`

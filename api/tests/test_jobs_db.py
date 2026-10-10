@@ -89,6 +89,13 @@ class WantsReturningTest(unittest.TestCase):
                 "INSERT INTO match_feedback (user_id, job_id, vote, ts) VALUES (?, ?, ?, ?)"
             )
         )
+        self.assertFalse(
+            _wants_returning(
+                "INSERT INTO crawl_rejects (source_url, reason, decided_at, via_ai) "
+                "VALUES (?, ?, ?, ?) ON CONFLICT(source_url) DO UPDATE SET "
+                "reason = excluded.reason"
+            )
+        )
 
 
 class CursorRowcountTests(unittest.TestCase):

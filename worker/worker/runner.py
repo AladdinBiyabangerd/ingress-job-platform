@@ -306,6 +306,12 @@ def _run_pass(store: Store) -> int:
     except Exception:
         capture_exception()
     try:
+        places = store.normalize_cities()
+        if places:
+            print(f"city normalize: {places}", flush=True)
+    except Exception:
+        capture_exception()
+    try:
         refreshed = store.reextract_tech_stack()
         if refreshed:
             print(f"tech stack reextract: {refreshed}", flush=True)

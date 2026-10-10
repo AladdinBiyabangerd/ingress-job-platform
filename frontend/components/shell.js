@@ -246,7 +246,8 @@ function BoardAuthActions({ locale, returnTo, me, onMe }) {
   );
 }
 
-const BOARD_SHELL_MODES = new Set(["browse", "saved", "applications", "profile"]);
+/** Board chrome: Jobs · Companies · Learning header + wrap-board. */
+const BOARD_SHELL_MODES = new Set(["browse", "companies", "saved", "applications", "profile"]);
 
 function BoardBottomNav({ locale, mode }) {
   const t = text(locale);
@@ -278,7 +279,7 @@ function BoardBottomNav({ locale, mode }) {
       </a>
       <a href={ingressUrl(locale)} rel="noopener noreferrer" target="_blank">
         <BoardNavIconAcademy />
-        <span>{t.navAcademy}</span>
+        <span>{t.navLearning}</span>
       </a>
       <a
         href={hrefFor(locale, { mode: "profile" })}
@@ -393,23 +394,23 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
               <span className="brand-text">Ingress Job</span>
             </a>
             {isBoard ? (
-              <nav className="primary-nav board-primary-nav" aria-label={t.navJobs}>
+              <nav className="primary-nav board-primary-nav" aria-label={t.browse}>
                 <a
                   href={hrefFor(locale)}
-                  className={mode === "browse" ? "on" : ""}
-                  aria-current={mode === "browse" ? "page" : undefined}
+                  className={mode === "browse" || jobId ? "on" : ""}
+                  aria-current={mode === "browse" || jobId ? "page" : undefined}
                 >
                   {t.navJobs}
                 </a>
                 <a
-                  href={hrefFor(locale, { mode: "post" })}
-                  className={mode === "post" ? "on" : ""}
-                  aria-current={mode === "post" ? "page" : undefined}
+                  href={hrefFor(locale, { mode: "companies" })}
+                  className={mode === "companies" ? "on" : ""}
+                  aria-current={mode === "companies" ? "page" : undefined}
                 >
-                  {t.navForEmployers}
+                  {t.navCompanies}
                 </a>
                 <a href={ingressUrl(locale)} rel="noopener noreferrer" target="_blank">
-                  {t.navAcademy}
+                  {t.navLearning}
                 </a>
               </nav>
             ) : (

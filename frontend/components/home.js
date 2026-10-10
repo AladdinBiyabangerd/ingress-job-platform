@@ -911,7 +911,7 @@ export function Home({
                   onClick={openFilters}
                 >
                   <FilterIcon />
-                  {t.moreFilters}
+                  <span className="home-board-more-label">{t.moreFilters}</span>
                   {activeFilters ? <span className="filters-badge">{activeFilters}</span> : null}
                 </button>
                 <button type="submit" className="btn primary home-board-search-submit">
