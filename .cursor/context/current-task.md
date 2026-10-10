@@ -1,20 +1,24 @@
 # Current task
 
 ## Completed
-- `/company` no longer redirects completed profiles to `/profile`
-- `/company` is create + edit page; first save → `/post`, later saves stay with note
+- `/company` expanded: address, website, industry, size (+ API/DB)
+- Account menu “Şirkət məlumatları” for employer/staff
+- Profile no longer edits company inline → link card to `/company`
+- Form uses full page width with sectioned layout
 
 ## Current state
-- Guest → login; authenticated → form always (complete or not)
-- CTA: incomplete “Davam et”, complete “Saxla”
+- Required: name, city, about → complete / post gate
+- Optional: address, website, industry, size
+- First save → `/post`; later saves stay on `/company`
 
 ## Decisions
-- Company details stay on `/company` as a separate page
+- Company owned on `/company` page, not Profile form
 
 ## Remaining work
-- Optional: remove duplicate company block from Profile if product wants single owner
+- Restart API if long-lived process so column migration runs
+- Live check while logged in
 
 ## Relevant files
-- `frontend/components/company-form.js`
-- `frontend/app/{,en/,ru/}company/page.js`
-- `frontend/lib/server/company.js`
+- `api/app/profiles.py`, `api/app/account.py`
+- `frontend/components/company-form.js`, `account-bar.js`, `profile-form.js`
+- `frontend/lib/copy.js`, `frontend/app/globals.css`

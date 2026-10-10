@@ -14,11 +14,7 @@ const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function applyMe(data, setters) {
   if (!data || typeof data !== "object") return;
-  const company = data.company_profile || {};
   const person = data.candidate_profile || {};
-  setters.setCompanyName(company.company_name || "");
-  setters.setCity(company.city || "");
-  setters.setAbout(company.about || "");
   setters.setDisplayName(person.display_name || "");
   setters.setPhone(person.phone || "");
   setters.setEmail(person.email || "");
@@ -78,14 +74,9 @@ export function ProfileForm({ locale }) {
     if (initialMe && typeof initialMe === "object") return initialMe;
     return undefined;
   });
-  const [companyName, setCompanyName] = useState(() => initialMe?.company_profile?.company_name || "");
-  const [city, setCity] = useState(() => initialMe?.company_profile?.city || "");
-  const [about, setAbout] = useState(() => initialMe?.company_profile?.about || "");
   const [displayName, setDisplayName] = useState(() => initialMe?.candidate_profile?.display_name || "");
   const [phone, setPhone] = useState(() => initialMe?.candidate_profile?.phone || "");
   const [email, setEmail] = useState(() => initialMe?.candidate_profile?.email || "");
-  const [companyError, setCompanyError] = useState("");
-  const [companyNote, setCompanyNote] = useState("");
   const [applicantError, setApplicantError] = useState("");
   const [applicantNote, setApplicantNote] = useState("");
   const seededConsents =
@@ -100,7 +91,7 @@ export function ProfileForm({ locale }) {
   useEffect(() => {
     if (initialMe && typeof initialMe === "object") {
       setMe(initialMe);
-      applyMe(initialMe, { setCompanyName, setCity, setAbout, setDisplayName, setPhone, setEmail });
+      applyMe(initialMe, { setDisplayName, setPhone, setEmail });
       return undefined;
     }
     let cancelled = false;
@@ -108,7 +99,7 @@ export function ProfileForm({ locale }) {
       .then((data) => {
         if (cancelled) return;
         setMe(data);
-        applyMe(data, { setCompanyName, setCity, setAbout, setDisplayName, setPhone, setEmail });
+        applyMe(data, { setDisplayName, setPhone, setEmail });
       })
       .catch(() => {
         if (!cancelled) setMe({ authenticated: false });
@@ -144,18 +135,6 @@ export function ProfileForm({ locale }) {
       cancelled = true;
     };
   }, [showApplicant, locale, me]);
-
-  async function saveCompany(event) {
-    event.preventDefault();
-    setCompanyError("");
-    setCompanyNote("");
-    const res = await saveCompanyProfile({ company_name: companyName, city, about });
-    if (!res.ok) {
-      setCompanyError(t.companyRequired);
-      return;
-    }
-    setCompanyNote(t.companySaved);
-  }
 
   function applicantProblem() {
     if (!displayName.trim()) return t.profileNameRequired;
@@ -290,46 +269,19 @@ export function ProfileForm({ locale }) {
                 <ProfileHero locale={locale} showApplicant={showApplicant} />
                 <div className={`profile-page ${layoutClass}`}>
                   {showCompany ? (
-                    <form className="h2-panel h2-form profile-panel" onSubmit={saveCompany}>
+                    <div className="h2-panel profile-panel company-profile-card">
                       <h2 className="h2-panel-title">{t.companyTitle}</h2>
-                      {companyError ? <p className="note">{companyError}</p> : null}
-                      {companyNote ? <p className="note">{companyNote}</p> : null}
-                      <div className="profile-grid">
-                        <label>
-                          <span className="profile-field-label">{t.companyName}</span>
-                          <input
-                            value={companyName}
-                            maxLength={120}
-                            required
-                            onChange={(event) => setCompanyName(event.target.value)}
-                          />
-                        </label>
-                        <label>
-                          <span className="profile-field-label">{t.companyCity}</span>
-                          <input
-                            value={city}
-                            maxLength={80}
-                            required
-                            onChange={(event) => setCity(event.target.value)}
-                          />
-                        </label>
-                        <label className="profile-span">
-                          <span className="profile-field-label">{t.companyAbout}</span>
-                          <textarea
-                            value={about}
-                            maxLength={400}
-                            required
-                            rows={3}
-                            onChange={(event) => setAbout(event.target.value)}
-                          />
-                        </label>
+                      <p className="company-profile-card-copy">
+                        {me?.company_profile?.company_name
+                          ? `${me.company_profile.company_name}${me.company_profile.city ? ` · ${me.company_profile.city}` : ""}`
+                          : t.companyLede}
+                      </p>
+                      <div className="company-profile-card-actions">
+                        <a className="btn ink" href={hrefFor(locale, { mode: "company" })}>
+                          {t.companyManage}
+                        </a>
                       </div>
-                      <div className="ad-actions profile-panel-actions">
-                        <button type="submit" className="btn ink">
-                          {t.companySave}
-                        </button>
-                      </div>
-                    </form>
+                    </div>
                   ) : null}
                   {showApplicant ? (
                     <form className="h2-panel h2-form profile-panel profile-applicant" onSubmit={saveApplicant}>

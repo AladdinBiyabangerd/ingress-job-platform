@@ -11375,6 +11375,16 @@ a.saved-preview-company:hover {
   justify-content: flex-end;
 }
 
+.profile-page .company-profile-card-actions .btn,
+.profile-page .company-profile-card-actions .btn.ink {
+  min-height: 32px;
+  height: auto;
+  padding: 5px 12px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  line-height: 1.2;
+}
+
 @media (max-width: 720px) {
   .company-profile-fields {
     grid-template-columns: 1fr;

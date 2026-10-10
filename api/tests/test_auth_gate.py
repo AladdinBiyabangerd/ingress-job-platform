@@ -121,6 +121,10 @@ class AuthGateTests(unittest.TestCase):
                     "company_name": "Ingress MMC",
                     "city": "Baki",
                     "about": "Komanda ucun aciq vakansiyalar.",
+                    "address": "Nizami 1",
+                    "website": "https://ingress.academy",
+                    "industry": "Education",
+                    "size": "51-200",
                 },
             )
             self.assertEqual(saved.status_code, 200)
@@ -128,6 +132,10 @@ class AuthGateTests(unittest.TestCase):
             self.assertFalse(done["needs_company_profile"])
             self.assertTrue(done["company_profile"]["complete"])
             self.assertEqual(done["company_profile"]["company_name"], "Ingress MMC")
+            self.assertEqual(done["company_profile"]["address"], "Nizami 1")
+            self.assertEqual(done["company_profile"]["website"], "https://ingress.academy")
+            self.assertEqual(done["company_profile"]["industry"], "Education")
+            self.assertEqual(done["company_profile"]["size"], "51-200")
 
     def test_staff_skips_the_company_gate(self):
         staff = user("job:employer job:staff", subject="staff-1")

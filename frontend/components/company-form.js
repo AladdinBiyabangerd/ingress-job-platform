@@ -280,7 +280,7 @@ export function CompanyForm({ locale, initialMe, initialProfile = null }) {
                   </span>
                   <input
                     name="website"
-                    type="url"
+                    type="text"
                     inputMode="url"
                     autoComplete="url"
                     placeholder="https://"
