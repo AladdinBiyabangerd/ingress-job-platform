@@ -331,7 +331,42 @@ class JobAnalyzeTests(unittest.TestCase):
         self.assertTrue(body["ai_report"])
         self.assertIn("match the core", body["report"]["summary"])
         self.assertEqual(body["report"]["skills"]["matching"], ["Java", "Spring"])
+        # Job seed defaults remote=1, relocation=1 → localized Yes/Yes, not raw "yes".
+        self.assertEqual(body["report"]["facts"]["remote"], "Yes")
+        self.assertEqual(body["report"]["facts"]["relocation"], "Yes")
         self.assertFalse(body["ai_pending"])
+
+    def test_az_facts_yes_no_localized(self):
+        from app.job_analyze import _validate_report
+
+        report = _validate_report(
+            {
+                "summary": "Sizin AWS bacarığınız bu uzaqdan vəzifəyə uyğundur və əlavə bulud təcrübəsi faydalıdır.",
+                "skills_matching": ["AWS"],
+                "skills_missing": [],
+                "skills_unverified": [],
+                "requirements_matching": [],
+                "requirements_missing": [],
+                "requirements_unverified": [],
+                "salary": "",
+                "location": "",
+                "remote": "yes",
+                "visa": "",
+                "relocation": "no",
+                "experiences_to_emphasize": [],
+                "cv_adapt": [],
+                "apply_tip": "AWS layihələrinizi vurğulayın.",
+            },
+            have=["AWS"],
+            missing=["Azure"],
+            lang="az",
+            remote=True,
+            relocation=False,
+        )
+        self.assertIsNotNone(report)
+        self.assertEqual(report["facts"]["remote"], "Bəli")
+        self.assertEqual(report["facts"]["relocation"], "Xeyr")
+        self.assertEqual(report["facts"]["salary"], "Qeyd edilməyib")
 
     def test_independent_of_recommendations_flag(self):
         subject = "analyze-flag"
@@ -351,8 +386,9 @@ class JobAnalyzeTests(unittest.TestCase):
     def test_az_user_prompt_requires_orthography(self):
         from app.job_analyze import PROMPT_VERSION, _SYSTEM, _build_ai_user
 
-        self.assertEqual(PROMPT_VERSION, "job-analyze-v2")
-        self.assertIn("tələb", _SYSTEM)
+        self.assertEqual(PROMPT_VERSION, "job-analyze-v3")
+        self.assertIn("bacarığınız", _SYSTEM)
+        self.assertIn("YesToken", _SYSTEM)
         job = {
             "id": 1,
             "title": "Java Dev",
@@ -385,9 +421,11 @@ class JobAnalyzeTests(unittest.TestCase):
             fit=fit,
             profile={"preferences": {}},
         )
-        self.assertIn("Azerbaijani orthography required", az)
-        self.assertIn("tələblərə", az)
-        self.assertNotIn("Azerbaijani orthography required", en)
+        self.assertIn("YesToken: Bəli", az)
+        self.assertIn("bacarığınız", az)
+        self.assertIn("Siz … sizə", az)
+        self.assertIn("YesToken: Yes", en)
+        self.assertNotIn("bacarığınız", en)
 
 
 if __name__ == "__main__":

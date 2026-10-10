@@ -23,8 +23,8 @@ from app.role_suggestions import (
 log = logging.getLogger("ingress-job.api.job_apply_draft")
 
 PURPOSE = "job_apply_draft"
-# v2: stronger Azerbaijani orthography (no TR/FR bleed, correct conjugations).
-PROMPT_VERSION = "job-apply-draft-v2"
+# v3: natural Azerbaijani prose (grammar + no TR/EN bleed).
+PROMPT_VERSION = "job-apply-draft-v3"
 MESSAGE_MAX = 2000
 MESSAGE_MIN = 80
 
@@ -43,10 +43,12 @@ _SYSTEM = (
     "'great fit', 'perfect candidate', vague praise. "
     "Length: about 900–1400 characters, at most 2000. Three to five short paragraphs. "
     "Write the message field in the language named in the context. "
-    "Spelling: correct orthography for that language. For Azerbaijani use ə, ı, ö, ü, ğ, ş, ç; "
-    "do not mix Turkish conjugations or French accents into AZ prose "
-    "(yaşayıram not yaşayırəm; yaratdım not yaradım; düzgünlüyünü not düzgünlüğünü; "
-    "strategiya not stratəjiya; üstünlük verirəm not préfər). "
+    "Spelling and grammar: write natural sentences in the requested language. "
+    "For Azerbaijani use ə, ı, ö, ü, ğ, ş, ç; no Turkish (olarak→kimi/olaraq; "
+    "mentorliq→mentorluq; loyiqə→layihə) and no English/French fragments "
+    "(préfər→üstünlük verirəm; familiarity). "
+    "Correct: yaşayıram, yaratdım, bacarığım, layihələrim. "
+    "Incorrect: yaşayırəm, yaradım, bacarım, olarak, préfər. "
     "Prefer native AZ wording (inkişaf/CI prosesləri — not avadanlıq for tooling). "
     "Voice: first person."
 )
@@ -125,11 +127,13 @@ def _build_user(
     ]
     if locale == "az":
         lines.append(
-            "Azerbaijani orthography required: ə ı ö ü ğ ş ç. "
-            "Correct: yaşayıram, yaratdım, düzgünlüyünü, strategiya, üstünlük verirəm, "
-            "təcrübə, tələblər. "
-            "Incorrect: yaşayırəm, yaradım, düzgünlüğünü, stratəjiya, préfər, tecrube, talablar. "
-            "Do not mix Turkish or English spelling into Azerbaijani prose."
+            "Azerbaijani: natural first-person prose with ə ı ö ü ğ ş ç. "
+            "Correct: yaşayıram, yaratdım, bacarığım, layihələrim, mentorluq, "
+            "kimi/olaraq, üstünlük verirəm. "
+            "Incorrect: yaşayırəm, yaradım, bacarım, olarak, mentorliq, loyiqə, "
+            "préfər, familiarity. "
+            "Do not mix Turkish or English into Azerbaijani prose "
+            "(skill/product names like Java may stay)."
         )
     lines.append("Return JSON with message and language matching OutputLanguageCode.")
     return "\n".join(lines)
