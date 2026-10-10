@@ -139,7 +139,10 @@ class JobgetherConnector(FeedConnector):
     min_interval_hours = 3
     max_pages = 5
     # Feed has no description; the public offer page fills JobPosting text.
+    # Each new tech candidate costs one offer-page request (robots Crawl-delay 2),
+    # so cap new candidates per run: 25 pages is about a minute at 2 s each.
     detail = True
+    candidates = 25
     credit_note = "Jobgether public astroapi jobs JSON. The link opens the Jobgether offer URL."
 
     def feed_items(self) -> list[dict]:
@@ -185,6 +188,9 @@ class JobgetherConnector(FeedConnector):
             page_info = payload.get("pagination") if isinstance(payload, dict) else None
             if not isinstance(page_info, dict) or not page_info.get("hasMore"):
                 break
+        # Remote offers first: with the per-run candidate cap they are the ones
+        # that get an offer-page read; on-site rows only fill what is left.
+        out.sort(key=lambda it: it.get("remote") is not True)
         return out
 
 

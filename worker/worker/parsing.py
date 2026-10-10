@@ -190,6 +190,72 @@ def html_to_text(fragment: str, limit: int = 20000) -> str:
     return out.result()[:limit]
 
 
+# Escaped tag open/close: &lt;h2 … &lt;/div&gt; (Arbeitnow Doctolib-style bodies).
+_ESCAPED_TAG = re.compile(r"&lt;\s*/?\s*[a-zA-Z][a-zA-Z0-9]*\b", re.I)
+_REAL_TAG = re.compile(r"<\s*/?\s*[a-zA-Z][a-zA-Z0-9]*\b")
+# Raw HTML that still carries class= on structural tags (missed cleaner / bad upsert).
+_RAW_HTML_CLASS = re.compile(
+    r"<\s*(?:p|div|h[1-6]|ul|ol|li|section|article|span|strong)\b[^>]*\bclass\s*=",
+    re.I,
+)
+
+
+def needs_html_unescape(raw: str) -> bool:
+    """True when the body is HTML stored mostly as &lt;…&gt; entities.
+
+    Arbeitnow mixes a fully-escaped description with a real-HTML credit footer,
+    so requiring zero raw '<' misses the common case and leaves tags as text.
+    """
+    escaped = len(_ESCAPED_TAG.findall(raw))
+    if not escaped:
+        return False
+    remainder = raw.replace("&lt;", "").replace("&LT;", "")
+    if "<" not in remainder:
+        return True
+    real = len(_REAL_TAG.findall(raw))
+    return escaped >= 3 and escaped >= real
+
+
+def looks_like_html_description(raw: str) -> bool:
+    """True when stored text still looks like HTML markup, not plain job copy."""
+    sample = str(raw or "")[:8000]
+    if not sample:
+        return False
+    if needs_html_unescape(sample):
+        return True
+    return bool(_RAW_HTML_CLASS.search(sample))
+
+
+def text_from_html(fragment: object, limit: int = 20000) -> str:
+    raw = str(fragment or "")
+    if needs_html_unescape(raw):
+        raw = unescape(raw)
+    return html_to_text(raw, limit)
+
+
+_ELLIPSIS_RUN = re.compile(r"\.\.\.|…")
+_TYPE_TAIL = re.compile(r"(?im)\b(?:full-time|part-time|contract)\s*$")
+
+
+def is_aggregator_snippet(text: object) -> bool:
+    """True for search-result stubs (Jooble snippets), not a usable job description.
+
+    Full employer JDs are never published as leading ``...`` cuts or a handful of
+    ellipsis fragments plus ``Full-time``. Those must not reach the detail page.
+    """
+    body = str(text or "").strip()
+    if not body:
+        return True
+    if body.startswith("...") or body.startswith("…"):
+        return True
+    cuts = len(_ELLIPSIS_RUN.findall(body))
+    if cuts >= 2 and len(body) < 900:
+        return True
+    if cuts >= 1 and len(body) < 400 and _TYPE_TAIL.search(body):
+        return True
+    return False
+
+
 def meta_content(soup: BeautifulSoup, attr: str, key: str) -> str:
     tag = soup.find("meta", attrs={attr: key})
     if tag is None:

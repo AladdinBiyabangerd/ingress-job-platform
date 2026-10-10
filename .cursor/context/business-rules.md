@@ -8,6 +8,7 @@
 - **No crawl** without PoliteClient robots allow (Reed `/api/1.0/` is the only owner-approved exception).
 - Remotive (`Disallow: /api/*`), Landing.jobs (`Disallow: /api/`), Ashby (`api.ashbyhq.com` robots HTTP 401), NoFluff/JustJoin (robots), DevIT/GermanTech JobsLight (signup HTML) → do not enable until robots/API is clean.
 - Jobgether + RemoteYeah are enabled; The Muse deferred (US-heavy).
+- **Jooble:** no-go for publish — API only returns search snippets; detail HTML blocked by robots. Snippet stubs rejected as `thin_description` (purge + finish_item).
 
 ## Crawl / scrape geo gate
 - Collect foreign **remote** and **relocation** IT ads.

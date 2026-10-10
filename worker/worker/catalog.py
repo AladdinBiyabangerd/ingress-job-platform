@@ -360,15 +360,14 @@ SOURCES: list[dict] = [
         "https://jooble.org/",
         "official_api",
         "https://jooble.org/api/",
-        enabled=True,
-        go="go",
+        enabled=False,
+        go="no-go",
         note=(
-            "Rəsmi Jooble API (POST jooble.org/api/<açar>), yalnız JOOBLE_API_KEY olduqda işləyir; "
-            "açar yoxdursa keçid atlanır. Açarın limiti cəmi 500 sorğudur: ən çox 6 saatda bir, "
-            "hər keçiddə 3 IT sorğusu (remote software developer, relocation software engineer, "
-            "remote devops engineer), yalnız 1-ci səhifə. Sorğular api_usage cədvəlində ay üzrə "
-            "sayılır və ayda 450 sorğuya (JOOBLE_MONTHLY_BUDGET) çatanda Jooble çağırılmır. "
-            "Açar loglara yazılmır. Elanın Jooble linki saxlanılır, açılmır; HTML toplanmır."
+            "Sönülüdür (2026-10-11). Rəsmi Jooble API yalnız search snippet qaytarır "
+            "(`...About... Full-time`); HTML/detail robots ilə bağlıdır, tam JD yoxdur. "
+            "Detail səhifəsində stub elanlar (Twilio Observability və s.) yaradırdı. "
+            "Tam mətn üçün Greenhouse/ATS lövhələrinə üstünlük verilir. "
+            "Mövcud snippet sətirləri market_purge (thin_description) ilə gizlədilir."
         ),
         credit_note="Jobs from the Jooble API (jooble.org). The link opens the offer through Jooble.",
         api_key_env="JOOBLE_API_KEY",

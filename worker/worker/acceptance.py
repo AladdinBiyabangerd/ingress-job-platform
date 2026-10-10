@@ -9,6 +9,7 @@ from worker.market_fit import (
     is_rejected,
     mark_rejected,
 )
+from worker.parsing import is_aggregator_snippet
 from worker.techstack import (
     az_market_relevant,
     enrich,
@@ -33,6 +34,12 @@ def finish_item(connector, item: dict | None) -> dict | None:
     conn = getattr(getattr(connector, "store", None), "conn", None)
 
     if url and is_rejected(conn, url):
+        return None
+
+    # Jooble (and similar) only ship search snippets — never a full JD.
+    if is_aggregator_snippet(text):
+        if url:
+            mark_rejected(conn, url, "thin_description", via_ai=False)
         return None
 
     pre_remote = item.get("remote")

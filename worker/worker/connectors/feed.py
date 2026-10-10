@@ -17,7 +17,7 @@ from xml.etree import ElementTree as ET
 from worker.connectors.sitemap import CANDIDATES
 from worker.db import Store
 from worker.http import Disallowed, NotFound, PoliteClient, SourceBlocked, SourceFailed
-from worker.parsing import clean, html_to_text, posting_item
+from worker.parsing import clean, looks_like_html_description, posting_item, text_from_html
 from worker.techstack import is_tech_job
 
 RSS_ACCEPT = "application/rss+xml,application/atom+xml,application/xml,text/xml,*/*"
@@ -113,7 +113,12 @@ class FeedConnector:
         item["title"] = title[:300]
         item["company"] = clean(item.get("company"))[:200]
         item["city"] = clean(item.get("city"))[:200]
-        item["text"] = str(item.get("text") or "").strip()
+        text = str(item.get("text") or "").strip()
+        # Safety net: connectors should already call text_from_html; re-clean if
+        # escaped/raw HTML still leaked through (e.g. Arbeitnow mixed footer).
+        if looks_like_html_description(text):
+            text = text_from_html(text)
+        item["text"] = text
         item["external_id"] = clean(item.get("external_id") or "")[:200]
         item["source_url"] = url
         item["source_name"] = self.name
@@ -123,13 +128,6 @@ class FeedConnector:
 
     def upsert(self, item: dict) -> str:
         return self.store.upsert(item)
-
-
-def text_from_html(fragment: object, limit: int = 20000) -> str:
-    raw = str(fragment or "")
-    if "&lt;" in raw and "<" not in raw.replace("&lt;", ""):
-        raw = unescape(raw)
-    return html_to_text(raw, limit)
 
 
 def _local(tag: str) -> str:

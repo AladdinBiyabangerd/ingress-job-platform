@@ -80,25 +80,35 @@ class JoobleTest(unittest.TestCase):
         self.store.close()
         self.tmp.cleanup()
 
-    def test_parses_tech_only_and_counts_requests(self):
+    def test_parses_tech_only_and_counts_requests_but_drops_snippets(self):
         client = FakeClient()
         conn = JoobleConnector(client, self.store)
         urls = conn.discover()
         self.assertEqual(len(client.calls), 3)  # three queries, page 1 only
         self.assertTrue(all(c[1]["page"] == "1" for c in client.calls))
         self.assertTrue(all(c[0].endswith(KEY) and c[2] == SHOWN for c in client.calls))
-        self.assertEqual(urls, ["https://jooble.org/jdp/111", "https://jooble.org/jdp/333"])
+        # API only returns search snippets — nothing publishable for the detail page.
+        self.assertEqual(urls, [])
         self.assertEqual(self.store.api_requests_used("Jooble", month_period()), 3)
 
-        item = finish_item(conn, conn.normalize(conn.fetch(urls[0]), urls[0]))
-        self.assertEqual(item["title"], "Senior Python Developer (Remote)")
-        self.assertEqual(item["company"], "Acme")
-        self.assertEqual(item["source_url"], "https://jooble.org/jdp/111")
-        self.assertEqual(item["external_id"], "jooble-111")
-        self.assertTrue(item["remote"])
-        self.assertIn("Python", item["tech_stack"])
-        self.assertEqual(item["job_category"], "Backend")
-        self.assertIn("Jooble", item["credit_note"])
+        # Defense in depth: even a hand-built snippet item must not pass finish_item.
+        stub = {
+            "title": "Remote DevOps Engineer (Observability)",
+            "company": "Twilio",
+            "city": "Remote",
+            "text": (
+                "...craft personalized customer experiences.\n"
+                "Our dedication to remote-first work , and strong culture of connection "
+                "and global... ...See yourself at Twilio\n"
+                "Join the team as our next Software Engineer on Twilio’s platform "
+                "engineering observability team.\nAbout...\n\nFull-time"
+            ),
+            "source_url": "https://jooble.org/jdp/-2120851625733911641",
+            "external_id": "jooble-twilio",
+            "tags": ["Full-time"],
+            "source_name": "Jooble",
+        }
+        self.assertIsNone(finish_item(conn, stub))
 
     def test_budget_stops_requests(self):
         self.store.add_api_requests("Jooble", month_period(), 449)

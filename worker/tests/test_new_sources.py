@@ -84,6 +84,72 @@ class RemoteYeahConnectorTest(unittest.TestCase):
         self.assertTrue(is_tech_job(items[0]["title"]))
 
 
+class RemoteYeahTitleSplitTest(unittest.TestCase):
+    def _items(self, title, company=None):
+        co = f"<company>{company}</company>" if company else ""
+        rss = f"""<?xml version="1.0"?><rss><channel><item><title>{title}</title>{co}
+        <link>https://remoteyeah.com/jobs/x</link><description>Locations: Remote</description>
+        </item></channel></rss>"""
+        client = MagicMock()
+        client.get_text.return_value = rss
+        return RemoteYeahConnector(client, MagicMock()).feed_items()
+
+    def test_multiple_at_with_company_field(self):
+        it = self._items("Engineer at Scale at Acme", "Acme")[0]
+        self.assertEqual((it["title"], it["company"]), ("Engineer at Scale", "Acme"))
+
+    def test_multiple_at_without_company_field_splits_on_last(self):
+        it = self._items("Engineer at Scale at Acme")[0]
+        self.assertEqual((it["title"], it["company"]), ("Engineer at Scale", "Acme"))
+
+    def test_company_suffix_must_follow_at(self):
+        it = self._items("Engineer at Acme", "me")[0]
+        self.assertEqual(it["company"], "me")
+        self.assertEqual(it["title"], "Engineer")
+
+    def test_no_at_keeps_title(self):
+        it = self._items("Backend Engineer", "Acme")[0]
+        self.assertEqual((it["title"], it["company"]), ("Backend Engineer", "Acme"))
+
+
+class JobgetherDetailCapTest(unittest.TestCase):
+    def test_candidates_capped_and_remote_first(self):
+        self.assertLessEqual(JobgetherConnector.candidates, 30)
+        jobs = [
+            {"id": str(i), "title": "Backend Developer", "company": "C",
+             "url": f"https://jobgether.com/offer/{i}", "location": "US",
+             "remote": "Full Remote" if i % 2 else "On-site", "jobFunctions": ["Developer"]}
+            for i in range(1, 101)
+        ]
+        client = MagicMock()
+        client.get_json.return_value = {"jobs": jobs, "pagination": {"hasMore": False}}
+        client.allowed.return_value = True
+        store = MagicMock()
+        store.has_source_url.return_value = False
+        conn = JobgetherConnector(client, store)
+        urls = conn.discover()
+        self.assertEqual(len(urls), JobgetherConnector.candidates)
+        self.assertTrue(all(conn._items[u]["remote"] is True for u in urls))
+
+    def test_detail_pages_only_for_discovered(self):
+        client = MagicMock()
+        client.get_json.return_value = {"jobs": [
+            {"id": "1", "title": "Backend Developer", "company": "C", "url": "https://jobgether.com/offer/1",
+             "location": "US", "remote": "Full Remote", "jobFunctions": ["Developer"]}
+            for _ in range(1)] + [
+            {"id": "2", "title": "Content Writer", "company": "C", "url": "https://jobgether.com/offer/2",
+             "location": "US", "remote": "Full Remote", "jobFunctions": ["Writer"]}],
+            "pagination": {"hasMore": False}}
+        client.allowed.return_value = True
+        client.get_text.return_value = "<html></html>"
+        store = MagicMock()
+        store.has_source_url.return_value = False
+        conn = JobgetherConnector(client, store)
+        for u in conn.discover():
+            conn.fetch(u)
+        self.assertEqual(client.get_text.call_count, 1)
+
+
 class AtsExpansionTest(unittest.TestCase):
     def test_new_greenhouse_slugs_present(self):
         by_name = {name: boards for name, _ats, _region, boards in GROUPS}

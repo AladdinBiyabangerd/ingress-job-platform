@@ -349,9 +349,58 @@ function classifyGroup(lines, context, nextGroupStart, out) {
   return ctx;
 }
 
+const ESCAPED_TAG_RE = /&lt;\s*\/?\s*[a-zA-Z][a-zA-Z0-9]*\b/gi;
+const REAL_TAG_RE = /<\s*\/?\s*[a-zA-Z][a-zA-Z0-9]*\b/g;
+const RAW_HTML_CLASS_RE =
+  /<\s*(?:p|div|h[1-6]|ul|ol|li|section|article|span|strong)\b[^>]*\bclass\s*=/i;
+
+/** Arbeitnow-style bodies: HTML entities for the JD + a real-HTML credit footer. */
+export function needsHtmlUnescape(raw) {
+  const text = String(raw || "");
+  const escaped = (text.match(ESCAPED_TAG_RE) || []).length;
+  if (!escaped) return false;
+  const remainder = text.replace(/&lt;/gi, "");
+  if (!remainder.includes("<")) return true;
+  const real = (text.match(REAL_TAG_RE) || []).length;
+  return escaped >= 3 && escaped >= real;
+}
+
+/**
+ * Best-effort plain text when DB still holds escaped/raw HTML (pre-fix rows).
+ * Worker text_from_html is the source of truth for new crawls.
+ */
+export function plainJobText(raw) {
+  let text = String(raw || "");
+  if (!text) return "";
+  if (needsHtmlUnescape(text)) {
+    text = text
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#0*39;/g, "'")
+      .replace(/&apos;/gi, "'")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&");
+  }
+  if (!RAW_HTML_CLASS_RE.test(text) && !/<\s*(?:p|div|h[1-6]|ul|ol|li|br)\b/i.test(text)) {
+    return text;
+  }
+  text = text
+    .replace(/<\s*br\s*\/?>/gi, "\n")
+    .replace(/<\s*hr\s*\/?>/gi, "\n\n")
+    .replace(/<\s*\/\s*(?:p|div|h[1-6]|section|article|tr|ul|ol)\s*>/gi, "\n\n")
+    .replace(/<\s*li[^>]*>/gi, "\n• ")
+    .replace(/<\s*h[1-6][^>]*>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return text;
+}
+
 /** Description text -> [{type: "heading"|"paragraph", text} | {type: "list", ordered, items}]. */
 export function descriptionBlocks(raw, title = "") {
-  const groups = groupsOf(raw).map((group) => joinLabels(joinBrokenLines(group)));
+  const groups = groupsOf(plainJobText(raw)).map((group) => joinLabels(joinBrokenLines(group)));
   const wanted = String(title || "").trim().toLowerCase();
   if (wanted && groups.length && groups[0][0] && groups[0][0].toLowerCase() === wanted) {
     groups[0] = groups[0].slice(1);

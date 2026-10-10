@@ -26,12 +26,26 @@ class AtsGroupsTest(unittest.TestCase):
         cls = ATS_GROUP_CONNECTORS["Greenhouse boards (US West)"]
         conn = cls(None, None)
         self.assertGreater(len(cls.boards), ATS_MAX_BOARDS)
+        slots = cls.rotation_slots()
+        self.assertEqual(slots, -(-len(cls.boards) // ATS_MAX_BOARDS))
         seen: set[str] = set()
-        for slot in range(4):
-            picked = conn.boards_this_pass(now=slot * 3 * 3600 + 1)
+        for slot in range(slots):
+            picked = conn.boards_this_pass(now=slot * cls.min_interval_hours * 3600 + 1)
             self.assertEqual(len(picked), ATS_MAX_BOARDS)
             seen.update(picked)
         self.assertEqual(seen, set(cls.boards))
+
+    def test_every_group_is_fully_covered_within_a_day(self):
+        # A group may grow, but a full rotation must stay within 24 h: otherwise
+        # split the group (more boards would be read too rarely).
+        for name, cls in ATS_GROUP_CONNECTORS.items():
+            conn = cls(None, None)
+            slots = cls.rotation_slots()
+            self.assertLessEqual(slots * cls.min_interval_hours, 24, name)
+            seen: set[str] = set()
+            for slot in range(slots):
+                seen.update(conn.boards_this_pass(now=slot * cls.min_interval_hours * 3600 + 1))
+            self.assertEqual(seen, set(cls.boards), name)
 
     def test_small_group_reads_all(self):
         cls = ATS_GROUP_CONNECTORS["Greenhouse boards (Canada)"]

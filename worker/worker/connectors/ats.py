@@ -70,6 +70,12 @@ class AtsConnector(FeedConnector):
     def board_items(self, slug: str) -> list[dict]:
         raise NotImplementedError
 
+    @classmethod
+    def rotation_slots(cls) -> int:
+        """Passes needed so every board is read once (1 for groups that fit one pass)."""
+        n = len(cls.boards)
+        return max(1, -(-n // cls.max_boards))
+
     def boards_this_pass(self, now: float | None = None) -> tuple[str, ...]:
         boards = tuple(self.boards)
         if len(boards) <= self.max_boards:

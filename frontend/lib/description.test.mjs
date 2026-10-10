@@ -1,6 +1,38 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { descriptionBlocks, joinBrokenLines, joinLabels, linkParts, splitDescription } from "./description.js";
+import {
+  descriptionBlocks,
+  joinBrokenLines,
+  joinLabels,
+  linkParts,
+  needsHtmlUnescape,
+  plainJobText,
+  splitDescription,
+} from "./description.js";
+
+const ARBEITNOW_MIXED = [
+  "&lt;h2 class=&quot;s-pb-2 s-pt-4&quot;&gt;&lt;strong&gt;Your Impact&lt;/strong&gt;&lt;/h2&gt;",
+  "&lt;div class=&quot;s-whitespace-pre-wrap&quot;&gt;We are looking for a ",
+  "&lt;strong&gt;Senior Site Reliability Engineer&lt;/strong&gt; ",
+  "to join Platform Engineering.&lt;/div&gt;",
+  "&lt;ul&gt;&lt;li&gt;Lead the observability strategy&lt;/li&gt;",
+  "&lt;li&gt;Take part in on-call&lt;/li&gt;&lt;/ul&gt;",
+  '<p>Find more <a href="https://www.arbeitnow.com/english-speaking-jobs">',
+  "English Speaking Jobs in Germany</a> on Arbeitnow</a>",
+].join("\n");
+
+test("unescapes Arbeitnow mixed HTML before building blocks", () => {
+  assert.equal(needsHtmlUnescape(ARBEITNOW_MIXED), true);
+  const plain = plainJobText(ARBEITNOW_MIXED);
+  assert.match(plain, /Your Impact/);
+  assert.match(plain, /Senior Site Reliability Engineer/);
+  assert.doesNotMatch(plain, /s-pb-2/);
+  assert.doesNotMatch(plain, /&lt;/);
+  const blocks = descriptionBlocks(ARBEITNOW_MIXED);
+  const blob = blocks.map((b) => (b.type === "list" ? b.items.join(" ") : b.text)).join("\n");
+  assert.match(blob, /Senior Site Reliability Engineer/);
+  assert.doesNotMatch(blob, /s-pb-2/);
+});
 
 // What the old worker cleaner stored for a Djinni ad: every <strong> on its own line.
 const DJINNI_LEGACY = [

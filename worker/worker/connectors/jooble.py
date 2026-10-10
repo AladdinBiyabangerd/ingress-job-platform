@@ -14,6 +14,10 @@ every error message shows "jooble.org/api/<key>" instead.
 Jooble's links point to jooble.org redirect pages. We store and show that link
 as Jooble asks API partners to; the worker never fetches it (robots.txt keeps
 crawlers off /desc/ and /away/, and nothing here crawls them).
+
+Because the API only returns search ``snippet`` text (truncated with ``...``),
+items are dropped in finish_item via ``is_aggregator_snippet`` — they must not
+appear on the job-detail page. Prefer employer ATS boards for full descriptions.
 """
 
 from __future__ import annotations
@@ -24,7 +28,7 @@ from datetime import datetime, timezone
 
 from worker.connectors.feed import FeedConnector, text_from_html
 from worker.http import SourceFailed
-from worker.parsing import clean
+from worker.parsing import clean, is_aggregator_snippet
 from worker.techstack import is_tech_job
 
 KEY_ENV = "JOOBLE_API_KEY"
@@ -88,11 +92,16 @@ class JoobleConnector(FeedConnector):
                 salary = clean(job.get("salary"))
                 text = text_from_html(job.get("snippet"))
                 extra = " | ".join(x for x in (kind, salary) if x)
+                body = f"{text}\n\n{extra}".strip() if extra else text
+                # API field is always a search snippet (often with "..."); never a
+                # full JD. Skip every row so broken stubs never hit upsert.
+                if is_aggregator_snippet(body) or len(body) < 600:
+                    continue
                 out.append({
                     "title": title,
                     "company": clean(job.get("company")),
                     "city": clean(job.get("location")),
-                    "text": f"{text}\n\n{extra}".strip() if extra else text,
+                    "text": body,
                     "source_url": str(job.get("link") or "").strip(),
                     "external_id": f"jooble-{job.get('id')}" if job.get("id") else "",
                     "tags": [kind] if kind else [],

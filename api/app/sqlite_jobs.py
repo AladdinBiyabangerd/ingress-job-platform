@@ -18,8 +18,11 @@ import os
 import re
 import sqlite3
 import unicodedata
+from html import unescape
 from pathlib import Path
 from threading import Lock
+
+from bs4 import BeautifulSoup
 
 from app.apply_form import parse_stored
 from app.companies import application_count, application_counts, company_slug
@@ -144,8 +147,43 @@ def repair_text(value: str) -> str:
     return value.replace("\u00c2", "").replace("\u00a0", " ")
 
 
+# Arbeitnow-style: JD body as &lt;h2…&gt; entities + real-HTML credit footer.
+_ESCAPED_TAG = re.compile(r"&lt;\s*/?\s*[a-zA-Z][a-zA-Z0-9]*\b", re.I)
+_REAL_TAG = re.compile(r"<\s*/?\s*[a-zA-Z][a-zA-Z0-9]*\b")
+_RAW_HTML_CLASS = re.compile(
+    r"<\s*(?:p|div|h[1-6]|ul|ol|li|section|article|span|strong)\b[^>]*\bclass\s*=",
+    re.I,
+)
+_HTML_BLOCK = re.compile(r"<\s*(?:p|div|h[1-6]|ul|ol|li|br)\b", re.I)
+
+
+def _needs_html_unescape(raw: str) -> bool:
+    escaped = len(_ESCAPED_TAG.findall(raw))
+    if not escaped:
+        return False
+    remainder = raw.replace("&lt;", "").replace("&LT;", "")
+    if "<" not in remainder:
+        return True
+    real = len(_REAL_TAG.findall(raw))
+    return escaped >= 3 and escaped >= real
+
+
+def strip_leaked_html(value: str) -> str:
+    """Plain text when DB still holds escaped/raw HTML (pre-worker-fix rows)."""
+    raw = value or ""
+    if not raw:
+        return ""
+    if _needs_html_unescape(raw):
+        raw = unescape(raw)
+    if not (_RAW_HTML_CLASS.search(raw) or _HTML_BLOCK.search(raw)):
+        return raw
+    text = BeautifulSoup(raw, "html.parser").get_text("\n")
+    text = re.sub(r"[ \t]+\n", "\n", text)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
 def public_text(value: str) -> str:
-    cleaned = repair_text(value or "")
+    cleaned = strip_leaked_html(repair_text(value or ""))
     cleaned = _URL.sub("", cleaned)
     lines = []
     for line in cleaned.splitlines():

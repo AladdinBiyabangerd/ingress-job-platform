@@ -1,39 +1,26 @@
 # Current task
 
 ## Completed
-- Phase 1 ATS slug expansion (2026-10-10 probe): Greenhouse +~30 boards; Workable +mercari/huggingface; Recruitee +effectory
-- Phase 2 connectors: **Jobgether** (official_api) + **RemoteYeah** (rss); catalog + BUILDERS + tests
-- Listing-rule samples for Worldwide keep / US-only + Africa-SA remote reject (existing rules OK, no gap fix needed)
-- Probe: Jobgether + RemoteYeah `status=ok`
-- Phase 3 ATS slug expansion (2026-10-10 wave2): +34 probed boards (Greenhouse +27, Lever cred, Teamtailor bambuser, Workable +3, Recruitee +2)
+- Fixed Arbeitnow HTML leak (`&lt;h2 class=…` shown as text) — unescape mixed escaped+raw HTML
+- Fixed Jooble truncated stubs (Twilio Observability `...About... Full-time`) — snippet-only API
 
 ## Current state
-- Ashby crawl: **NO-GO** — `api.ashbyhq.com/robots.txt` HTTP 401 → PoliteClient `SourceBlocked` (no ROBOTS_EXCEPTION without owner approval)
-- The Muse: **skipped** (US-heavy, low remote/relocation ROI per plan default)
-- Remotive: **NO-GO** — robots `Disallow: /api/*` (WildcardRobots); needs owner-approved exception like Reed if wanted later
-- Landing.jobs: **NO-GO** — robots `Disallow: /api/`
-- DevITjobs UK / GermanTechJobs: **NO-GO** — `/api/jobsLight` returns JobCopilot signup HTML, not JSON
-- NoFluffJobs / JustJoin / etc.: deny list (robots/Cloudflare) — not implemented
-- Second ATS probe: ~1400 candidates → 34 OK (rest 404/empty/wrong ATS); no robots exceptions added
+- **HTML:** `text_from_html` / `needs_html_unescape` in `worker/worker/parsing.py`; API `strip_leaked_html` in `public_text`; frontend `plainJobText`
+- **Jooble:** catalog `enabled=False` / `go=no-go`; connector drops snippets (`<600` chars or aggregator shape); `finish_item` + `market_purge` reject `thin_description`
+- Local purge hid 10 thin rows including Twilio id=341 and NetBox id=345
 
 ## Decisions
-- Safest volume = ATS slug expansion (done this pass)
-- Do not add Remotive/Landing/Ashby robots exceptions without explicit owner approval
-- Jobgether uses `detail=True` (JSON has no description)
-- Only add slugs that answer + robots allow + ≥1 tech role
+- Jooble cannot ship full JDs (robots block detail HTML) → do not publish; prefer Greenhouse/ATS
+- Aggregator snippet heuristic: leading `...`, or ≥2 ellipses in short body, or ellipsis + job-type tail under 400 chars
 
 ## Remaining work
-- Optional later: owner-approved Remotive/Landing robots exceptions; Ashby if robots fixed
-- Deploy worker so catalog seed + new BUILDERS / ATS slugs run in prod
+- Deploy worker + API + frontend so prod catalog disables Jooble and purge runs
+- Optional: re-ingest Twilio Observability from Greenhouse board (`twilio` / job 8108771) for a full JD
 
 ## Relevant files
-- `worker/worker/ats_boards.py`
-- `worker/worker/connectors/ats.py` (Workable/Recruitee boards)
-- `worker/worker/connectors/apis.py` (JobgetherConnector)
-- `worker/worker/connectors/rssboards.py` (RemoteYeahConnector)
-- `worker/worker/catalog.py`, `worker/worker/runner.py`
-- `worker/tests/test_new_sources.py`
-- Probe results: `.tmp/ats_slug_probe.json`, `.tmp/ats_slug_probe_wave2.json`
-
-## Plan
-- `.cursor/plans/new_crawl_sources_61ad9645.plan.md`
+- `worker/worker/parsing.py` (`is_aggregator_snippet`, HTML unescape)
+- `worker/worker/connectors/jooble.py`, `worker/worker/catalog.py`
+- `worker/worker/acceptance.py`, `worker/worker/market_purge.py`
+- `worker/worker/connectors/feed.py`, `api/app/sqlite_jobs.py`
+- `frontend/lib/description.js`
+- Tests: `test_parsing.py`, `test_jooble.py`, `test_market_purge.py`, `test_public_text.py`, `description.test.mjs`

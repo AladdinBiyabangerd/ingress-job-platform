@@ -226,11 +226,14 @@ class RemoteYeahConnector(FeedConnector):
             full = clean(first(it.get("title")))
             company = clean(first(it.get("company")))
             title = full
-            if company and " at " in full and full.endswith(company):
-                title = full[: -len(company)].rstrip().removesuffix(" at").strip()
+            if company and full.endswith(f" at {company}") and len(full) > len(company) + 4:
+                # Structured company field: strip exactly " at <company>" from the end.
+                title = full[: -len(company) - 4].strip()
             elif " at " in full:
-                title, _, company = full.rpartition(" at ")
-                title, company = title.strip(), company.strip()
+                # No usable company field: the company is whatever follows the LAST " at ".
+                head, _, tail = full.rpartition(" at ")
+                title = head.strip() or full
+                company = company or tail.strip()
             desc = first(it.get("description")) or first(it.get("encoded"))
             place = ""
             m = re.search(r"(?i)Locations?:\s*([^<\n]+)", desc)

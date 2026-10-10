@@ -35,7 +35,7 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
         "robinhood", "asana", "scaleai", "brex", "chime", "boxinc", "lattice", "waymo", "block",
         "twitch", "okta", "zscaler", "fastly", "cockroachlabs", "fivetran", "mixpanel",
         "launchdarkly", "coursera", "udacity", "roblox", "pagerduty", "bitwarden", "netlify",
-        "togetherai", "epicgames", "riotgames", "medium", "gemini", "ripple", "fireblocks",
+        "togetherai", "epicgames", "riotgames", "gemini", "ripple", "fireblocks",
         "circleci", "nuro")),
     ("Greenhouse boards (US East)", "greenhouse", "ABŞ şərq sahili", (
         "datadog", "mongodb", "gitlab", "toast", "zocdoc", "justworks", "duolingo", "squarespace",
