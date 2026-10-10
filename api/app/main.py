@@ -15,6 +15,7 @@ from app.routers import (
     email_prefs,
     health,
     jobs,
+    linkedin_import,
     me,
     notifications,
     profile,
@@ -97,6 +98,7 @@ app.add_middleware(RequestTrace)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins(),
+    allow_origin_regex=r"^chrome-extension://[a-z]{32}$",
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
@@ -107,6 +109,7 @@ app.include_router(companies.router)
 app.include_router(account_router)
 app.include_router(cabinet.router)
 app.include_router(admin.router)
+app.include_router(linkedin_import.router)
 app.include_router(applications.router)
 app.include_router(talent.router)
 app.include_router(consents.router)
