@@ -16,6 +16,7 @@ const FLOWS = [
   ["role_coach", "adminAiRoleCoach"],
   ["learning_roadmap", "adminAiLearningRoadmap"],
   ["job_analyze", "adminAiJobAnalyze"],
+  ["job_apply_draft", "adminAiJobApplyDraft"],
   ["digest_intro", "adminAiDigest"],
   ["engagement_copy", "adminAiEngagement"],
 ];

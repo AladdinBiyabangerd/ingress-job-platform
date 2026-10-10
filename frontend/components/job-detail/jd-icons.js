@@ -82,6 +82,13 @@ export function JdIcon({ name, size = 18, className = "" }) {
           <path d="M5 18.5h12" />
         </svg>
       );
+    case "pen":
+      return (
+        <svg {...common}>
+          <path d="M4 20.5l4.2-.8L19.5 8.4a1.8 1.8 0 00-2.5-2.5L5.7 17.2 4 20.5z" />
+          <path d="M14.2 7.2l2.5 2.5" />
+        </svg>
+      );
     case "users":
       return (
         <svg {...common}>

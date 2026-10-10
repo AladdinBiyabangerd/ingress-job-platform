@@ -3,7 +3,7 @@ const test = require("node:test");
 const assert = require("node:assert");
 const fs = require("fs");
 const path = require("path");
-const { decodeApplyUrl, jobIdFromUrl, extract } = require("../extract.js");
+const { decodeApplyUrl, jobIdFromUrl, extract, findShowMore } = require("../extract.js");
 
 test("safety/go decoding strips utm and returns external url", () => {
   const href =
@@ -58,6 +58,33 @@ test("Turkish layout extraction", { skip: !JSDOM && "jsdom yoxdur" }, () => {
   assert.match(job.description, /Kubernetes at scale/);
   assert.match(job.description, /Terraform, Go and Python/);
   assert.doesNotMatch(job.description, /consultancy|İş ilanı hakkında|Şirket hakkında/);
+});
+
+test("findShowMore + hidden full description via textContent", { skip: !JSDOM && "jsdom yoxdur" }, () => {
+  const html = `<!doctype html><html><body>
+    <h1>SRE Kubernetes</h1>
+    <a href="/company/acme/">Acme</a>
+    <div id="job-details">
+      <p class="visible">Short teaser only.</p>
+      <p class="hidden-full" style="display:none">Full role owns Kubernetes, Terraform, Go and Python on-call.</p>
+      <button aria-expanded="false">Show more</button>
+    </div>
+  </body></html>`;
+  const { window } = new JSDOM(html);
+  // Görünən mətn qısa; textContent isə gizli tam mətni də ehtiva edir.
+  Object.defineProperty(window.HTMLElement.prototype, "innerText", {
+    get() {
+      if (this.id === "job-details") return "Short teaser only.\nShow more";
+      return (this.textContent || "").trim();
+    },
+  });
+  const btn = findShowMore(window.document);
+  assert.ok(btn);
+  assert.match(btn.textContent, /Show more/i);
+  const job = extract(window.document, "https://www.linkedin.com/jobs/view/4300001234/");
+  assert.ok(job, "extract returned null");
+  assert.match(job.description, /Kubernetes/);
+  assert.doesNotMatch(job.description, /^Short teaser only\.?$/);
 });
 
 // EN (Easy Apply / xarici Apply) nümunələri, sintetik düzənlər: test/fixtures.js

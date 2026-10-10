@@ -26,6 +26,7 @@ FEATURES = (
     "match_why",
     "role_coach",
     "job_analyze",
+    "job_apply_draft",
     "digest_intro",
     "engagement_copy",
 )
@@ -41,6 +42,7 @@ FEATURE_ENV = {
     "match_why": "AI_MATCH_WHY_ENABLED",
     "role_coach": "AI_ROLE_COACH_ENABLED",
     "job_analyze": "AI_JOB_ANALYZE_ENABLED",
+    "job_apply_draft": "AI_JOB_APPLY_DRAFT_ENABLED",
     "digest_intro": "DIGEST_AI_INTRO_ENABLED",
     "engagement_copy": "ENGAGEMENT_AI_COPY_ENABLED",
 }

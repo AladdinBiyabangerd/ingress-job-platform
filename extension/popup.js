@@ -32,7 +32,9 @@ function showResult(r) {
 }
 
 async function render() {
-  const { recording = false, jobs = {}, lastResult } = await chrome.storage.local.get(["recording", "jobs", "lastResult"]);
+  const { recording = false, jobs = {}, lastResult, contentSeenAt = 0 } = await chrome.storage.local.get([
+    "recording", "jobs", "lastResult", "contentSeenAt",
+  ]);
   const list = Object.values(jobs);
   $("state").textContent = recording ? "qeyd gedir" : "dayandı";
   $("state").className = "pill" + (recording ? " on" : "");
@@ -44,6 +46,18 @@ async function render() {
   $("count").textContent = "Toplanan elan: " + list.length;
   $("hint").hidden = recording || list.length > 0;
   $("empty").hidden = list.length > 0;
+  // Content script son 2 dəqiqədə salam göndərməyibsə LinkedIn tabını yeniləmək lazımdır.
+  const scriptOk = contentSeenAt && Date.now() - contentSeenAt < 120000;
+  const scriptEl = $("script");
+  if (recording && !scriptOk) {
+    scriptEl.hidden = false;
+    scriptEl.textContent = "LinkedIn tabında script yoxdur — chrome://extensions → Reload, sonra LinkedIn səhifəsini yeniləyin.";
+  } else if (scriptOk) {
+    scriptEl.hidden = false;
+    scriptEl.textContent = "LinkedIn script aktiv.";
+  } else {
+    scriptEl.hidden = true;
+  }
   $("list").innerHTML = list
     .map((j) => {
       const ext = isExternal(j);

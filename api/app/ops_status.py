@@ -40,6 +40,7 @@ _FEATURE_LABELS = {
     "role_coach": "Rol bacarıq koçu",
     "learning_roadmap": "Öyrənmə roadmap",
     "job_analyze": "Elan «Analiz et» hesabatı",
+    "job_apply_draft": "Elan «Müraciət mətni» qaralama",
     "digest_intro": "Digest giriş mətni",
     "engagement_copy": "Engagement bildiriş mətni",
 }

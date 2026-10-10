@@ -4,6 +4,13 @@
   const lc = (s) => String(s || "").toLocaleLowerCase("tr");
   const clean = (s) => String(s || "").replace(/[ \t\u00a0]+/g, " ").replace(/\s*\n\s*/g, "\n").trim();
   const text = (el) => (el ? clean(el.innerText !== undefined ? el.innerText : el.textContent) : "");
+  // innerText görünən (kəsilmiş) mətn; textContent gizli tam mətni də götürə bilər — uzunu seç.
+  const richText = (el) => {
+    if (!el) return "";
+    const a = clean(el.innerText !== undefined ? el.innerText : "");
+    const b = clean(el.textContent || "");
+    return a.length >= b.length ? a : b;
+  };
 
   // Çoxdilli başlıqlar / etiketlər (en, tr, az, ru, de, fr, es)
   const ABOUT_JOB = /^(about the job|job description|iş ilanı hakkında|iş tanımı|vakansiya haqqında|elan haqqında|iş elanı haqqında|о вакансии|описание вакансии|über die stelle|stellenbeschreibung|à propos de l.offre|description du poste|acerca del empleo|información sobre el empleo)$/;
@@ -11,7 +18,9 @@
   // Təsvirin sonu: Premium təklifi və ya şirkət bölməsi (daxili başlıqlara ("Requirements" və s.) güvənmirik)
   const END_BLOCK = /^(job search faster with premium|get hired faster with premium|try premium|reactivate premium|retry premium|see how you compare|premium ile|premium ilə|premium ile daha hızlı|попробуйте premium|ищите работу быстрее с premium)/;
   // Təsvirə aid olmayan LinkedIn interfeys sətirləri
-  const NOISE = /^(your profile and resume are missing|profiliniz ve özgeçmişiniz|show match details|eşleşme ayrıntılarını göster|beta\b|is this information helpful|bu bilgi yararlı mı|see how you compare|tailor my resume|resume builder|job match summary not available|this job post doesn.t have enough information|responses managed off linkedin|show more|show less|daha fazla göster|daha az göster|\d+\+? (people|applicants|kişi)|over \d+ (applicants|people)|\d+ (applicants|kişi))/;
+  const NOISE = /^(your profile and resume are missing|profiliniz ve özgeçmişiniz|show match details|eşleşme ayrıntılarını göster|beta\b|is this information helpful|bu bilgi yararlı mı|see how you compare|tailor my resume|resume builder|job match summary not available|this job post doesn.t have enough information|responses managed off linkedin|show more|show less|see more|see less|read more|daha fazla göster|daha az göster|daha fazla|daha çox|\d+\+? (people|applicants|kişi)|over \d+ (applicants|people)|\d+ (applicants|kişi))/;
+  const SHOW_MORE = /(show more|see more|read more|daha fazla|daha çox|voir plus|ver más|siehe mehr|показать ещё|показать еще|ещё|еще)/;
+  const SHOW_LESS = /(show less|see less|daha az|voir moins|ver menos|weniger|скрыть|свернуть)/;
   const EASY = /(easy apply|kolay başvuru|asan müraciət|быстрая подача|candidature simplifiée|solicitud sencilla|einfach bewerben)/;
   const APPLY = /(^|\s)(apply|başvur|müraciət|подать|откликнуться|bewerben|postuler|candidatar|solicitar)/;
   const REMOTE = /^(remote|uzaktan|uzaqdan|удал[её]нно|удал[её]нная работа|fernarbeit|à distance|remoto)$/;
@@ -70,11 +79,30 @@
     return null;
   }
 
-  function descriptionOf(doc) {
-    const direct = doc.querySelector(
-      '#job-details, .jobs-description__content, .jobs-box__html-content, [data-testid="expandable-text-box"], [componentkey*="AboutTheJob" i]'
+  function descriptionRoot(doc) {
+    return doc.querySelector(
+      '#job-details, .jobs-description__content, .jobs-box__html-content, .jobs-description, [data-testid="expandable-text-box"], [componentkey*="AboutTheJob" i]'
     );
-    if (direct && text(direct).length > 40) return { desc: stripHeadings(text(direct)), heading: findHeading(doc, ABOUT_JOB) };
+  }
+
+  // Qeyd zamanı yalnız təsvirin "Show more" düyməsi (elanlar arası keçid / Apply yox).
+  function findShowMore(doc) {
+    const root = descriptionRoot(doc) || findHeading(doc, ABOUT_JOB)?.closest("section,article,div") || null;
+    if (!root) return null;
+    for (const btn of root.querySelectorAll('button, a[role="button"], span[role="button"]')) {
+      if (btn.getAttribute("aria-expanded") === "true") continue;
+      const label = lc(btn.getAttribute("aria-label") || text(btn));
+      if (!label || SHOW_LESS.test(label) || !SHOW_MORE.test(label)) continue;
+      return btn;
+    }
+    return null;
+  }
+
+  function descriptionOf(doc) {
+    const direct = descriptionRoot(doc);
+    if (direct && richText(direct).length > 40) {
+      return { desc: stripHeadings(richText(direct)), heading: findHeading(doc, ABOUT_JOB) };
+    }
     const h = findHeading(doc, ABOUT_JOB);
     if (!h) return { desc: "", heading: null };
     // Başlığın qardaş elementlərindəki mətn (təsvir); yetərli deyilsə bir səviyyə yuxarı çıx.
@@ -82,7 +110,7 @@
     for (let i = 0; i < 8 && el && el !== doc.body; i++) {
       const parts = [];
       for (let sib = el.nextElementSibling; sib; sib = sib.nextElementSibling) {
-        const t = text(sib);
+        const t = richText(sib);
         if (!t) continue;
         const first = lc(t.split("\n")[0]).replace(/[:：]$/, "");
         if (ABOUT_COMPANY.test(first) || END_BLOCK.test(first) || findHeading(sib, ABOUT_COMPANY)) break;
@@ -93,6 +121,13 @@
       el = el.parentElement;
     }
     return { desc: "", heading: h };
+  }
+
+  function descriptionFromLd(doc, ld) {
+    if (!ld || !ld.description) return "";
+    const d = doc.createElement("div");
+    d.innerHTML = ld.description;
+    return stripHeadings(richText(d) || text(d));
   }
 
   function stripHeadings(t) {
@@ -159,7 +194,7 @@
   function extract(doc, href) {
     const id = jobIdFromUrl(href);
     if (!id) return null;
-    const ld = /\/jobs\/view\//.test(href) ? jsonLd(doc) : null;
+    const ld = jsonLd(doc);
     const { desc, heading } = descriptionOf(doc);
     const scope = heading ? scopeOf(doc, heading) : doc;
     const titleParts = (doc.title || "").split(/\s[|–-]\s/).map((s) => s.trim());
@@ -196,11 +231,8 @@
     const employment = labels.find((t) => EMPLOYMENT.test(lc(t))) || (ld && (Array.isArray(ld.employmentType) ? ld.employmentType[0] : ld.employmentType)) || "";
 
     let description = desc;
-    if (!description && ld && ld.description) {
-      const d = doc.createElement("div");
-      d.innerHTML = ld.description;
-      description = text(d);
-    }
+    const fromLd = descriptionFromLd(doc, ld);
+    if (fromLd.length > description.length) description = fromLd;
 
     if (!title) return null;
     return {
@@ -219,7 +251,7 @@
     };
   }
 
-  const api = { extract, decodeApplyUrl, jobIdFromUrl };
+  const api = { extract, decodeApplyUrl, jobIdFromUrl, findShowMore };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.IJExtract = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

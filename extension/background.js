@@ -3,8 +3,8 @@
 const DEFAULTS = { apiBase: "http://localhost:3010", token: "" };
 
 async function getState() {
-  const s = await chrome.storage.local.get({ recording: false, jobs: {}, settings: DEFAULTS });
-  return { recording: s.recording, jobs: s.jobs, settings: { ...DEFAULTS, ...s.settings } };
+  const s = await chrome.storage.local.get({ recording: false, jobs: {}, settings: DEFAULTS, contentSeenAt: 0 });
+  return { recording: s.recording, jobs: s.jobs, settings: { ...DEFAULTS, ...s.settings }, contentSeenAt: s.contentSeenAt || 0 };
 }
 
 function badge(count, recording) {
@@ -64,6 +64,10 @@ async function stopAndSend() {
 
 chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   (async () => {
+    if (msg.type === "content_hello") {
+      await chrome.storage.local.set({ contentSeenAt: Date.now(), contentHref: msg.href || "" });
+      return reply({ ok: true });
+    }
     if (msg.type === "capture") return reply(await capture(msg.job));
     if (msg.type === "start") {
       await chrome.storage.local.set({ recording: true });

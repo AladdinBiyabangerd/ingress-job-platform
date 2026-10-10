@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchMe } from "../../lib/me-client";
 import { useInitialMe } from "../me-seed";
 import { JobDetailAnalyzePanel } from "./job-detail-analyze-panel";
+import { JobDetailApplyDraftPanel } from "./job-detail-apply-draft-panel";
 import { JobDetailApplyForm } from "./job-detail-apply-form";
 import { JobDetailCompanySidebar } from "./job-detail-company-sidebar";
 import { JobDetailDescription } from "./job-detail-description";
@@ -22,6 +23,8 @@ export function JobDetailView({ locale, model: baseModel }) {
   });
   const [formOpen, setFormOpen] = useState(false);
   const [analyzeOpen, setAnalyzeOpen] = useState(false);
+  const [applyDraftOpen, setApplyDraftOpen] = useState(false);
+  const [draftMessage, setDraftMessage] = useState("");
 
   useEffect(() => {
     if (preview) {
@@ -76,9 +79,37 @@ export function JobDetailView({ locale, model: baseModel }) {
     }
   }
 
+  function revealApplyDraft() {
+    setApplyDraftOpen(true);
+    if (typeof document !== "undefined") {
+      window.requestAnimationFrame(() => {
+        document.getElementById("jd-apply-draft-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }
+
+  const onDraftMessage = useCallback(
+    (msg) => {
+      const text = String(msg || "").trim();
+      if (!text) return;
+      setDraftMessage(text);
+      if (model.listingType === "company_posted") {
+        setFormOpen(true);
+        if (typeof document !== "undefined") {
+          window.requestAnimationFrame(() => {
+            document.getElementById("jd-apply-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+        }
+      }
+    },
+    [model.listingType],
+  );
+
   useEffect(() => {
     setFormOpen(false);
     setAnalyzeOpen(false);
+    setApplyDraftOpen(false);
+    setDraftMessage("");
   }, [model.jobId, model.listingType, model.authState]);
 
   return (
@@ -91,8 +122,10 @@ export function JobDetailView({ locale, model: baseModel }) {
               model={model}
               onRevealForm={revealForm}
               onRevealAnalyze={revealAnalyze}
+              onRevealApplyDraft={revealApplyDraft}
               formOpen={formOpen}
               analyzeOpen={analyzeOpen}
+              applyDraftOpen={applyDraftOpen}
               preview={preview}
             />
 
@@ -102,6 +135,16 @@ export function JobDetailView({ locale, model: baseModel }) {
               returnTo={model.returnTo}
               open={analyzeOpen}
               preview={preview}
+            />
+
+            <JobDetailApplyDraftPanel
+              locale={locale}
+              jobId={model.jobId}
+              returnTo={model.returnTo}
+              listingType={model.listingType}
+              open={applyDraftOpen}
+              preview={preview}
+              onMessage={onDraftMessage}
             />
 
             {showInlineGate ? (
@@ -122,6 +165,7 @@ export function JobDetailView({ locale, model: baseModel }) {
                 returnTo={model.returnTo}
                 form={model.form}
                 open={formOpen}
+                draftMessage={draftMessage}
               />
             ) : null}
 
@@ -153,8 +197,10 @@ export function JobDetailView({ locale, model: baseModel }) {
         model={model}
         onRevealForm={revealForm}
         onRevealAnalyze={revealAnalyze}
+        onRevealApplyDraft={revealApplyDraft}
         formOpen={formOpen}
         analyzeOpen={analyzeOpen}
+        applyDraftOpen={applyDraftOpen}
         preview={preview}
       />
     </div>

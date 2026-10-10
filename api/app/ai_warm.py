@@ -50,6 +50,10 @@ def _analyze_key(*, user_id: str, job_id: int, lang: str) -> str:
     return f"analyze:{user_id}:{int(job_id)}:{lang}"
 
 
+def _apply_draft_key(*, user_id: str, job_id: int, lang: str) -> str:
+    return f"apply-draft:{user_id}:{int(job_id)}:{lang}"
+
+
 def _pick_locale(lang: str) -> str:
     text = (lang or "").strip().lower()[:2]
     return text if text in _COACH_LANGS else "az"
@@ -366,4 +370,77 @@ def schedule_job_analyze_ai_warm(
             _done(key)
 
     threading.Thread(target=run, daemon=True, name="ai-warm-analyze").start()
+    return True
+
+
+def job_apply_draft_warm_fail_code(
+    *,
+    user_id: str,
+    job_id: int,
+    lang: str,
+) -> str | None:
+    subject = (user_id or "").strip()
+    locale = _pick_locale(lang)
+    return recent_fail_code(
+        _apply_draft_key(user_id=subject, job_id=int(job_id), lang=locale)
+    )
+
+
+def schedule_job_apply_draft_ai_warm(
+    *,
+    user_id: str,
+    job_id: int,
+    lang: str,
+    refresh: bool = False,
+) -> bool:
+    """Start background warm for job-detail apply-message draft."""
+    subject = (user_id or "").strip()
+    jid = int(job_id or 0)
+    if not subject or jid <= 0:
+        return False
+    locale = _pick_locale(lang)
+    key = _apply_draft_key(user_id=subject, job_id=jid, lang=locale)
+    if not refresh and recent_fail_code(key):
+        return False
+    if not _track(key):
+        return False
+
+    def run() -> None:
+        try:
+            from app.cabinet_store import _LOCK, _connect
+            from app.job_apply_draft import apply_draft_payload
+
+            with _LOCK:
+                conn = _connect()
+                try:
+                    payload = apply_draft_payload(
+                        conn,
+                        user_id=subject,
+                        job_id=jid,
+                        lang=locale,
+                        refresh=refresh,
+                        allow_ai_provider=True,
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+            if str(payload.get("message") or "").strip():
+                _clear_fail(key)
+            else:
+                err = str(payload.get("ai_error") or "ai_failed").strip() or "ai_failed"
+                if err in {"ai_pending", "job_apply_draft_disabled"}:
+                    err = "ai_failed" if err == "ai_pending" else err
+                if err == "job_apply_draft_disabled":
+                    _clear_fail(key)
+                else:
+                    _mark_fail(key, err)
+        except Exception as exc:
+            log.warning(
+                "job_apply_draft AI warm failed user=%s job=%s: %s", subject, jid, exc
+            )
+            _mark_fail(key, "ai_failed")
+        finally:
+            _done(key)
+
+    threading.Thread(target=run, daemon=True, name="ai-warm-apply-draft").start()
     return True

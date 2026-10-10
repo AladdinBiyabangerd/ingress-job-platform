@@ -13,7 +13,7 @@ const CV_OK = /\.(pdf|doc|docx)$/i;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Onsite apply form revealed by the Job Detail Apply CTA. */
-export function JobDetailApplyForm({ locale, jobId, returnTo, form, open }) {
+export function JobDetailApplyForm({ locale, jobId, returnTo, form, open, draftMessage = "" }) {
   const t = text(locale);
   const spec = applyFormFromJob({ form: form || null });
   const [note, setNote] = useState("");
@@ -31,6 +31,12 @@ export function JobDetailApplyForm({ locale, jobId, returnTo, form, open }) {
   const [emailEdited, setEmailEdited] = useState(false);
   const [consentPayload, setConsentPayload] = useState(null);
   const [grants, setGrants] = useState({ matching: false, emails: false, recruiter_visibility: false });
+
+  useEffect(() => {
+    const next = String(draftMessage || "").trim();
+    if (!next) return;
+    setMessage(next.slice(0, 2000));
+  }, [draftMessage]);
 
   useEffect(() => {
     let cancelled = false;

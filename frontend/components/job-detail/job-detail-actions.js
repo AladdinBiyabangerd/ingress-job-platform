@@ -19,8 +19,10 @@ export function JobDetailActions({
   layout = "desktop",
   onRevealForm,
   onRevealAnalyze,
+  onRevealApplyDraft,
   formOpen = false,
   analyzeOpen = false,
+  applyDraftOpen = false,
   preview = false,
   className = "",
 }) {
@@ -43,6 +45,18 @@ export function JobDetailActions({
       return;
     }
     onRevealAnalyze?.();
+  }
+
+  function onApplyDraft() {
+    if (preview) {
+      onRevealApplyDraft?.();
+      return;
+    }
+    if (isGuest) {
+      beginLogin({ intent: "job_candidate", returnTo: model.returnTo });
+      return;
+    }
+    onRevealApplyDraft?.();
   }
 
   async function onPrimary() {
@@ -68,7 +82,7 @@ export function JobDetailActions({
         return;
       }
       if (res.ok && typeof res.data?.url === "string" && res.data.url) {
-        window.location.href = res.data.url;
+        window.open(res.data.url, "_blank", "noopener,noreferrer");
         return;
       }
       const orig = await fetch(`/api/auth/jobs/${model.jobId}/original`, { cache: "no-store" });
@@ -78,7 +92,7 @@ export function JobDetailActions({
       }
       const data = await orig.json().catch(() => ({}));
       if (orig.ok && typeof data.url === "string" && data.url) {
-        window.location.href = data.url;
+        window.open(data.url, "_blank", "noopener,noreferrer");
       }
     } finally {
       setBusy(false);
@@ -133,6 +147,19 @@ export function JobDetailActions({
     </button>
   );
 
+  const applyDraftBtn = (
+    <button
+      type="button"
+      className="jd-btn jd-btn-outline"
+      onClick={onApplyDraft}
+      aria-expanded={applyDraftOpen || undefined}
+      aria-controls="jd-apply-draft-panel"
+    >
+      <JdIcon name="pen" size={16} />
+      <span>{t.jdApplyDraft}</span>
+    </button>
+  );
+
   const secondary = (
     <>
       {preview ? (
@@ -150,6 +177,7 @@ export function JobDetailActions({
         />
       )}
       {analyzeBtn}
+      {applyDraftBtn}
       <button type="button" className="jd-btn jd-btn-outline" onClick={onShare}>
         <JdIcon name="share" size={16} />
         <span>{t.jdShare}</span>

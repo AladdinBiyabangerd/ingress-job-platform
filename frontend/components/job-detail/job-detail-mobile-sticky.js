@@ -7,8 +7,10 @@ export function JobDetailMobileSticky({
   model,
   onRevealForm,
   onRevealAnalyze,
+  onRevealApplyDraft,
   formOpen,
   analyzeOpen,
+  applyDraftOpen,
   preview,
 }) {
   return (
@@ -19,8 +21,10 @@ export function JobDetailMobileSticky({
         layout="sticky"
         onRevealForm={onRevealForm}
         onRevealAnalyze={onRevealAnalyze}
+        onRevealApplyDraft={onRevealApplyDraft}
         formOpen={formOpen}
         analyzeOpen={analyzeOpen}
+        applyDraftOpen={applyDraftOpen}
         preview={preview}
       />
     </div>
