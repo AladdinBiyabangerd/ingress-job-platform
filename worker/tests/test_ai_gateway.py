@@ -291,3 +291,35 @@ class GatewayTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ChatProviderOrderTest(unittest.TestCase):
+    """Free providers first; OpenAI only as the very last resort."""
+
+    def test_openai_is_forced_last_even_if_env_lists_it_first(self):
+        import os
+        from unittest import mock
+
+        from worker.ai_gateway import gateway as gw
+
+        env = {
+            "AI_CHAT_PROVIDERS": "openai,gemini,groq,nvidia,openrouter",
+            "GEMINI_API_KEY": "g", "GROQ_API_KEY": "q", "NVIDIA_API_KEY": "n",
+            "OPENROUTER_API_KEY": "o", "OPENAI_API_KEY": "x",
+        }
+        with mock.patch.dict(os.environ, env, clear=False):
+            names = [p.name for p in gw._chat_providers()]
+        self.assertEqual(names, ["gemini", "groq", "nvidia", "openrouter", "openai"])
+
+    def test_default_order_and_missing_keys_skip(self):
+        import os
+        from unittest import mock
+
+        from worker.ai_gateway import gateway as gw
+
+        env = {"GROQ_API_KEY": "q", "OPENAI_API_KEY": "x"}
+        with mock.patch.dict(os.environ, env, clear=False):
+            for k in ("AI_CHAT_PROVIDERS", "GEMINI_API_KEY", "NVIDIA_API_KEY", "OPENROUTER_API_KEY"):
+                os.environ.pop(k, None)
+            names = [p.name for p in gw._chat_providers()]
+        self.assertEqual(names, ["groq", "openai"])

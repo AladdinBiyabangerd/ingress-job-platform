@@ -17,6 +17,7 @@ from typing import Any
 
 from worker.ai_flags import feature_on
 from worker.ai_gateway import complete_json
+from worker.cv_parse.quality import assess
 from worker.techstack import find_stack
 
 LOW_CONFIDENCE = 0.55
@@ -190,13 +191,30 @@ def dictionary_skill_count(profile: dict) -> int:
     return len(seen)
 
 
+def _record_quality(meta: dict, q: dict, *, before: float | None = None) -> None:
+    meta["quality"] = {
+        "score": q["score"],
+        "threshold": q["threshold"],
+        "issues": list(q["issues"])[:20],
+        "weak": list(q["weak"]),
+        "version": q["version"],
+    }
+    if before is not None:
+        meta["quality"]["score_before"] = before
+
+
 def maybe_ai_fallback(
     profile: dict,
     text: str,
     *,
     conn: sqlite3.Connection | None = None,
 ) -> dict:
-    """If rules confidence is low (or skills are thin), try LLM enrichment. Never raises."""
+    """Rules first; ask AI only when the output quality score is low. Never raises.
+
+    The decision looks at the parse *output* (see ``quality.assess``), not at the
+    CV template. AI repairs only the weak parts; on any AI failure the rules
+    output is kept. ``parse_meta.parse_source`` is rules | ai | mixed.
+    """
     meta = profile.setdefault("parse_meta", {})
     if not isinstance(meta, dict):
         meta = {}
@@ -208,8 +226,13 @@ def maybe_ai_fallback(
     except (TypeError, ValueError):
         conf = 0.0
 
+    quality = assess(profile, text)
+    _record_quality(meta, quality)
+    meta["parse_source"] = "rules"
+
     thin = dictionary_skill_count(profile) < THIN_SKILLS_THRESHOLD
-    if conf >= low_confidence_threshold() and not thin:
+    low_conf = conf < low_confidence_threshold()
+    if not (quality["needs_ai"] or low_conf or thin):
         return profile
     if not (text or "").strip():
         return profile
@@ -218,39 +241,64 @@ def maybe_ai_fallback(
         meta["ai_error"] = "ai_disabled"
         return profile
 
-    if thin and conf >= low_confidence_threshold():
+    reasons = []
+    if quality["needs_ai"]:
+        reasons.append("quality")
+    if low_conf:
+        reasons.append("low_confidence")
+    if thin:
+        reasons.append("thin_skills")
+    if thin and not low_conf:
         meta["ai_force_reason"] = "thin_skills"
+    meta["ai_reasons"] = reasons
 
     contact = profile.get("contact") if isinstance(profile.get("contact"), dict) else {}
-    result = complete_json(
-        purpose=PURPOSE,
-        prompt_version=PROMPT_VERSION,
-        system=_SYSTEM,
-        user="Redacted CV text:\n\n" + text[:12000],
-        schema=_SCHEMA,
-        schema_name="cv_profile",
-        known_pii=contact,
-        conn=conn,
-    )
+    try:
+        result = complete_json(
+            purpose=PURPOSE,
+            prompt_version=PROMPT_VERSION,
+            system=_SYSTEM,
+            user="Redacted CV text:\n\n" + text[:12000],
+            schema=_SCHEMA,
+            schema_name="cv_profile",
+            known_pii=contact,
+            conn=conn,
+        )
+    except Exception as exc:  # gateway must never break the rules result
+        meta["ai_fallback"] = "failed"
+        meta["ai_error"] = f"ai_exception:{type(exc).__name__}"
+        return profile
     meta["prompt_version"] = PROMPT_VERSION
     if not result.ok or not isinstance(result.data, dict):
         meta["ai_fallback"] = "failed"
         meta["ai_error"] = result.error or "ai_failed"
         return profile
 
-    merged = _merge(profile, result.data, text)
+    try:
+        weak = set(quality["weak"])
+        if quality["score"] < quality["threshold"] or "work_missing" in quality["issues"]:
+            weak.add("headline")  # whole parse is weak: headline is unreliable too
+        merged = _merge(profile, result.data, text, weak=weak)
+    except Exception as exc:
+        meta["ai_fallback"] = "failed"
+        meta["ai_error"] = f"ai_merge_error:{type(exc).__name__}"
+        return profile
+    had_structure = bool(profile.get("work_history") or profile.get("education"))
     out_meta = merged.setdefault("parse_meta", {})
     out_meta["method"] = "llm"
+    out_meta["parse_source"] = "mixed" if had_structure else "ai"
     out_meta["ai_fallback"] = "applied"
     out_meta["prompt_version"] = PROMPT_VERSION
     out_meta["ai_cached"] = result.cached
-    if thin and conf >= low_confidence_threshold():
+    if thin and not low_conf:
         out_meta["ai_force_reason"] = "thin_skills"
     if result.prompt_tokens or result.completion_tokens:
         out_meta["ai_tokens"] = {
             "prompt": result.prompt_tokens,
             "completion": result.completion_tokens,
         }
+    after = assess(merged, text)
+    _record_quality(out_meta, after, before=quality["score"])
     # Re-score lightly: LLM filled gaps → at least threshold.
     try:
         old = float(out_meta.get("confidence") or 0)
@@ -261,13 +309,25 @@ def maybe_ai_fallback(
     return merged
 
 
-def _merge(rules: dict, llm: dict, text: str) -> dict:
+def _merge(rules: dict, llm: dict, text: str, *, weak: set[str] | None = None) -> dict:
+    """Merge AI output into rules output, touching only weak/empty parts.
+
+    ``weak=None`` keeps the legacy behaviour (AI may override everything).
+    """
     out = dict(rules)
     # Contact always from rules (real PII; LLM saw masks only).
-    out["contact"] = rules.get("contact") or {}
+    contact = dict(rules.get("contact") or {})
+    if weak is not None and "contact" in weak:
+        city = str(contact.get("city") or "")
+        if city and "city_is_education" in assess(rules, text)["issues"]:
+            contact["city"] = ""
+    out["contact"] = contact
+
+    def allowed(part: str, empty: bool) -> bool:
+        return weak is None or empty or part in weak
 
     headline = str(llm.get("headline") or "").strip()[:120]
-    if headline and not _has_placeholder(headline):
+    if headline and not _has_placeholder(headline) and allowed("headline", not str(rules.get("headline") or "").strip()):
         out["headline"] = headline
 
     summary = str(llm.get("summary") or "").strip()[:2000]
@@ -275,18 +335,27 @@ def _merge(rules: dict, llm: dict, text: str) -> dict:
         if not str(out.get("summary") or "").strip() or len(summary) > len(str(out.get("summary") or "")):
             out["summary"] = summary
 
+    work = _filter_work(llm.get("work_history"), text)
+    rules_work = rules.get("work_history") if isinstance(rules.get("work_history"), list) else []
+    work_replaced = False
+    if work and allowed("work_history", not rules_work):
+        if weak is None:
+            ok = not rules_work or len(work) >= len(rules_work)
+        else:
+            ok = not rules_work or len(work) * 2 >= len(rules_work)
+        if ok:
+            out["work_history"] = work
+            work_replaced = True
+
     seniority = str(llm.get("seniority") or "").strip().lower()
     if seniority in {"intern", "junior", "middle", "senior", "lead", "principal", "staff"}:
-        out["seniority"] = seniority
+        if weak is None or work_replaced or not str(rules.get("seniority") or "").strip():
+            out["seniority"] = seniority
 
     years = llm.get("total_years")
     if isinstance(years, (int, float)) and 0 <= float(years) <= 60:
-        out["total_years"] = float(max(0, int(round(float(years)))))
-
-    work = _filter_work(llm.get("work_history"), text)
-    rules_work = rules.get("work_history") if isinstance(rules.get("work_history"), list) else []
-    if work and (not rules_work or len(work) >= len(rules_work)):
-        out["work_history"] = work
+        if weak is None or work_replaced or not rules.get("total_years"):
+            out["total_years"] = float(max(0, int(round(float(years)))))
 
     skills = filter_skills(llm.get("skills"), text)
     rules_skills = rules.get("skills") if isinstance(rules.get("skills"), list) else []
@@ -298,11 +367,11 @@ def _merge(rules: dict, llm: dict, text: str) -> dict:
         out["soft_skills"] = soft
 
     languages = _filter_languages(llm.get("languages"))
-    if languages:
+    if languages and (weak is None or not rules.get("languages")):
         out["languages"] = languages
 
     education = _filter_education(llm.get("education"))
-    if education:
+    if education and allowed("education", not rules.get("education")):
         out["education"] = education
 
     return out

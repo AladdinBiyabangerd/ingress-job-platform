@@ -13,6 +13,7 @@ import {
   uploadCvProfile,
 } from "../lib/server/refresh";
 import { PageChrome } from "./page-chrome";
+import { ProfileReviewCvCheck } from "./profile-review-cvcheck";
 import { RoleSkillParts } from "./role-skill-parts";
 import { Shell } from "./shell";
 import { useInitialMe } from "./me-seed";
@@ -774,6 +775,7 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
                     { id: "basics", label: t.profileReviewTabBasics, warn: warn("contact") || warn("headline") || warn("seniority") || warn("total_years") },
                     { id: "experience", label: t.profileReviewTabExperience, warn: warn("skills") || warn("work_history") },
                     { id: "more", label: t.profileReviewTabMore, warn: false },
+                    { id: "cvcheck", label: t.profileReviewTabCvCheck, warn: false },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -1272,6 +1274,24 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
                       </div>
                     ) : null}
                   </div>
+                ) : null}
+
+                {reviewTab === "cvcheck" ? (
+                  <ProfileReviewCvCheck
+                    t={t}
+                    confidence={payload?.confidence}
+                    parseMeta={payload?.profile?.parse_meta}
+                    values={{ fullName, email, phone, city, headline, work, education, skills, languages }}
+                    onJump={(id) =>
+                      setReviewTab(
+                        id === "work" || id === "skills"
+                          ? "experience"
+                          : id === "education" || id === "languages"
+                            ? "more"
+                            : "basics",
+                      )
+                    }
+                  />
                 ) : null}
               </div>
 

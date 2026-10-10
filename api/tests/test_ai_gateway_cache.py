@@ -114,3 +114,12 @@ class AiGatewayCachePersistTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_api_chat_providers_openai_last(monkeypatch):
+    from app.ai_gateway import gateway as gw
+
+    monkeypatch.setenv("AI_CHAT_PROVIDERS", "openai,gemini,groq")
+    for key in ("GEMINI_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY"):
+        monkeypatch.setenv(key, "x")
+    assert [p.name for p in gw._chat_providers()] == ["gemini", "groq", "openai"]

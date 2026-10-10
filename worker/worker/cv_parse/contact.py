@@ -79,7 +79,7 @@ def _guess_location(text: str) -> tuple[str, str]:
             break
         if not line or "@" in line or "http" in line.lower() or re.search(r"\d", line):
             continue
-        if _LOC_REJECT.search(line):
+        if _LOC_REJECT.search(line) or line.endswith((".", "!", ":")) or len(line) > 50:
             continue
         parts = [p.strip() for p in line.split(",")]
         if len(parts) >= 3 and all(2 <= len(p) <= 40 for p in parts[-2:]):

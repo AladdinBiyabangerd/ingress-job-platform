@@ -462,5 +462,22 @@ class CvProfileTests(unittest.TestCase):
         self.assertEqual(profile["status"], "draft")
 
 
+class ParseMetaQualityTest(unittest.TestCase):
+    def test_quality_and_source_survive_normalize(self):
+        from app.cv_profile import _empty_profile, normalize_profile_data
+
+        out = normalize_profile_data(
+            {"parse_meta": {"parse_source": "mixed", "ai_fallback": "applied",
+                            "quality": {"score": 0.8, "score_before": 0.4, "threshold": 0.65,
+                                        "issues": ["work_undated"], "junk": 1}}},
+            base=_empty_profile(),
+        )
+        meta = out["parse_meta"]
+        self.assertEqual(meta["parse_source"], "mixed")
+        self.assertEqual(meta["quality"]["score_before"], 0.4)
+        self.assertEqual(meta["quality"]["issues"], ["work_undated"])
+        self.assertNotIn("junk", meta["quality"])
+
+
 if __name__ == "__main__":
     unittest.main()

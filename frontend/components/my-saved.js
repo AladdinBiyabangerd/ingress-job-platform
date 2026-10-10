@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { refreshSavedJobs, unsaveJob } from "../lib/server/refresh";
 import { useInitialMe } from "./me-seed";
 import { PageChrome } from "./page-chrome";
 import { preloadSavedIds } from "./save-job-button";
-import { RegisterChoice } from "./register-choice";
 import { SavedJobListItem, SavedJobPreview } from "./saved-job-panel";
 import { Shell } from "./shell";
 
@@ -150,20 +150,22 @@ export function MySaved({
 
   const count = total || items.length || undefined;
   const canLoadMore = page < pages;
+  const returnTo = hrefFor(locale, { mode: "saved" });
 
   return (
     <Shell locale={locale} mode="saved">
       {me === undefined ? null : allowed ? (
-        <div className="h2-candidate">
+        <div className="h2-candidate my-saved">
           <PageChrome
+            className="my-saved-chrome"
             backHref={hrefFor(locale)}
             backLabel={t.breadcrumbHome}
             title={t.savedJobs}
             count={count}
           />
-          {error ? <p className="note">{error}</p> : null}
+          {error ? <p className="note my-saved-banner">{error}</p> : null}
           {items.length === 0 ? (
-            <div className="h2-empty">
+            <div className="my-saved-empty">
               <p>{t.savedJobsEmpty}</p>
             </div>
           ) : (
@@ -182,7 +184,7 @@ export function MySaved({
                 </div>
                 {canLoadMore ? (
                   <div className="saved-list-more">
-                    <button type="button" className="btn" disabled={loadingMore} onClick={loadMore}>
+                    <button type="button" className="btn small" disabled={loadingMore} onClick={loadMore}>
                       {t.savedJobsLoadMore}
                     </button>
                   </div>
@@ -202,11 +204,29 @@ export function MySaved({
           )}
         </div>
       ) : (
-        <div className="h2-candidate">
-          <PageChrome backHref={hrefFor(locale)} backLabel={t.breadcrumbHome} title={t.savedJobs} />
-          <div className="h2-empty h2-gate">
+        <div className="h2-candidate my-saved">
+          <PageChrome
+            className="my-saved-chrome"
+            backHref={hrefFor(locale)}
+            backLabel={t.breadcrumbHome}
+            title={t.savedJobs}
+          />
+          <div className="h2-panel my-saved-gate">
             <p>{t.savedJobsGate}</p>
-            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "saved" })} />
+            <div className="my-saved-gate-actions">
+              <a
+                className="btn small board-auth-signin"
+                href={loginHref({ intent: "job_candidate", returnTo })}
+              >
+                {t.signIn}
+              </a>
+              <a
+                className="btn small primary"
+                href={loginHref({ intent: "job_candidate", returnTo })}
+              >
+                {t.createAccount}
+              </a>
+            </div>
           </div>
         </div>
       )}

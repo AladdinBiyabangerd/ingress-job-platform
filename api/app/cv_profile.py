@@ -328,7 +328,7 @@ def normalize_profile_data(raw: object, *, base: dict | None = None) -> dict:
     meta_in = incoming.get("parse_meta") if isinstance(incoming.get("parse_meta"), dict) else None
     if meta_in is not None:
         meta = dict(data.get("parse_meta") or {})
-        for key in ("method", "parser_version", "source", "error"):
+        for key in ("method", "parser_version", "source", "error", "parse_source", "ai_fallback", "ai_error"):
             if key in meta_in:
                 meta[key] = _as_str(meta_in.get(key), max_len=80)
         if "confidence" in meta_in:
@@ -338,6 +338,20 @@ def normalize_profile_data(raw: object, *, base: dict | None = None) -> dict:
             meta["sections_found"] = [
                 _as_str(item, max_len=40) for item in meta_in["sections_found"] if _as_str(item, max_len=40)
             ][:40]
+        quality_in = meta_in.get("quality") if isinstance(meta_in.get("quality"), dict) else None
+        if quality_in is not None:
+            q_score = _as_float(quality_in.get("score"))
+            q_before = _as_float(quality_in.get("score_before"))
+            meta["quality"] = {
+                "score": None if q_score is None else max(0.0, min(1.0, q_score)),
+                "score_before": None if q_before is None else max(0.0, min(1.0, q_before)),
+                "threshold": max(0.0, min(1.0, _as_float(quality_in.get("threshold")) or 0.0)),
+                "issues": [
+                    _as_str(i, max_len=40)
+                    for i in (quality_in.get("issues") if isinstance(quality_in.get("issues"), list) else [])
+                    if _as_str(i, max_len=40)
+                ][:20],
+            }
         data["parse_meta"] = meta
 
     # Keep top-level mirrors in sync with columns the UI edits.

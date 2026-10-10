@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { refreshMyApplications } from "../lib/server/refresh";
 import { ApplicationsBoard } from "./applications-board";
 import { useInitialMe } from "./me-seed";
 import { PageChrome } from "./page-chrome";
-import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 
 export function MyApplications({ locale, initialItems = null }) {
@@ -22,6 +22,7 @@ export function MyApplications({ locale, initialItems = null }) {
   const [error, setError] = useState("");
 
   const allowed = Boolean(me?.authenticated && (me.candidate || me.staff));
+  const returnTo = hrefFor(locale, { mode: "applications" });
 
   async function load() {
     setItems(await refreshMyApplications());
@@ -60,22 +61,41 @@ export function MyApplications({ locale, initialItems = null }) {
   return (
     <Shell locale={locale} mode="applications">
       {me === undefined ? null : allowed ? (
-        <div className="h2-candidate">
+        <div className="h2-candidate my-applications">
           <PageChrome
+            className="my-applications-chrome"
             backHref={hrefFor(locale)}
             backLabel={t.breadcrumbHome}
             title={t.myApplications}
             count={items.length || undefined}
           />
-          {error ? <p className="note">{error}</p> : null}
+          {error ? <p className="note apps-e-banner">{error}</p> : null}
           <ApplicationsBoard locale={locale} items={items} onChanged={load} />
         </div>
       ) : (
-        <div className="h2-candidate">
-          <PageChrome backHref={hrefFor(locale)} backLabel={t.breadcrumbHome} title={t.myApplications} />
-          <div className="h2-empty h2-gate">
+        <div className="h2-candidate my-applications">
+          <PageChrome
+            className="my-applications-chrome"
+            backHref={hrefFor(locale)}
+            backLabel={t.breadcrumbHome}
+            title={t.myApplications}
+          />
+          <div className="h2-panel my-applications-gate">
             <p>{t.applicationsGate}</p>
-            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "applications" })} />
+            <div className="my-applications-gate-actions">
+              <a
+                className="btn small board-auth-signin"
+                href={loginHref({ intent: "job_candidate", returnTo })}
+              >
+                {t.signIn}
+              </a>
+              <a
+                className="btn small primary"
+                href={loginHref({ intent: "job_candidate", returnTo })}
+              >
+                {t.createAccount}
+              </a>
+            </div>
           </div>
         </div>
       )}

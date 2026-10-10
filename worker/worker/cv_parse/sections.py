@@ -18,6 +18,15 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
         "relevant experience",
         "internships",
         "career",
+        "experiences",
+        "work experiences",
+        "professional experiences",
+        "research experience",
+        "academic appointments",
+        "appointments",
+        "positions held",
+        "industry experience",
+        "teaching experience",
         "təcrübə",
         "iş təcrübəsi",
         "peşəkar təcrübə",
@@ -29,6 +38,8 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
         "education",
         "academic",
         "academic background",
+        "educational background",
+        "qualifications",
         "education and training",
         "education & training",
         "təhsil",
@@ -125,13 +136,60 @@ _HEADING_RE = re.compile(
 )
 
 
+_FUZZY_CANDIDATES = sorted(k for k in _ALIAS_TO_CANON if len(k) >= 6)
+
+
+def _fuzzy_heading(title: str) -> str | None:
+    """Typo-tolerant heading match ("WORK EXPERICENCE") for short upper/title-case lines."""
+    import difflib
+
+    if len(title) < 6 or len(title) > 32:
+        return None
+    best = difflib.get_close_matches(title, _FUZZY_CANDIDATES, n=1, cutoff=0.88)
+    return _ALIAS_TO_CANON[best[0]] if best else None
+
+
+_INLINE_HEADING = re.compile(r"^(?P<head>[A-Z][A-Z &/]{3,28}?)\s+(?P<rest>[A-Z][a-z].{6,})$")
+
+
+def _split_inline_heading(line: str) -> tuple[str, str] | None:
+    """"EDUCATION First American University, ..." → ("education", "First American University, ...")."""
+    m = _INLINE_HEADING.match(line)
+    if not m:
+        return None
+    canon = _heading_name(m.group("head"))
+    return (canon, m.group("rest")) if canon else None
+
+
 def split_sections(text: str) -> dict[str, str]:
     """Split CV text into named sections. Unknown preamble → ``other``."""
     buckets: dict[str, list[str]] = {key: [] for key in _HEADINGS}
     buckets["other"] = []
     current = "other"
-    for raw in text.splitlines():
+    raw_lines = text.splitlines()
+    idx = 0
+    while idx < len(raw_lines):
+        raw = raw_lines[idx]
+        idx += 1
         line = raw.strip()
+        if line.isupper() and idx < len(raw_lines):
+            # Heading split over two lines: "RESEARCH" / "EXPERIENCE".
+            nxt = raw_lines[idx].strip()
+            if (
+                nxt.isupper()
+                and len(line) < 20
+                and len(nxt) < 20
+                and not _heading_name(line)
+                and _heading_name(f"{line} {nxt}")
+            ):
+                current = _heading_name(f"{line} {nxt}") or current
+                idx += 1
+                continue
+        inline = _split_inline_heading(line) if line and not _heading_name(line) else None
+        if inline:
+            current = inline[0]
+            buckets[current].append(inline[1])
+            continue
         if not line:
             if buckets[current] and buckets[current][-1] != "":
                 buckets[current].append("")
@@ -180,4 +238,11 @@ def _heading_name(line: str) -> str | None:
             canon = _ALIAS_TO_CANON.get(bigram) or _ALIAS_TO_CANON.get(bigram.replace("ı", "i"))
             if canon:
                 return canon
+    if line_is_caps(m.group("title")):
+        return _fuzzy_heading(ascii_title)
     return None
+
+
+def line_is_caps(title: str) -> bool:
+    letters = [c for c in title if c.isalpha()]
+    return len(letters) >= 6 and all(c.isupper() for c in letters)

@@ -429,10 +429,15 @@ def _provider_order(env_name: str, default: str) -> list[str]:
     return [p.strip().lower() for p in raw.split(",") if p.strip()]
 
 
+def _openai_last(order: list[str]) -> list[str]:
+    """Paid OpenAI is always the last resort, whatever AI_CHAT_PROVIDERS says."""
+    return [p for p in order if p != "openai"] + (["openai"] if "openai" in order else [])
+
+
 def _chat_providers() -> list[_ChatProvider]:
     out: list[_ChatProvider] = []
-    for name in _provider_order(
-        "AI_CHAT_PROVIDERS", "gemini,groq,nvidia,openrouter,openai"
+    for name in _openai_last(
+        _provider_order("AI_CHAT_PROVIDERS", "gemini,groq,nvidia,openrouter,openai")
     ):
         if name == "gemini":
             key = os.environ.get("GEMINI_API_KEY", "").strip()

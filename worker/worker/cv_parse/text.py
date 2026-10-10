@@ -135,9 +135,39 @@ def _decode(data: bytes) -> str:
     return data.decode("utf-8", errors="replace")
 
 
+_GLYPH_DIGITS = {
+    "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4",
+    "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9",
+}
+# LaTeX/Typst PDFs without ToUnicode leak glyph names: "/two.lnum", "/A.sc", "/f_ic".
+_GLYPH_DIGIT = re.compile(r"/(zero|one|two|three|four|five|six|seven|eight|nine)\.(?:lnum|onum|tnum|pnum)")
+_GLYPH_SC = re.compile(r"/([A-Za-z])\.sc")
+_GLYPH_LIG = re.compile(r"/f_(f_)?([ilf])(?![a-z]\.)")
+_GLYPH_ICON = re.compile(r"/(?:_\d{2,4}|[a-z]{2,12}_[a-z_]{2,12}|f1ab|github|twitter|linkedin)(?=[A-Za-z+@])")
+_PUA = re.compile("[\ue000-\uf8ff\ufffd]")
+_KERN_GAP = re.compile(r"\b([TVWYK]) (?=[a-z]{2,})")
+_HYPHEN_WRAP = re.compile(r"(?<=[a-z]{2})-\n(?=[a-z]{2})")
+_LIGS = {"\ufb00": "ff", "\ufb01": "fi", "\ufb02": "fl", "\ufb03": "ffi", "\ufb04": "ffl"}
+
+
+def _repair_glyphs(text: str) -> str:
+    """Undo common PDF-extraction artefacts (glyph names, ligatures, kerning gaps, icon fonts)."""
+    if "/" in text:
+        text = _GLYPH_DIGIT.sub(lambda m: _GLYPH_DIGITS[m.group(1)], text)
+        text = _GLYPH_SC.sub(lambda m: m.group(1), text)
+        text = _GLYPH_LIG.sub(lambda m: "f" + ("f" if m.group(1) else "") + m.group(2), text)
+        text = _GLYPH_ICON.sub("", text)
+    for lig, rep in _LIGS.items():
+        text = text.replace(lig, rep)
+    text = _PUA.sub("", text)
+    text = _HYPHEN_WRAP.sub("", text)
+    return _KERN_GAP.sub(r"\1", text)
+
+
 def _normalize(text: str) -> str:
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     text = text.replace("\xa0", " ").replace("\ufeff", "").replace("\xad", "-")
+    text = _repair_glyphs(text)
     lines = [_WS.sub(" ", line).rstrip() for line in text.split("\n")]
     return _BLANK.sub("\n\n", "\n".join(lines)).strip()
 

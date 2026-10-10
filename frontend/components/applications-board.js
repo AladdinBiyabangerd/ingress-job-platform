@@ -82,7 +82,7 @@ function AppsBoardColumn({ locale, status, items, selectedId, visibleCount, onSe
           />
         ))}
         {canMore ? (
-          <button type="button" className="btn apps-e-more" onClick={onShowMore}>
+          <button type="button" className="btn small apps-e-more" onClick={onShowMore}>
             {t.applicationsShowMore}
           </button>
         ) : null}
@@ -132,32 +132,32 @@ function AppsDetail({ locale, item, busy, onWithdraw, onBack }) {
 
       <ApplicationTimeline locale={locale} t={t} item={item} />
 
-      <div className="apps-e-tiles">
-        <div className="apps-e-tile">
-          <span className="apps-e-tile-k">CV</span>
-          <span className="apps-e-tile-v">
+      <dl className="apps-e-facts">
+        <div>
+          <dt>CV</dt>
+          <dd>
             {item.has_cv ? (
               <a href={`/api/auth/applications/${item.id}/cv`}>{item.cv_name || t.downloadCv}</a>
             ) : (
               t.noCv
             )}
-          </span>
+          </dd>
         </div>
-        <div className="apps-e-tile">
-          <span className="apps-e-tile-k">{t.applicationsJobLabel}</span>
-          <span className="apps-e-tile-v">{item.job_id ? `#${item.job_id}` : "—"}</span>
+        <div>
+          <dt>{t.applicationsJobLabel}</dt>
+          <dd>{item.job_id ? `#${item.job_id}` : "—"}</dd>
         </div>
-      </div>
+      </dl>
 
       <div className="apps-e-detail-actions">
         {jobHref ? (
-          <a className="btn primary" href={jobHref}>
+          <a className="btn small primary" href={jobHref}>
             {t.savedJobsViewJob}
           </a>
         ) : null}
         <button
           type="button"
-          className="btn red"
+          className="btn small red"
           disabled={busy === item.id}
           onClick={() => onWithdraw(item)}
         >
@@ -235,7 +235,7 @@ export function ApplicationsBoard({ locale, items, onChanged }) {
       <div className="apps-e-empty">
         {error ? <p className="note apps-e-banner">{error}</p> : null}
         {note ? <p className="note apps-e-banner">{note}</p> : null}
-        <div className="h2-empty">
+        <div className="apps-e-empty-msg">
           <p>{t.applicationsEmpty}</p>
         </div>
       </div>
@@ -297,7 +297,7 @@ export function ApplicationsBoard({ locale, items, onChanged }) {
               ))
             )}
             {mobileItems.length > (visible[mobileTab] || COL_PAGE) ? (
-              <button type="button" className="btn apps-e-more" onClick={() => showMore(mobileTab)}>
+              <button type="button" className="btn small apps-e-more" onClick={() => showMore(mobileTab)}>
                 {t.applicationsShowMore}
               </button>
             ) : null}

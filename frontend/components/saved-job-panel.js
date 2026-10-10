@@ -124,7 +124,7 @@ export function SavedJobPreview({ locale, job, onUnsave, onBack = null }) {
         ) : null}
       </dl>
       <div className="saved-preview-actions">
-        <a className="btn primary" href={jobHref}>
+        <a className="btn small primary" href={jobHref}>
           {t.savedJobsViewJob}
         </a>
         <button type="button" className="text-btn" onClick={() => onUnsave(job.id)}>
