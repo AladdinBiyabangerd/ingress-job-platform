@@ -13142,6 +13142,11 @@ a.saved-preview-company:hover {
   scrollbar-gutter: stable;
 }
 
+/* Keep CTA / panels full height; scroll the aside instead of crushing children. */
+.jd-aside > * {
+  flex-shrink: 0;
+}
+
 .jd-back {
   display: inline-flex;
   align-items: center;
