@@ -187,6 +187,27 @@ Baku State
         lang_codes = {item["code"] for item in profile["languages"]}
         self.assertEqual(lang_codes, {"az", "en", "tr"})
 
+    def test_pipe_education_same_school_year_merges_fields(self):
+        text = """
+Aladdin Example
+aladdin@example.com
+Education
+Business Administration | Bachelor
+Geoinformation Cartography | Bachelor
+Heydar Aliyev Higher Military School
+2021 – 2025
+Skills
+Java
+"""
+        profile = parse_text(text)
+        self.assertEqual(len(profile["education"]), 1, profile["education"])
+        edu = profile["education"][0]
+        self.assertEqual(edu["degree"], "Bachelor")
+        self.assertIn("Heydar Aliyev", edu["school"])
+        self.assertEqual(edu["year"], 2021)
+        self.assertIn("Business Administration", edu["field"])
+        self.assertIn("Geoinformation Cartography", edu["field"])
+
     def test_intern_years_do_not_inflate_seniority(self):
         text = """
 Ada Example

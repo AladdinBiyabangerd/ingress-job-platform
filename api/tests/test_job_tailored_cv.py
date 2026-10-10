@@ -316,10 +316,50 @@ class JobTailoredCvTests(unittest.TestCase):
         self.assertFalse(body["ai_pending"])
 
     def test_prompt_version(self):
-        from app.job_tailored_cv import PROMPT_VERSION, _SYSTEM
+        from app.job_tailored_cv import PROMPT_VERSION, _SYSTEM, _build_user, _normalize_cv
 
-        self.assertEqual(PROMPT_VERSION, "job-tailored-cv-v1")
+        self.assertEqual(PROMPT_VERSION, "job-tailored-cv-v4")
         self.assertIn("Do not invent", _SYSTEM)
+        self.assertIn("süni intellekt", _SYSTEM)
+        self.assertIn("arxa uç→backend", _SYSTEM)
+        self.assertIn("no hollow", _SYSTEM)
+        self.assertIn("empty experience", _SYSTEM)
+        az = _build_user(
+            lang="az",
+            profile_version="v1",
+            job={
+                "id": 1,
+                "title": "Java Dev",
+                "company": "Acme",
+                "city": "",
+                "remote": True,
+                "relocation": False,
+                "text": "Java",
+            },
+            profile={"preferences": {}},
+            have=["Java"],
+            missing=[],
+        )
+        self.assertIn("kunstiq intellekt", az)
+        self.assertIn("mentorluq", az)
+        dup = _normalize_cv(
+            {
+                "headline": "Backend",
+                "summary": "Test",
+                "skills": ["Java"],
+                "experience": [],
+                "education": [
+                    {"school": "HS", "degree": "Bachelor", "dates": "2025"},
+                    {"school": "HS", "degree": "Bachelor", "dates": "2025"},
+                ],
+                "languages": ["az"],
+                "language": "az",
+            },
+            locale="az",
+            contact={"full_name": "A", "email": "", "phone": "", "city": "", "country": ""},
+        )
+        self.assertIsNotNone(dup)
+        self.assertEqual(len(dup["education"]), 1)
 
     def test_independent_of_recommendations_flag(self):
         subject = "tcv-flag"

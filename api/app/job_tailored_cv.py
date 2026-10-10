@@ -24,7 +24,7 @@ from app.role_suggestions import (
 log = logging.getLogger("ingress-job.api.job_tailored_cv")
 
 PURPOSE = "job_tailored_cv"
-PROMPT_VERSION = "job-tailored-cv-v1"
+PROMPT_VERSION = "job-tailored-cv-v4"
 
 _LANG_NAME = {"az": "Azerbaijani", "en": "English", "ru": "Russian"}
 
@@ -36,16 +36,41 @@ _SYSTEM = (
     "You may rephrase summary and experience bullets for clarity and job relevance, "
     "but every claim must stay grounded in ConfirmedExperience / ConfirmedEducation / "
     "HaveSkills / CandidateSummary. "
-    "If a role has no bullet facts, keep bullets empty or one short rephrase of its summary. "
-    "Prefer skills that appear in HaveSkills; never add MissingSkills as owned skills. "
-    "headline: short role-oriented line. summary: 2–4 sentences. "
-    "skills: 6–16 items. experience: up to 6 roles, each with 0–5 bullets. "
-    "education / languages: from confirmed lists only (may reorder). "
+    "Density: no hollow or half-finished sentences. Do not leave empty experience "
+    "bullets when that role has a Summary or Skills in the facts. Split a rich role "
+    "Summary into 2–4 concrete bullets (rephrase only — no new facts). If a role "
+    "truly has almost no facts, write one complete bullet from title+company+dates, "
+    "never an empty bullets array. "
+    "summary (About): 3–5 full sentences covering stack, domain, and impact from "
+    "confirmed facts — not one thin line. "
+    "Prefer skills that appear in HaveSkills / ProfileSkills; never add MissingSkills "
+    "as owned skills. Keep skill labels as standard tech names. "
+    "headline: short role-oriented line. "
+    "skills: 8–16 items when enough HaveSkills exist. experience: up to 6 roles, "
+    "each with 2–5 bullets when facts allow (else 1 complete bullet). "
+    "education / languages: from confirmed lists only (may reorder); never duplicate "
+    "the same school+degree+dates row — emit one row per school+degree+year, "
+    "putting field/specialty into the degree string when present. "
     "Write prose fields in the language named in the context. "
-    "Azerbaijani: use ə, ı, ö, ü, ğ, ş, ç; no Turkish (olarak→kimi/olaraq) and no "
-    "English fragments in AZ sentences (skill names like AWS may stay). "
-    "Voice: first person for summary is OK; bullets may be first person or "
-    "impersonal action phrases — stay consistent."
+    "Azerbaijani orthography: ə, ı, ö, ü, ğ, ş, ç. Natural AZ only — no Turkish bleed "
+    "and no broken calques. "
+    "Banned AZ mistakes → use instead: "
+    "arxa uç→backend; sorumlu/sorumluyam→məsuləm/cavabdehəm; "
+    "kunstiq/künstiq intellekt→süni intellekt; "
+    "entegrasiya→inteqrasiya; optimizasyonu/optimizasyon→optimallaşdırma; "
+    "səhv ayırtma→debugging (or xəta analizi); mentorluk/mentorliq→mentorluq; "
+    "modellləmə→modelləşdirmə; prosess→proses; işləyüb→işləyib; "
+    "Academy'nin / X'nin→X-nin; birgə (TR sense)→birlikdə; "
+    "olarak→kimi/olaraq; loyiqə→layihə. "
+    "Prefer keeping established English tech tokens in AZ CV text and skills lists: "
+    "backend, microservices, CI/CD, API, SQL, debugging, refactoring, audit logging, "
+    "indexing, Spring Boot — do not translate them into awkward AZ. "
+    "Correct AZ glue words around those tokens: etibarlı backend sistemlər, "
+    "microservices architecture / mikroservis arxitekturası, "
+    "məsuləm, inteqrasiya, optimallaşdırma, mentorluq. "
+    "Voice: first person for summary is OK; bullets complete past-tense clauses "
+    "(-ib/-ıb: işləyib, qurub, aparıb) — never -üb typos like işləyüb, never "
+    "truncated fragments."
 )
 
 _SCHEMA: dict[str, Any] = {
@@ -129,22 +154,64 @@ def _contact_from_profile(profile: dict) -> dict[str, str]:
     }
 
 
+def _role_skill_names(item: dict) -> list[str]:
+    raw = item.get("skills") if isinstance(item.get("skills"), list) else []
+    names: list[str] = []
+    for skill in raw[:20]:
+        if isinstance(skill, str):
+            name = _clip(skill, limit=60)
+        elif isinstance(skill, dict):
+            name = _clip(skill.get("name"), limit=60)
+        else:
+            name = ""
+        if name and name not in names:
+            names.append(name)
+    return names
+
+
 def _confirmed_experience_block(profile: dict) -> str:
     history = profile.get("work_history") if isinstance(profile.get("work_history"), list) else []
     blocks: list[str] = []
-    for item in history[:8]:
+    for idx, item in enumerate(history[:8], start=1):
         if not isinstance(item, dict):
             continue
-        title = _clip(item.get("title") or item.get("role"), limit=80)
-        company = _clip(item.get("company") or item.get("employer"), limit=80)
+        title = _clip(item.get("title") or item.get("role"), limit=100)
+        company = _clip(item.get("company") or item.get("employer"), limit=100)
         start = _clip(item.get("start"), limit=20)
         end = _clip(item.get("end"), limit=20) or "present"
         dates = f"{start}–{end}" if start else ""
-        summary = _clip(item.get("summary"), limit=400)
-        bits = [b for b in (title, company, dates, summary) if b]
-        if bits:
-            blocks.append(" | ".join(bits))
+        summary = _clip(item.get("summary"), limit=1200)
+        location = _clip(item.get("location"), limit=80)
+        role_skills = _role_skill_names(item)
+        if not title and not company and not summary:
+            continue
+        lines = [f"Role {idx}:"]
+        if title:
+            lines.append(f"  Title: {title}")
+        if company:
+            lines.append(f"  Company: {company}")
+        if dates:
+            lines.append(f"  Dates: {dates}")
+        if location:
+            lines.append(f"  Location: {location}")
+        if role_skills:
+            lines.append(f"  Skills: {', '.join(role_skills)}")
+        lines.append(f"  Summary: {summary or '(none)'}")
+        blocks.append("\n".join(lines))
     return "\n".join(blocks) if blocks else "(none)"
+
+
+def _profile_skill_names(profile: dict) -> list[str]:
+    raw = profile.get("skills") if isinstance(profile.get("skills"), list) else []
+    names: list[str] = []
+    for item in raw[:40]:
+        if isinstance(item, dict):
+            name = _clip(item.get("name"), limit=60)
+        else:
+            name = _clip(item, limit=60)
+        if name and name not in names:
+            names.append(name)
+    return names
 
 
 def _confirmed_education_block(profile: dict) -> str:
@@ -184,7 +251,7 @@ def _confirmed_languages_block(profile: dict) -> str:
 
 def _normalize_cv(data: dict[str, Any], *, locale: str, contact: dict[str, str]) -> dict[str, Any] | None:
     headline = _clip(data.get("headline"), limit=160)
-    summary = _clip(data.get("summary"), limit=900)
+    summary = _clip(data.get("summary"), limit=1400)
     if not headline and not summary:
         return None
     skills = _str_list(data.get("skills"), limit=16, item_limit=60)
@@ -198,7 +265,8 @@ def _normalize_cv(data: dict[str, Any], *, locale: str, contact: dict[str, str])
             company = _clip(item.get("company"), limit=100)
             if not title and not company:
                 continue
-            bullets = _str_list(item.get("bullets"), limit=5, item_limit=220)
+            bullets = _str_list(item.get("bullets"), limit=5, item_limit=280)
+            bullets = [b for b in bullets if len(b) >= 12]
             experience.append(
                 {
                     "title": title,
@@ -208,22 +276,24 @@ def _normalize_cv(data: dict[str, Any], *, locale: str, contact: dict[str, str])
                 }
             )
     education: list[dict[str, str]] = []
+    seen_edu: set[tuple[str, str, str]] = set()
     raw_edu = data.get("education")
     if isinstance(raw_edu, list):
-        for item in raw_edu[:6]:
+        for item in raw_edu[:8]:
             if not isinstance(item, dict):
                 continue
             school = _clip(item.get("school"), limit=120)
             degree = _clip(item.get("degree"), limit=120)
+            dates = _clip(item.get("dates"), limit=40)
             if not school and not degree:
                 continue
-            education.append(
-                {
-                    "school": school,
-                    "degree": degree,
-                    "dates": _clip(item.get("dates"), limit=40),
-                }
-            )
+            key = (school.lower(), degree.lower(), dates.lower())
+            if key in seen_edu:
+                continue
+            seen_edu.add(key)
+            education.append({"school": school, "degree": degree, "dates": dates})
+            if len(education) >= 6:
+                break
     languages = _str_list(data.get("languages"), limit=12, item_limit=60)
     lang = str(data.get("language") or locale).strip().lower()[:2]
     if lang not in _LANG_NAME:
@@ -265,8 +335,8 @@ def _build_user(
         f"OutputLanguageCode: {locale}",
         f"ProfileVersion: {profile_version}",
         f"CandidateName: {contact.get('full_name') or '(none)'}",
-        f"CandidateHeadline: {_clip(profile.get('headline'), limit=160) or '(none)'}",
-        f"CandidateSummary: {_clip(profile.get('summary'), limit=500) or '(none)'}",
+        f"CandidateHeadline: {_clip(profile.get('headline'), limit=200) or '(none)'}",
+        f"CandidateSummary: {_clip(profile.get('summary'), limit=1200) or '(none)'}",
         f"CandidateSeniority: {str(profile.get('seniority') or '').strip() or '(none)'}",
         f"CandidateYears: {profile.get('total_years') if profile.get('total_years') is not None else '(unknown)'}",
         f"CandidateRemotePref: {prefs.get('remote')}",
@@ -278,6 +348,8 @@ def _build_user(
         "ConfirmedEducation:",
         _confirmed_education_block(profile),
         "ConfirmedLanguages: " + _confirmed_languages_block(profile),
+        "ProfileSkills: "
+        + (", ".join(_profile_skill_names(profile)[:30]) or "(none)"),
         "HaveSkills: " + (", ".join(have[:24]) if have else "(none)"),
         "MissingSkills: " + (", ".join(missing[:12]) if missing else "(none)"),
         f"JobId: {job.get('id')}",
@@ -291,12 +363,22 @@ def _build_user(
     ]
     if locale == "az":
         lines.append(
-            "Azerbaijani: natural prose with ə ı ö ü ğ ş ç. "
-            "No Turkish (olarak, mentorliq) and no English fragments in AZ sentences."
+            "Azerbaijani CV rules: ə ı ö ü ğ ş ç; native AZ grammar. "
+            "Keep tech tokens in English when standard (backend, microservices, "
+            "CI/CD, API, SQL, debugging, refactoring, Spring Boot). "
+            "Correct: süni intellekt, inteqrasiya, optimallaşdırma, mentorluq, "
+            "işləyib, məsuləm, etibarlı backend sistemlər, X-nin. "
+            "Incorrect: kunstiq intellekt, arxa uç, sorumlu, entegrasiya, "
+            "optimizasyonu, səhv ayırtma, mentorluk, modellləmə, prosess, "
+            "işləyüb, Academy'nin, olarak. "
+            "Do not duplicate education rows. "
+            "Fill Haqqında and each role with complete sentences from the facts — "
+            "no empty bullets, no truncated fragments."
         )
     lines.append(
         "Return JSON with headline, summary, skills, experience, education, "
-        "languages, and language matching OutputLanguageCode."
+        "languages, and language matching OutputLanguageCode. "
+        "Use ConfirmedExperienceDetail Summaries fully: expand into multiple bullets."
     )
     return "\n".join(lines)
 

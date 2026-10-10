@@ -219,6 +219,32 @@ def _normalize_education(item: object) -> dict | None:
     return {"degree": degree, "field": field, "school": school, "year": year_value}
 
 
+def _merge_education(rows: list[dict]) -> list[dict]:
+    """Collapse same school+degree+year rows; join distinct fields with ' / '."""
+    merged: list[dict] = []
+    index: dict[tuple[str, str, int | None], int] = {}
+    for row in rows:
+        key = (
+            str(row.get("school") or "").strip().lower(),
+            str(row.get("degree") or "").strip().lower(),
+            row.get("year") if isinstance(row.get("year"), int) else None,
+        )
+        if key in index:
+            prev = merged[index[key]]
+            field = str(row.get("field") or "").strip()
+            prev_field = str(prev.get("field") or "").strip()
+            if field:
+                existing = {part.strip().lower() for part in prev_field.split("/") if part.strip()}
+                if field.lower() not in existing:
+                    prev["field"] = f"{prev_field} / {field}" if prev_field else field
+                    if len(prev["field"]) > TEXT_SHORT:
+                        prev["field"] = prev["field"][:TEXT_SHORT]
+            continue
+        index[key] = len(merged)
+        merged.append(dict(row))
+    return merged
+
+
 def normalize_profile_data(raw: object, *, base: dict | None = None) -> dict:
     """Coerce user/parser JSON into the §5.2 shape used by the review UI."""
     data = dict(base or _empty_profile())
@@ -301,7 +327,7 @@ def normalize_profile_data(raw: object, *, base: dict | None = None) -> dict:
             row = _normalize_education(item)
             if row:
                 edu.append(row)
-        data["education"] = edu
+        data["education"] = _merge_education(edu)
 
     if "desired_roles" in incoming and isinstance(incoming.get("desired_roles"), list):
         data["desired_roles"] = [

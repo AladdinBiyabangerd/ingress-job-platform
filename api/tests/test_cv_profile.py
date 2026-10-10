@@ -462,6 +462,52 @@ class CvProfileTests(unittest.TestCase):
         self.assertEqual(profile["status"], "draft")
 
 
+class EducationMergeTest(unittest.TestCase):
+    def test_same_school_degree_year_merges_fields(self):
+        from app.cv_profile import _empty_profile, normalize_profile_data
+
+        out = normalize_profile_data(
+            {
+                "education": [
+                    {
+                        "degree": "Bachelor",
+                        "field": "Business Administration",
+                        "school": "Heydar Aliyev Higher Military School",
+                        "year": 2025,
+                    },
+                    {
+                        "degree": "Bachelor",
+                        "field": "Geoinformation Cartography",
+                        "school": "Heydar Aliyev Higher Military School",
+                        "year": 2025,
+                    },
+                ]
+            },
+            base=_empty_profile(),
+        )
+        self.assertEqual(len(out["education"]), 1)
+        row = out["education"][0]
+        self.assertEqual(row["degree"], "Bachelor")
+        self.assertEqual(row["school"], "Heydar Aliyev Higher Military School")
+        self.assertEqual(row["year"], 2025)
+        self.assertIn("Business Administration", row["field"])
+        self.assertIn("Geoinformation Cartography", row["field"])
+
+    def test_different_years_stay_separate(self):
+        from app.cv_profile import _empty_profile, normalize_profile_data
+
+        out = normalize_profile_data(
+            {
+                "education": [
+                    {"degree": "Bachelor", "field": "CS", "school": "BSU", "year": 2020},
+                    {"degree": "Master", "field": "CS", "school": "BSU", "year": 2022},
+                ]
+            },
+            base=_empty_profile(),
+        )
+        self.assertEqual(len(out["education"]), 2)
+
+
 class ParseMetaQualityTest(unittest.TestCase):
     def test_quality_and_source_survive_normalize(self):
         from app.cv_profile import _empty_profile, normalize_profile_data

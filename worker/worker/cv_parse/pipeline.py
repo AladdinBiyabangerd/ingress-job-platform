@@ -679,7 +679,31 @@ def _education(text: str) -> list[dict]:
                 "year": year,
             }
         )
-    return items[:8]
+    return _merge_education(items)[:8]
+
+
+def _merge_education(items: list[dict]) -> list[dict]:
+    """Same school+degree+year → one row; join distinct fields with ' / '."""
+    merged: list[dict] = []
+    index: dict[tuple[str, str, int | None], int] = {}
+    for item in items:
+        key = (
+            str(item.get("school") or "").strip().lower(),
+            str(item.get("degree") or "").strip().lower(),
+            item.get("year") if isinstance(item.get("year"), int) else None,
+        )
+        if key in index:
+            prev = merged[index[key]]
+            field = str(item.get("field") or "").strip()
+            prev_field = str(prev.get("field") or "").strip()
+            if field:
+                existing = {part.strip().lower() for part in prev_field.split("/") if part.strip()}
+                if field.lower() not in existing:
+                    prev["field"] = f"{prev_field} / {field}" if prev_field else field
+            continue
+        index[key] = len(merged)
+        merged.append(dict(item))
+    return merged
 
 
 def _split_degree_line(line: str) -> tuple[str, str]:
@@ -727,7 +751,7 @@ def _education_from_pipe_rows(
                 "year": year,
             }
         )
-    return items
+    return _merge_education(items)
 
 
 def _languages(text: str) -> list[dict]:
