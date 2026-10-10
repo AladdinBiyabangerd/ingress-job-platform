@@ -32,9 +32,9 @@ def _worker():
             raise WorkerUnavailable(str(exc)) from exc
     from worker.acceptance import finish_item
     from worker.db import Store
-    from worker.market_fit import is_rejected
+    from worker.market_fit import is_rejected, mark_rejected
 
-    return finish_item, Store, is_rejected
+    return finish_item, Store, is_rejected, mark_rejected
 
 
 class _Connector:
@@ -51,7 +51,7 @@ class _Connector:
 
 
 def import_jobs(items: list[dict]) -> dict:
-    finish_item, Store, is_rejected = _worker()
+    finish_item, Store, is_rejected, mark_rejected = _worker()
     from app.sqlite_jobs import DB_PATH
 
     created: list[dict] = []
@@ -100,6 +100,8 @@ def import_jobs(items: list[dict]) -> dict:
                 accepted = finish_item(connector, item)
                 store.conn.commit()
                 if not accepted:
+                    # Always remember the LinkedIn view URL so ops can attribute rejects.
+                    mark_rejected(store.conn, li_url, "rules")
                     rejected.append({"linkedin_id": lid, "reason": "rules"})
                     continue
                 accepted["source_name"] = SOURCE_NAME

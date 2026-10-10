@@ -295,6 +295,68 @@ def _source_run_ok(source: dict, *, key_ok: bool) -> tuple[str, str]:
     return "running", "Mənbə aktivdir; hələ bu dövrdə run yoxdur."
 
 
+LINKEDIN_EXTENSION_SOURCE = "linkedin-extension"
+
+
+def _empty_linkedin_extension() -> dict:
+    return {
+        "source_name": LINKEDIN_EXTENSION_SOURCE,
+        "created": 0,
+        "published_live": 0,
+        "rejected": 0,
+    }
+
+
+def _linkedin_extension_stats(conn: sqlite3.Connection, *, since: str) -> dict:
+    """Separate funnel for Chrome LinkedIn extension imports (not in crawl_runs)."""
+    out = _empty_linkedin_extension()
+    try:
+        created_row = conn.execute(
+            """
+            SELECT COUNT(DISTINCT j.id) AS n
+            FROM jobs j
+            JOIN job_sources js ON js.job_id = j.id
+            WHERE js.source_name = ?
+              AND j.created_at >= ?
+            """,
+            (LINKEDIN_EXTENSION_SOURCE, since),
+        ).fetchone()
+        out["created"] = int(_cell(created_row, "n", 0) or 0)
+
+        live_row = conn.execute(
+            """
+            SELECT COUNT(DISTINCT j.id) AS n
+            FROM jobs j
+            JOIN job_sources js ON js.job_id = j.id
+            WHERE js.source_name = ?
+              AND j.status = 'published'
+              AND COALESCE(j.hidden, 0) = 0
+              AND (j.merged_into IS NULL OR j.merged_into = 0)
+            """,
+            (LINKEDIN_EXTENSION_SOURCE,),
+        ).fetchone()
+        out["published_live"] = int(_cell(live_row, "n", 0) or 0)
+
+        # Import always has a LinkedIn view URL; finish_item may also reject apply URLs.
+        # Count LinkedIn job URLs remembered in the period (extension-attributable).
+        reject_row = conn.execute(
+            """
+            SELECT COUNT(*) AS n
+            FROM crawl_rejects
+            WHERE decided_at >= ?
+              AND (
+                LOWER(source_url) LIKE '%linkedin.com/jobs/view/%'
+                OR LOWER(source_url) LIKE '%linkedin.com/jobs/search%'
+              )
+            """,
+            (since,),
+        ).fetchone()
+        out["rejected"] = int(_cell(reject_row, "n", 0) or 0)
+    except Exception:
+        pass
+    return out
+
+
 def _crawl_funnel(conn: sqlite3.Connection | None, *, days: int) -> dict:
     if conn is None:
         return {
@@ -308,6 +370,7 @@ def _crawl_funnel(conn: sqlite3.Connection | None, *, days: int) -> dict:
                 "published_live": 0,
             },
             "rejects_by_reason": [],
+            "linkedin_extension": _empty_linkedin_extension(),
         }
 
     conn.executescript(_CRAWL_RUNS_DDL)
@@ -466,12 +529,16 @@ def _crawl_funnel(conn: sqlite3.Connection | None, *, days: int) -> dict:
         for r in reject_rows
     ]
 
+    # Extension source is not a crawl_sources row — keep it out of the hourly table.
+    out_sources = [s for s in out_sources if s["name"] != LINKEDIN_EXTENSION_SOURCE]
+
     return {
         "days": days,
         "since": since,
         "sources": out_sources,
         "totals": totals,
         "rejects_by_reason": rejects,
+        "linkedin_extension": _linkedin_extension_stats(conn, since=since),
     }
 
 

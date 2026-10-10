@@ -175,6 +175,71 @@ class OpsStatusTests(unittest.TestCase):
         # 1 multi-source scraped + 1 employer = 2 unique open ads (not 1+1 scraped only).
         self.assertEqual(body["crawl"]["totals"]["published_live"], 2)
 
+    def test_linkedin_extension_stats_are_separate(self):
+        from app.cabinet_store import _LOCK, _connect
+        from app.ops_status import _CRAWL_RUNS_DDL
+
+        with _LOCK:
+            conn = _connect()
+            try:
+                conn.executescript(_CRAWL_RUNS_DDL)
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS crawl_rejects (
+                        source_url TEXT PRIMARY KEY,
+                        reason TEXT NOT NULL DEFAULT '',
+                        decided_at TEXT NOT NULL,
+                        via_ai INTEGER NOT NULL DEFAULT 0
+                    )
+                    """
+                )
+                conn.execute(
+                    """
+                    INSERT INTO jobs (title, company, city, text, status, created_at, norm_key, owner_subject, hidden)
+                    VALUES
+                      ('LI Dev', 'Co', '', 'text', 'published', '2099-01-02T00:00:00+00:00', 'k-li', '', 0),
+                      ('Old LI', 'Co', '', 'text', 'published', '2000-01-01T00:00:00+00:00', 'k-li-old', '', 0)
+                    """
+                )
+                ids = {
+                    r[0]: r[1]
+                    for r in conn.execute("SELECT norm_key, id FROM jobs WHERE norm_key LIKE 'k-li%'").fetchall()
+                }
+                conn.execute(
+                    """
+                    INSERT INTO job_sources (job_id, source_name, source_url, external_id, last_seen)
+                    VALUES
+                      (?, 'linkedin-extension', 'https://www.linkedin.com/jobs/view/1/', '1', '2099-01-02T00:00:00+00:00'),
+                      (?, 'linkedin-extension', 'https://www.linkedin.com/jobs/view/2/', '2', '2000-01-01T00:00:00+00:00')
+                    """,
+                    (ids["k-li"], ids["k-li-old"]),
+                )
+                conn.execute(
+                    """
+                    INSERT INTO crawl_rejects (source_url, reason, decided_at, via_ai)
+                    VALUES
+                      ('https://www.linkedin.com/jobs/view/9/', 'rules', '2099-01-02T00:00:00+00:00', 0),
+                      ('https://remoteok.com/x', 'rules', '2099-01-02T00:00:00+00:00', 0)
+                    """
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+        with self._auth("job:staff", "ops-staff"):
+            res = self.client.get(
+                "/api/v1/admin/ops-status?days=7",
+                headers={"Authorization": "Bearer test"},
+            )
+        self.assertEqual(res.status_code, 200, res.text)
+        li = res.json()["crawl"]["linkedin_extension"]
+        self.assertEqual(li["source_name"], "linkedin-extension")
+        self.assertEqual(li["created"], 1)  # only the recent one in the rolling window
+        self.assertEqual(li["published_live"], 2)
+        self.assertEqual(li["rejected"], 1)
+        source_names = {s["name"] for s in res.json()["crawl"]["sources"]}
+        self.assertNotIn("linkedin-extension", source_names)
+
     def test_internal_ops_status_requires_token(self):
         denied = self.client.get("/api/v1/internal/ops-status")
         self.assertEqual(denied.status_code, 401)
