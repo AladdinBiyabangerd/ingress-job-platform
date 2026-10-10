@@ -2,6 +2,7 @@
 
 import { hrefFor, text } from "../lib/copy";
 import { loginHref } from "../lib/auth-link";
+import { recommendationsEnabled } from "../lib/product-features";
 import { AcademyCourseLinks, SkillRow, sharePct } from "./skill-gap-bits";
 import { PageChrome } from "./page-chrome";
 import { Shell } from "./shell";
@@ -263,9 +264,11 @@ export function TrendDetailPage({ locale, data, error }) {
 
         {showHave ? <HaveStrip t={t} items={companionsHave} /> : null}
 
-        <p className="hint skills-footer">
-          <a href={hrefFor(locale, { mode: "recommendations" })}>{t.recommendationsOpen}</a>
-        </p>
+        {recommendationsEnabled() ? (
+          <p className="hint skills-footer">
+            <a href={hrefFor(locale, { mode: "recommendations" })}>{t.recommendationsOpen}</a>
+          </p>
+        ) : null}
       </div>
     </Shell>
   );

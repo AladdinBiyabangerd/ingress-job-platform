@@ -5,6 +5,7 @@ import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { ingressUrl } from "../lib/ingress";
 import { clearMeCache } from "../lib/me-client";
+import { recommendationsEnabled, roadmapEnabled } from "../lib/product-features";
 import { navTabs } from "../lib/roles";
 import { useMediaQuery } from "../lib/use-media-query";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
@@ -140,14 +141,14 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
               </a>
             </li>
           ) : null}
-          {me.candidate || me.staff ? (
+          {(me.candidate || me.staff) && recommendationsEnabled() ? (
             <li>
               <a href={hrefFor(locale, { mode: "recommendations" })} aria-current={mode === "recommendations" ? "page" : undefined}>
                 {t.recommendationsOpen}
               </a>
             </li>
           ) : null}
-          {me.candidate || me.staff ? (
+          {(me.candidate || me.staff) && roadmapEnabled() ? (
             <li>
               <a href={hrefFor(locale, { mode: "insightsRoadmap" })} aria-current={mode === "insights" ? "page" : undefined}>
                 {t.roadmapTitle}

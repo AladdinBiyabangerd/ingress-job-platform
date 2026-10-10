@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { apiBase } from "../api";
+import { roadmapEnabled } from "../product-features";
 import { getMe, sessionAccess } from "./me";
 
 const TIMEOUT_MS = 10_000;
@@ -27,6 +28,9 @@ async function loadJson(access, path) {
  * Growth hub payload for /me/insights. Skips FastAPI for guests / non-candidates.
  */
 export const getInsightsBundle = cache(async (lang = "az") => {
+  if (!roadmapEnabled()) {
+    return { insights: null };
+  }
   const me = await getMe();
   if (!me?.authenticated || !(me.candidate || me.staff)) {
     return { insights: null };

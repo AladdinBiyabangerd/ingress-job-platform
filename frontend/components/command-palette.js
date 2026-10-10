@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
+import { recommendationsEnabled, roadmapEnabled } from "../lib/product-features";
 import { canPostJobs, isStaff } from "../lib/roles";
 
 function isModK(event) {
@@ -29,8 +30,24 @@ function buildItems(locale, me, t) {
   if (me.candidate || me.staff) {
     items.push(
       { id: "profileReview", label: t.profileReviewOpen, href: hrefFor(locale, { mode: "profileReview" }), group: "account" },
-      { id: "recommendations", label: t.recommendationsOpen, href: hrefFor(locale, { mode: "recommendations" }), group: "account" },
-      { id: "roadmap", label: t.roadmapTitle, href: hrefFor(locale, { mode: "insightsRoadmap" }), group: "account" },
+    );
+    if (recommendationsEnabled()) {
+      items.push({
+        id: "recommendations",
+        label: t.recommendationsOpen,
+        href: hrefFor(locale, { mode: "recommendations" }),
+        group: "account",
+      });
+    }
+    if (roadmapEnabled()) {
+      items.push({
+        id: "roadmap",
+        label: t.roadmapTitle,
+        href: hrefFor(locale, { mode: "insightsRoadmap" }),
+        group: "account",
+      });
+    }
+    items.push(
       { id: "emailSettings", label: t.emailSettingsOpen, href: hrefFor(locale, { mode: "emailSettings" }), group: "account" },
       { id: "applications", label: t.myApplications, href: hrefFor(locale, { mode: "applications" }), group: "account" },
     );

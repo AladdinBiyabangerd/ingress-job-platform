@@ -5,6 +5,7 @@ import { CATEGORY_ORDER, categoryLabel, languageLabel, text } from "../lib/copy"
 import { jobsListParams } from "../lib/jobs-params";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
 import { fetchMe } from "../lib/me-client";
+import { recommendationsEnabled } from "../lib/product-features";
 import { useMediaQuery } from "../lib/use-media-query";
 import { FeaturedJob } from "./featured-job";
 import { JobRow } from "./job-row";
@@ -221,7 +222,7 @@ export function Home({
   }, [initialMe]);
 
   useEffect(() => {
-    if (!me?.authenticated) {
+    if (!me?.authenticated || !recommendationsEnabled()) {
       setMatches([]);
       return undefined;
     }
@@ -472,12 +473,14 @@ export function Home({
 
           <aside className="home-h2-side">
             <TrendAside locale={locale} />
-            <MatchAside
-              locale={locale}
-              authenticated={authenticated}
-              topScore={typeof topMatch?.score === "number" ? topMatch.score : null}
-              jobTitle={topMatch?.title || ""}
-            />
+            {recommendationsEnabled() ? (
+              <MatchAside
+                locale={locale}
+                authenticated={authenticated}
+                topScore={typeof topMatch?.score === "number" ? topMatch.score : null}
+                jobTitle={topMatch?.title || ""}
+              />
+            ) : null}
           </aside>
 
           <section className="open-roles" ref={resultsRef} aria-labelledby="open-roles-title">

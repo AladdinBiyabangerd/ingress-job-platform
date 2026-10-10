@@ -584,6 +584,17 @@ def build_growth_cta(
 ) -> dict[str, Any]:
     """Academy course + career-path together, then AI/template roadmap fill."""
     from app.learning_roadmap import build_learning_roadmap, legacy_roadmap_steps
+    from app.product_features import roadmap_enabled
+
+    if not roadmap_enabled():
+        return {
+            "academy_courses": [],
+            "career_path": None,
+            "roadmap": [],
+            "learning_roadmap": None,
+            "cta_secondary_href": "",
+            "missing_names": [],
+        }
 
     locale = _lang(lang)
     names: list[str] = []
@@ -769,7 +780,10 @@ def _event_payload(
         if role:
             payload["role"] = role
     elif kind == "match_near":
-        payload["cta_secondary_href"] = "/me/recommendations"
+        from app.product_features import recommendations_enabled
+
+        if recommendations_enabled():
+            payload["cta_secondary_href"] = "/me/recommendations"
     return payload
 
 
@@ -1865,11 +1879,16 @@ def process_user_engagement(
                 inapp_left = max(0, inapp_left - 1)
 
         coach_ctx = None
-        try:
-            coach_ctx = build_coach_weekly_context(conn, user_id=user_id, lang=lang)
-        except Exception as exc:
-            logger.exception("coach_weekly context failed for %s: %s", user_id, exc)
-            out["reasons"]["coach_weekly"] = "context_error"
+        from app.product_features import roadmap_enabled
+
+        if not roadmap_enabled():
+            out["reasons"]["coach_weekly"] = "product_off"
+        else:
+            try:
+                coach_ctx = build_coach_weekly_context(conn, user_id=user_id, lang=lang)
+            except Exception as exc:
+                logger.exception("coach_weekly context failed for %s: %s", user_id, exc)
+                out["reasons"]["coach_weekly"] = "context_error"
         if coach_ctx is None and "coach_weekly" not in out["reasons"]:
             out["reasons"]["coach_weekly"] = "no_role"
         elif coach_ctx is not None:

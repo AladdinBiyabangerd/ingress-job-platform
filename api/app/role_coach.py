@@ -91,6 +91,10 @@ _SCHEMA: dict[str, Any] = {
 
 
 def coach_enabled(conn=None) -> bool:
+    from app.product_features import recommendations_enabled
+
+    if not recommendations_enabled():
+        return False
     return feature_on("role_coach", conn)
 
 

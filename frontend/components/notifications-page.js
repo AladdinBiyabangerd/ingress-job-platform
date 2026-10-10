@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
+import { recommendationsEnabled, roadmapEnabled } from "../lib/product-features";
 import { markAllNotificationsRead, markNotificationRead, refreshNotifications } from "../lib/server/refresh";
 import { publishUnreadNotifications } from "../lib/unread-document-title";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
@@ -48,6 +49,11 @@ const FILTERS = [
   { id: "apps", kinds: APP_KINDS },
 ];
 
+function visibleFilters() {
+  if (roadmapEnabled()) return FILTERS;
+  return FILTERS.filter((filter) => filter.id !== "learning");
+}
+
 function localePrefix(locale) {
   return locale === "en" || locale === "ru" ? `/${locale}` : "";
 }
@@ -61,16 +67,25 @@ function resolveHref(locale, href) {
 function destination(locale, item) {
   const cta = item?.payload?.cta_href;
   const resolved = resolveHref(locale, cta);
-  if (resolved) return resolved;
+  if (resolved) {
+    if (!roadmapEnabled() && resolved.includes("/me/insights")) return hrefFor(locale);
+    if (!recommendationsEnabled() && resolved.includes("/me/recommendations")) {
+      if (item.job_id) return hrefFor(locale, { jobId: item.job_id });
+      return hrefFor(locale);
+    }
+    return resolved;
+  }
   if (item.kind === "match_new" || item.kind === "match_near") {
     if (item.job_id) return hrefFor(locale, { jobId: item.job_id });
-    return hrefFor(locale, { mode: "recommendations" });
+    return recommendationsEnabled()
+      ? hrefFor(locale, { mode: "recommendations" })
+      : hrefFor(locale);
   }
   if (item.kind === "profile_nudge") {
     return hrefFor(locale, { mode: "profileReview" });
   }
   if (item.kind === "coach_weekly") {
-    return hrefFor(locale, { mode: "insightsRoadmap" });
+    return roadmapEnabled() ? hrefFor(locale, { mode: "insightsRoadmap" }) : hrefFor(locale);
   }
   if (item.kind === "application_seen" || item.kind === "application_rejected") {
     return hrefFor(locale, { mode: "applications" });
@@ -85,13 +100,17 @@ function secondaryHref(locale, item) {
   const payload = item?.payload || {};
   const secondary = payload.cta_secondary_href;
   const resolved = resolveHref(locale, secondary);
-  if (resolved) return resolved;
+  if (resolved) {
+    if (!roadmapEnabled() && resolved.includes("/me/insights")) return "";
+    if (!recommendationsEnabled() && resolved.includes("/me/recommendations")) return "";
+    return resolved;
+  }
   const courses = Array.isArray(payload.academy_courses) ? payload.academy_courses : [];
   const first = courses[0];
   if (first && typeof first.url === "string" && first.url.startsWith("http")) {
     return first.url;
   }
-  if (item.kind === "match_near" || item.kind === "coach_weekly") {
+  if (roadmapEnabled() && (item.kind === "match_near" || item.kind === "coach_weekly")) {
     return hrefFor(locale, { mode: "insightsRoadmap" });
   }
   return "";
@@ -222,7 +241,9 @@ function GrowthRail({ t, locale, item, onBack }) {
   const primary = destination(locale, item);
   const secondary = secondaryHref(locale, item);
   const externalSecondary = secondary.startsWith("http");
-  const showGrowth = Boolean(heroTitle || roadmap.length || weekSkill || weekItems.length || pathSteps.length);
+  const showGrowth =
+    roadmapEnabled()
+    && Boolean(heroTitle || roadmap.length || weekSkill || weekItems.length || pathSteps.length);
 
   const upcoming = (pathSteps.length
     ? pathSteps.slice(0, 5).map((step, index) => {
@@ -336,9 +357,11 @@ function GrowthRail({ t, locale, item, onBack }) {
           ) : null}
 
           <div className="notes-c-rail-actions">
-            <a className="btn small ink" href={hrefFor(locale, { mode: "insightsRoadmap" })}>
-              {t.roadmapOpenFull}
-            </a>
+            {roadmapEnabled() ? (
+              <a className="btn small ink" href={hrefFor(locale, { mode: "insightsRoadmap" })}>
+                {t.roadmapOpenFull}
+              </a>
+            ) : null}
             {secondary && secondary !== primary ? (
               <a
                 className="btn small"
@@ -436,10 +459,15 @@ export function NotificationsPage({ locale, initialItems = null, initialUnread =
   const [selectedId, setSelectedId] = useState(null);
   const [mobileDetail, setMobileDetail] = useState(false);
 
-  const activeFilter = FILTERS.find((f) => f.id === filterId) || FILTERS[0];
+  const filters = visibleFilters();
+  const activeFilter = filters.find((f) => f.id === filterId) || filters[0];
   const filteredItems = useMemo(() => {
-    if (!activeFilter.kinds) return items;
-    return items.filter((item) => activeFilter.kinds.has(item.kind));
+    let list = items;
+    if (!roadmapEnabled()) {
+      list = list.filter((item) => item.kind !== "coach_weekly");
+    }
+    if (!activeFilter.kinds) return list;
+    return list.filter((item) => activeFilter.kinds.has(item.kind));
   }, [items, activeFilter]);
 
   const { pageItems, currentPage, totalPages, pageSize, total, goToPage, resetPage } = usePagination(
@@ -634,7 +662,7 @@ export function NotificationsPage({ locale, initialItems = null, initialUnread =
             <div className={["notes-c", mobileDetail ? "is-mobile-detail" : ""].filter(Boolean).join(" ")}>
               <nav className="notes-c-filters" aria-label={t.notificationsTitle}>
                 <ul className="notes-c-filter-list">
-                  {FILTERS.map((filter) => {
+                  {filters.map((filter) => {
                     const count = countForFilter(items, filter);
                     const unreadCount = unreadForFilter(items, filter);
                     const active = filter.id === filterId;

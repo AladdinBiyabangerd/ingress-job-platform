@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { apiBase } from "../api";
+import { recommendationsEnabled } from "../product-features";
 import { getMe, sessionAccess } from "./me";
 
 export const MATCHES_FETCH_LIMIT = 10;
@@ -29,6 +30,9 @@ async function loadJson(access, path, timeoutMs = TIMEOUT_MS) {
  * Skips FastAPI for guests and non-candidates. Deduped within one RSC request.
  */
 export const getRecommendationBundle = cache(async (lang = "az", preferredRole = "", includeGap = true) => {
+  if (!recommendationsEnabled()) {
+    return { roles: null, matches: null, gap: null, role: "" };
+  }
   const me = await getMe();
   if (!me?.authenticated || !(me.candidate || me.staff)) {
     return { roles: null, matches: null, gap: null, role: "" };

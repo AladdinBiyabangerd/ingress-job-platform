@@ -238,6 +238,10 @@ _SCHEMA: dict[str, Any] = {
 
 
 def roadmap_enabled(conn=None) -> bool:
+    from app.product_features import roadmap_enabled as product_on
+
+    if not product_on():
+        return False
     return feature_on("learning_roadmap", conn)
 
 

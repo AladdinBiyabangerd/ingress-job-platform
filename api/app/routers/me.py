@@ -26,6 +26,7 @@ from app.saved_jobs import (
     save_job,
     unsave_job,
 )
+from app.product_features import recommendations_enabled, roadmap_enabled
 from app.skill_gap import MAX_TOP as SKILL_GAP_MAX_TOP, skill_gap
 
 router = APIRouter(prefix="/api/v1/me", tags=["me"])
@@ -46,6 +47,16 @@ class MatchFeedbackBody(BaseModel):
 def _require_candidate(user: VerifiedAccess) -> None:
     if "job:candidate" not in user.scopes and "job:staff" not in user.scopes:
         raise HTTPException(status_code=403, detail="Namizəd hesabı tələb edir")
+
+
+def _require_recommendations() -> None:
+    if not recommendations_enabled():
+        raise HTTPException(status_code=404, detail="Tapılmadı")
+
+
+def _require_roadmap() -> None:
+    if not roadmap_enabled():
+        raise HTTPException(status_code=404, detail="Tapılmadı")
 
 
 @router.get("/saved-jobs/ids")
@@ -96,6 +107,7 @@ def get_matches(
     user: VerifiedAccess = Depends(current_user),
 ) -> dict:
     """Structured job matches (plan §6.2). Optional role= scopes to signature skills."""
+    _require_recommendations()
     _require_candidate(user)
     return list_matches(user_id=user.subject, limit=limit, lang=lang, role=role)
 
@@ -107,6 +119,7 @@ def post_match_feedback(
     user: VerifiedAccess = Depends(current_user),
 ) -> dict:
     """👍 / 👎 on a recommendation (plan §6.3)."""
+    _require_recommendations()
     _require_candidate(user)
     vote = (body.vote or "").strip().lower()
     reason = (body.reason or "").strip().lower()
@@ -140,6 +153,7 @@ def get_skill_gap(
     user: VerifiedAccess = Depends(current_user),
 ) -> dict:
     """Skill gap vs target role signature skills (plan §7.2)."""
+    _require_recommendations()
     _require_candidate(user)
     return skill_gap(user_id=user.subject, role=role, top=top, lang=lang)
 
@@ -150,6 +164,7 @@ def get_insights(
     user: VerifiedAccess = Depends(current_user),
 ) -> dict:
     """Growth hub: weekly coach, near-miss jobs, Academy/roadmap (engagement Phase 4)."""
+    _require_roadmap()
     _require_candidate(user)
     from app.cabinet_store import _LOCK, _connect, ensure_schema
     from app.engagement import insights_payload

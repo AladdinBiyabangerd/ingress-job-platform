@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { clearMeCache, fetchMe } from "../lib/me-client";
+import { recommendationsEnabled, roadmapEnabled } from "../lib/product-features";
 import { NotificationsBell } from "./notifications-bell";
 import { RegisterChoice } from "./register-choice";
 import { useInitialMe } from "./me-seed";
@@ -120,12 +121,12 @@ export function AccountBar({ locale, returnTo, onMe }) {
                     {t.profileReviewOpen}
                   </a>
                 ) : null}
-                {me.candidate || me.staff ? (
+                {(me.candidate || me.staff) && recommendationsEnabled() ? (
                   <a role="menuitem" href={hrefFor(locale, { mode: "recommendations" })} onClick={() => setOpen(false)}>
                     {t.recommendationsOpen}
                   </a>
                 ) : null}
-                {me.candidate || me.staff ? (
+                {(me.candidate || me.staff) && roadmapEnabled() ? (
                   <a role="menuitem" href={hrefFor(locale, { mode: "insightsRoadmap" })} onClick={() => setOpen(false)}>
                     {t.roadmapTitle}
                   </a>

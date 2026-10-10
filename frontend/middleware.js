@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiBase } from "./lib/api";
+import { recommendationsEnabled, roadmapEnabled } from "./lib/product-features";
 import { appendCookies, ensureSession, publicOrigin } from "./lib/server/oidc";
 
 const COMPANY = new Set(["/company", "/en/company", "/ru/company"]);
@@ -21,6 +22,28 @@ function localeOf(pathname) {
   if (pathname === "/en" || pathname.startsWith("/en/")) return "en";
   if (pathname === "/ru" || pathname.startsWith("/ru/")) return "ru";
   return "az";
+}
+
+/** Strip locale prefix → path used for product gates. */
+function barePath(pathname) {
+  return pathname.replace(/^\/(en|ru)(?=\/|$)/, "") || "/";
+}
+
+/** Parked surfaces: nobody should land on recommendations / roadmap while off. */
+function parkedProductRedirect(request, locale) {
+  const path = barePath(request.nextUrl.pathname);
+  const recommendationsParked =
+    !recommendationsEnabled()
+    && (path === "/me/recommendations"
+      || path.startsWith("/me/recommendations/")
+      || path === "/me/skills"
+      || path.startsWith("/me/skills/"));
+  const roadmapParked =
+    !roadmapEnabled()
+    && (path === "/me/insights" || path.startsWith("/me/insights/"));
+  if (!recommendationsParked && !roadmapParked) return null;
+  const prefix = locale === "az" ? "" : `/${locale}`;
+  return NextResponse.redirect(new URL(`${prefix}/` || "/", publicOrigin(request)));
 }
 
 function hasSessionCookies(request) {
@@ -50,6 +73,9 @@ export async function middleware(request) {
   if (pathname.startsWith("/api") || pathname.startsWith("/_next")) {
     return pass(request, locale);
   }
+
+  const parked = parkedProductRedirect(request, locale);
+  if (parked) return parked;
 
   // Cookie refresh belongs here (Set-Cookie on the response). RSC may only read.
   let session = null;

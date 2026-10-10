@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
+import { roadmapEnabled } from "../lib/product-features";
 import { saveEmailPrefs } from "../lib/server/refresh";
 import {
   disableBrowserPush,
@@ -16,7 +17,6 @@ import { useInitialMe } from "./me-seed";
 
 const FREQUENCIES = ["daily", "weekly", "biweekly", "important_only", "none"];
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
-const CHANNEL_TOTAL = 6;
 
 function frequencyLabel(t, value) {
   if (value === "daily") return t.emailFreqDaily;
@@ -279,9 +279,16 @@ export function EmailSettings({ locale, initialPrefs = null }) {
   }
 
   const allowed = Boolean(me?.authenticated && (me.candidate || me.staff));
-  const activeCount = [digest, highMatch, matchNear, profileNudge, coachWeekly, pushEnabled].filter(
-    Boolean,
-  ).length;
+  const showCoachWeekly = roadmapEnabled();
+  const channelTotal = showCoachWeekly ? 6 : 5;
+  const activeCount = [
+    digest,
+    highMatch,
+    matchNear,
+    profileNudge,
+    showCoachWeekly && coachWeekly,
+    pushEnabled,
+  ].filter(Boolean).length;
   const consentOn = !prefs || prefs.emails_consent !== false;
   const langLabel = String(language || fallbackLang).toUpperCase();
 
@@ -316,7 +323,7 @@ export function EmailSettings({ locale, initialPrefs = null }) {
               <aside className="es-rail" aria-label={t.emailSettingsCurrentPlan}>
                 <div className="es-stat">
                   <div className="es-stat-num">
-                    {activeCount}/{CHANNEL_TOTAL}
+                    {activeCount}/{channelTotal}
                   </div>
                   <div className="es-stat-lbl">{t.emailSettingsActiveKinds}</div>
                   <span className={`es-pill${pushSubActive ? " is-on" : ""}`}>
@@ -418,12 +425,14 @@ export function EmailSettings({ locale, initialPrefs = null }) {
                       checked={profileNudge}
                       onChange={setProfileNudge}
                     />
-                    <ChannelCard
-                      title={t.emailSettingsCoachWeekly}
-                      hint={t.emailSettingsCoachWeeklyHint}
-                      checked={coachWeekly}
-                      onChange={setCoachWeekly}
-                    />
+                    {showCoachWeekly ? (
+                      <ChannelCard
+                        title={t.emailSettingsCoachWeekly}
+                        hint={t.emailSettingsCoachWeeklyHint}
+                        checked={coachWeekly}
+                        onChange={setCoachWeekly}
+                      />
+                    ) : null}
                     <ChannelCard
                       title={t.emailSettingsPush}
                       hint={t.emailSettingsPushHintShort}
