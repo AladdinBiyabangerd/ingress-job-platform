@@ -6,6 +6,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from worker.cv_queue import (
     ENQUEUE_EXISTING_STEP,
@@ -195,6 +196,64 @@ class CvQueueTest(unittest.TestCase):
         self.assertEqual(row["headline"], "Keep Me")
         self.assertEqual(row["status"], "confirmed")
         self.assertEqual(row["cv_file_key"], "old.pdf")
+
+    def test_slow_ai_does_not_block_queue_done(self):
+        """Rules finish the job even when AI enhancement hangs / fails."""
+        stored = self._write_sample_cv()
+        queue_id = enqueue_parse(
+            self.store.conn,
+            user_id="cand-ai-slow",
+            cv_file_key=stored,
+            cv_name="cv.docx",
+        )
+        self.store.conn.commit()
+
+        def hang(*_a, **_k):
+            raise TimeoutError("provider_stuck")
+
+        with patch("worker.cv_parse.ai_fallback.maybe_ai_fallback", side_effect=hang):
+            stats = drain_parse_cv_queue(self.store.conn, cv_root=self.cvs)
+        self.store.conn.commit()
+        self.assertEqual(stats["done"], 1)
+        row = self.store.conn.execute(
+            "SELECT status FROM parse_cv_queue WHERE id = ?",
+            (queue_id,),
+        ).fetchone()
+        self.assertEqual(row["status"], "done")
+        profile = self.store.conn.execute(
+            "SELECT status, parse_method, headline FROM candidate_profile WHERE user_id = ?",
+            ("cand-ai-slow",),
+        ).fetchone()
+        self.assertEqual(profile["status"], "draft")
+        self.assertEqual(profile["parse_method"], "rules")
+        self.assertTrue(profile["headline"])
+
+    def test_stale_processing_is_reclaimed_and_done(self):
+        stored = self._write_sample_cv()
+        self.store.conn.execute(
+            """
+            INSERT INTO parse_cv_queue (
+                user_id, cv_file_key, cv_name, application_id, status, attempts,
+                error, created_at, started_at, finished_at
+            ) VALUES (
+                'cand-stale', ?, 'cv.docx', NULL, 'processing', 1,
+                '', '2020-01-01T00:00:00+00:00', '2020-01-01T00:00:00+00:00', ''
+            )
+            """,
+            (stored,),
+        )
+        self.store.conn.commit()
+        stats = drain_parse_cv_queue(self.store.conn, cv_root=self.cvs)
+        self.store.conn.commit()
+        self.assertEqual(stats["done"], 1)
+        row = self.store.conn.execute(
+            "SELECT status FROM parse_cv_queue WHERE user_id = 'cand-stale'"
+        ).fetchone()
+        self.assertEqual(row["status"], "done")
+        profile = self.store.conn.execute(
+            "SELECT headline FROM candidate_profile WHERE user_id = 'cand-stale'"
+        ).fetchone()
+        self.assertTrue(profile["headline"])
 
 
 class RowcountHelperTests(unittest.TestCase):

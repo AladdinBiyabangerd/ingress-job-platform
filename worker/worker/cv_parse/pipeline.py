@@ -81,7 +81,11 @@ def parse_bytes(
     conn: sqlite3.Connection | None = None,
     ai_fallback: bool = True,
 ) -> dict:
-    """Extract text, rules-parse, then optional AI #1 when confidence is low."""
+    """Extract text and rules-parse; optional AI #1 when ``ai_fallback`` is on.
+
+    Queue drain uses ``ai_fallback=False`` so a slow LLM cannot stall completion;
+    AI polish runs separately after the job is already marked done.
+    """
     extracted = extract(data, filename=filename, content_type=content_type)
     profile = parse_text(extracted.text)
     meta = profile.setdefault("parse_meta", {})

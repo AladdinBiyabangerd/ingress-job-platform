@@ -208,12 +208,14 @@ def maybe_ai_fallback(
     text: str,
     *,
     conn: sqlite3.Connection | None = None,
+    timeout: float = 20.0,
 ) -> dict:
     """Rules first; ask AI only when the output quality score is low. Never raises.
 
     The decision looks at the parse *output* (see ``quality.assess``), not at the
     CV template. AI repairs only the weak parts; on any AI failure the rules
     output is kept. ``parse_meta.parse_source`` is rules | ai | mixed.
+    ``timeout`` bounds the provider call so a slow LLM cannot stall the queue.
     """
     meta = profile.setdefault("parse_meta", {})
     if not isinstance(meta, dict):
@@ -271,6 +273,7 @@ def maybe_ai_fallback(
             schema_name="cv_profile",
             known_pii=contact,
             conn=conn,
+            timeout=max(1.0, float(timeout)),
         )
     except Exception as exc:  # gateway must never break the rules result
         meta["ai_fallback"] = "failed"

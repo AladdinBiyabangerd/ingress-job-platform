@@ -1,6 +1,7 @@
 """parse_cv_queue + candidate_profile stub (Phase 1.2).
 
-Enqueue on CV upload; worker drains with rules + OCR + AI #1 fallback.
+Enqueue on CV upload; worker drains with rules (+ OCR). AI #1 is optional
+enhancement after the queue is already marked done — never blocks the UI.
 candidate_profile lives in the shared jobs DB (plan §12). It is separate from
 accounts.sqlite candidate_profiles (display name / phone / email only).
 """
@@ -8,6 +9,7 @@ accounts.sqlite candidate_profiles (display name / phone / email only).
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -16,9 +18,15 @@ from worker.ai_gateway import ensure_ai_tables
 from worker.cv_files import read_cv
 from worker.cv_parse import parse_bytes
 
+log = logging.getLogger("ingress-job.cv_queue")
+
 MAX_ATTEMPTS = 5
 PER_RUN = 20
 ENQUEUE_EXISTING_STEP = "enqueue-existing-application-cvs-v1"
+# Optional AI polish after rules parse; keep short so drain stays responsive.
+AI_ENHANCE_TIMEOUT = 20.0
+# Re-queue jobs left in "processing" after a crash / hung AI (pre-fix path).
+STALE_PROCESSING_SEC = 90
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS parse_cv_queue (
@@ -248,7 +256,44 @@ def _rowcount(cur) -> int:
     return int(n)
 
 
+def _reclaim_stale_processing(conn) -> int:
+    """Reset hung processing jobs to pending so drain can retry them."""
+    now = datetime.now().astimezone()
+    rows = list(
+        conn.execute(
+            "SELECT id, started_at FROM parse_cv_queue WHERE status = 'processing'"
+        )
+    )
+    reclaimed = 0
+    for row in rows:
+        qid = int(row["id"] if hasattr(row, "keys") else row[0])
+        started_raw = row["started_at"] if hasattr(row, "keys") else row[1]
+        stale = True
+        if started_raw:
+            try:
+                started = datetime.fromisoformat(str(started_raw))
+                if started.tzinfo is None:
+                    started = started.replace(tzinfo=now.tzinfo)
+                stale = (now - started).total_seconds() >= STALE_PROCESSING_SEC
+            except ValueError:
+                stale = True
+        if not stale:
+            continue
+        cur = conn.execute(
+            """
+            UPDATE parse_cv_queue
+            SET status = 'pending', error = 'reclaimed_stale',
+                started_at = '', finished_at = ''
+            WHERE id = ? AND status = 'processing'
+            """,
+            (qid,),
+        )
+        reclaimed += _rowcount(cur)
+    return reclaimed
+
+
 def _claim(conn, limit: int) -> list[sqlite3.Row]:
+    _reclaim_stale_processing(conn)
     rows = list(
         conn.execute(
             """
@@ -322,7 +367,11 @@ def _process_one(conn, row: sqlite3.Row, *, root: Path | None) -> str:
     if data is None:
         _finish(conn, int(row["id"]), status="failed", error="cv_missing")
         return "failed"
-    profile = parse_bytes(data, filename=row["cv_name"] or stored, conn=conn)
+    # Rules-only first: partial extract is enough to unblock the review UI.
+    # AI is optional polish and must not keep parse_status at "processing".
+    profile = parse_bytes(
+        data, filename=row["cv_name"] or stored, conn=conn, ai_fallback=False
+    )
     if _queue_status(conn, int(row["id"])) != "processing":
         # Cancelled (or otherwise closed) while parse_bytes was running.
         return "failed"
@@ -340,6 +389,14 @@ def _process_one(conn, row: sqlite3.Row, *, root: Path | None) -> str:
     _finish(conn, int(row["id"]), status="done", error=err[:1000] if err else "")
     if _queue_status(conn, int(row["id"])) != "done":
         return "failed"
+
+    profile = _maybe_ai_enhance(
+        conn,
+        row=row,
+        data=data,
+        profile=profile,
+        stored=stored,
+    )
     try:
         from worker.embeddings import embed_profile
 
@@ -349,13 +406,60 @@ def _process_one(conn, row: sqlite3.Row, *, root: Path | None) -> str:
     return "done"
 
 
+def _maybe_ai_enhance(
+    conn,
+    *,
+    row: sqlite3.Row,
+    data: bytes,
+    profile: dict,
+    stored: str,
+) -> dict:
+    """Best-effort AI #1 after queue is done. Never raises; keeps rules on failure."""
+    try:
+        from worker.cv_parse.ai_fallback import maybe_ai_fallback
+        from worker.cv_parse.text import extract
+
+        extracted = extract(data, filename=row["cv_name"] or stored)
+        if not (extracted.text or "").strip():
+            return profile
+        improved = maybe_ai_fallback(
+            profile,
+            extracted.text,
+            conn=conn,
+            timeout=AI_ENHANCE_TIMEOUT,
+        )
+        meta = improved.get("parse_meta") if isinstance(improved.get("parse_meta"), dict) else {}
+        if meta.get("ai_fallback") != "applied":
+            return profile
+        existing = conn.execute(
+            "SELECT status, cv_file_key FROM candidate_profile WHERE user_id = ?",
+            (row["user_id"],),
+        ).fetchone()
+        if existing is None:
+            return profile
+        status = existing["status"] if "status" in existing.keys() else existing[0]
+        cv_key = existing["cv_file_key"] if "cv_file_key" in existing.keys() else existing[1]
+        if status == "confirmed" or (cv_key or "") != stored:
+            return profile
+        upsert_candidate_profile(
+            conn,
+            user_id=row["user_id"],
+            cv_file_key=stored,
+            profile=improved,
+        )
+        return improved
+    except Exception as exc:
+        log.warning("cv ai enhance skipped: %s", exc)
+        return profile
+
+
 def drain_parse_cv_queue(
     conn,
     *,
     limit: int = PER_RUN,
     cv_root: Path | None = None,
 ) -> dict[str, int]:
-    """Claim pending jobs and run rules (+ AI #1 if needed). Returns status counts."""
+    """Claim pending jobs, run rules parse, optionally polish with AI. Returns status counts."""
     ensure_cv_queue_tables(conn)
     ensure_ai_tables(conn)
     stats = {"claimed": 0, "done": 0, "failed": 0}
