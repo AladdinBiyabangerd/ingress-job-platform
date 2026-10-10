@@ -19,6 +19,7 @@ FEATURES = (
     "gateway",
     "cv_fallback",
     "job_tidy",
+    "market_fit",
     "embeddings",
     "rerank",
     "llm_rerank",
@@ -28,9 +29,12 @@ FEATURES = (
     "engagement_copy",
 )
 
+# market_fit defaults ON when any chat key exists (same as gateway / job_tidy).
+# Chat provider order is free-first → OpenAI last (see ai_gateway).
 FEATURE_ENV = {
     "gateway": "AI_GATEWAY_ENABLED",
     "cv_fallback": "CV_AI_FALLBACK_ENABLED",
+    "market_fit": "AI_MARKET_FIT_ENABLED",
     "rerank": "AI_RERANK_ENABLED",
     "llm_rerank": "AI_LLM_RERANK_ENABLED",
     "match_why": "AI_MATCH_WHY_ENABLED",
@@ -168,7 +172,7 @@ def feature_on(feature: str, conn=None) -> bool:
     if env is True:
         return True
     # Notification engagement copy defaults on with the key (same as gateway).
-    if feature in {"gateway", "job_tidy", "engagement_copy"}:
+    if feature in {"gateway", "job_tidy", "engagement_copy", "market_fit"}:
         return key_configured()
     return feature_on("gateway", conn)
 

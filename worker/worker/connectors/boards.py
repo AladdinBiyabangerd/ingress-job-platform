@@ -92,6 +92,7 @@ class JapanDevConnector(OpenListConnector):
 
     name = "Japan Dev"
     entry_url = "https://japan-dev.com/jobs"
+    require_remote_or_relocation = True
     credit_note = "Japan Dev public job pages."
 
     def links(self, html: str, page_url: str) -> list[str]:

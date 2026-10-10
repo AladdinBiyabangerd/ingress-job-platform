@@ -1,50 +1,34 @@
 # Current task
 
-## Completed (this / prior chats)
-- Design skill + Home checkup / smell
-- `/design interaction` (Home)
-- `/design tokenize` (Home-touched + outside Home brand hex)
-- `/design deslop` (featured / filters)
-- `/design smell` re-score: **10/10 · CLEAN**
-- `/design finish` Home primary flow (browse → filter → open job)
-- `/design review` Home — **7/10 · STRONG** (audit only; `.design/review-report.{md,html}`)
-- Reference ingest → `.design/reference.md` (Stripe DESIGN.md + Primer/GitHub + relocate.me / relocue live + review P0–P2). No frontend changes. Keep `#001fff`.
-- `/design relayout` Home against P0 + reference — **done**
-- `/design typeset` Home open-roles head (P1) + job-row open track (P2) — **done**
+## Completed (this chat)
+- **Job Detail mockup rebuild** — old `.h2-detail` / PageChrome ribbon layout removed.
+- Shared components under `frontend/components/job-detail/`.
+- Design preview: `/design/job-detail?state=company_signed_in|company_guest|external_signed_in|external_guest`
+- Production `/jobs/[id]` (+ en/ru) uses the same view model + components.
+- CTAs: Apply / Sign in to apply / Open original listing; Save + Share; guest gate; onsite form reveals on Apply.
+- Board bottom nav hidden when `jobId` is set (avoids clash with mobile sticky CTA).
+- Screenshots: `.design/job-detail-qa/` (`desktop-signed-in`, `desktop-guest`, `desktop-external`, `mobile-signed-in`, `mobile-guest`).
 
 ## Current state
-P1: `.open-roles-head h2` **18px** / count **13px** → ratio **1.385** (≥1.3). Semibold + heading LH; count `tabular-nums`.
-P2: `.job-row` / mobile / `.job-row-no-company` open column track **44px** (was 28px); control still 44×44.
-Measured (CDP): 390 / 700 / 1280 — ratio 1.385; last track 44; open 44×44.
-Committed: design skill + rule + Home frontend + `.gitignore` (`.design/` ignored). README parked-surfaces note left unstaged.
+- Visual fidelity is close to the reference collage; global Shell nav still differs from mockup (Jobs / For Employers / Academy vs mockup’s Companies / Learning) — intentional out of scope.
+- Live jobs omit missing fields (size / industry / cover / experience / languages); fixtures carry full sample content.
 
-## Plan (do in separate chats — one major step each)
+## Decisions
+- Apply reveals existing onsite form (not always-visible form).
+- Preview fixtures for pixel QA; production maps API → same UI.
+- Plain CSS `.jd-*` (no Tailwind).
 
-| # | Chat prompt | Mode | Changes source? |
-|---|---|---|---|
-| 1 | `/design tokenize` outside Home | tokenize | yes — **done** |
-| 2 | `/design finish` Home primary flow | finish | yes — **done** |
-| 3 | `/design review` Home (after finish) | review | no — **done** |
-| 4 | `/design relayout` Home (P0 + `.design/reference.md`) | relayout | yes — **done** |
-| 5 | Optional: `/design typeset` Home open-roles head (P1 ≥1.3) | typeset | yes — **done** |
-| 6 | Optional: job-row open track ≥44px (P2) | finish/craft | yes — **done** |
-| 7 | Commit when asked (skill + rule + frontend; exclude `.design/`) | git | — | **done** |
-
-## Decisions (keep)
-- Brand hue `#001fff` / deep / soft stay
-- Featured: flat `--brand-soft` + company initial
-- Filters chip icon stays; drawer noun icons out
-- Home = surface / catalogue + featured lead
-- Empty filter results: show `t.clear` when `activeFilters > 0`
-- Filter chip row: `overflow: hidden` on toolbar (not one-axis clip)
-- Review: primary flow browse → filter → open job
-- Relayout: stacked order `featured` → `list` → `side`; sticky side only ≥1100px
-- Reference: Stripe craft (not purple); Primer focus-over-features; relocate filter-above-list; Relocue glance-before-essay
-- Typeset: open-roles section title 18px / count 13px (ratio ~1.385); no new font family
-- Craft: job-row open grid track = 44px to match control
+## Remaining work (other chats)
+1. Jobs shell IA — 3-col board + tokens (from prior home plan)
+2. Job cards / tabs polish
+3. Home front door vs `/jobs`
+4. Me page
+5. Optional: tighter pixel pass on job detail after board header matches mockup
 
 ## Relevant files
-- `frontend/app/globals.css` — `.open-roles-head h2` / `.open-roles-count`; `.job-row` tracks
-- `frontend/components/home.js` — open-roles head markup (unchanged)
-- `.design/reference.md`, `.design/review-report.md` — backlog (P0–P2 cleared in UI)
-- Dev server often on `:3010`
+- `frontend/components/job-detail.js` + `frontend/components/job-detail/*`
+- `frontend/lib/job-detail-view-model.js`, `job-detail-fixtures.js`
+- `frontend/app/design/job-detail/page.js`
+- `frontend/app/globals.css` (`.jd-*` block)
+- `frontend/lib/copy.js` (jd* keys)
+- QA: `.design/job-detail-qa/*.png`

@@ -179,6 +179,9 @@ class Store:
             self.skills_seeded, self.skills_backfilled = ensure_skills(self.conn)
             self.roles_seeded, self.role_weights_seeded = ensure_roles(self.conn)
             self.cv_queue_enqueued = ensure_cv_queue(self.conn)
+            from worker.market_fit import ensure_rejects_table
+
+            ensure_rejects_table(self.conn)
 
     def close(self) -> None:
         self.conn.close()

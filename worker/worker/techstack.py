@@ -10,6 +10,9 @@ Everything here is a local keyword match. No site is fetched.
   and tools. Unknown tags are ignored so the chips stay consistent.
 - ``remote_flag`` / ``relocation_flag`` read the title, location and text.
   A negation right before a phrase ("no visa sponsorship") cancels it.
+- ``az_market_relevant`` drops remote ads geo-locked to a foreign country
+  (e.g. "Remote, Canada") because the board targets Azerbaijan. Worldwide /
+  EMEA / AZ-open remote and relocation stay.
 """
 
 from __future__ import annotations
@@ -702,6 +705,181 @@ def relocation_flag(title: str, place: str, text: str) -> bool:
     if _positive(_RELOCATION, sample):
         return True
     return bool(_HN_VISA.search(title or ""))
+
+
+# ---- Azerbaijan market geo gate --------------------------------------------
+# Ingress Job is an Azerbaijan-first board. True worldwide remote is welcome;
+# "remote, but only in Canada / US / UK / …" is not.
+
+_FOREIGN_GEO = (
+    r"united\s+states|u\.?s\.?a\.?\b|\bu\.?s\.?\b|canada|united\s+kingdom|\buk\b|"
+    r"england|scotland|wales|ireland|\beu\b|european\s+union|\beurope\b|"
+    r"germany|france|netherlands|spain|italy|portugal|poland|sweden|norway|"
+    r"denmark|finland|switzerland|austria|belgium|australia|new\s+zealand|"
+    r"japan|korea|singapore|india|brazil|mexico|argentina|chile|"
+    r"israel|tel\s*aviv|dubai|uae|united\s+arab\s+emirates|saudi|riyadh|"
+    r"latam|latin\s+america|apac|north\s+america|south\s+america|"
+    r"california|texas|florida|ontario|british\s+columbia|quebec|"
+    r"london|toronto|vancouver|montreal|berlin|munich|münchen|hamburg|"
+    r"amsterdam|dublin|paris|stockholm|oslo|copenhagen|sydney|melbourne|"
+    r"tokyo|bangalore|bengaluru|são\s+paulo|sao\s+paulo|mexico\s+city|"
+    r"deutschland"
+)
+
+# Bare "worldwide" in company blurbs ("orgs worldwide") must NOT open the gate.
+_OPEN_MARKET = re.compile(
+    r"work from anywhere|anywhere in the world|from anywhere|"
+    r"location[\s-]?independent|no location restrict|"
+    r"remote\s*(?:\(|-|–|:)\s*(?:worldwide|world[\s-]?wide|global|anywhere)|"
+    r"(?:hiring|candidates?|applicants?|role|position|job)\s+"
+    r"[^\n.]{0,40}(?:worldwide|world[\s-]?wide|global(?:ly)?)\b|"
+    r"(?:worldwide|world[\s-]?wide|global)\s+"
+    r"(?:remote|candidates?|applicants?|hiring)\b|"
+    r"azerbaijan|azərbaycan|azerbaycan|\bbaku\b|\bbakı\b|"
+    r"\beméa\b|\bemea\b|\bcis\b|caucasus|central\s+asia",
+    re.IGNORECASE,
+)
+
+_REMOTE_FOREIGN_PAIR = re.compile(
+    rf"(?i)(?:\bremote\b.{{0,48}}(?:{_FOREIGN_GEO}|\bCA\b)|"
+    rf"(?:{_FOREIGN_GEO}|\bCA\b).{{0,48}}\bremote\b)"
+)
+
+_FOREIGN_GEO_RE = re.compile(rf"(?i)\b(?:{_FOREIGN_GEO})\b")
+
+_RESIDENCY_LOCK = re.compile(
+    rf"(?i)(?:"
+    rf"(?:must|should|need to|required to|only)\s+(?:be\s+)?"
+    rf"(?:located|based|living|reside|residing)\s+in\b|"
+    rf"(?:only|exclusively)\s+(?:open|available|hiring)\s+(?:to|in|for)\b|"
+    rf"(?:candidates?|applicants?)\s+must\s+(?:be|have|live)\b|"
+    rf"(?:right|authorization|authorisation|eligibility|eligible)\s+to\s+work\s+in\b|"
+    rf"remote\s+(?:within|across|from|in)\s+(?:the\s+)?(?:{_FOREIGN_GEO})\b|"
+    rf"\b(?:us|usa|uk|canada|eu|europe)[\s-]+only\b|"
+    rf"\bonly\s+(?:in\s+)?(?:the\s+)?(?:{_FOREIGN_GEO})\b"
+    rf")"
+)
+
+# US-only remote often says "US based" / clearance without "must be located in".
+_US_MARKET_LOCK = re.compile(
+    r"(?i)(?:"
+    r"\bus[\s-]?based\b|"
+    r"\bu\.?s\.?a?\.?\s*based\b|"
+    r"locations?\s*\(\s*us\s+based\s*\)|"
+    r"(?:candidates?|applicants?|consider(?:ed|ing)?)\s+[^\n.]{0,60}\bus\s+based\b|"
+    r"(?:right|authorized|authorised|eligible)\s+to\s+work\s+in\s+the\s+u\.?s|"
+    r"u\.?s\.?\s+gov(?:ernment)?\s+(?:secret\s+)?clearance|"
+    r"(?:active|current)\s+(?:or\s+current\s+)?u\.?s\.?\s+gov|"
+    r"(?:secret|top[\s-]?secret)\s+clearance|"
+    r"must\s+have\s+[^\n.]{0,40}clearance"
+    r")"
+)
+
+# "Remote (Germany-wide)" / country-scoped remote without worldwide wording.
+_COUNTRY_REMOTE_LOCK = re.compile(
+    rf"(?i)(?:"
+    rf"germany[\s-]?wide|deutschlandweit|"
+    rf"(?:uk|u\.?s\.?a?|us|canada|france|germany|deutschland|netherlands|"
+    rf"spain|italy|poland|sweden|norway|denmark|finland|switzerland|"
+    rf"austria|belgium|ireland|australia|india|japan)[\s-]?wide|"
+    rf"(?:work\s+)?remote(?:ly)?\s*"
+    rf"(?:\(|-|–|:|,)?\s*(?:only\s+)?(?:in\s+|within\s+)?"
+    rf"(?:the\s+)?(?:{_FOREIGN_GEO})\b|"
+    rf"remote(?:ly)?\s+within\s+(?:the\s+)?(?:{_FOREIGN_GEO})\b|"
+    rf"offices?\s+in\s+[^\n.]{{0,80}}(?:hamburg|berlin|münchen|munich|"
+    rf"london|paris|amsterdam|dublin|toronto|tokyo|tel\s*aviv)"
+    rf")"
+)
+
+_PLACE_NOISE = re.compile(
+    r"(?i)\b(?:remote|hybrid|onsite|on[\s-]?site|wfh|distributed|telecommute|"
+    r"full[\s-]?time|part[\s-]?time|contract)\b"
+)
+
+
+def _sample_head(title: str, place: str, text: str) -> str:
+    return f"{title}\n{place}\n{(text or '')[:8000]}"
+
+
+def _place_foreign_remote_lock(place: str) -> bool:
+    """True when the location field pins remote work to a foreign geo."""
+    raw = (place or "").strip()
+    if not raw:
+        return False
+    if _OPEN_MARKET.search(raw):
+        return False
+    if _REMOTE_FOREIGN_PAIR.search(raw):
+        return True
+    stripped = _PLACE_NOISE.sub(" ", raw)
+    stripped = re.sub(r"[\s,;|/–\-:()]+", " ", stripped).strip()
+    if not stripped:
+        return False
+    return bool(_FOREIGN_GEO_RE.search(stripped))
+
+
+def foreign_locked_remote(title: str, place: str, text: str) -> bool:
+    """Remote role restricted to a foreign country/region (not AZ-reachable)."""
+    head = f"{title} | {place}"
+    # Place/title open wins; body "orgs worldwide" must not unlock a CA/US place.
+    if _OPEN_MARKET.search(place or "") or _OPEN_MARKET.search(title or ""):
+        return False
+    if _place_foreign_remote_lock(place):
+        return True
+    if _REMOTE_FOREIGN_PAIR.search(head):
+        return True
+
+    sample = _sample_head(title, place, text)
+    if _US_MARKET_LOCK.search(sample):
+        return True
+    if _COUNTRY_REMOTE_LOCK.search(sample):
+        return True
+    if _positive(_RESIDENCY_LOCK, sample) and _FOREIGN_GEO_RE.search(sample):
+        return True
+    if _OPEN_MARKET.search(sample):
+        return False
+    return False
+
+
+def foreign_office_without_offer(title: str, place: str, text: str) -> bool:
+    """Onsite/hybrid abroad with no remote or relocation/visa keywords.
+
+    These must not reach AI (and must not be kept): e.g. Tel Aviv + #LI-Hybrid.
+    """
+    if relocation_flag(title, place, text):
+        return False
+    if remote_flag(title, place, text):
+        return False
+    head = f"{title}\n{place}"
+    sample = f"{head}\n{(text or '')[:4000]}"
+    hybrid = bool(_HYBRID.search(head) or re.search(r"(?i)#\s*LI\s*-?\s*Hybrid\b", sample))
+    foreign_place = bool(_FOREIGN_GEO_RE.search(place or ""))
+    if foreign_place and (hybrid or not re.search(r"(?i)\bremote\b", place or "")):
+        return True
+    if hybrid and foreign_place:
+        return True
+    return False
+
+
+def az_market_relevant(
+    title: str,
+    place: str,
+    text: str,
+    *,
+    remote: bool,
+    relocation: bool,
+) -> bool:
+    """Keep ads useful for Azerbaijan candidates.
+
+    Relocation (move abroad) stays. Unrestricted / worldwide / EMEA remote
+    stays. Remote locked to Canada, US, UK, EU-only, etc. is dropped.
+    """
+    if relocation:
+        return True
+    if foreign_office_without_offer(title, place, text):
+        return False
+    if remote and foreign_locked_remote(title, place, text):
+        return False
+    return True
 
 
 def enrich(item: dict, *, remote_default: bool = False, relocation_default: bool = False) -> dict:

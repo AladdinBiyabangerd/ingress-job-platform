@@ -58,6 +58,8 @@ def _rank(rows: list[dict], stamp_key: str = "_stamp") -> list[dict]:
 
 class AtsConnector(FeedConnector):
     boards: tuple[str, ...] = ()
+    # Employer boards mix onsite and remote; keep only remote / relocation.
+    require_remote_or_relocation = True
     # Employer boards change slowly: read each group at most every 3 hours,
     # look at no more than 40 new candidates, and rotate large groups so one
     # pass reads at most ATS_MAX_BOARDS boards.

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { ingressUrl } from "../lib/ingress";
-import { clearMeCache } from "../lib/me-client";
+import { clearMeCache, fetchMe } from "../lib/me-client";
 import { recommendationsEnabled, roadmapEnabled } from "../lib/product-features";
 import { navTabs } from "../lib/roles";
 import { useMediaQuery } from "../lib/use-media-query";
@@ -227,6 +227,115 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
   );
 }
 
+function BoardAuthActions({ locale, returnTo, me, onMe }) {
+  const t = text(locale);
+  const back = returnTo || hrefFor(locale);
+  // Signed-in: full account menu. Guest: mockup Sign in / Create account (no RegisterChoice chrome).
+  if (me?.authenticated) {
+    return <AccountBar locale={locale} returnTo={returnTo} onMe={onMe} />;
+  }
+  return (
+    <div className="board-auth">
+      <a className="btn board-auth-signin" href={loginHref({ intent: "job_candidate", returnTo: back })}>
+        {t.signIn}
+      </a>
+      <a className="btn primary board-auth-create" href={loginHref({ intent: "job_candidate", returnTo: back })}>
+        {t.createAccount}
+      </a>
+    </div>
+  );
+}
+
+const BOARD_SHELL_MODES = new Set(["browse", "saved", "applications", "profile"]);
+
+function BoardBottomNav({ locale, mode }) {
+  const t = text(locale);
+  return (
+    <nav className="board-bottom-nav" aria-label={t.menuLabel}>
+      <a
+        href={hrefFor(locale)}
+        className={mode === "browse" ? "on" : ""}
+        aria-current={mode === "browse" ? "page" : undefined}
+      >
+        <BoardNavIconJobs />
+        <span>{t.navJobs}</span>
+      </a>
+      <a
+        href={hrefFor(locale, { mode: "saved" })}
+        className={mode === "saved" ? "on" : ""}
+        aria-current={mode === "saved" ? "page" : undefined}
+      >
+        <BoardNavIconSaved />
+        <span>{t.navSavedShort}</span>
+      </a>
+      <a
+        href={hrefFor(locale, { mode: "applications" })}
+        className={mode === "applications" ? "on" : ""}
+        aria-current={mode === "applications" ? "page" : undefined}
+      >
+        <BoardNavIconApplied />
+        <span>{t.navAppliedShort}</span>
+      </a>
+      <a href={ingressUrl(locale)} rel="noopener noreferrer" target="_blank">
+        <BoardNavIconAcademy />
+        <span>{t.navAcademy}</span>
+      </a>
+      <a
+        href={hrefFor(locale, { mode: "profile" })}
+        className={mode === "profile" ? "on" : ""}
+        aria-current={mode === "profile" ? "page" : undefined}
+      >
+        <BoardNavIconMe />
+        <span>{t.navMe}</span>
+      </a>
+    </nav>
+  );
+}
+
+function BoardNavIconJobs() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" />
+    </svg>
+  );
+}
+
+function BoardNavIconSaved() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M7 3.5h10a1 1 0 011 1V21l-6-3.5L6 21V4.5a1 1 0 011-1z" />
+    </svg>
+  );
+}
+
+function BoardNavIconApplied() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M8 4h8a2 2 0 012 2v14l-6-3-6 3V6a2 2 0 012-2z" />
+      <path d="M9 10h6M9 14h4" />
+    </svg>
+  );
+}
+
+function BoardNavIconAcademy() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M12 3l9 5-9 5-9-5 9-5z" />
+      <path d="M5 10v5c0 1.5 3 3 7 3s7-1.5 7-3v-5" />
+    </svg>
+  );
+}
+
+function BoardNavIconMe() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 19.5c1.5-3 4-4.5 7-4.5s5.5 1.5 7 4.5" />
+    </svg>
+  );
+}
+
 export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
   const t = text(locale);
   const initialMe = useInitialMe();
@@ -238,6 +347,7 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
   const returnTo = hrefFor(locale, { mode, jobId, companySlug, skillId });
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const openCmd = useCallback(() => setCmdOpen(true), []);
+  const isBoard = BOARD_SHELL_MODES.has(mode);
 
   useCommandPaletteHotkey(openCmd);
 
@@ -249,6 +359,25 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
     if (!compact) setMenuOpen(false);
   }, [compact]);
 
+  useEffect(() => {
+    if (!isBoard) return undefined;
+    if (initialMe != null) {
+      setMe(initialMe);
+      return undefined;
+    }
+    let cancelled = false;
+    fetchMe()
+      .then((data) => {
+        if (!cancelled) setMe(data);
+      })
+      .catch(() => {
+        if (!cancelled) setMe({ authenticated: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isBoard, initialMe]);
+
   const nav = navTabs(me);
 
   return (
@@ -256,32 +385,60 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
       <a className="skip-link" href="#main">
         {locale === "ru" ? "К содержанию" : locale === "en" ? "Skip to content" : "Məzmuna keç"}
       </a>
-      <header className="top">
+      <header className={`top${isBoard ? " top-board" : ""}`}>
         <div className="top-inner">
           <div className="top-left">
             <a className="brand" href={hrefFor(locale)}>
               <img className="mark" src="/ingress-mark.svg" alt="" aria-hidden="true" />
               <span className="brand-text">Ingress Job</span>
             </a>
-            <nav className="primary-nav" aria-label={t.browse}>
-              {nav.map((key) => (
+            {isBoard ? (
+              <nav className="primary-nav board-primary-nav" aria-label={t.navJobs}>
                 <a
-                  key={key}
-                  className={mode === key ? "on" : ""}
-                  href={hrefFor(locale, { mode: key })}
-                  aria-current={mode === key ? "page" : undefined}
+                  href={hrefFor(locale)}
+                  className={mode === "browse" ? "on" : ""}
+                  aria-current={mode === "browse" ? "page" : undefined}
                 >
-                  {tabLabel(t, key)}
+                  {t.navJobs}
                 </a>
-              ))}
-            </nav>
+                <a
+                  href={hrefFor(locale, { mode: "post" })}
+                  className={mode === "post" ? "on" : ""}
+                  aria-current={mode === "post" ? "page" : undefined}
+                >
+                  {t.navForEmployers}
+                </a>
+                <a href={ingressUrl(locale)} rel="noopener noreferrer" target="_blank">
+                  {t.navAcademy}
+                </a>
+              </nav>
+            ) : (
+              <nav className="primary-nav" aria-label={t.browse}>
+                {nav.map((key) => (
+                  <a
+                    key={key}
+                    className={mode === key ? "on" : ""}
+                    href={hrefFor(locale, { mode: key })}
+                    aria-current={mode === key ? "page" : undefined}
+                  >
+                    {tabLabel(t, key)}
+                  </a>
+                ))}
+              </nav>
+            )}
           </div>
           <div className="top-right">
-            <button type="button" className="cmdk-trigger" onClick={openCmd} aria-label={t.cmdKOpen}>
-              <span className="cmdk-trigger-label">{t.cmdKOpen}</span>
-              <kbd className="cmdk-trigger-kbd">{t.cmdKHint}</kbd>
-            </button>
-            <AccountBar locale={locale} returnTo={returnTo} onMe={setMe} />
+            {!isBoard ? (
+              <button type="button" className="cmdk-trigger" onClick={openCmd} aria-label={t.cmdKOpen}>
+                <span className="cmdk-trigger-label">{t.cmdKOpen}</span>
+                <kbd className="cmdk-trigger-kbd">{t.cmdKHint}</kbd>
+              </button>
+            ) : null}
+            {isBoard ? (
+              <BoardAuthActions locale={locale} returnTo={returnTo} me={me} onMe={setMe} />
+            ) : (
+              <AccountBar locale={locale} returnTo={returnTo} onMe={setMe} />
+            )}
             <LanguageSwitcher locale={locale} mode={mode} jobId={jobId} companySlug={companySlug} />
             <button
               ref={toggleRef}
@@ -301,8 +458,11 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
         ) : null}
       </header>
       <CommandPalette locale={locale} me={me} open={cmdOpen} onOpenChange={setCmdOpen} />
-      <main id="main" className="wrap">{children}</main>
-      <footer className="site-footer">
+      <main id="main" className={`wrap${isBoard ? " wrap-board" : ""}`}>
+        {children}
+      </main>
+      {isBoard && compact && !jobId ? <BoardBottomNav locale={locale} mode={mode} /> : null}
+      <footer className={`site-footer${isBoard ? " site-footer-board" : ""}`}>
         <div className="site-footer-inner">
           <p className="site-footer-eco">
             <span>{t.ecosystemLine}</span>

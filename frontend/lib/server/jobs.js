@@ -19,7 +19,7 @@ export function emptyJobsPayload() {
     total: 0,
     pages: 1,
     catalog_total: 0,
-    facets: { languages: [], categories: [], stacks: [] },
+    facets: { languages: [], categories: [], stacks: [], cities: [], remote_total: 0 },
   };
 }
 

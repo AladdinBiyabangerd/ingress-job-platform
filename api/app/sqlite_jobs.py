@@ -472,8 +472,10 @@ def _build_sql_filters(
     *,
     q: str,
     company: str,
+    city: str = "",
     remote: bool,
     relocation: bool,
+    onsite: bool = False,
     categories: list[str],
 ) -> tuple[str, list]:
     clauses: list[str] = []
@@ -487,10 +489,16 @@ def _build_sql_filters(
     if company_q:
         clauses.append("LOWER(j.company) LIKE ?")
         params.append(f"%{company_q}%")
+    city_q = city.strip().lower()
+    if city_q:
+        clauses.append("LOWER(TRIM(COALESCE(j.city, ''))) = ?")
+        params.append(city_q)
     if remote:
         clauses.append("(COALESCE(j.remote, 0) = 1 OR LOWER(COALESCE(j.job_type, '')) = 'uzaqdan')")
     if relocation:
         clauses.append("COALESCE(j.relocation, 0) = 1")
+    if onsite:
+        clauses.append("TRIM(COALESCE(j.owner_subject, '')) != ''")
     valid_cats = [c for c in categories if c in CATEGORIES]
     if valid_cats:
         placeholders = ",".join("?" * len(valid_cats))
@@ -636,7 +644,40 @@ def _build_facets(conn) -> dict:
         [{"name": name, "total": total} for name, total in stack_counts.items()],
         key=lambda item: (-item["total"], item["name"]),
     )
-    return {"languages": languages, "categories": categories, "stacks": stacks}
+
+    city_counts: Counter[str] = Counter()
+    for row in conn.execute(
+        f"""
+        SELECT TRIM(COALESCE(j.city, '')) AS city, COUNT(*) AS total
+        {_PUBLISHED_WHERE}
+          AND TRIM(COALESCE(j.city, '')) != ''
+        GROUP BY 1
+        """
+    ).fetchall():
+        name = (row["city"] or "").strip()
+        if name:
+            city_counts[name] += int(row["total"] or 0)
+    cities = sorted(
+        [{"name": name, "total": total} for name, total in city_counts.items()],
+        key=lambda item: (-item["total"], item["name"].lower()),
+    )
+
+    remote_row = conn.execute(
+        f"""
+        SELECT COUNT(*) AS total
+        {_PUBLISHED_WHERE}
+          AND (COALESCE(j.remote, 0) = 1 OR LOWER(COALESCE(j.job_type, '')) = 'uzaqdan')
+        """
+    ).fetchone()
+    remote_total = int((remote_row["total"] if remote_row else 0) or 0)
+
+    return {
+        "languages": languages,
+        "categories": categories,
+        "stacks": stacks,
+        "cities": cities,
+        "remote_total": remote_total,
+    }
 
 
 def _cache_db_key() -> str:
@@ -724,8 +765,10 @@ def query_jobs(
     per_page: int = DEFAULT_PER_PAGE,
     q: str = "",
     company: str = "",
+    city: str = "",
     remote: bool = False,
     relocation: bool = False,
+    onsite: bool = False,
     when: str = "any",
     sort: str = "newest",
     languages: list[str] | str | None = None,
@@ -755,8 +798,10 @@ def query_jobs(
     where, params = _build_sql_filters(
         q=q,
         company=company,
+        city=city,
         remote=remote,
         relocation=relocation,
+        onsite=onsite,
         categories=cat_filter,
     )
     order = _order_sql(sort)

@@ -4,8 +4,10 @@ export function jobsListParams({
   perPage = 20,
   q = "",
   company = "",
+  city = "",
   remote = false,
   relocation = false,
+  onsite = false,
   when = "any",
   sort = "newest",
   languages = [],
@@ -21,8 +23,11 @@ export function jobsListParams({
   if (query) params.set("q", query);
   const companyQ = String(company || "").trim();
   if (companyQ) params.set("company", companyQ);
+  const cityQ = String(city || "").trim();
+  if (cityQ) params.set("city", cityQ);
   if (remote) params.set("remote", "true");
   if (relocation) params.set("relocation", "true");
+  if (onsite) params.set("onsite", "true");
   if (when && when !== "any") params.set("when", when);
   if (sort && sort !== "newest") params.set("sort", sort);
   for (const code of languages || []) {

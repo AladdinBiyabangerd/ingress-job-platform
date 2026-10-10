@@ -8,6 +8,7 @@ const FLOWS = [
   ["gateway", "adminAiGateway"],
   ["cv_fallback", "adminAiCv"],
   ["job_tidy", "adminAiTidy"],
+  ["market_fit", "adminAiMarketFit"],
   ["embeddings", "adminAiEmbeddings"],
   ["rerank", "adminAiRerank"],
   ["llm_rerank", "adminAiLlmRerank"],

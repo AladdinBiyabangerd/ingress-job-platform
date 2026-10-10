@@ -1,8 +1,9 @@
 """Staff-controlled AI flow flags in the shared jobs DB.
 
 Env still hard-offs a feature when set to 0/false/off. A DB row then wins.
-With no row: gateway / job_tidy / engagement_copy default on when any AI provider
-key is set (Gemini/Groq/NVIDIA/OpenRouter/OpenAI); other flows follow gateway.
+With no row: gateway / job_tidy / engagement_copy / market_fit default on when any
+AI provider key is set (Gemini/Groq/NVIDIA/OpenRouter/OpenAI); other flows follow
+gateway. Chat calls use free providers first, OpenAI last.
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ FEATURES = (
     "gateway",
     "cv_fallback",
     "job_tidy",
+    "market_fit",
     "embeddings",
     "rerank",
     "llm_rerank",
@@ -34,6 +36,7 @@ FEATURES = (
 FEATURE_ENV = {
     "gateway": "AI_GATEWAY_ENABLED",
     "cv_fallback": "CV_AI_FALLBACK_ENABLED",
+    "market_fit": "AI_MARKET_FIT_ENABLED",
     "rerank": "AI_RERANK_ENABLED",
     "llm_rerank": "AI_LLM_RERANK_ENABLED",
     "match_why": "AI_MATCH_WHY_ENABLED",
@@ -181,7 +184,7 @@ def feature_on(feature: str, conn=None) -> bool:
     if env is True:
         return True
     # Notification engagement copy defaults on with the key (same as gateway).
-    if feature in {"gateway", "job_tidy", "engagement_copy"}:
+    if feature in {"gateway", "job_tidy", "engagement_copy", "market_fit"}:
         return key_configured()
     return feature_on("gateway", conn)
 

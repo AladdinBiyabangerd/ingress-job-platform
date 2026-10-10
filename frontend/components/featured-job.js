@@ -29,14 +29,13 @@ function featuredTags(locale, t, job) {
   return tags.slice(0, 4);
 }
 
-/** Brand-panel featured role — no stock photo. */
+/** Elevated lead listing above the Home catalogue. */
 export function FeaturedJob({ locale, job, matchScore = null }) {
   const t = text(locale);
   if (!job) return null;
 
   const company = job.company || t.noCompany;
   const place = job.remote ? t.placeRemote : job.city || t.noCity;
-  const type = jobTypeLabel(t, job.job_type);
   const when = calendarDate(job.created_at, locale);
   const applications = applicationsLabel(t, job, { short: true });
   const tags = featuredTags(locale, t, job);
@@ -48,39 +47,49 @@ export function FeaturedJob({ locale, job, matchScore = null }) {
 
   return (
     <section className="featured-job" aria-labelledby="featured-job-title">
-      <div className="featured-job-panel" aria-hidden="true">
-        <span className="featured-job-glyph">{companyInitial(company)}</span>
-      </div>
       <div className="featured-job-body">
         <p className="featured-job-badge">
+          <span className="featured-job-mark" aria-hidden="true">
+            {companyInitial(company)}
+          </span>
           {t.featuredRole}
           {score !== null ? <span className="featured-job-score">{score}%</span> : null}
         </p>
         <h2 id="featured-job-title" className="featured-job-title">
           <a href={jobHref}>{job.title}</a>
         </h2>
-        <p className="featured-job-meta">
-          <span className="featured-job-avatar" aria-hidden="true">
-            {companyInitial(company)}
-          </span>
-          {job.company_slug ? (
-            <a href={hrefFor(locale, { companySlug: job.company_slug })}>{company}</a>
-          ) : (
-            <span>{company}</span>
-          )}
-          <span className="featured-job-dot" aria-hidden="true">
-            ·
-          </span>
-          <span>{place}</span>
-          {type ? (
-            <>
-              <span className="featured-job-dot" aria-hidden="true">
-                ·
-              </span>
-              <span>{type}</span>
-            </>
+
+        <dl className="featured-job-glance">
+          <div className="featured-job-glance-row">
+            <dt>{t.companies}</dt>
+            <dd>
+              {job.company_slug ? (
+                <a href={hrefFor(locale, { companySlug: job.company_slug })}>{company}</a>
+              ) : (
+                company
+              )}
+            </dd>
+          </div>
+          <div className="featured-job-glance-row">
+            <dt>{t.factLocation}</dt>
+            <dd>{place}</dd>
+          </div>
+          {when ? (
+            <div className="featured-job-glance-row">
+              <dt>{t.factPosted}</dt>
+              <dd>
+                <time dateTime={job.created_at}>{when}</time>
+              </dd>
+            </div>
           ) : null}
-        </p>
+          {applications ? (
+            <div className="featured-job-glance-row">
+              <dt>{t.applicationsTitle}</dt>
+              <dd>{applications}</dd>
+            </div>
+          ) : null}
+        </dl>
+
         {tags.length ? (
           <ul className="featured-job-tags">
             {tags.map((tag) => (
@@ -88,8 +97,9 @@ export function FeaturedJob({ locale, job, matchScore = null }) {
             ))}
           </ul>
         ) : null}
+
         <div className="featured-job-actions">
-          <a className="btn featured-job-apply" href={jobHref}>
+          <a className="btn primary featured-job-apply" href={jobHref}>
             {t.apply}
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
               <path d="M3.5 8h9M8.5 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -102,14 +112,6 @@ export function FeaturedJob({ locale, job, matchScore = null }) {
             className="save-job-btn-featured"
           />
         </div>
-        <p className="featured-job-foot">
-          {when ? (
-            <span>
-              {t.factPosted}: <time dateTime={job.created_at}>{when}</time>
-            </span>
-          ) : null}
-          {applications ? <span>{applications}</span> : null}
-        </p>
       </div>
     </section>
   );

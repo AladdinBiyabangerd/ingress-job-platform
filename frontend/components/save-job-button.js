@@ -40,7 +40,7 @@ async function ensureIds() {
   return set;
 }
 
-export function SaveJobButton({ locale, jobId, returnTo, className = "" }) {
+export function SaveJobButton({ locale, jobId, returnTo, className = "", icon = "star", showLabel = false }) {
   const t = text(locale);
   const initialMe = useInitialMe();
   const [me, setMe] = useState(() => {
@@ -49,6 +49,7 @@ export function SaveJobButton({ locale, jobId, returnTo, className = "" }) {
   });
   const [saved, setSaved] = useState(() => (idsCache ? idsCache.has(Number(jobId)) : false));
   const [busy, setBusy] = useState(false);
+  const bookmark = icon === "bookmark";
 
   useEffect(() => {
     if (initialMe && typeof initialMe === "object") {
@@ -114,25 +115,40 @@ export function SaveJobButton({ locale, jobId, returnTo, className = "" }) {
     }
   }
 
+  const label = saved ? t.unsaveJob : t.jdSave || t.saveJob;
+
   return (
     <button
       type="button"
-      className={`save-job-btn${saved ? " on" : ""}${className ? ` ${className}` : ""}`}
+      className={`save-job-btn${bookmark ? " save-job-btn-bookmark" : ""}${saved ? " on" : ""}${showLabel ? " save-job-btn-labeled" : ""}${className ? ` ${className}` : ""}`}
       aria-pressed={saved}
       aria-label={saved ? t.unsaveJob : t.saveJob}
       title={saved ? t.unsaveJob : t.saveJob}
       disabled={busy}
       onClick={toggle}
     >
-      <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-        <path
-          d="M8 2.6 9.7 6l3.7.3-2.8 2.5.9 3.6L8 10.7 4.5 12.4l.9-3.6L2.6 6.3 6.3 6 8 2.6z"
-          fill={saved ? "currentColor" : "none"}
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinejoin="round"
-        />
-      </svg>
+      {bookmark ? (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+          <path
+            d="M7 3.5h10a1 1 0 011 1V21l-6-3.5L6 21V4.5a1 1 0 011-1z"
+            fill={saved ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ) : (
+        <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+          <path
+            d="M8 2.6 9.7 6l3.7.3-2.8 2.5.9 3.6L8 10.7 4.5 12.4l.9-3.6L2.6 6.3 6.3 6 8 2.6z"
+            fill={saved ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+      {showLabel ? <span className="save-job-btn-text">{label}</span> : null}
     </button>
   );
 }

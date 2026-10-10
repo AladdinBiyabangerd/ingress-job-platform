@@ -48,7 +48,19 @@ from worker.connectors.wellfound import WellfoundConnector
 from worker.connectors.weworkremotely import WeWorkRemotelyConnector
 from worker.cv_queue import drain_parse_cv_queue
 from worker.db import Store
-from worker.techstack import enrich, is_tech_job
+from worker.market_fit import (
+    clarify_market_fit,
+    has_clear_market_signal,
+    is_rejected,
+    mark_rejected,
+)
+from worker.market_purge import purge_off_market
+from worker.techstack import (
+    az_market_relevant,
+    enrich,
+    foreign_office_without_offer,
+    is_tech_job,
+)
 from worker.tidy import tidy_pending
 from worker.http import Disallowed, NotFound, PoliteClient, SourceBlocked, SourceFailed
 
@@ -130,9 +142,14 @@ def _main(argv: list[str]) -> int:
         return _probe(argv[2:])
     if len(argv) >= 2 and argv[1] == "parse-cv":
         return _parse_cv_only()
-    if len(argv) > 2 or (len(argv) == 2 and argv[1] not in {"list", "schedule", "parse-cv"}):
+    if len(argv) >= 2 and argv[1] == "purge-market":
+        return _purge_market_only()
+    if len(argv) > 2 or (
+        len(argv) == 2 and argv[1] not in {"list", "schedule", "parse-cv", "purge-market"}
+    ):
         print(
-            'usage: python -m worker [list|schedule|parse-cv|probe ["Source name" ...]]',
+            'usage: python -m worker '
+            '[list|schedule|parse-cv|purge-market|probe ["Source name" ...]]',
             flush=True,
         )
         return 2
@@ -144,6 +161,21 @@ def _main(argv: list[str]) -> int:
             _print_jobs(store)
             return 0
         return _run(store)
+    finally:
+        store.close()
+
+
+def _purge_market_only() -> int:
+    """Hide off-market scraped ads already in the DB (keyword rules, no AI)."""
+    store = Store()
+    try:
+        stats = purge_off_market(store.conn)
+        print(
+            "purge-market: "
+            + " ".join(f"{k}={v}" for k, v in stats.items()),
+            flush=True,
+        )
+        return 0
     finally:
         store.close()
 
@@ -226,6 +258,16 @@ def _run(store: Store) -> int:
 
 def _run_pass(store: Store) -> int:
     print("not connectors: " + NOT_CONNECTORS, flush=True)
+    try:
+        stats = purge_off_market(store.conn)
+        if stats.get("hidden"):
+            print(
+                "market_purge: "
+                + " ".join(f"{k}={v}" for k, v in stats.items()),
+                flush=True,
+            )
+    except Exception:
+        capture_exception()
     # CV parse first — do not leave uploads waiting behind a long crawl.
     try:
         _drain_cvs(store)
@@ -368,20 +410,79 @@ def _too_soon(store: Store, connector, source_id: int) -> bool:
 
 
 def finish_item(connector, item: dict | None) -> dict | None:
-    """Tech roles only (the source category decides first). Adds tech_stack,
-    job_category, remote and relocation."""
+    """Tech roles only. Adds tech_stack / remote / relocation. Keeps AZ-market
+    remote or relocation; unclear ads go through AI; rejects are remembered."""
     if not item:
         return None
     if not is_tech_job(str(item.get("title") or ""), item.get("category"), item.get("tags")):
         return None
-    enrich(
-        item,
-        remote_default=bool(getattr(connector, "remote_default", False)),
-        relocation_default=bool(getattr(connector, "relocation_default", False)),
+
+    title = str(item.get("title") or "")
+    place = str(item.get("city") or "")
+    text = str(item.get("text") or "")
+    company = str(item.get("company") or "")
+    url = str(item.get("source_url") or "").strip()
+    conn = getattr(getattr(connector, "store", None), "conn", None)
+
+    if url and is_rejected(conn, url):
+        return None
+
+    pre_remote = item.get("remote")
+    pre_relocation = item.get("relocation")
+    remote_default = bool(getattr(connector, "remote_default", False))
+    relocation_default = bool(getattr(connector, "relocation_default", False))
+    clear = has_clear_market_signal(
+        title,
+        place,
+        text,
+        pre_remote=pre_remote if isinstance(pre_remote, bool) else None,
+        pre_relocation=pre_relocation if isinstance(pre_relocation, bool) else None,
+        remote_default=remote_default,
+        relocation_default=relocation_default,
     )
+
+    enrich(item, remote_default=remote_default, relocation_default=relocation_default)
+
+    # Tel Aviv / hybrid office etc.: drop before AI (no remote/reloc keywords).
+    if foreign_office_without_offer(title, place, text):
+        if url:
+            mark_rejected(conn, url, "foreign_office", via_ai=False)
+        return None
+
+    if not clear:
+        verdict = clarify_market_fit(
+            title=title, company=company, place=place, text=text, conn=conn
+        )
+        if not verdict or not verdict.get("suitable"):
+            if url and verdict is not None and not verdict.get("suitable"):
+                mark_rejected(
+                    conn,
+                    url,
+                    str(verdict.get("reason") or "unsuitable"),
+                    via_ai=True,
+                )
+            return None
+        item["remote"] = bool(verdict.get("remote"))
+        item["relocation"] = bool(verdict.get("relocation"))
+
     if getattr(connector, "require_remote_or_relocation", False):
         if not (item.get("remote") or item.get("relocation")):
             return None
+
+    if not az_market_relevant(
+        title,
+        place,
+        text,
+        remote=bool(item.get("remote")),
+        relocation=bool(item.get("relocation")),
+    ):
+        if url:
+            mark_rejected(conn, url, "foreign_locked_remote", via_ai=False)
+        return None
+
+    if not (item.get("remote") or item.get("relocation")):
+        return None
+
     credit = getattr(connector, "credit_note", "")
     if credit and not item.get("credit_note"):
         item["credit_note"] = credit
@@ -400,6 +501,8 @@ def _run_source(store: Store, client: PoliteClient, connector, source_id: int) -
         for url in urls:
             if created >= CAP:
                 break
+            if is_rejected(store.conn, url):
+                continue
             try:
                 raw = connector.fetch(url)
                 item = finish_item(connector, connector.normalize(raw, url))

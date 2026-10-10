@@ -1,23 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CATEGORY_ORDER, categoryLabel, languageLabel, text } from "../lib/copy";
+import { CATEGORY_ORDER, categoryLabel, hrefFor, languageLabel, text } from "../lib/copy";
 import { jobsListParams } from "../lib/jobs-params";
+import { ingressUrl } from "../lib/ingress";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
-import { fetchMe } from "../lib/me-client";
-import { recommendationsEnabled } from "../lib/product-features";
 import { useMediaQuery } from "../lib/use-media-query";
-import { FeaturedJob } from "./featured-job";
-import { JobRow } from "./job-row";
-import { MatchAside } from "./match-aside";
-import { useInitialMe } from "./me-seed";
+import { JobBoardCard } from "./job-board-card";
 import { Shell } from "./shell";
-import { TrendAside } from "./trend-aside";
 
 const PAGE_SIZE = 20;
 const TEXT_DEBOUNCE_MS = 300;
-const EMPTY_FACETS = { languages: [], categories: [], stacks: [] };
-const QUICK_CATEGORY_LIMIT = 4;
+const EMPTY_FACETS = { languages: [], categories: [], stacks: [], cities: [], remote_total: 0 };
+/** Matches `--dur-exit` in globals.css (~70% of `--dur-base`). */
+const DRAWER_EXIT_MS = 154;
+const DRAWER_EXIT_REDUCED_MS = 90;
 
 function FilterIcon() {
   return (
@@ -41,34 +38,362 @@ function FilterIcon() {
   );
 }
 
-function GroupLabel({ children }) {
-  return <span className="filter-label">{children}</span>;
+function SearchIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.5-3.5" />
+    </svg>
+  );
 }
 
-function matchToJob(match, listItem) {
-  if (!match) return null;
-  const id = Number(match.job_id);
-  if (!Number.isFinite(id) || id <= 0) return null;
-  const base = listItem && Number(listItem.id) === id ? listItem : {};
-  return {
-    id,
-    title: match.title || base.title || "",
-    company: match.company || base.company || "",
-    company_slug: base.company_slug || "",
-    city: match.city || base.city || "",
-    remote: Boolean(match.remote ?? base.remote),
-    relocation: Boolean(match.relocation ?? base.relocation),
-    tech_stack: Array.isArray(base.tech_stack) ? base.tech_stack : [],
-    category: match.category || base.category || "",
-    language: match.language || base.language || "",
-    salary: match.salary || base.salary || "",
-    job_type: base.job_type || "",
-    source_name: base.source_name || "",
-    created_at: match.created_at || base.created_at || "",
-    onsite: base.onsite,
-    applications: base.applications,
-    has_original: base.has_original,
-  };
+function LocationIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </svg>
+  );
+}
+
+function LanguageIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18" />
+    </svg>
+  );
+}
+
+function CategoryIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+}
+
+function ResetIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M3 12a9 9 0 109-9" />
+      <path d="M3 4v5h5" />
+    </svg>
+  );
+}
+
+function SideNavIconBrowse() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" />
+    </svg>
+  );
+}
+
+function SideNavIconSaved() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M7 3.5h10a1 1 0 011 1V21l-6-3.5L6 21V4.5a1 1 0 011-1z" />
+    </svg>
+  );
+}
+
+function SideNavIconApplied() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M8 4h8a2 2 0 012 2v14l-6-3-6 3V6a2 2 0 012-2z" />
+      <path d="M9 10h6M9 14h4" />
+    </svg>
+  );
+}
+
+function SideNavIconPost() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+function SideNavIconMe() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 19.5c1.5-3 4-4.5 7-4.5s5.5 1.5 7 4.5" />
+    </svg>
+  );
+}
+
+function SideNavIconAcademy() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M12 3l9 5-9 5-9-5 9-5z" />
+      <path d="M5 10v5c0 1.5 3 3 7 3s7-1.5 7-3v-5" />
+    </svg>
+  );
+}
+
+function AcademyPromo({ locale, t }) {
+  return (
+    <a
+      className="home-board-hero-copy home-board-hero-copy--promo"
+      href={ingressUrl(locale)}
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      <p className="home-board-eyebrow">{t.academyPromoEyebrow}</p>
+      <p className="home-board-brand">{t.academyPromoTitle}</p>
+      <p className="home-board-title">{t.academyPromoBody}</p>
+      <p className="home-board-lede home-board-lede--cta">{t.academyPromoCta}</p>
+    </a>
+  );
+}
+
+function JobsSideNav({ locale, t }) {
+  return (
+    <aside className="home-board-nav" aria-label={t.browse}>
+      <nav className="home-board-nav-list">
+        <a href={hrefFor(locale)} className="on" aria-current="page">
+          <SideNavIconBrowse />
+          <span>{t.navBrowseJobs}</span>
+        </a>
+        <a href={hrefFor(locale, { mode: "saved" })}>
+          <SideNavIconSaved />
+          <span>{t.navSavedJobs}</span>
+        </a>
+        <a href={hrefFor(locale, { mode: "applications" })}>
+          <SideNavIconApplied />
+          <span>{t.navAppliedJobs}</span>
+        </a>
+        <a href={hrefFor(locale, { mode: "profile" })}>
+          <SideNavIconMe />
+          <span>{t.navMe}</span>
+        </a>
+      </nav>
+      <div className="home-board-nav-employer">
+        <a href={hrefFor(locale, { mode: "post" })}>
+          <SideNavIconPost />
+          <span>{t.navPostRole}</span>
+        </a>
+      </div>
+      <a
+        className="home-board-nav-academy"
+        href={ingressUrl(locale)}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <span className="home-board-nav-academy-icon" aria-hidden="true">
+          <SideNavIconAcademy />
+        </span>
+        <span className="home-board-nav-academy-text">
+          <strong>{t.sideAcademyTitle}</strong>
+          <span>{t.sideAcademyBody}</span>
+          <span className="home-board-nav-academy-cta">{t.sideAcademyCta}</span>
+        </span>
+      </a>
+    </aside>
+  );
+}
+
+function FilterPanelBody({
+  t,
+  locale,
+  cityOptions,
+  remoteTotal,
+  languageOptions,
+  categoryOptions,
+  techOptions,
+  techQuery,
+  setTechQuery,
+  city,
+  setCity,
+  languages,
+  setLanguages,
+  remote,
+  setRemote,
+  relocation,
+  setRelocation,
+  categories,
+  setCategories,
+  stacks,
+  setStacks,
+  salaryMin,
+  setSalaryMin,
+  salaryMax,
+  setSalaryMax,
+  company,
+  setCompany,
+  when,
+  setWhen,
+  toggle,
+  clear,
+}) {
+  return (
+    <>
+      <fieldset className="home-board-filter-group">
+        <legend>{t.locationFilter}</legend>
+        <div className="home-board-checks">
+          {cityOptions.map(({ name, total: count }) => (
+            <label key={name} className="home-board-check">
+              <input
+                type="checkbox"
+                checked={city.toLowerCase() === String(name).toLowerCase()}
+                onChange={() =>
+                  setCity(city.toLowerCase() === String(name).toLowerCase() ? "" : name)
+                }
+              />
+              <span className="home-board-check-label">{name}</span>
+              <span className="home-board-check-count">{count}</span>
+            </label>
+          ))}
+          <label className="home-board-check">
+            <input type="checkbox" checked={remote} onChange={(e) => setRemote(e.target.checked)} />
+            <span className="home-board-check-label">{t.placeRemote}</span>
+            {remoteTotal ? <span className="home-board-check-count">{remoteTotal}</span> : null}
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset className="home-board-filter-group">
+        <legend>{t.language}</legend>
+        <div className="home-board-checks">
+          {languageOptions.map((code) => (
+            <label key={code} className="home-board-check">
+              <input
+                type="checkbox"
+                checked={languages.includes(code)}
+                onChange={() => toggle(languages, setLanguages, code)}
+              />
+              <span className="home-board-check-label">{languageLabel(locale, code)}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset className="home-board-filter-group">
+        <legend>{t.jobTypeFilter}</legend>
+        <div className="home-board-checks">
+          <label className="home-board-check">
+            <input type="checkbox" checked={remote} onChange={(e) => setRemote(e.target.checked)} />
+            <span className="home-board-check-label">{t.remoteFilter}</span>
+          </label>
+          <label className="home-board-check">
+            <input
+              type="checkbox"
+              checked={relocation}
+              onChange={(e) => setRelocation(e.target.checked)}
+            />
+            <span className="home-board-check-label">{t.relocationFilter}</span>
+          </label>
+        </div>
+      </fieldset>
+
+      {categoryOptions.length ? (
+        <fieldset className="home-board-filter-group">
+          <legend>{t.categoryFilter}</legend>
+          <div className="home-board-checks home-board-checks-scroll">
+            {categoryOptions.map(({ name, total: count }) => (
+              <label key={name} className="home-board-check">
+                <input
+                  type="checkbox"
+                  checked={categories.includes(name)}
+                  onChange={() => toggle(categories, setCategories, name)}
+                />
+                <span className="home-board-check-label">{categoryLabel(locale, name)}</span>
+                <span className="home-board-check-count">{count}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
+
+      <div className="home-board-filter-group">
+        <p className="home-board-filter-legend">{t.techStack}</p>
+        <input
+          type="search"
+          className="home-board-filter-search"
+          value={techQuery}
+          placeholder={t.techPlaceholder}
+          onChange={(e) => setTechQuery(e.target.value)}
+        />
+        {techOptions.length ? (
+          <div className="home-board-checks home-board-checks-scroll">
+            {techOptions.map(({ name, total: count }) => (
+              <label key={name} className="home-board-check">
+                <input
+                  type="checkbox"
+                  checked={stacks.includes(name)}
+                  onChange={() => toggle(stacks, setStacks, name)}
+                />
+                <span className="home-board-check-label">{name}</span>
+                <span className="home-board-check-count">{count}</span>
+              </label>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="home-board-filter-group">
+        <p className="home-board-filter-legend">{t.salaryMonthlyAz}</p>
+        <div className="home-board-salary">
+          <label>
+            <span>{t.salaryFrom}</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              step="1"
+              value={salaryMin}
+              placeholder={t.salaryFrom}
+              onChange={(e) => setSalaryMin(e.target.value)}
+            />
+          </label>
+          <label>
+            <span>{t.salaryTo}</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              step="1"
+              value={salaryMax}
+              placeholder={t.salaryTo}
+              onChange={(e) => setSalaryMax(e.target.value)}
+            />
+          </label>
+        </div>
+        <p className="home-board-salary-note">{t.salaryNote}</p>
+      </div>
+
+      <div className="home-board-filter-group home-board-filter-more">
+        <label className="stack">
+          <span className="home-board-filter-legend">{t.companies}</span>
+          <input
+            type="search"
+            value={company}
+            placeholder={t.companyPlaceholder}
+            onChange={(e) => setCompany(e.target.value)}
+          />
+        </label>
+        <label className="stack">
+          <span className="home-board-filter-legend">{t.when}</span>
+          <select value={when} onChange={(e) => setWhen(e.target.value)}>
+            <option value="any">{t.anyTime}</option>
+            <option value="today">{t.today}</option>
+            <option value="week">{t.week}</option>
+          </select>
+        </label>
+      </div>
+
+      <button type="button" className="home-board-reset" onClick={clear}>
+        <ResetIcon />
+        {t.resetFilters}
+      </button>
+    </>
+  );
 }
 
 export function Home({
@@ -80,19 +405,20 @@ export function Home({
   error = false,
 }) {
   const t = text(locale);
-  const initialMe = useInitialMe();
-  const [me, setMe] = useState(() => {
-    if (initialMe && typeof initialMe === "object") return initialMe;
-    return undefined;
-  });
   const [q, setQ] = useState(() => {
     if (typeof window === "undefined") return "";
     return new URLSearchParams(window.location.search).get("q") || "";
   });
+  const [draftQ, setDraftQ] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("q") || "";
+  });
   const [company, setCompany] = useState("");
+  const [city, setCity] = useState("");
   const [languages, setLanguages] = useState([]);
   const [remote, setRemote] = useState(false);
   const [relocation, setRelocation] = useState(false);
+  const [onsite, setOnsite] = useState(false);
   const [stacks, setStacks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [techQuery, setTechQuery] = useState("");
@@ -107,67 +433,55 @@ export function Home({
   const [facetData, setFacetData] = useState(facets?.languages ? facets : EMPTY_FACETS);
   const [loadError, setLoadError] = useState(Boolean(error));
   const [loading, setLoading] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [matches, setMatches] = useState([]);
-  const compact = useMediaQuery("(max-width: 767px)");
+  const [filtersMounted, setFiltersMounted] = useState(false);
+  const compact = useMediaQuery("(max-width: 959px)");
   const panelRef = useRef(null);
   const toggleRef = useRef(null);
   const closeRef = useRef(null);
   const resultsRef = useRef(null);
+  const drawerExitRef = useRef(null);
   const skipFirstFetch = useRef(true);
-  const prevTextKey = useRef(`${q}|${company}|${salaryMin}|${salaryMax}`);
+  const prevTextKey = useRef(`${q}|${company}|${city}|${salaryMin}|${salaryMax}`);
   const prevFilterKey = useRef("");
 
-  useEffect(() => {
-    if (initialMe && typeof initialMe === "object") {
-      setMe(initialMe);
-      return undefined;
+  function openFilters() {
+    if (drawerExitRef.current) {
+      clearTimeout(drawerExitRef.current);
+      drawerExitRef.current = null;
     }
-    let cancelled = false;
-    fetchMe()
-      .then((data) => {
-        if (!cancelled) setMe(data);
-      })
-      .catch(() => {
-        if (!cancelled) setMe({ authenticated: false });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [initialMe]);
+    setFiltersMounted(true);
+    setFiltersOpen(true);
+  }
 
-  useEffect(() => {
-    if (!me?.authenticated || !recommendationsEnabled()) {
-      setMatches([]);
-      return undefined;
-    }
-    const controller = new AbortController();
-    const lang = encodeURIComponent(locale || "az");
-    fetch(`/api/auth/me/matches?lang=${lang}&limit=10`, {
-      credentials: "same-origin",
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
-      .then(({ ok, data }) => {
-        if (!ok) return;
-        setMatches(Array.isArray(data.matches) ? data.matches : []);
-      })
-      .catch((err) => {
-        if (err?.name === "AbortError") return;
-        setMatches([]);
-      });
-    return () => controller.abort();
-  }, [me?.authenticated, locale]);
+  function closeFilters() {
+    setFiltersOpen(false);
+    if (drawerExitRef.current) clearTimeout(drawerExitRef.current);
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    drawerExitRef.current = setTimeout(() => {
+      setFiltersMounted(false);
+      drawerExitRef.current = null;
+    }, reduce ? DRAWER_EXIT_REDUCED_MS : DRAWER_EXIT_MS);
+  }
+
+  function retryLoad() {
+    setLoadError(false);
+    setReloadToken((n) => n + 1);
+  }
 
   const filterKey = useMemo(
     () =>
       JSON.stringify({
         q,
         company,
+        city,
         languages,
         remote,
         relocation,
+        onsite,
         stacks,
         categories,
         when,
@@ -175,8 +489,39 @@ export function Home({
         salaryMin,
         salaryMax,
       }),
-    [q, company, languages, remote, relocation, stacks, categories, when, sort, salaryMin, salaryMax],
+    [q, company, city, languages, remote, relocation, onsite, stacks, categories, when, sort, salaryMin, salaryMax],
   );
+
+  const boardTab = useMemo(() => {
+    if (onsite && !remote && !relocation) return "company";
+    if (remote && !relocation && !onsite) return "remote";
+    if (relocation && !remote && !onsite) return "relocation";
+    return "all";
+  }, [remote, relocation, onsite]);
+
+  function setBoardTab(next) {
+    if (next === "remote") {
+      setRemote(true);
+      setRelocation(false);
+      setOnsite(false);
+      return;
+    }
+    if (next === "relocation") {
+      setRemote(false);
+      setRelocation(true);
+      setOnsite(false);
+      return;
+    }
+    if (next === "company") {
+      setRemote(false);
+      setRelocation(false);
+      setOnsite(true);
+      return;
+    }
+    setRemote(false);
+    setRelocation(false);
+    setOnsite(false);
+  }
 
   const languageOptions = useMemo(
     () => (Array.isArray(facetData.languages) ? facetData.languages : []).map((item) => item.code).filter(Boolean),
@@ -190,38 +535,16 @@ export function Home({
     };
     return [...list].sort((a, b) => rank(a.name) - rank(b.name));
   }, [facetData]);
-  const quickCategories = useMemo(() => {
-    const list = Array.isArray(facetData.categories) ? [...facetData.categories] : [];
-    list.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));
-    return list.slice(0, QUICK_CATEGORY_LIMIT);
+  const cityOptions = useMemo(() => {
+    const list = Array.isArray(facetData.cities) ? facetData.cities : [];
+    return list.slice(0, 12);
   }, [facetData]);
+  const remoteTotal = Number(facetData.remote_total) || 0;
   const techOptions = useMemo(() => {
     const list = Array.isArray(facetData.stacks) ? facetData.stacks : [];
     const query = techQuery.trim().toLowerCase();
     return list.filter((item) => !query || String(item.name || "").toLowerCase().includes(query));
   }, [facetData, techQuery]);
-
-  const matchById = useMemo(() => {
-    const map = new Map();
-    for (const row of matches) {
-      const id = Number(row.job_id);
-      if (Number.isFinite(id) && typeof row.score === "number") map.set(id, row);
-    }
-    return map;
-  }, [matches]);
-
-  const featured = useMemo(() => {
-    if (me?.authenticated && matches.length) {
-      const top = matches[0];
-      const listHit = items.find((job) => Number(job.id) === Number(top.job_id));
-      const job = matchToJob(top, listHit);
-      if (job?.title) {
-        return { job, score: typeof top.score === "number" ? top.score : null };
-      }
-    }
-    if (items[0]) return { job: items[0], score: matchById.get(Number(items[0].id))?.score ?? null };
-    return null;
-  }, [me?.authenticated, matches, items, matchById]);
 
   function toggle(list, setList, value) {
     setList(list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
@@ -231,8 +554,8 @@ export function Home({
     if (skipFirstFetch.current) {
       skipFirstFetch.current = false;
       prevFilterKey.current = filterKey;
-      prevTextKey.current = `${q}|${company}|${salaryMin}|${salaryMax}`;
-      if (!error && jobs.length > 0 && !q) return undefined;
+      prevTextKey.current = `${q}|${company}|${city}|${salaryMin}|${salaryMax}`;
+      if (!error && jobs.length > 0 && !q && !city && reloadToken === 0) return undefined;
     }
     if (prevFilterKey.current !== filterKey) {
       prevFilterKey.current = filterKey;
@@ -241,11 +564,9 @@ export function Home({
         return undefined;
       }
     }
-    const textKey = `${q}|${company}|${salaryMin}|${salaryMax}`;
-    const textActive = Boolean(q.trim() || company.trim() || salaryMin.trim() || salaryMax.trim());
-    // Debounce while typing; fetch immediately when text filters clear so empty UI does not stick.
-    const debounceMs =
-      textKey !== prevTextKey.current && textActive ? TEXT_DEBOUNCE_MS : 0;
+    const textKey = `${q}|${company}|${city}|${salaryMin}|${salaryMax}`;
+    const textActive = Boolean(q.trim() || company.trim() || city.trim() || salaryMin.trim() || salaryMax.trim());
+    const debounceMs = textKey !== prevTextKey.current && textActive ? TEXT_DEBOUNCE_MS : 0;
     prevTextKey.current = textKey;
     const controller = new AbortController();
     const timer = setTimeout(() => {
@@ -254,8 +575,10 @@ export function Home({
         perPage: PAGE_SIZE,
         q,
         company,
+        city,
         remote,
         relocation,
+        onsite,
         when,
         sort,
         languages,
@@ -295,24 +618,36 @@ export function Home({
     filterKey,
     q,
     company,
+    city,
     languages,
     remote,
     relocation,
+    onsite,
     stacks,
     categories,
     when,
     sort,
     salaryMin,
     salaryMax,
+    reloadToken,
   ]);
+
+  useEffect(() => {
+    return () => {
+      if (drawerExitRef.current) clearTimeout(drawerExitRef.current);
+    };
+  }, []);
 
   function clear() {
     setLoading(true);
     setQ("");
+    setDraftQ("");
     setCompany("");
+    setCity("");
     setLanguages([]);
     setRemote(false);
     setRelocation(false);
+    setOnsite(false);
     setStacks([]);
     setCategories([]);
     setTechQuery("");
@@ -328,28 +663,86 @@ export function Home({
     }
   }
 
-  const activeFilters =
-    languages.length +
-    categories.length +
-    stacks.length +
-    (remote ? 1 : 0) +
-    (relocation ? 1 : 0) +
-    (q.trim() ? 1 : 0) +
-    (company.trim() ? 1 : 0) +
-    (when !== "any" ? 1 : 0) +
-    (salaryMin.trim() || salaryMax.trim() ? 1 : 0);
+  const activeChips = useMemo(() => {
+    const chips = [];
+    if (q.trim()) chips.push({ key: "q", label: q.trim(), onRemove: () => { setQ(""); setDraftQ(""); } });
+    if (city.trim()) chips.push({ key: "city", label: city, onRemove: () => setCity("") });
+    if (remote) chips.push({ key: "remote", label: t.placeRemote, onRemove: () => setRemote(false) });
+    if (relocation) chips.push({ key: "relocation", label: t.relocationFilter, onRemove: () => setRelocation(false) });
+    if (onsite) chips.push({ key: "onsite", label: t.tabCompanyPosted, onRemove: () => setOnsite(false) });
+    for (const code of languages) {
+      chips.push({
+        key: `lang-${code}`,
+        label: languageLabel(locale, code),
+        onRemove: () => setLanguages((prev) => prev.filter((c) => c !== code)),
+      });
+    }
+    for (const name of categories) {
+      chips.push({
+        key: `cat-${name}`,
+        label: categoryLabel(locale, name),
+        onRemove: () => setCategories((prev) => prev.filter((c) => c !== name)),
+      });
+    }
+    for (const name of stacks) {
+      chips.push({
+        key: `stack-${name}`,
+        label: name,
+        onRemove: () => setStacks((prev) => prev.filter((c) => c !== name)),
+      });
+    }
+    if (company.trim()) chips.push({ key: "company", label: company.trim(), onRemove: () => setCompany("") });
+    if (when !== "any") {
+      chips.push({
+        key: "when",
+        label: when === "today" ? t.today : t.week,
+        onRemove: () => setWhen("any"),
+      });
+    }
+    if (salaryMin.trim() || salaryMax.trim()) {
+      chips.push({
+        key: "salary",
+        label: `${salaryMin || "…"}–${salaryMax || "…"}`,
+        onRemove: () => {
+          setSalaryMin("");
+          setSalaryMax("");
+        },
+      });
+    }
+    return chips;
+  }, [
+    q,
+    city,
+    remote,
+    relocation,
+    onsite,
+    languages,
+    categories,
+    stacks,
+    company,
+    when,
+    salaryMin,
+    salaryMax,
+    locale,
+    t,
+  ]);
 
+  const activeFilters = activeChips.length;
   const currentPage = Math.min(page, resultPages);
+
+  useEffect(() => {
+    if (!filtersMounted) return undefined;
+    return lockBodyScroll();
+  }, [filtersMounted]);
 
   useEffect(() => {
     if (!filtersOpen) return undefined;
     const toggleBtn = toggleRef.current;
-    const unlock = lockBodyScroll();
     closeRef.current?.focus();
     function onKey(event) {
       if (event.key === "Escape") {
         event.preventDefault();
-        setFiltersOpen(false);
+        closeFilters();
         return;
       }
       trapTab(event, panelRef.current);
@@ -357,397 +750,346 @@ export function Home({
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("keydown", onKey);
-      unlock();
       toggleBtn?.focus({ preventScroll: true });
     };
   }, [filtersOpen]);
 
-  function applyFilters() {
-    setFiltersOpen(false);
+  function submitSearch(event) {
+    event?.preventDefault?.();
+    setQ(draftQ);
     const top = resultsRef.current?.getBoundingClientRect().top;
-    if (typeof top === "number" && top < 0) {
-      window.scrollTo({ top: window.scrollY + top - 12, behavior: "smooth" });
+    if (typeof top === "number") {
+      window.scrollTo({ top: window.scrollY + top - 72, behavior: "smooth" });
     }
   }
 
   function goToPage(next) {
     const clamped = Math.max(1, Math.min(resultPages, next));
     setPage(clamped);
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    const top = resultsRef.current?.getBoundingClientRect().top;
+    if (typeof top === "number") {
+      window.scrollTo({ top: window.scrollY + top - 72, behavior: "smooth" });
     }
   }
 
-  const topMatch = matches[0];
-  const authenticated = Boolean(me?.authenticated);
+  const filterProps = {
+    t,
+    locale,
+    cityOptions,
+    remoteTotal,
+    languageOptions,
+    categoryOptions,
+    techOptions,
+    techQuery,
+    setTechQuery,
+    city,
+    setCity,
+    languages,
+    setLanguages,
+    remote,
+    setRemote: (value) => {
+      const next = typeof value === "boolean" ? value : Boolean(value);
+      setRemote(next);
+      if (next) setOnsite(false);
+    },
+    relocation,
+    setRelocation: (value) => {
+      const next = typeof value === "boolean" ? value : Boolean(value);
+      setRelocation(next);
+      if (next) setOnsite(false);
+    },
+    categories,
+    setCategories,
+    stacks,
+    setStacks,
+    salaryMin,
+    setSalaryMin,
+    salaryMax,
+    setSalaryMax,
+    company,
+    setCompany,
+    when,
+    setWhen,
+    toggle,
+    clear,
+  };
 
   return (
     <Shell locale={locale} mode="browse">
-      <div className="home home-h2">
-        {loadError ? <p className="note">{t.loadError}</p> : null}
-        <div className="home-h2-layout">
-          {featured?.job ? (
-            <FeaturedJob locale={locale} job={featured.job} matchScore={featured.score} />
-          ) : null}
+      <div className="home home-board">
+        {loadError ? (
+          <div className="note home-board-load-error" role="alert">
+            <p>{t.loadError}</p>
+            <button type="button" className="btn home-board-load-retry" onClick={retryLoad}>
+              {t.loadRetry}
+            </button>
+          </div>
+        ) : null}
 
-          <section
-            className="open-roles"
-            ref={resultsRef}
-            aria-labelledby="open-roles-title"
-            aria-busy={loading || undefined}
-          >
-            <div className="open-roles-head">
-              <h2 id="open-roles-title">{t.openRoles}</h2>
-              <p className="open-roles-count">{t.count(resultTotal)}</p>
+        <div className="home-board-shell">
+          {!compact ? <JobsSideNav locale={locale} t={t} /> : null}
+
+          <div className="home-board-main">
+            <div className="home-board-front">
+              <section className="home-board-hero-copy" aria-labelledby="home-front-title">
+                <p className="home-board-eyebrow">{t.jobBoardEyebrow}</p>
+                <p className="home-board-brand">{t.homeBrand}</p>
+                <h1 id="home-front-title" className="home-board-title">
+                  {t.homeHeadline}
+                </h1>
+                <p className="home-board-lede">{t.openRolesLede}</p>
+              </section>
+
+              <AcademyPromo locale={locale} t={t} />
+
+              <form className="home-board-search" onSubmit={submitSearch} role="search">
+                <label className="home-board-search-field home-board-search-q">
+                  <SearchIcon />
+                  <span className="visually-hidden">{t.searchKeywordPlaceholder}</span>
+                  <input
+                    type="search"
+                    value={draftQ}
+                    placeholder={t.searchKeywordPlaceholder}
+                    onChange={(e) => setDraftQ(e.target.value)}
+                  />
+                </label>
+                <label className="home-board-search-field">
+                  <LocationIcon />
+                  <span className="visually-hidden">{t.searchLocationPlaceholder}</span>
+                  <select
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    aria-label={t.searchLocationPlaceholder}
+                  >
+                    <option value="">{t.searchLocationPlaceholder}</option>
+                    {cityOptions.map(({ name }) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="home-board-search-field">
+                  <LanguageIcon />
+                  <span className="visually-hidden">{t.searchLanguagePlaceholder}</span>
+                  <select
+                    value={languages[0] || ""}
+                    onChange={(e) => setLanguages(e.target.value ? [e.target.value] : [])}
+                    aria-label={t.searchLanguagePlaceholder}
+                  >
+                    <option value="">{t.searchLanguagePlaceholder}</option>
+                    {languageOptions.map((code) => (
+                      <option key={code} value={code}>
+                        {languageLabel(locale, code)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="home-board-search-field">
+                  <CategoryIcon />
+                  <span className="visually-hidden">{t.searchCategoryPlaceholder}</span>
+                  <select
+                    value={categories[0] || ""}
+                    onChange={(e) => setCategories(e.target.value ? [e.target.value] : [])}
+                    aria-label={t.searchCategoryPlaceholder}
+                  >
+                    <option value="">{t.searchCategoryPlaceholder}</option>
+                    {categoryOptions.map(({ name }) => (
+                      <option key={name} value={name}>
+                        {categoryLabel(locale, name)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  ref={toggleRef}
+                  type="button"
+                  className="home-board-more"
+                  aria-haspopup="dialog"
+                  aria-expanded={filtersOpen}
+                  aria-controls="job-filters"
+                  onClick={openFilters}
+                >
+                  <FilterIcon />
+                  {t.moreFilters}
+                  {activeFilters ? <span className="filters-badge">{activeFilters}</span> : null}
+                </button>
+                <button type="submit" className="btn primary home-board-search-submit">
+                  {t.searchSubmit}
+                </button>
+              </form>
             </div>
 
-            <div className="filter-chips" role="toolbar" aria-label={t.filters}>
-              <div className="filter-chips-scroll">
-                <button
-                  type="button"
-                  className={categories.length === 0 ? "filter-chip is-on" : "filter-chip"}
-                  onClick={() => setCategories([])}
-                >
-                  {t.allRoles}
-                </button>
-                {quickCategories.map(({ name }) => (
+            {activeChips.length ? (
+              <div className="home-board-chips" role="list" aria-label={t.filters}>
+                {activeChips.map((chip) => (
                   <button
-                    key={name}
+                    key={chip.key}
                     type="button"
-                    className={categories.includes(name) ? "filter-chip is-on" : "filter-chip"}
-                    onClick={() => toggle(categories, setCategories, name)}
+                    className="home-board-chip"
+                    role="listitem"
+                    onClick={chip.onRemove}
                   >
-                    {categoryLabel(locale, name)}
+                    {chip.label}
+                    <span aria-hidden="true"> ×</span>
                   </button>
                 ))}
-                <button
-                  type="button"
-                  className={remote ? "filter-chip is-on" : "filter-chip"}
-                  onClick={() => setRemote((value) => !value)}
-                >
-                  {t.remoteFilter}
+                <button type="button" className="home-board-clear-all" onClick={clear}>
+                  {t.clearAll}
                 </button>
+              </div>
+            ) : null}
+
+            <div className="home-board-tabs" role="tablist" aria-label={t.categoryTabsLabel}>
+              {[
+                { id: "all", label: t.tabAll },
+                { id: "remote", label: t.tabRemote },
+                { id: "relocation", label: t.tabRelocation },
+                { id: "company", label: t.tabCompanyPosted },
+              ].map((tab) => (
                 <button
+                  key={tab.id}
                   type="button"
-                  className={relocation ? "filter-chip is-on" : "filter-chip"}
-                  onClick={() => setRelocation((value) => !value)}
+                  role="tab"
+                  aria-selected={boardTab === tab.id}
+                  className={`home-board-tab${boardTab === tab.id ? " on" : ""}`}
+                  onClick={() => setBoardTab(tab.id)}
                 >
-                  {t.relocationFilter}
+                  {tab.label}
                 </button>
-                <label className="filter-chip filter-chip-select">
-                  <span className="visually-hidden">{t.when}</span>
-                  <select value={when} onChange={(event) => setWhen(event.target.value)}>
-                    <option value="any">{t.anyTime}</option>
-                    <option value="today">{t.today}</option>
-                    <option value="week">{t.week}</option>
+              ))}
+            </div>
+
+            <section
+              className="home-board-results"
+              ref={resultsRef}
+              aria-labelledby="results-heading"
+              aria-busy={loading || undefined}
+            >
+              <div className="home-board-results-head">
+                <div className="home-board-results-titles">
+                  <p className="home-board-catalogue-kicker">{t.openRoles}</p>
+                  <h2 id="results-heading" className="home-board-results-count" key={resultTotal}>
+                    {t.resultsCount(resultTotal)}
+                  </h2>
+                </div>
+                <label className="home-board-sort">
+                  <span className="visually-hidden">{t.sort}</span>
+                  <select value={sort} onChange={(e) => setSort(e.target.value)}>
+                    <option value="newest">{t.newestFirst}</option>
+                    <option value="oldest">{t.oldest}</option>
+                    <option value="title">{t.byTitle}</option>
                   </select>
                 </label>
               </div>
-              <button
-                ref={toggleRef}
-                type="button"
-                className="filter-chip filter-chip-more"
-                aria-haspopup="dialog"
-                aria-expanded={filtersOpen}
-                aria-controls="job-filters"
-                onClick={() => setFiltersOpen(true)}
-              >
-                <FilterIcon />
-                {t.filters}
-                {activeFilters ? (
-                  <>
-                    <span className="filters-badge" aria-hidden="true">
-                      {activeFilters}
-                    </span>
-                    <span className="visually-hidden">{`, ${t.filtersActive(activeFilters)}`}</span>
-                  </>
-                ) : null}
-              </button>
-            </div>
 
-            <p className="visually-hidden" aria-live="polite" aria-atomic="true">
-              {loading ? t.listLoading : ""}
-            </p>
+              <p className="visually-hidden" aria-live="polite" aria-atomic="true">
+                {loading ? t.listLoading : ""}
+              </p>
 
-            {!loading && resultTotal === 0 && !loadError ? (
-              <div className="job-empty">
-                <p className="job-empty-copy">{t.empty}</p>
-                {activeFilters > 0 ? (
-                  <button type="button" className="btn job-empty-clear" onClick={clear}>
-                    {t.clear}
+              {!loading && resultTotal === 0 && !loadError ? (
+                <div className="job-empty">
+                  <p className="job-empty-copy">{t.empty}</p>
+                  {activeFilters > 0 ? (
+                    <button type="button" className="btn job-empty-clear" onClick={clear}>
+                      {t.clear}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {loading ? (
+                <div className="home-board-card-list is-loading">
+                  {Array.from({ length: 5 }, (_, index) => (
+                    <div key={index} className="job-board-card job-board-card-skeleton" aria-hidden="true">
+                      <div className="job-board-card-main">
+                        <span className="skeleton job-board-skel-logo" />
+                        <div className="job-board-card-body">
+                          <span className="skeleton skeleton-line short" />
+                          <span className="skeleton skeleton-line" />
+                          <span className="skeleton skeleton-line short" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="home-board-card-list">
+                  {items.map((job) => (
+                    <JobBoardCard key={job.id} locale={locale} job={job} />
+                  ))}
+                </div>
+              )}
+
+              {resultTotal > PAGE_SIZE ? (
+                <nav className="home-board-pager pager" aria-label={t.pageOf(currentPage, resultPages)}>
+                  <button
+                    type="button"
+                    className="pager-btn"
+                    disabled={currentPage <= 1 || loading}
+                    onClick={() => goToPage(currentPage - 1)}
+                  >
+                    {t.pagePrev}
                   </button>
-                ) : null}
-              </div>
-            ) : null}
+                  <span className="pager-status">{t.pageOf(currentPage, resultPages)}</span>
+                  <button
+                    type="button"
+                    className="pager-btn"
+                    disabled={currentPage >= resultPages || loading}
+                    onClick={() => goToPage(currentPage + 1)}
+                  >
+                    {t.pageNext}
+                  </button>
+                </nav>
+              ) : null}
+            </section>
+          </div>
 
-            {loading ? (
-              <div className="job-row-list is-loading" data-compact={compact ? "true" : undefined}>
-                {!compact ? (
-                  <div className="job-row-head" aria-hidden="true">
-                    <span className="job-row-save" />
-                    <span className="job-row-role">{t.jobRowRole}</span>
-                    <span className="job-row-company">{t.companies}</span>
-                    <span className="job-row-place">{t.factLocation}</span>
-                    <span className="job-row-salary">{t.salaryFilter}</span>
-                    <span className="job-row-posted">{t.factPosted}</span>
-                    <span className="job-row-match">{t.jobRowMatch}</span>
-                    <span className="job-row-open" />
-                  </div>
-                ) : null}
-                {Array.from({ length: 6 }, (_, index) => (
-                  <div key={index} className="job-row job-row-skeleton" aria-hidden="true">
-                    <span className="job-row-save">
-                      <span className="skeleton job-row-skel-save" />
-                    </span>
-                    <span className="job-row-role">
-                      <span className="skeleton skeleton-line" />
-                      <span className="skeleton skeleton-line short" />
-                    </span>
-                    <span className="job-row-company">
-                      <span className="skeleton skeleton-line" />
-                    </span>
-                    <span className="job-row-place">
-                      <span className="skeleton skeleton-line short" />
-                    </span>
-                    <span className="job-row-salary">
-                      <span className="skeleton skeleton-line short" />
-                    </span>
-                    <span className="job-row-posted">
-                      <span className="skeleton skeleton-line short" />
-                    </span>
-                    <span className="job-row-match">
-                      <span className="skeleton job-row-skel-match" />
-                    </span>
-                    <span className="job-row-open" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="job-row-list" data-compact={compact ? "true" : undefined}>
-                {!compact && items.length ? (
-                  <div className="job-row-head" aria-hidden="true">
-                    <span className="job-row-save" />
-                    <span className="job-row-role">{t.jobRowRole}</span>
-                    <span className="job-row-company">{t.companies}</span>
-                    <span className="job-row-place">{t.factLocation}</span>
-                    <span className="job-row-salary">{t.salaryFilter}</span>
-                    <span className="job-row-posted">{t.factPosted}</span>
-                    <span className="job-row-match">{t.jobRowMatch}</span>
-                    <span className="job-row-open" />
-                  </div>
-                ) : null}
-                {items.map((job, index) => (
-                  <JobRow
-                    key={job.id}
-                    locale={locale}
-                    job={job}
-                    matchScore={matchById.get(Number(job.id))?.score ?? null}
-                    active={index === 0}
-                  />
-                ))}
-              </div>
-            )}
-
-            {resultTotal > PAGE_SIZE ? (
-              <nav className="pager" aria-label={t.pageOf(currentPage, resultPages)}>
-                <button
-                  type="button"
-                  className="pager-btn"
-                  disabled={currentPage <= 1 || loading}
-                  onClick={() => goToPage(currentPage - 1)}
-                >
-                  {t.pagePrev}
-                </button>
-                <span className="pager-status">{t.pageOf(currentPage, resultPages)}</span>
-                <button
-                  type="button"
-                  className="pager-btn"
-                  disabled={currentPage >= resultPages || loading}
-                  onClick={() => goToPage(currentPage + 1)}
-                >
-                  {t.pageNext}
-                </button>
-              </nav>
-            ) : null}
-          </section>
-
-          <aside className="home-h2-side">
-            <TrendAside locale={locale} />
-            {recommendationsEnabled() ? (
-              <MatchAside
-                locale={locale}
-                authenticated={authenticated}
-                topScore={typeof topMatch?.score === "number" ? topMatch.score : null}
-                jobTitle={topMatch?.title || ""}
-              />
-            ) : null}
-          </aside>
+          {!compact ? (
+            <aside className="home-board-sidebar" aria-label={t.filters}>
+              <FilterPanelBody {...filterProps} />
+            </aside>
+          ) : null}
         </div>
 
-        {filtersOpen ? (
+        {filtersMounted ? (
           <>
-            <div className="filter-backdrop" aria-hidden="true" onClick={() => setFiltersOpen(false)} />
+            <div
+              className={`filter-backdrop ${filtersOpen ? "is-open" : "is-closing"}`}
+              aria-hidden="true"
+              onClick={closeFilters}
+            />
             <aside
               ref={panelRef}
               id="job-filters"
-              className="filter-panel is-open h2-filter-drawer"
+              className={`home-board-drawer ${filtersOpen ? "is-open" : "is-closing"}`}
               role="dialog"
               aria-modal="true"
               aria-labelledby="job-filters-title"
             >
-              <div className="filter-head">
+              <div className="home-board-drawer-head">
                 <h2 id="job-filters-title">{t.filters}</h2>
                 <button
                   ref={closeRef}
                   type="button"
                   className="filter-close"
                   aria-label={t.filtersClose}
-                  onClick={() => setFiltersOpen(false)}
+                  onClick={closeFilters}
                 >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                     <path d="M6 6l12 12M18 6L6 18" />
                   </svg>
                 </button>
               </div>
-              <label className="stack">
-                <GroupLabel>{t.sort}</GroupLabel>
-                <select value={sort} onChange={(event) => setSort(event.target.value)}>
-                  <option value="newest">{t.newest}</option>
-                  <option value="oldest">{t.oldest}</option>
-                  <option value="title">{t.byTitle}</option>
-                </select>
-              </label>
-              <label className="stack">
-                <GroupLabel>{t.when}</GroupLabel>
-                <select value={when} onChange={(event) => setWhen(event.target.value)}>
-                  <option value="any">{t.anyTime}</option>
-                  <option value="today">{t.today}</option>
-                  <option value="week">{t.week}</option>
-                </select>
-              </label>
-              <fieldset className="filter-group">
-                <legend className="filter-label">{t.language}</legend>
-                <div className="checks scroll-set">
-                  {languageOptions.map((code) => (
-                    <label key={code} className="check">
-                      <input
-                        type="checkbox"
-                        checked={languages.includes(code)}
-                        onChange={() => toggle(languages, setLanguages, code)}
-                      />
-                      <span>{languageLabel(locale, code)}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              <div className="filter-group">
-                <label className="stack">
-                  <GroupLabel>{t.companies}</GroupLabel>
-                  <input
-                    type="search"
-                    value={company}
-                    placeholder={t.companyPlaceholder}
-                    onChange={(event) => setCompany(event.target.value)}
-                  />
-                </label>
+              <div className="home-board-drawer-body">
+                <FilterPanelBody {...filterProps} />
               </div>
-              <label className="check">
-                <input type="checkbox" checked={remote} onChange={(event) => setRemote(event.target.checked)} />
-                <GroupLabel>{t.remoteFilter}</GroupLabel>
-              </label>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={relocation}
-                  onChange={(event) => setRelocation(event.target.checked)}
-                />
-                <GroupLabel>{t.relocationFilter}</GroupLabel>
-              </label>
-              {categoryOptions.length ? (
-                <fieldset className="filter-group">
-                  <legend className="filter-label">{t.categoryFilter}</legend>
-                  <div className="checks scroll-set">
-                    {categoryOptions.map(({ name, total: count }) => (
-                      <label key={name} className="check">
-                        <input
-                          type="checkbox"
-                          checked={categories.includes(name)}
-                          onChange={() => toggle(categories, setCategories, name)}
-                        />
-                        <span>
-                          {categoryLabel(locale, name)} <span className="check-count">{count}</span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-              ) : null}
-              <div className="filter-group">
-                <label className="stack">
-                  <GroupLabel>{t.techStack}</GroupLabel>
-                  <input
-                    type="search"
-                    value={techQuery}
-                    placeholder={t.techPlaceholder}
-                    onChange={(event) => setTechQuery(event.target.value)}
-                  />
-                </label>
-                {techOptions.length ? (
-                  <div className="checks scroll-set">
-                    {techOptions.map(({ name, total: count }) => (
-                      <label key={name} className="check">
-                        <input
-                          type="checkbox"
-                          checked={stacks.includes(name)}
-                          onChange={() => toggle(stacks, setStacks, name)}
-                        />
-                        <span>
-                          {name} <span className="check-count">{count}</span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-              <div className="filter-group">
-                <GroupLabel>{t.salaryFilter}</GroupLabel>
-                <div className="salary-bounds">
-                  <label>
-                    <span>{t.salaryMin}</span>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min="0"
-                      step="1"
-                      value={salaryMin}
-                      placeholder={t.salaryMin}
-                      onChange={(event) => setSalaryMin(event.target.value)}
-                    />
-                  </label>
-                  <label>
-                    <span>{t.salaryMax}</span>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min="0"
-                      step="1"
-                      value={salaryMax}
-                      placeholder={t.salaryMax}
-                      onChange={(event) => setSalaryMax(event.target.value)}
-                    />
-                  </label>
-                </div>
-                <p className="salary-note">{t.salaryNote}</p>
-              </div>
-              <div className="filter-actions">
+              <div className="home-board-drawer-actions">
                 <button type="button" className="btn" onClick={clear}>
                   {t.filtersClear}
                 </button>
-                <button type="button" className="btn primary" onClick={applyFilters}>
-                  <span className="filter-actions-label">
-                    {t.filtersApply}
-                    <span className="filter-actions-count">({t.count(resultTotal)})</span>
-                  </span>
+                <button type="button" className="btn primary" onClick={closeFilters}>
+                  {t.filtersApply}
                 </button>
               </div>
             </aside>
