@@ -6,6 +6,8 @@ import re
 
 import phonenumbers
 
+from worker.cv_parse.sections import _heading_name
+
 _EMAIL = re.compile(r"(?i)\b[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}\b")
 _LINKEDIN = re.compile(
     r"(?i)(?:https?://)?(?:www\.)?linkedin\.com/in/[a-z0-9\-_%]+/?"
@@ -183,6 +185,15 @@ def _guess_name(text: str, email: str) -> str:
         )[0].strip()
         if head and head != line and _NAME_LINE.match(head):
             return head[:120]
+        if len(line) < 40 and _heading_name(line):
+            continue  # a section heading is never the name
+        line = re.sub(r"(?<=[a-zü])(?:RESUME|CV)$", "", line).strip()
+        if re.search(r"\s[·•|]\s", line):
+            # "Jan Küster · Consultant · Bremen · mail" header strip: first segment is the name.
+            first = re.split(r"\s[·•|]\s", line)[0].strip()
+            if 3 <= len(first) <= 40 and 1 <= len(first.split()) <= 4 and not re.search(r"[\d@]", first):
+                if _NAME_LINE.match(first) or " " in first:
+                    return first
         if email and email.lower() in line.lower():
             continue
         if _EMAIL.search(line) or _PHONE_CANDIDATE.fullmatch(line):
