@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
-import { buildAuthorizeQuery, buildJobAccountLoginUrl } from "../../../../lib/oidc-authorize";
+import { buildAuthorizeQuery, buildLoginRedirectUrl } from "../../../../lib/oidc-authorize";
 import {
   beginLoginCookies,
   hasSessionCookies,
@@ -65,13 +65,14 @@ export async function GET(request) {
     alreadySignedIn,
   });
 
-  // Prefer Academy job-account (SSO / account screen) over raw authorize.
-  const loginUrl = buildJobAccountLoginUrl({
+  // Live Job session + role intent → authorize (existing_account). Guests → job-account.
+  const loginUrl = buildLoginRedirectUrl({
     jobAccountUrl: config.jobAccountUrl,
     authorizeUrl: config.authorizeUrl,
     authorizeParams: params,
     intent,
     returnToAbsolute,
+    alreadySignedIn,
   });
   const redirect = NextResponse.redirect(loginUrl, 302);
   // After logout, keep job_guest until callback succeeds.

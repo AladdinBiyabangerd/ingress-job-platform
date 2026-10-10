@@ -4,6 +4,7 @@ import {
   JOB_OIDC_SCOPE,
   buildAuthorizeQuery,
   buildJobAccountLoginUrl,
+  buildLoginRedirectUrl,
 } from "./oidc-authorize.js";
 
 function params(extra = {}) {
@@ -65,5 +66,43 @@ describe("buildJobAccountLoginUrl", () => {
     assert.equal(next.includes("https://ingress.academy"), false);
     assert.match(next, /registration_intent=job_candidate/);
     assert.match(next, /client_id=job-web/);
+  });
+});
+
+describe("buildLoginRedirectUrl", () => {
+  const authorizeUrl = "https://ingress.academy/portal/oauth/authorize";
+  const jobAccountUrl = "https://ingress.academy/portal/job-account/";
+
+  it("sends a live Job account straight to authorize when adding a role", () => {
+    const authorizeParams = params({
+      intent: "job_employer",
+      alreadySignedIn: true,
+      returnToAbsolute: "https://job.example/company",
+    });
+    const href = buildLoginRedirectUrl({
+      jobAccountUrl,
+      authorizeUrl,
+      authorizeParams,
+      intent: "job_employer",
+      returnToAbsolute: "https://job.example/company",
+      alreadySignedIn: true,
+    });
+    const url = new URL(href);
+    assert.equal(url.pathname, "/portal/oauth/authorize");
+    assert.equal(url.searchParams.get("registration_intent"), "job_employer");
+    assert.equal(url.searchParams.get("existing_account"), "1");
+    assert.equal(url.searchParams.get("prompt"), null);
+  });
+
+  it("keeps guests on job-account choice", () => {
+    const authorizeParams = params({ intent: "job_employer" });
+    const href = buildLoginRedirectUrl({
+      jobAccountUrl,
+      authorizeUrl,
+      authorizeParams,
+      intent: "job_employer",
+      alreadySignedIn: false,
+    });
+    assert.equal(new URL(href).pathname, "/portal/job-account/");
   });
 });

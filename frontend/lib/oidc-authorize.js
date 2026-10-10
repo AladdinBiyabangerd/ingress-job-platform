@@ -45,6 +45,43 @@ export function authorizeNextPath(authorizeUrl, authorizeParams) {
   return `${path}?${authorizeParams.toString()}`;
 }
 
+/** Absolute Academy /portal/oauth/authorize URL with PKCE query. */
+export function buildAuthorizeUrl(authorizeUrl, authorizeParams) {
+  const url = new URL(authorizeUrl);
+  for (const [key, value] of authorizeParams.entries()) {
+    url.searchParams.set(key, value);
+  }
+  return url.toString();
+}
+
+/**
+ * Academy entry for Job login / role upgrade.
+ *
+ * - Already signed into Job and adding a role: go straight to authorize with
+ *   `existing_account=1` so Academy grants the group on the live portal session
+ *   (or sends them to sign-in — not the create-account choice).
+ * - Guests: job-account choice (sign in vs create), then authorize.
+ */
+export function buildLoginRedirectUrl({
+  jobAccountUrl,
+  authorizeUrl,
+  authorizeParams,
+  intent = "",
+  returnToAbsolute = "",
+  alreadySignedIn = false,
+}) {
+  if (alreadySignedIn && intent) {
+    return buildAuthorizeUrl(authorizeUrl, authorizeParams);
+  }
+  return buildJobAccountLoginUrl({
+    jobAccountUrl,
+    authorizeUrl,
+    authorizeParams,
+    intent,
+    returnToAbsolute,
+  });
+}
+
 /**
  * Academy job-account entry: if portal session exists, show signed-in account
  * and continue into Job; otherwise the normal login/register screen.

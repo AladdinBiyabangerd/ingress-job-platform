@@ -1,24 +1,28 @@
 # Current task
 
 ## Completed
-- Rules-first CV parse (prior commit `c8defa8`)
-- Root cause of remaining stall: `done` was uncommitted until AI/embed finished
-- Mid-drain `_commit()` after rules `done` so `/profile` poll sees it
-- Export `any_provider_key` from worker/api `ai_gateway` (fixes tidy ImportError)
+- Candidate → employer upgrade CTAs → `/company`
+- Signed-in role upgrade goes straight to Academy authorize (`existing_account=1`), not job-account
+- Copy: same account adds employer; denied text no longer says the role was revoked
 
 ## Current state
-- Local tests green (`tests.test_cv_queue`)
-- Needs commit + Railway redeploy (API installs worker from git SHA)
+- Production still shows the old gate: candidate body + “Şirkət hesabı aktivləşdirilə bilmədi…”
+- That screen is `employer_denied=1`: OAuth finished, token has no `job:employer`
+- This person was candidate-only (applied to ads) and now wants to post. Namizəd rolu qalmalıdır; `JOB_EMPLOYER` üstünə əlavə olunur, sonra şirkət forması
+- Academy already does that on authorize unless `JobRoleStaffBlock` exists for `JOB_EMPLOYER`
 
 ## Decisions
-- Commit before optional AI/embed so UI unblocks immediately
+- Already-signed-in role upgrades skip job-account; guests still use it
+- Roles still only come from Academy groups / token scopes
+- Staff revoke still blocks self-service restore
 
 ## Remaining work
-- Commit/push and redeploy API + worker
-- Re-upload CV to verify “Təhlil” clears within seconds
+- Deploy Job frontend (login redirect + copy)
+- Retry: candidate → Şirkət hesabı ilə davam et → company form
+- If still denied: Academy staff user → Job Employer toggle on (clears the block)
 
 ## Relevant files
-- `worker/worker/cv_queue.py`
-- `worker/worker/ai_gateway/__init__.py`
-- `api/app/ai_gateway/__init__.py`
-- `worker/tests/test_cv_queue.py`
+- `frontend/app/api/auth/login/route.js`
+- `frontend/lib/oidc-authorize.js`
+- `frontend/lib/copy.js`
+- Academy: `portal/job_access.py`, `portal/oidc/views.py`
