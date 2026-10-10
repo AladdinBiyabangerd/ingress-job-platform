@@ -114,7 +114,10 @@ _MONTH_TOKEN = (
 
 # Optional day before month: "16 Fev 2026", "03 İyul 2026"
 _DAY_PREFIX = r"(?:(?:0?[1-9]|[12]\d|3[01])\s+)?"
-_MONTH_YEAR = rf"(?:{_DAY_PREFIX}{_MONTH_TOKEN}[\s\./\-]+)?(?:19|20)\d{{2}}"
+_MONTH_YEAR = (
+    rf"(?:{_DAY_PREFIX}{_MONTH_TOKEN}[\s\./\-]+)?(?:19|20)\d{{2}}"
+    rf"(?:\s+(?:{_MONTH_TOKEN})(?![a-z])\.?)?"  # "2023 Mar." (year-first, Typst/Vantage)
+)
 
 _RANGE = re.compile(
     rf"(?ix)"
@@ -155,6 +158,8 @@ def parse_month(token: str, *, end: bool = False) -> date | None:
         return date(today.year, today.month, 1)
     raw = raw.replace(".", "/").replace("-", " ")
     parts = [p for p in re.split(r"[\s/]+", raw) if p]
+    if len(parts) == 2 and re.fullmatch(r"(?:19|20)\d{2}", parts[0]) and _month_num(parts[1]):
+        parts = [parts[1], parts[0]]  # "2023 mar" -> "mar 2023"
     if not parts:
         return None
     year = None
