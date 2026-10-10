@@ -19,115 +19,30 @@ const TEXT_DEBOUNCE_MS = 300;
 const EMPTY_FACETS = { languages: [], categories: [], stacks: [] };
 const QUICK_CATEGORY_LIMIT = 4;
 
-function FilterIcon({ name }) {
-  const props = {
-    className: "filter-icon",
-    width: 16,
-    height: 16,
-    viewBox: "0 0 16 16",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "1.5",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    "aria-hidden": "true",
-    focusable: "false",
-  };
-  if (name === "filter") {
-    return (
-      <svg {...props}>
-        <path d="M2.5 4.5h7M12.5 4.5h1M2.5 11.5h1M6.5 11.5h7" />
-        <circle cx="11" cy="4.5" r="1.5" />
-        <circle cx="5" cy="11.5" r="1.5" />
-      </svg>
-    );
-  }
-  if (name === "sort") {
-    return (
-      <svg {...props}>
-        <path d="M3 4h10M5 8h6M7 12h2" />
-      </svg>
-    );
-  }
-  if (name === "date") {
-    return (
-      <svg {...props}>
-        <rect x="2.5" y="3.5" width="11" height="10" rx="1.5" />
-        <path d="M2.5 6.5h11M5.5 2v2M10.5 2v2" />
-      </svg>
-    );
-  }
-  if (name === "language") {
-    return (
-      <svg {...props}>
-        <circle cx="8" cy="8" r="5.25" />
-        <path d="M2.75 8h10.5M8 2.75c1.5 1.7 2.25 3.4 2.25 5.25S9.5 11.55 8 13.25C6.5 11.55 5.75 9.85 5.75 8S6.5 4.45 8 2.75z" />
-      </svg>
-    );
-  }
-  if (name === "company") {
-    return (
-      <svg {...props}>
-        <path d="M3 13.5V3.5h5.5V13.5M8.5 6.5H13v7M5 6h1.5M5 8.5h1.5M10 9h1.5M10 11h1.5" />
-      </svg>
-    );
-  }
-  if (name === "salary") {
-    return (
-      <svg {...props}>
-        <rect x="2.5" y="4" width="11" height="8" rx="1.5" />
-        <path d="M8 6.25v3.5M6.5 7.25c.4-.55 1-.85 1.5-.85s1.1.3 1.5.85M6.5 9.75c.4.55 1 .85 1.5.85s1.1-.3 1.5-.85" />
-      </svg>
-    );
-  }
-  if (name === "relocation") {
-    return (
-      <svg {...props}>
-        <path d="M2.5 9.5 13.5 4l-2 9-3-3.25L6 11.5V8.5" />
-        <path d="M8.5 9.75 13.5 4" />
-      </svg>
-    );
-  }
-  if (name === "category") {
-    return (
-      <svg {...props}>
-        <rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1" />
-        <rect x="9" y="2.5" width="4.5" height="4.5" rx="1" />
-        <rect x="2.5" y="9" width="4.5" height="4.5" rx="1" />
-        <rect x="9" y="9" width="4.5" height="4.5" rx="1" />
-      </svg>
-    );
-  }
-  if (name === "stack") {
-    return (
-      <svg {...props}>
-        <path d="M6 4.5 2.75 8 6 11.5M10 4.5 13.25 8 10 11.5" />
-      </svg>
-    );
-  }
-  if (name === "remote") {
-    return (
-      <svg {...props}>
-        <rect x="2.25" y="3.25" width="11.5" height="7.5" rx="1.25" />
-        <path d="M6 13h4M8 10.75V13" />
-      </svg>
-    );
-  }
+function FilterIcon() {
   return (
-    <svg {...props}>
-      <path d="M8 13.5s3.75-3.3 3.75-5.8a3.75 3.75 0 0 0-7.5 0C4.25 10.2 8 13.5 8 13.5z" />
-      <path d="M6.4 7.6 7.5 8.7 9.7 6.5" />
+    <svg
+      className="filter-icon"
+      width={16}
+      height={16}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M2.5 4.5h7M12.5 4.5h1M2.5 11.5h1M6.5 11.5h7" />
+      <circle cx="11" cy="4.5" r="1.5" />
+      <circle cx="5" cy="11.5" r="1.5" />
     </svg>
   );
 }
 
-function GroupLabel({ icon, children }) {
-  return (
-    <span className="filter-label">
-      <FilterIcon name={icon} />
-      {children}
-    </span>
-  );
+function GroupLabel({ children }) {
+  return <span className="filter-label">{children}</span>;
 }
 
 function matchToJob(match, listItem) {
@@ -327,7 +242,10 @@ export function Home({
       }
     }
     const textKey = `${q}|${company}|${salaryMin}|${salaryMax}`;
-    const debounceMs = textKey !== prevTextKey.current ? TEXT_DEBOUNCE_MS : 0;
+    const textActive = Boolean(q.trim() || company.trim() || salaryMin.trim() || salaryMax.trim());
+    // Debounce while typing; fetch immediately when text filters clear so empty UI does not stick.
+    const debounceMs =
+      textKey !== prevTextKey.current && textActive ? TEXT_DEBOUNCE_MS : 0;
     prevTextKey.current = textKey;
     const controller = new AbortController();
     const timer = setTimeout(() => {
@@ -389,6 +307,7 @@ export function Home({
   ]);
 
   function clear() {
+    setLoading(true);
     setQ("");
     setCompany("");
     setLanguages([]);
@@ -471,19 +390,12 @@ export function Home({
             <FeaturedJob locale={locale} job={featured.job} matchScore={featured.score} />
           ) : null}
 
-          <aside className="home-h2-side">
-            <TrendAside locale={locale} />
-            {recommendationsEnabled() ? (
-              <MatchAside
-                locale={locale}
-                authenticated={authenticated}
-                topScore={typeof topMatch?.score === "number" ? topMatch.score : null}
-                jobTitle={topMatch?.title || ""}
-              />
-            ) : null}
-          </aside>
-
-          <section className="open-roles" ref={resultsRef} aria-labelledby="open-roles-title">
+          <section
+            className="open-roles"
+            ref={resultsRef}
+            aria-labelledby="open-roles-title"
+            aria-busy={loading || undefined}
+          >
             <div className="open-roles-head">
               <h2 id="open-roles-title">{t.openRoles}</h2>
               <p className="open-roles-count">{t.count(resultTotal)}</p>
@@ -540,7 +452,7 @@ export function Home({
                 aria-controls="job-filters"
                 onClick={() => setFiltersOpen(true)}
               >
-                <FilterIcon name="filter" />
+                <FilterIcon />
                 {t.filters}
                 {activeFilters ? (
                   <>
@@ -553,31 +465,88 @@ export function Home({
               </button>
             </div>
 
-            {resultTotal === 0 && !loadError ? <p className="job-empty">{t.empty}</p> : null}
+            <p className="visually-hidden" aria-live="polite" aria-atomic="true">
+              {loading ? t.listLoading : ""}
+            </p>
 
-            <div className="job-row-list" data-compact={compact ? "true" : undefined}>
-              {!compact && items.length ? (
-                <div className="job-row-head" aria-hidden="true">
-                  <span className="job-row-save" />
-                  <span className="job-row-role">{t.jobRowRole}</span>
-                  <span className="job-row-company">{t.companies}</span>
-                  <span className="job-row-place">{t.factLocation}</span>
-                  <span className="job-row-salary">{t.salaryFilter}</span>
-                  <span className="job-row-posted">{t.factPosted}</span>
-                  <span className="job-row-match">{t.jobRowMatch}</span>
-                  <span className="job-row-open" />
-                </div>
-              ) : null}
-              {items.map((job, index) => (
-                <JobRow
-                  key={job.id}
-                  locale={locale}
-                  job={job}
-                  matchScore={matchById.get(Number(job.id))?.score ?? null}
-                  active={index === 0}
-                />
-              ))}
-            </div>
+            {!loading && resultTotal === 0 && !loadError ? (
+              <div className="job-empty">
+                <p className="job-empty-copy">{t.empty}</p>
+                {activeFilters > 0 ? (
+                  <button type="button" className="btn job-empty-clear" onClick={clear}>
+                    {t.clear}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
+            {loading ? (
+              <div className="job-row-list is-loading" data-compact={compact ? "true" : undefined}>
+                {!compact ? (
+                  <div className="job-row-head" aria-hidden="true">
+                    <span className="job-row-save" />
+                    <span className="job-row-role">{t.jobRowRole}</span>
+                    <span className="job-row-company">{t.companies}</span>
+                    <span className="job-row-place">{t.factLocation}</span>
+                    <span className="job-row-salary">{t.salaryFilter}</span>
+                    <span className="job-row-posted">{t.factPosted}</span>
+                    <span className="job-row-match">{t.jobRowMatch}</span>
+                    <span className="job-row-open" />
+                  </div>
+                ) : null}
+                {Array.from({ length: 6 }, (_, index) => (
+                  <div key={index} className="job-row job-row-skeleton" aria-hidden="true">
+                    <span className="job-row-save">
+                      <span className="skeleton job-row-skel-save" />
+                    </span>
+                    <span className="job-row-role">
+                      <span className="skeleton skeleton-line" />
+                      <span className="skeleton skeleton-line short" />
+                    </span>
+                    <span className="job-row-company">
+                      <span className="skeleton skeleton-line" />
+                    </span>
+                    <span className="job-row-place">
+                      <span className="skeleton skeleton-line short" />
+                    </span>
+                    <span className="job-row-salary">
+                      <span className="skeleton skeleton-line short" />
+                    </span>
+                    <span className="job-row-posted">
+                      <span className="skeleton skeleton-line short" />
+                    </span>
+                    <span className="job-row-match">
+                      <span className="skeleton job-row-skel-match" />
+                    </span>
+                    <span className="job-row-open" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="job-row-list" data-compact={compact ? "true" : undefined}>
+                {!compact && items.length ? (
+                  <div className="job-row-head" aria-hidden="true">
+                    <span className="job-row-save" />
+                    <span className="job-row-role">{t.jobRowRole}</span>
+                    <span className="job-row-company">{t.companies}</span>
+                    <span className="job-row-place">{t.factLocation}</span>
+                    <span className="job-row-salary">{t.salaryFilter}</span>
+                    <span className="job-row-posted">{t.factPosted}</span>
+                    <span className="job-row-match">{t.jobRowMatch}</span>
+                    <span className="job-row-open" />
+                  </div>
+                ) : null}
+                {items.map((job, index) => (
+                  <JobRow
+                    key={job.id}
+                    locale={locale}
+                    job={job}
+                    matchScore={matchById.get(Number(job.id))?.score ?? null}
+                    active={index === 0}
+                  />
+                ))}
+              </div>
+            )}
 
             {resultTotal > PAGE_SIZE ? (
               <nav className="pager" aria-label={t.pageOf(currentPage, resultPages)}>
@@ -601,6 +570,18 @@ export function Home({
               </nav>
             ) : null}
           </section>
+
+          <aside className="home-h2-side">
+            <TrendAside locale={locale} />
+            {recommendationsEnabled() ? (
+              <MatchAside
+                locale={locale}
+                authenticated={authenticated}
+                topScore={typeof topMatch?.score === "number" ? topMatch.score : null}
+                jobTitle={topMatch?.title || ""}
+              />
+            ) : null}
+          </aside>
         </div>
 
         {filtersOpen ? (
@@ -629,7 +610,7 @@ export function Home({
                 </button>
               </div>
               <label className="stack">
-                <GroupLabel icon="sort">{t.sort}</GroupLabel>
+                <GroupLabel>{t.sort}</GroupLabel>
                 <select value={sort} onChange={(event) => setSort(event.target.value)}>
                   <option value="newest">{t.newest}</option>
                   <option value="oldest">{t.oldest}</option>
@@ -637,7 +618,7 @@ export function Home({
                 </select>
               </label>
               <label className="stack">
-                <GroupLabel icon="date">{t.when}</GroupLabel>
+                <GroupLabel>{t.when}</GroupLabel>
                 <select value={when} onChange={(event) => setWhen(event.target.value)}>
                   <option value="any">{t.anyTime}</option>
                   <option value="today">{t.today}</option>
@@ -645,10 +626,7 @@ export function Home({
                 </select>
               </label>
               <fieldset className="filter-group">
-                <legend className="filter-label">
-                  <FilterIcon name="language" />
-                  {t.language}
-                </legend>
+                <legend className="filter-label">{t.language}</legend>
                 <div className="checks scroll-set">
                   {languageOptions.map((code) => (
                     <label key={code} className="check">
@@ -664,7 +642,7 @@ export function Home({
               </fieldset>
               <div className="filter-group">
                 <label className="stack">
-                  <GroupLabel icon="company">{t.companies}</GroupLabel>
+                  <GroupLabel>{t.companies}</GroupLabel>
                   <input
                     type="search"
                     value={company}
@@ -675,7 +653,7 @@ export function Home({
               </div>
               <label className="check">
                 <input type="checkbox" checked={remote} onChange={(event) => setRemote(event.target.checked)} />
-                <GroupLabel icon="remote">{t.remoteFilter}</GroupLabel>
+                <GroupLabel>{t.remoteFilter}</GroupLabel>
               </label>
               <label className="check">
                 <input
@@ -683,14 +661,11 @@ export function Home({
                   checked={relocation}
                   onChange={(event) => setRelocation(event.target.checked)}
                 />
-                <GroupLabel icon="relocation">{t.relocationFilter}</GroupLabel>
+                <GroupLabel>{t.relocationFilter}</GroupLabel>
               </label>
               {categoryOptions.length ? (
                 <fieldset className="filter-group">
-                  <legend className="filter-label">
-                    <FilterIcon name="category" />
-                    {t.categoryFilter}
-                  </legend>
+                  <legend className="filter-label">{t.categoryFilter}</legend>
                   <div className="checks scroll-set">
                     {categoryOptions.map(({ name, total: count }) => (
                       <label key={name} className="check">
@@ -709,7 +684,7 @@ export function Home({
               ) : null}
               <div className="filter-group">
                 <label className="stack">
-                  <GroupLabel icon="stack">{t.techStack}</GroupLabel>
+                  <GroupLabel>{t.techStack}</GroupLabel>
                   <input
                     type="search"
                     value={techQuery}
@@ -735,7 +710,7 @@ export function Home({
                 ) : null}
               </div>
               <div className="filter-group">
-                <GroupLabel icon="salary">{t.salaryFilter}</GroupLabel>
+                <GroupLabel>{t.salaryFilter}</GroupLabel>
                 <div className="salary-bounds">
                   <label>
                     <span>{t.salaryMin}</span>
@@ -769,8 +744,10 @@ export function Home({
                   {t.filtersClear}
                 </button>
                 <button type="button" className="btn primary" onClick={applyFilters}>
-                  {t.filtersApply}{" "}
-                  <span className="filter-actions-count">({t.count(resultTotal)})</span>
+                  <span className="filter-actions-label">
+                    {t.filtersApply}
+                    <span className="filter-actions-count">({t.count(resultTotal)})</span>
+                  </span>
                 </button>
               </div>
             </aside>

@@ -24,3 +24,4 @@ cvs/
 .idea/
 tmp/
 *.log
+.design/

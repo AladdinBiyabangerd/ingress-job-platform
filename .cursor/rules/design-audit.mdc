@@ -1,0 +1,15 @@
+---
+description: Design audit via .cursor/skills/design — report first, fix only when asked
+alwaysApply: false
+globs: frontend/**/*.{js,jsx,css}
+---
+
+# Design audit
+
+When the user asks for a design audit, de-slop, or says UI looks generic / AI-generated / templated:
+
+1. Load [`.cursor/skills/design/SKILL.md`](.cursor/skills/design/SKILL.md) and the relevant mode under `modes/`.
+2. Prefer report-only modes first: `checkup`, `smell`, `review`. They write `.design/` and must not edit source.
+3. Run `deslop` / `relayout` / `recolor` / other treatment modes only when the user explicitly asks.
+4. Existing Ingress Job visual language and tokens in `frontend/app/globals.css` win over generic skill defaults. Marketing rewrite ≠ cabinet rewrite.
+5. After a large audit or before a fix pass: update `.cursor/context/current-task.md` and continue treatment in a **new chat** so context stays small.

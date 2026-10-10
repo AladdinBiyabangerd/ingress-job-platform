@@ -53,7 +53,7 @@ export function FeaturedJob({ locale, job, matchScore = null }) {
       </div>
       <div className="featured-job-body">
         <p className="featured-job-badge">
-          <span aria-hidden="true">★</span> {t.featuredRole}
+          {t.featuredRole}
           {score !== null ? <span className="featured-job-score">{score}%</span> : null}
         </p>
         <h2 id="featured-job-title" className="featured-job-title">
