@@ -23,7 +23,7 @@ _ROLE = re.compile(
     r"lead\b|director|scientist|researcher|analyst|designer|architect|consultant|"
     r"specialist|officer|assistant|head\b|president|administrator|devops|\bsre\b|\bqa\b|"
     r"tester|professor|lecturer|accountant|teacher|coordinator|executive|associate|"
-    r"representative|technician|supervisor|advisor|fellow|member|mentor|"
+    r"representative|technician|supervisor|advisor|fellow|member|mentor|student|"
     r"developer|mühəndis|menecer|müəllim|təcrübəçi|разработчик|инженер|менеджер|"
     r"аналитик|дизайнер|стажёр|стажер|директор|руководитель|специалист)"
 )
@@ -31,7 +31,9 @@ _LOC_TAIL_COMMA = re.compile(r"^(?P<head>.*?),\s*[A-Z][\w .'’-]+,\s*[A-Za-z]{2
 _LOC_TAIL_SEP = re.compile(
     r"\s+[|–—-]\s*[A-Z][\w .'’-]+,\s*[A-Za-z .]{2,30}$|\s*\|\s*[A-Z][\w .'’-]+$"
 )
-_LOC_ONLY = re.compile(r"^[A-Z][\w .'’-]+,\s*[A-Za-z .]{2,30}$")
+_LOC_ONLY = re.compile(
+    r"^(?:[A-Z][\w .'’-]+,\s*[A-Za-z .]{2,30}|(?:Remote|Hybrid|On-?site|Worldwide)(?:,\s*[A-Za-z .]{2,30})?)$"
+)
 _DURATION = re.compile(
     r"(?i)^\s*\d+\s*(?:years?|yrs?|months?|mos?|il|ay|год(?:а)?|лет|мес\w*)"
     r"(?:\s+\d+\s*(?:months?|mos?|ay|мес\w*))?\s*$"
@@ -65,6 +67,9 @@ def _is_anchor(line: str) -> bool:
 
 def _strip_location(text: str) -> str:
     text = text.strip(" |–—-,")
+    if text.count(",") >= 3:
+        # "Title, Company, City, Country": the last two comma parts are the place.
+        text = ",".join(text.split(",")[:-2])
     m = _LOC_TAIL_COMMA.match(text)
     if m:
         text = m.group("head")
@@ -181,6 +186,8 @@ def _normalize_leading(lines: list[str], anchors: list[int]) -> list[str]:
         rest = (lines[idx][: span[0]] + " " + lines[idx][span[1] :]) if span else ""
         rest = clean_line(rest).strip(" |–—-,()")
         rest_stripped = _strip_location(rest) if rest else ""
+        if rest_stripped and _LOC_ONLY.match(rest_stripped) and not _ROLE.search(rest_stripped):
+            rest_stripped = ""  # "Jul 2021 — Jul 2022 London, UK": the tail is just the place
         headers: list[str] = []
         head_start = idx
         before: list[str] = []
