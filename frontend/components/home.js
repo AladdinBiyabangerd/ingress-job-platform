@@ -5,7 +5,7 @@ import { CATEGORY_ORDER, categoryLabel, hrefFor, languageLabel, text } from "../
 import { jobsListParams } from "../lib/jobs-params";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
 import { useMediaQuery } from "../lib/use-media-query";
-import { BoardAcademyPromo, BoardSideNav } from "./board-side-nav";
+import { BoardSideNav } from "./board-side-nav";
 import { JobBoardCard } from "./job-board-card";
 import { Shell } from "./shell";
 
@@ -717,16 +717,7 @@ export function Home({
 
           <div className="home-board-main">
             <div className="home-board-front">
-              <section className="home-board-hero-copy" aria-labelledby="home-front-title">
-                <p className="home-board-eyebrow">{t.jobBoardEyebrow}</p>
-                <p className="home-board-brand">{t.homeBrand}</p>
-                <h1 id="home-front-title" className="home-board-title">
-                  {t.homeHeadline}
-                </h1>
-                <p className="home-board-lede">{t.openRolesLede}</p>
-              </section>
-
-              <BoardAcademyPromo locale={locale} />
+              <h1 className="visually-hidden">{t.homeBrand}</h1>
 
               <form className="home-board-search" onSubmit={submitSearch} role="search">
                 <label className="home-board-search-field home-board-search-q">

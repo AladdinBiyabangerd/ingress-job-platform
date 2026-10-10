@@ -43,7 +43,7 @@ function parkedProductRedirect(request, locale) {
     && (path === "/me/insights" || path.startsWith("/me/insights/"));
   if (!recommendationsParked && !roadmapParked) return null;
   const prefix = locale === "az" ? "" : `/${locale}`;
-  return NextResponse.redirect(new URL(`${prefix}/` || "/", publicOrigin(request)));
+  return NextResponse.redirect(new URL(prefix || "/", publicOrigin(request)));
 }
 
 function hasSessionCookies(request) {

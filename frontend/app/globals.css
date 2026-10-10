@@ -12065,12 +12065,16 @@ a.saved-preview-company:hover {
     "search search";
   gap: 16px 32px;
   align-items: stretch;
-  padding: 20px 0 4px;
+  padding: 12px 0 4px;
   margin: 0 0 4px;
+  border-radius: 0;
+}
+
+.home-board-front:has(.home-board-hero-copy) {
+  padding: 20px 0 4px;
   background:
     radial-gradient(90% 120% at 0% 0%, var(--brand-soft) 0%, transparent 55%),
     radial-gradient(60% 80% at 100% 0%, var(--brand-tint) 0%, transparent 50%);
-  border-radius: 0;
 }
 
 .home-board-hero-copy {
