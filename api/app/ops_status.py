@@ -39,6 +39,7 @@ _FEATURE_LABELS = {
     "match_why": "Uyğunluq «niyə» cümləsi",
     "role_coach": "Rol bacarıq koçu",
     "learning_roadmap": "Öyrənmə roadmap",
+    "job_analyze": "Elan «Analiz et» hesabatı",
     "digest_intro": "Digest giriş mətni",
     "engagement_copy": "Engagement bildiriş mətni",
 }

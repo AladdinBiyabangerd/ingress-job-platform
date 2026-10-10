@@ -178,11 +178,13 @@ def complete_json(
     conn: sqlite3.Connection | None = None,
     timeout: float = 60.0,
     allow_provider: bool = True,
+    bypass_cache: bool = False,
 ) -> GatewayResult:
     """Redact → cache → budget → provider JSON call → cost log.
 
     When allow_provider=False, only a cache hit succeeds; a miss returns
     error ``ai_pending`` so HTTP handlers can respond without blocking on LLMs.
+    bypass_cache skips the read (still writes on success) for refresh flows.
     """
     purpose = (purpose or "unknown")[:80]
     prompt_version = (prompt_version or "v0")[:40]
@@ -203,17 +205,18 @@ def complete_json(
 
     with _span(f"ai_gateway.{purpose}"):
         ensure_ai_tables(conn)
-        cached = _cache_get(conn, cache_key)
-        if cached is not None:
-            result.ok = True
-            result.data = cached
-            result.cached = True
-            result.meta["cache"] = "hit"
-            return result
+        if not bypass_cache:
+            cached = _cache_get(conn, cache_key)
+            if cached is not None:
+                result.ok = True
+                result.data = cached
+                result.cached = True
+                result.meta["cache"] = "hit"
+                return result
 
         if not allow_provider:
             result.error = "ai_pending"
-            result.meta["cache"] = "miss"
+            result.meta["cache"] = "bypass" if bypass_cache else "miss"
             return result
 
         if _over_budget(conn, purpose):

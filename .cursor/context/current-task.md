@@ -1,28 +1,35 @@
 # Current task
 
 ## Completed
-- Candidate → employer upgrade CTAs → `/company`
-- Signed-in role upgrade goes straight to Academy authorize (`existing_account=1`), not job-account
-- Copy: same account adds employer; denied text no longer says the role was revoked
+- Hunt-v3 reuse review + product decision (port/adapt, not copy)
+- Plan: `~/.cursor/plans/job_detail_analyze_24c3bd32.plan.md`
+- **API** `GET /api/v1/me/jobs/{id}/analyze?lang=&refresh=`
+  - `api/app/job_analyze.py` — gates, zero-overlap fit, AI schema/prompt
+  - Route on `me.py` (no `_require_recommendations`)
+  - Tests: `api/tests/test_job_analyze.py` (9 ok)
+- **AI warm**: `schedule_job_analyze_ai_warm` + fail cooldown; flag `job_analyze` / `AI_JOB_ANALYZE_ENABLED`
+  - Gateway `bypass_cache` for refresh; admin + ops labels; worker flag mirror
+- **UI**: BFF `frontend/app/api/auth/me/jobs/[jobId]/analyze/route.js`
+  - Analiz et in `job-detail-actions.js` (Save/Share yanında)
+  - Panel `job-detail-analyze-panel.js` under header; copy az/en/ru; `.jd-analyze-*` CSS
 
 ## Current state
-- Production still shows the old gate: candidate body + “Şirkət hesabı aktivləşdirilə bilmədi…”
-- That screen is `employer_denied=1`: OAuth finished, token has no `job:employer`
-- This person was candidate-only (applied to ads) and now wants to post. Namizəd rolu qalmalıdır; `JOB_EMPLOYER` üstünə əlavə olunur, sonra şirkət forması
-- Academy already does that on authorize unless `JobRoleStaffBlock` exists for `JOB_EMPLOYER`
+- Implementation landed; **manual QA** on a live job detail still recommended
+- Parked: employer upgrade CTAs (unrelated)
 
 ## Decisions
-- Already-signed-in role upgrades skip job-account; guests still use it
-- Roles still only come from Academy groups / token scopes
-- Staff revoke still blocks self-service restore
+- Port into platform; no hunt-v3 vendoring
+- Independent of `PRODUCT_RECOMMENDATIONS_ENABLED`
+- Deterministic fit always; AI soft-fails when flag/key off
+- Report language = UI locale; JD not translated
 
 ## Remaining work
-- Deploy Job frontend (login redirect + copy)
-- Retry: candidate → Şirkət hesabı ilə davam et → company form
-- If still denied: Academy staff user → Job Employer toggle on (clears the block)
+1. Manual QA: consent/skills gates, 3 locales, weak-fit, flag off / `ai_pending`
+2. Optional: refresh button in panel (`?refresh=1` already supported by API)
 
 ## Relevant files
-- `frontend/app/api/auth/login/route.js`
-- `frontend/lib/oidc-authorize.js`
-- `frontend/lib/copy.js`
-- Academy: `portal/job_access.py`, `portal/oidc/views.py`
+- `api/app/job_analyze.py`, `api/app/routers/me.py`, `api/app/ai_warm.py`, `api/app/ai_flags.py`
+- `api/tests/test_job_analyze.py`
+- `frontend/components/job-detail/job-detail-{actions,view,analyze-panel,header,mobile-sticky}.js`
+- `frontend/app/api/auth/me/jobs/[jobId]/analyze/route.js`
+- `frontend/lib/copy.js`, `frontend/app/globals.css`

@@ -1,0 +1,31 @@
+---
+description: Keep chats small — hand off via current-task.md before stacking large work
+alwaysApply: true
+---
+
+# Context growth
+
+Optimize for minimum necessary context. One chat = one logical task.
+
+## Warn and hand off when ANY is true
+
+1. Chat completed 2+ distinct subtasks/features
+2. Substantial implementation across 3+ files more than once
+3. Long multi-step plan continuing in the same chat
+4. History full of large diffs/tool output and next step is another big change
+5. Topic switch (auth → payments → export → refactor) in the same chat
+
+## Required actions (do not skip)
+
+1. Finish only the current small logical unit if almost done
+2. Update `.cursor/context/current-task.md` with: Completed / Current state / Decisions / Remaining work / Relevant files
+3. Tell the user explicitly:
+   `Context böyüyür — bu tapşırığı yeni chatdə davam et.`
+   Then give a short continuation prompt (goal + key files + plan path if any)
+4. Do not stack another large unrelated step in this chat after the warning
+
+## Do not
+
+- Rescan the whole repo when scoped files are enough
+- Dump full conversations into context files — keep them short and reusable
+- Start implementing a large planned feature in a chat that already did research + planning

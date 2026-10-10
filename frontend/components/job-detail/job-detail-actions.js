@@ -18,7 +18,9 @@ export function JobDetailActions({
   model,
   layout = "desktop",
   onRevealForm,
+  onRevealAnalyze,
   formOpen = false,
+  analyzeOpen = false,
   preview = false,
   className = "",
 }) {
@@ -30,6 +32,18 @@ export function JobDetailActions({
   const isExternal = model.listingType === "external";
   const primaryClass =
     isGuest && !isExternal ? "jd-btn jd-btn-soft" : "jd-btn jd-btn-primary";
+
+  function onAnalyze() {
+    if (preview) {
+      onRevealAnalyze?.();
+      return;
+    }
+    if (isGuest) {
+      beginLogin({ intent: "job_candidate", returnTo: model.returnTo });
+      return;
+    }
+    onRevealAnalyze?.();
+  }
 
   async function onPrimary() {
     if (preview) {
@@ -106,6 +120,19 @@ export function JobDetailActions({
     </button>
   );
 
+  const analyzeBtn = (
+    <button
+      type="button"
+      className="jd-btn jd-btn-outline"
+      onClick={onAnalyze}
+      aria-expanded={analyzeOpen || undefined}
+      aria-controls="jd-analyze-panel"
+    >
+      <JdIcon name="book" size={16} />
+      <span>{t.jdAnalyze}</span>
+    </button>
+  );
+
   const secondary = (
     <>
       {preview ? (
@@ -122,6 +149,7 @@ export function JobDetailActions({
           className="jd-btn jd-btn-outline jd-save"
         />
       )}
+      {analyzeBtn}
       <button type="button" className="jd-btn jd-btn-outline" onClick={onShare}>
         <JdIcon name="share" size={16} />
         <span>{t.jdShare}</span>

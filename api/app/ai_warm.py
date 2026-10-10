@@ -46,6 +46,10 @@ def _matches_key(*, user_id: str, role: str, lang: str, limit: int | None) -> st
     return f"matches:{user_id}:{role}:{lang}:{limit}"
 
 
+def _analyze_key(*, user_id: str, job_id: int, lang: str) -> str:
+    return f"analyze:{user_id}:{int(job_id)}:{lang}"
+
+
 def _pick_locale(lang: str) -> str:
     text = (lang or "").strip().lower()[:2]
     return text if text in _COACH_LANGS else "az"
@@ -120,6 +124,19 @@ def matches_warm_fail_code(
     return recent_fail_code(
         _matches_key(user_id=subject, role=role_name, lang=locale, limit=limit)
     )
+
+
+def job_analyze_warm_fail_code(
+    *,
+    user_id: str,
+    job_id: int,
+    lang: str,
+) -> str | None:
+    subject = (user_id or "").strip()
+    if not subject or int(job_id or 0) <= 0:
+        return None
+    locale = _pick_locale(lang)
+    return recent_fail_code(_analyze_key(user_id=subject, job_id=int(job_id), lang=locale))
 
 
 def schedule_skill_gap_sibling_langs(
@@ -289,4 +306,64 @@ def schedule_matches_ai_warm(
             _done(key)
 
     threading.Thread(target=run, daemon=True, name="ai-warm-matches").start()
+    return True
+
+
+def schedule_job_analyze_ai_warm(
+    *,
+    user_id: str,
+    job_id: int,
+    lang: str,
+    refresh: bool = False,
+) -> bool:
+    """Start background warm for job-detail analyze AI report."""
+    subject = (user_id or "").strip()
+    jid = int(job_id or 0)
+    if not subject or jid <= 0:
+        return False
+    locale = _pick_locale(lang)
+    key = _analyze_key(user_id=subject, job_id=jid, lang=locale)
+    if not refresh and recent_fail_code(key):
+        return False
+    if not _track(key):
+        return False
+
+    def run() -> None:
+        try:
+            from app.cabinet_store import _LOCK, _connect
+            from app.job_analyze import analyze_payload
+
+            with _LOCK:
+                conn = _connect()
+                try:
+                    payload = analyze_payload(
+                        conn,
+                        user_id=subject,
+                        job_id=jid,
+                        lang=locale,
+                        refresh=refresh,
+                        allow_ai_provider=True,
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+            if payload.get("ai_report"):
+                _clear_fail(key)
+            else:
+                err = str(payload.get("ai_error") or "ai_failed").strip() or "ai_failed"
+                if err in {"ai_pending", "job_analyze_disabled"}:
+                    err = "ai_failed" if err == "ai_pending" else err
+                if err == "job_analyze_disabled":
+                    _clear_fail(key)
+                else:
+                    _mark_fail(key, err)
+        except Exception as exc:
+            log.warning(
+                "job_analyze AI warm failed user=%s job=%s: %s", subject, jid, exc
+            )
+            _mark_fail(key, "ai_failed")
+        finally:
+            _done(key)
+
+    threading.Thread(target=run, daemon=True, name="ai-warm-analyze").start()
     return True

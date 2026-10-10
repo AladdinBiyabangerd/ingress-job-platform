@@ -7,7 +7,9 @@ export function JobDetailHeader({
   locale,
   model,
   onRevealForm,
+  onRevealAnalyze,
   formOpen,
+  analyzeOpen,
   preview,
 }) {
   const t = text(locale);
@@ -48,7 +50,9 @@ export function JobDetailHeader({
             model={model}
             layout="desktop"
             onRevealForm={onRevealForm}
+            onRevealAnalyze={onRevealAnalyze}
             formOpen={formOpen}
+            analyzeOpen={analyzeOpen}
             preview={preview}
           />
         </div>
@@ -60,7 +64,9 @@ export function JobDetailHeader({
           model={model}
           layout="mobile"
           onRevealForm={onRevealForm}
+          onRevealAnalyze={onRevealAnalyze}
           formOpen={formOpen}
+          analyzeOpen={analyzeOpen}
           preview={preview}
         />
       </div>

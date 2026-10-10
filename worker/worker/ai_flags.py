@@ -25,6 +25,7 @@ FEATURES = (
     "llm_rerank",
     "match_why",
     "role_coach",
+    "job_analyze",
     "digest_intro",
     "engagement_copy",
 )
@@ -39,6 +40,7 @@ FEATURE_ENV = {
     "llm_rerank": "AI_LLM_RERANK_ENABLED",
     "match_why": "AI_MATCH_WHY_ENABLED",
     "role_coach": "AI_ROLE_COACH_ENABLED",
+    "job_analyze": "AI_JOB_ANALYZE_ENABLED",
     "digest_intro": "DIGEST_AI_INTRO_ENABLED",
     "engagement_copy": "ENGAGEMENT_AI_COPY_ENABLED",
 }

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchMe } from "../../lib/me-client";
 import { useInitialMe } from "../me-seed";
+import { JobDetailAnalyzePanel } from "./job-detail-analyze-panel";
 import { JobDetailApplyForm } from "./job-detail-apply-form";
 import { JobDetailCompanySidebar } from "./job-detail-company-sidebar";
 import { JobDetailDescription } from "./job-detail-description";
@@ -20,6 +21,7 @@ export function JobDetailView({ locale, model: baseModel }) {
     return undefined;
   });
   const [formOpen, setFormOpen] = useState(false);
+  const [analyzeOpen, setAnalyzeOpen] = useState(false);
 
   useEffect(() => {
     if (preview) {
@@ -65,8 +67,18 @@ export function JobDetailView({ locale, model: baseModel }) {
     }
   }
 
+  function revealAnalyze() {
+    setAnalyzeOpen(true);
+    if (typeof document !== "undefined") {
+      window.requestAnimationFrame(() => {
+        document.getElementById("jd-analyze-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }
+
   useEffect(() => {
     setFormOpen(false);
+    setAnalyzeOpen(false);
   }, [model.jobId, model.listingType, model.authState]);
 
   return (
@@ -78,7 +90,17 @@ export function JobDetailView({ locale, model: baseModel }) {
               locale={locale}
               model={model}
               onRevealForm={revealForm}
+              onRevealAnalyze={revealAnalyze}
               formOpen={formOpen}
+              analyzeOpen={analyzeOpen}
+              preview={preview}
+            />
+
+            <JobDetailAnalyzePanel
+              locale={locale}
+              jobId={model.jobId}
+              returnTo={model.returnTo}
+              open={analyzeOpen}
               preview={preview}
             />
 
@@ -130,7 +152,9 @@ export function JobDetailView({ locale, model: baseModel }) {
         locale={locale}
         model={model}
         onRevealForm={revealForm}
+        onRevealAnalyze={revealAnalyze}
         formOpen={formOpen}
+        analyzeOpen={analyzeOpen}
         preview={preview}
       />
     </div>

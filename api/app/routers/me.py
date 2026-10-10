@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from app.account import current_user
 from app.auth_oidc import VerifiedAccess
 from app.cabinet_store import CabinetError
+from app.job_analyze import analyze_job
 from app.matching import (
     FEEDBACK_REASONS,
     FEEDBACK_VOTES,
@@ -110,6 +111,26 @@ def get_matches(
     _require_recommendations()
     _require_candidate(user)
     return list_matches(user_id=user.subject, limit=limit, lang=lang, role=role)
+
+
+@router.get("/jobs/{job_id}/analyze")
+def get_job_analyze(
+    job_id: int,
+    lang: str | None = Query(default=None, max_length=8),
+    refresh: int | None = Query(default=None, ge=0, le=1),
+    user: VerifiedAccess = Depends(current_user),
+) -> dict:
+    """Job-detail fit analysis. Independent of recommendations hub flag."""
+    _require_candidate(user)
+    payload = analyze_job(
+        user_id=user.subject,
+        job_id=job_id,
+        lang=lang,
+        refresh=bool(refresh),
+    )
+    if payload.get("gate") == "job_not_found":
+        raise HTTPException(status_code=404, detail="Elan tapılmadı")
+    return payload
 
 
 @router.post("/matches/{job_id}/feedback")

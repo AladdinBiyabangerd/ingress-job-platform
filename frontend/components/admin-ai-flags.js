@@ -15,6 +15,7 @@ const FLOWS = [
   ["match_why", "adminAiWhy"],
   ["role_coach", "adminAiRoleCoach"],
   ["learning_roadmap", "adminAiLearningRoadmap"],
+  ["job_analyze", "adminAiJobAnalyze"],
   ["digest_intro", "adminAiDigest"],
   ["engagement_copy", "adminAiEngagement"],
 ];
