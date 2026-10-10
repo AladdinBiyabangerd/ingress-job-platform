@@ -13321,6 +13321,16 @@ a.saved-preview-company:hover {
   white-space: nowrap;
 }
 
+.jd-actions .jd-actions-posted {
+  flex: 0 0 auto;
+  margin-left: 2px;
+}
+
+.jd-actions-mobile .jd-actions-posted {
+  margin: 0;
+  justify-content: flex-start;
+}
+
 .jd-skills {
   margin-top: 28px;
   padding-top: 22px;
@@ -13819,6 +13829,191 @@ a.saved-preview-company:hover {
 .jd-apply-draft-copied {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.jd-aside .jd-tailored-cv {
+  margin-top: 8px;
+}
+
+.jd-tailored-cv {
+  margin: 16px 0 8px;
+  padding: 18px 0 4px;
+  border-top: 1px solid var(--border);
+  scroll-margin-top: 88px;
+}
+
+.jd-tailored-cv-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+
+.jd-tailored-cv-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
+}
+
+.jd-tailored-cv-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.jd-tailored-cv-gate {
+  display: grid;
+  gap: 12px;
+  max-width: 36rem;
+}
+
+.jd-tailored-cv-gate p,
+.jd-tailored-cv-error,
+.jd-tailored-cv-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.jd-tailored-cv-error {
+  color: var(--danger, #b42318);
+}
+
+.jd-tailored-cv-body {
+  display: grid;
+  gap: 14px;
+}
+
+.jd-tailored-cv-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.jd-tcv-doc {
+  padding: 18px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: #0b1220;
+  max-width: 40rem;
+}
+
+.jd-tcv-doc-head {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.jd-tcv-name {
+  margin: 0 0 4px;
+  font-size: 1.35rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+}
+
+.jd-tcv-headline {
+  margin: 0 0 6px;
+  font-size: 0.98rem;
+  font-weight: var(--fw-semibold);
+  color: #344054;
+}
+
+.jd-tcv-contact {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.jd-tcv-section {
+  margin: 0 0 14px;
+}
+
+.jd-tcv-section h4 {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #475467;
+}
+
+.jd-tcv-section p,
+.jd-tcv-skills {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.jd-tcv-exp-list,
+.jd-tcv-edu-list,
+.jd-tcv-bullets {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jd-tcv-exp-list > li {
+  margin: 0 0 12px;
+}
+
+.jd-tcv-role-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 4px;
+  font-size: 0.92rem;
+}
+
+.jd-tcv-dates {
+  color: var(--muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.jd-tcv-bullets {
+  padding-left: 1.1rem;
+  list-style: disc;
+}
+
+.jd-tcv-bullets li {
+  margin: 0 0 3px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.jd-tcv-edu-list li {
+  margin: 0 0 6px;
+  font-size: 0.92rem;
+}
+
+@media print {
+  body.jd-tcv-printing * {
+    visibility: hidden !important;
+  }
+
+  body.jd-tcv-printing #jd-tcv-print-root,
+  body.jd-tcv-printing #jd-tcv-print-root * {
+    visibility: visible !important;
+  }
+
+  body.jd-tcv-printing #jd-tcv-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 12mm;
+    border: none;
+    border-radius: 0;
+    background: #fff;
+  }
 }
 
 .jd-analyze-head {

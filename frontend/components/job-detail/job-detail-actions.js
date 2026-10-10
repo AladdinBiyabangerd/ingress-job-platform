@@ -20,9 +20,11 @@ export function JobDetailActions({
   onRevealForm,
   onRevealAnalyze,
   onRevealApplyDraft,
+  onRevealTailoredCv,
   formOpen = false,
   analyzeOpen = false,
   applyDraftOpen = false,
+  tailoredCvOpen = false,
   preview = false,
   className = "",
 }) {
@@ -57,6 +59,18 @@ export function JobDetailActions({
       return;
     }
     onRevealApplyDraft?.();
+  }
+
+  function onTailoredCv() {
+    if (preview) {
+      onRevealTailoredCv?.();
+      return;
+    }
+    if (isGuest) {
+      beginLogin({ intent: "job_candidate", returnTo: model.returnTo });
+      return;
+    }
+    onRevealTailoredCv?.();
   }
 
   async function onPrimary() {
@@ -160,6 +174,19 @@ export function JobDetailActions({
     </button>
   );
 
+  const tailoredCvBtn = (
+    <button
+      type="button"
+      className="jd-btn jd-btn-outline"
+      onClick={onTailoredCv}
+      aria-expanded={tailoredCvOpen || undefined}
+      aria-controls="jd-tailored-cv-panel"
+    >
+      <JdIcon name="doc" size={16} />
+      <span>{t.jdTailoredCv}</span>
+    </button>
+  );
+
   const secondary = (
     <>
       {preview ? (
@@ -178,12 +205,23 @@ export function JobDetailActions({
       )}
       {analyzeBtn}
       {applyDraftBtn}
+      {tailoredCvBtn}
       <button type="button" className="jd-btn jd-btn-outline" onClick={onShare}>
         <JdIcon name="share" size={16} />
         <span>{t.jdShare}</span>
       </button>
     </>
   );
+
+  const postedLabel = model.meta?.posted;
+  const postedDateTime = model.meta?.postedDateTime;
+  const showPosted = Boolean(postedLabel) && (layout === "desktop" || layout === "mobile");
+  const posted = showPosted ? (
+    <p className="jd-meta-posted jd-actions-posted">
+      <JdIcon name="clock" size={15} />
+      {postedDateTime ? <time dateTime={postedDateTime}>{postedLabel}</time> : <span>{postedLabel}</span>}
+    </p>
+  ) : null;
 
   if (layout === "sidebar") {
     return (
@@ -202,6 +240,7 @@ export function JobDetailActions({
     return (
       <div className={`jd-actions jd-actions-${layout} ${className}`.trim()}>
         {primary}
+        {layout === "mobile" ? posted : null}
         <div className="jd-actions-row">{secondary}</div>
         {shareNote ? (
           <p className="jd-share-note" role="status">
@@ -216,6 +255,7 @@ export function JobDetailActions({
     <div className={`jd-actions jd-actions-desktop ${className}`.trim()}>
       {secondary}
       {primary}
+      {posted}
       {shareNote ? (
         <p className="jd-share-note jd-share-note-abs" role="status">
           {shareNote}

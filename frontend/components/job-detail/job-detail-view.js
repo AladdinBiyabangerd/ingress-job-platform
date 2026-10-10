@@ -12,6 +12,7 @@ import { JobDetailGuestGate } from "./job-detail-guest-gate";
 import { JobDetailHeader } from "./job-detail-header";
 import { JobDetailMobileSticky } from "./job-detail-mobile-sticky";
 import { JobDetailSkills } from "./job-detail-skills";
+import { JobDetailTailoredCvPanel } from "./job-detail-tailored-cv-panel";
 
 export function JobDetailView({ locale, model: baseModel }) {
   const preview = Boolean(baseModel.preview);
@@ -24,6 +25,7 @@ export function JobDetailView({ locale, model: baseModel }) {
   const [formOpen, setFormOpen] = useState(false);
   const [analyzeOpen, setAnalyzeOpen] = useState(false);
   const [applyDraftOpen, setApplyDraftOpen] = useState(false);
+  const [tailoredCvOpen, setTailoredCvOpen] = useState(false);
   const [draftMessage, setDraftMessage] = useState("");
 
   useEffect(() => {
@@ -88,6 +90,15 @@ export function JobDetailView({ locale, model: baseModel }) {
     }
   }
 
+  function revealTailoredCv() {
+    setTailoredCvOpen(true);
+    if (typeof document !== "undefined") {
+      window.requestAnimationFrame(() => {
+        document.getElementById("jd-tailored-cv-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }
+
   const onDraftMessage = useCallback(
     (msg) => {
       const text = String(msg || "").trim();
@@ -109,6 +120,7 @@ export function JobDetailView({ locale, model: baseModel }) {
     setFormOpen(false);
     setAnalyzeOpen(false);
     setApplyDraftOpen(false);
+    setTailoredCvOpen(false);
     setDraftMessage("");
   }, [model.jobId, model.listingType, model.authState]);
 
@@ -123,9 +135,11 @@ export function JobDetailView({ locale, model: baseModel }) {
               onRevealForm={revealForm}
               onRevealAnalyze={revealAnalyze}
               onRevealApplyDraft={revealApplyDraft}
+              onRevealTailoredCv={revealTailoredCv}
               formOpen={formOpen}
               analyzeOpen={analyzeOpen}
               applyDraftOpen={applyDraftOpen}
+              tailoredCvOpen={tailoredCvOpen}
               preview={preview}
             />
 
@@ -178,6 +192,14 @@ export function JobDetailView({ locale, model: baseModel }) {
               preview={preview}
               onMessage={onDraftMessage}
             />
+
+            <JobDetailTailoredCvPanel
+              locale={locale}
+              jobId={model.jobId}
+              returnTo={model.returnTo}
+              open={tailoredCvOpen}
+              preview={preview}
+            />
           </aside>
         </div>
       </div>
@@ -188,9 +210,11 @@ export function JobDetailView({ locale, model: baseModel }) {
         onRevealForm={revealForm}
         onRevealAnalyze={revealAnalyze}
         onRevealApplyDraft={revealApplyDraft}
+        onRevealTailoredCv={revealTailoredCv}
         formOpen={formOpen}
         analyzeOpen={analyzeOpen}
         applyDraftOpen={applyDraftOpen}
+        tailoredCvOpen={tailoredCvOpen}
         preview={preview}
       />
     </div>

@@ -41,6 +41,7 @@ _FEATURE_LABELS = {
     "learning_roadmap": "Öyrənmə roadmap",
     "job_analyze": "Elan «Analiz et» hesabatı",
     "job_apply_draft": "Elan «Müraciət mətni» qaralama",
+    "job_tailored_cv": "Elan «Elana uyğun CV»",
     "digest_intro": "Digest giriş mətni",
     "engagement_copy": "Engagement bildiriş mətni",
 }

@@ -8,9 +8,11 @@ export function JobDetailMobileSticky({
   onRevealForm,
   onRevealAnalyze,
   onRevealApplyDraft,
+  onRevealTailoredCv,
   formOpen,
   analyzeOpen,
   applyDraftOpen,
+  tailoredCvOpen,
   preview,
 }) {
   return (
@@ -22,9 +24,11 @@ export function JobDetailMobileSticky({
         onRevealForm={onRevealForm}
         onRevealAnalyze={onRevealAnalyze}
         onRevealApplyDraft={onRevealApplyDraft}
+        onRevealTailoredCv={onRevealTailoredCv}
         formOpen={formOpen}
         analyzeOpen={analyzeOpen}
         applyDraftOpen={applyDraftOpen}
+        tailoredCvOpen={tailoredCvOpen}
         preview={preview}
       />
     </div>

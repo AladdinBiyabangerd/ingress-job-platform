@@ -17,6 +17,7 @@ const FLOWS = [
   ["learning_roadmap", "adminAiLearningRoadmap"],
   ["job_analyze", "adminAiJobAnalyze"],
   ["job_apply_draft", "adminAiJobApplyDraft"],
+  ["job_tailored_cv", "adminAiJobTailoredCv"],
   ["digest_intro", "adminAiDigest"],
   ["engagement_copy", "adminAiEngagement"],
 ];

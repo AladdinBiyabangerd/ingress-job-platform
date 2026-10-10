@@ -24,7 +24,7 @@ export function JobDetailMeta({ meta }) {
     { icon: "wallet", value: meta.salary, pill: true },
   ].filter((item) => item.value);
 
-  if (!row1.length && !row2.length && !meta.posted) return null;
+  if (!row1.length && !row2.length) return null;
 
   return (
     <div className="jd-meta">
@@ -37,7 +37,7 @@ export function JobDetailMeta({ meta }) {
           ))}
         </ul>
       ) : null}
-      {row2.length || meta.posted ? (
+      {row2.length ? (
         <div className="jd-meta-row jd-meta-row-mixed">
           <ul className="jd-meta-pills">
             {row2.map((item) => (
@@ -47,12 +47,6 @@ export function JobDetailMeta({ meta }) {
               </li>
             ))}
           </ul>
-          {meta.posted ? (
-            <p className="jd-meta-posted">
-              <JdIcon name="clock" size={15} />
-              {meta.postedDateTime ? <time dateTime={meta.postedDateTime}>{meta.posted}</time> : <span>{meta.posted}</span>}
-            </p>
-          ) : null}
         </div>
       ) : null}
     </div>

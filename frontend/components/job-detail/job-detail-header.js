@@ -9,9 +9,11 @@ export function JobDetailHeader({
   onRevealForm,
   onRevealAnalyze,
   onRevealApplyDraft,
+  onRevealTailoredCv,
   formOpen,
   analyzeOpen,
   applyDraftOpen,
+  tailoredCvOpen,
   preview,
 }) {
   const t = text(locale);
@@ -57,9 +59,11 @@ export function JobDetailHeader({
           onRevealForm={onRevealForm}
           onRevealAnalyze={onRevealAnalyze}
           onRevealApplyDraft={onRevealApplyDraft}
+          onRevealTailoredCv={onRevealTailoredCv}
           formOpen={formOpen}
           analyzeOpen={analyzeOpen}
           applyDraftOpen={applyDraftOpen}
+          tailoredCvOpen={tailoredCvOpen}
           preview={preview}
         />
       </div>
@@ -72,9 +76,11 @@ export function JobDetailHeader({
           onRevealForm={onRevealForm}
           onRevealAnalyze={onRevealAnalyze}
           onRevealApplyDraft={onRevealApplyDraft}
+          onRevealTailoredCv={onRevealTailoredCv}
           formOpen={formOpen}
           analyzeOpen={analyzeOpen}
           applyDraftOpen={applyDraftOpen}
+          tailoredCvOpen={tailoredCvOpen}
           preview={preview}
         />
       </div>

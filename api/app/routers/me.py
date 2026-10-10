@@ -11,6 +11,7 @@ from app.auth_oidc import VerifiedAccess
 from app.cabinet_store import CabinetError
 from app.job_analyze import analyze_job
 from app.job_apply_draft import create_apply_draft
+from app.job_tailored_cv import create_tailored_cv
 from app.matching import (
     FEEDBACK_REASONS,
     FEEDBACK_VOTES,
@@ -138,6 +139,10 @@ class ApplyDraftBody(BaseModel):
     refresh: bool = False
 
 
+class TailoredCvBody(BaseModel):
+    refresh: bool = False
+
+
 @router.post("/jobs/{job_id}/apply-draft")
 def post_job_apply_draft(
     job_id: int,
@@ -150,6 +155,28 @@ def post_job_apply_draft(
     _require_candidate(user)
     want_refresh = bool(refresh) or bool(body.refresh)
     payload = create_apply_draft(
+        user_id=user.subject,
+        job_id=job_id,
+        lang=lang,
+        refresh=want_refresh,
+    )
+    if payload.get("status") == "job_not_found":
+        raise HTTPException(status_code=404, detail="Elan tapılmadı")
+    return payload
+
+
+@router.post("/jobs/{job_id}/tailored-cv")
+def post_job_tailored_cv(
+    job_id: int,
+    body: TailoredCvBody = TailoredCvBody(),
+    lang: str | None = Query(default=None, max_length=8),
+    refresh: int | None = Query(default=None, ge=0, le=1),
+    user: VerifiedAccess = Depends(current_user),
+) -> dict:
+    """Job-tailored ATS CV draft from confirmed profile facts. Independent of recommendations hub."""
+    _require_candidate(user)
+    want_refresh = bool(refresh) or bool(body.refresh)
+    payload = create_tailored_cv(
         user_id=user.subject,
         job_id=job_id,
         lang=lang,
