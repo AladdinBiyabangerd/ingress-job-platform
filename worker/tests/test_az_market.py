@@ -281,6 +281,129 @@ class AzMarketRemoteTest(unittest.TestCase):
             )
         )
 
+    def test_chile_residency_spanish_locked(self):
+        text = (
+            "Modalidad: 100% remoto, los candidatos deben residir en Chile para postular."
+        )
+        self.assertTrue(foreign_locked_remote("DevSecOps Senior", "", text))
+        self.assertFalse(
+            az_market_relevant(
+                "DevSecOps Senior",
+                "",
+                text,
+                remote=True,
+                relocation=False,
+            )
+        )
+
+    def test_chile_nationality_and_calendar_locked(self):
+        text = (
+            "Nacionalidad Chilena (excluyente). "
+            "Horario: De 09:00 a 18:00 horas, horario de Chile. "
+            "Feriados de Chile. Pago USD."
+        )
+        self.assertTrue(foreign_locked_remote("Senior iOS Developer", "", text))
+        self.assertFalse(
+            az_market_relevant(
+                "Senior Outsystems QA con Inglés y Español",
+                "",
+                text,
+                remote=True,
+                relocation=False,
+            )
+        )
+
+    def test_latam_based_talent_locked(self):
+        text = (
+            "TopTalent from LatAm. We need a Senior DevOps Engineer, "
+            "based in Latin America, available to work remotely."
+        )
+        self.assertTrue(foreign_locked_remote("Senior DevOps Engineer", "", text))
+        self.assertFalse(
+            az_market_relevant(
+                "Senior DevOps Engineer",
+                "",
+                text,
+                remote=True,
+                relocation=False,
+            )
+        )
+
+    def test_korea_location_line_locked(self):
+        text = (
+            "Location: South Korea | Remote\n"
+            "We are looking for Image Quality Evaluators based in South Korea. "
+            "Currently residing in South Korea."
+        )
+        self.assertTrue(foreign_locked_remote("AI Trainer Image QA Evaluator", "", text))
+        self.assertFalse(
+            az_market_relevant(
+                "AI Trainer Image QA Evaluator",
+                "",
+                text,
+                remote=True,
+                relocation=False,
+            )
+        )
+
+    def test_title_na_suffix_and_brasil_locked(self):
+        self.assertTrue(
+            foreign_locked_remote("Senior Forward Deployed Engineer - NA", "", "Fully remote.")
+        )
+        self.assertTrue(
+            foreign_locked_remote(
+                "Desarrollador/a Outsystems en Brasil con Inglés",
+                "",
+                "Modalidad: 100% remoto. Calendario laboral de Chile.",
+            )
+        )
+
+    def test_cet_timezone_band_locked(self):
+        text = (
+            "HYBRID (Berlin) or REMOTE (CET ±2h). "
+            "We're not able to offer relocation or visa sponsorship. "
+            "Fully remote within CET ±2h."
+        )
+        self.assertTrue(foreign_locked_remote("Lead Platform Engineer", "", text))
+        self.assertFalse(
+            az_market_relevant(
+                "Lead Platform Engineer",
+                "",
+                text,
+                remote=True,
+                relocation=False,
+            )
+        )
+
+    def test_india_rupee_stipend_locked(self):
+        text = (
+            "Mode: Remote. Stipend: Rs 8,000 per month. "
+            "Final-year B.Tech/B.E. students."
+        )
+        self.assertTrue(
+            foreign_locked_remote("AI/ML Intern - Python, LLM Fine-Tuning", "", text)
+        )
+
+    def test_country_list_hire_from_does_not_lock(self):
+        # Marketplace blurbs listing many hire-from countries must stay open.
+        text = (
+            "Remote marketplace connecting developers from 75+ countries across "
+            "Europe, Latin America, North America (the U.S. and Canada), selected "
+            "countries in Asia (Japan, Singapore, South Korea)."
+        )
+        self.assertFalse(
+            foreign_locked_remote("Senior .NET Full-stack Developer", "", text)
+        )
+        self.assertTrue(
+            az_market_relevant(
+                "Senior .NET Full-stack Developer",
+                "",
+                text,
+                remote=True,
+                relocation=False,
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

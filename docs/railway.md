@@ -116,7 +116,7 @@ that file is applied; set them yourself only if you use another bucket):
 | `AI_EMBEDDING_DIMS` | Optional. Vector size for pgvector column. NVIDIA embed = `2048`; OpenAI small = `1536`. Set explicitly when switching. If the `embeddings` table already exists with the old size, drop/recreate it once. |
 | `AI_RERANK_ENABLED` | Optional. Default follows gateway; `0` keeps structured-only matches. |
 | `AI_MATCH_WHY_ENABLED` | Optional. Default follows gateway; `0` skips LLM why sentences. |
-| `INTERNAL_JOB_TOKEN` | Shared secret for worker → API digests + engagement (`X-Internal-Token`). Set the **same** value on **api** and **worker**. If unset on worker, `engagement_jobs` / `email_jobs` are skipped and users get no hourly match notifications. |
+| `INTERNAL_JOB_TOKEN` | Shared secret for worker → API digests + engagement, and Academy staff ops status (`X-Internal-Token`). Set the **same** value on **api**, **worker**, and Academy `JOB_INTERNAL_TOKEN`. If unset on worker, `engagement_jobs` / `email_jobs` are skipped and users get no hourly match notifications. |
 | `JOB_API_BASE_URL` (worker) | API base the worker POSTs to (private URL on Railway). Required for digests/engagement triggers. |
 | `VAPID_PUBLIC_KEY` | Web Push applicationServerKey (**api**). Generate with `npx web-push generate-vapid-keys`. Without all three VAPID vars, browser push never sends (in-app still works). |
 | `VAPID_PRIVATE_KEY` | Web Push VAPID private key (API only — never on web). |

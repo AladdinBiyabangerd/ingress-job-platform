@@ -587,6 +587,7 @@ def _call_chat_json(
     if not providers:
         raise RuntimeError("no_chat_provider")
     errors: list[str] = []
+    failed_names: list[str] = []
     for provider in providers:
         try:
             raw = _chat_json(
@@ -599,10 +600,24 @@ def _call_chat_json(
             )
             raw["provider"] = provider.name
             raw["model"] = provider.model
+            if failed_names:
+                log.warning(
+                    "ai_gateway chat provider ok: %s model=%s (after failed: %s)",
+                    provider.name,
+                    provider.model,
+                    ",".join(failed_names),
+                )
+            else:
+                log.warning(
+                    "ai_gateway chat provider ok: %s model=%s",
+                    provider.name,
+                    provider.model,
+                )
             return raw
         except Exception as exc:
             msg = f"{provider.name}:{type(exc).__name__}:{exc}"
             errors.append(msg[:180])
+            failed_names.append(provider.name)
             log.warning("ai_gateway chat provider failed: %s", msg)
     raise RuntimeError("; ".join(errors[:4]) or "all_chat_providers_failed")
 
@@ -612,6 +627,7 @@ def _call_embed(*, texts: list[str], timeout: float) -> dict[str, Any]:
     if not providers:
         raise RuntimeError("no_embed_provider")
     errors: list[str] = []
+    failed_names: list[str] = []
     for provider in providers:
         try:
             raw = _openai_compat_embed(
@@ -623,10 +639,24 @@ def _call_embed(*, texts: list[str], timeout: float) -> dict[str, Any]:
             )
             raw["provider"] = provider.name
             raw["model"] = provider.model
+            if failed_names:
+                log.warning(
+                    "ai_gateway embed provider ok: %s model=%s (after failed: %s)",
+                    provider.name,
+                    provider.model,
+                    ",".join(failed_names),
+                )
+            else:
+                log.warning(
+                    "ai_gateway embed provider ok: %s model=%s",
+                    provider.name,
+                    provider.model,
+                )
             return raw
         except Exception as exc:
             msg = f"{provider.name}:{type(exc).__name__}:{exc}"
             errors.append(msg[:180])
+            failed_names.append(provider.name)
             log.warning("ai_gateway embed provider failed: %s", msg)
     raise RuntimeError("; ".join(errors[:4]) or "all_embed_providers_failed")
 

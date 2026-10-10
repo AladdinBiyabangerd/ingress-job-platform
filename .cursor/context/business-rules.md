@@ -11,7 +11,9 @@
 - **Reject** named foreign city + “remote possible” / on-site·customer travel (e.g. Cincinnati hybrid) — not AZ-reachable remote.
 - Title `(EMEA)` must **not** unlock `Remote (Germany|UK|…)`.
 - `Remote EMEA; Sliema, Malta` (EMEA + concrete city) → reject.
-- Title region pins `(AMER)`, Middle East, MENA, APAC, LATAM → reject unless place is worldwide/EMEA-open.
+- Title region pins `(AMER)`, `- NA`, Middle East, MENA, APAC, LATAM, `en Brasil` → reject unless place is worldwide/EMEA-open.
+- Body geo pins when city empty: `Location: South Korea`, `based in Latin America`, Spanish `deben residir en Chile` / `Nacionalidad Chilena`, Chile labour calendar (`horario/feriados de Chile`), `CET ±Nh` remote band, India `Rs … per month` stipend → reject.
+- Do **not** reject marketplace blurbs that only list many hire-from countries (e.g. Lemon.io).
 - Geo-locked remote wins over noisy `relocation`/H-1B flags.
 - Foreign **office/hybrid** keeps only with clear **international** visa/reloc (not domestic “relocation assistance”).
 - Ignore compensation boilerplate (“For US-based employees…”, “401k (US only)”).

@@ -280,6 +280,23 @@ def read_ai_flags(_user: VerifiedAccess = Depends(require_staff)) -> dict:
             conn.close()
 
 
+@router.get("/ops-status")
+def read_ops_status(
+    days: int = 7,
+    _user: VerifiedAccess = Depends(require_staff),
+) -> dict:
+    """Live AI provider/feature status + crawl funnel for staff ops."""
+    from app.cabinet_store import _LOCK, _connect
+    from app.ops_status import build_ops_status
+
+    with _LOCK:
+        conn = _connect()
+        try:
+            return build_ops_status(conn, days=days)
+        finally:
+            conn.close()
+
+
 @router.put("/ai-flags")
 def write_ai_flags(body: AiFlagsIn, user: VerifiedAccess = Depends(require_staff)) -> dict:
     from app.ai_flags import FlagError, key_configured, set_flags

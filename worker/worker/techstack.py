@@ -457,7 +457,11 @@ _PHYSICAL_TITLE = re.compile(
     r"mechanical|civil engineer|chemical|structural|process engineer|maintenance|"
     r"field service|biomedical|manufacturing|hvac|construction|petroleum|supplier|"
     r"avionics|electrical engineer|sales engineer|architectural|estimator|landscape|"
-    r"equipment technician",
+    r"equipment technician|"
+    r"propellant|propulsion|composite engineer|thermal engineer|quality control engineer|"
+    r"production engineer.{0,30}\buav\b|"
+    r"insurance|(?<!re)liability|underwrit|"
+    r"trust\s*(?:&|and)\s*safety|growth\s*(?:&|and)\s*operations",
     re.IGNORECASE,
 )
 
@@ -607,10 +611,17 @@ def _category_from_stack(stack: list[str]) -> str:
     return label if count else ""
 
 
+_QA_TITLE = re.compile(r"\bqa\b|quality assurance|\bsdet\b|\btesters?\b|test automation", re.IGNORECASE)
+
+
 def classify_category(category: object, title: str = "", stack: list[str] | None = None) -> str:
     """One of CATEGORIES. The source's own category first (values that clearly
     say non-tech are skipped), then the title, then the tech stack."""
     from_title = _match_category(title or "")
+    if from_title == "QA" and _QA_TITLE.search(title or ""):
+        # "QA Engineer" is QA whatever the source board or stack says
+        # (Azure, DevOps, security boards must not move it).
+        return "QA"
     for raw in _split_tags(category):
         if _value_verdict(_clean_cat(raw)) is False:
             continue
@@ -716,9 +727,11 @@ _FOREIGN_GEO = (
     r"england|scotland|wales|ireland|\beu\b|european\s+union|\beurope\b|"
     r"germany|france|netherlands|spain|italy|portugal|poland|sweden|norway|"
     r"denmark|finland|switzerland|austria|belgium|australia|new\s+zealand|"
-    r"japan|korea|singapore|india|brazil|mexico|argentina|chile|"
+    r"japan|south\s+korea|korea|singapore|india|brazil|brasil|mexico|méxico|argentina|chile|"
+    r"colombia|per[uú]|uruguay|ecuador|paraguay|bolivia|"
     r"israel|tel\s*aviv|dubai|uae|united\s+arab\s+emirates|saudi|riyadh|"
-    r"malta|sliema|latam|latin\s+america|apac|north\s+america|south\s+america|"
+    r"malta|sliema|latam|latin\s+america|am[eé]rica\s+latina|"
+    r"apac|north\s+america|south\s+america|"
     r"california|texas|florida|ontario|british\s+columbia|quebec|"
     r"london|toronto|vancouver|montreal|berlin|munich|münchen|hamburg|"
     r"amsterdam|dublin|paris|stockholm|oslo|copenhagen|sydney|melbourne|"
@@ -759,6 +772,18 @@ _RESIDENCY_LOCK = re.compile(
     rf"(?:located|based|living|reside|residing)\s+in\b|"
     rf"(?:only|exclusively)\s+(?:open|available|hiring)\s+(?:to|in|for)\b|"
     rf"(?:candidates?|applicants?)\s+must\s+(?:be|have|live)\b|"
+    # "Engineer, based in Latin America" / "evaluators based in South Korea"
+    rf"(?:candidates?|applicants?|engineers?|developers?|talent|evaluators?|"
+    rf"contractors?|looking for|we need|hiring)\s+[^\n.]{{0,80}}?"
+    rf"\bbased\s+in\s+(?:the\s+)?(?:{_FOREIGN_GEO})\b|"
+    rf",\s*based\s+in\s+(?:the\s+)?(?:{_FOREIGN_GEO})\b|"
+    rf"\bbased\s+in\s+(?:latin\s+america|am[eé]rica\s+latina|latam)\b|"
+    # Spanish/Portuguese residency + nationality pins (Chile/LATAM boards).
+    rf"(?:deben|debe|deber[aá]n?|tienen que|requisito)\s+"
+    rf"(?:los\s+candidatos\s+)?residir\s+en\b|"
+    rf"\bresidir\s+en\s+(?:el\s+)?(?:{_FOREIGN_GEO})\b|"
+    rf"\bnacionalidad\s+(?:chilena|argentina|colombiana|mexicana|brasile[nñ]a|"
+    rf"peruana|uruguaya)\b|"
     rf"(?:right|authorization|authorisation|eligibility|eligible)\s+to\s+work\s+in\b|"
     rf"remote\s+(?:within|across|from|in)\s+(?:the\s+)?(?:{_FOREIGN_GEO})\b|"
     # Avoid benefits like "401k match (US only)".
@@ -766,6 +791,26 @@ _RESIDENCY_LOCK = re.compile(
     rf"[^\n.]{{0,40}}\b(?:us|usa|uk|canada|eu|europe)[\s-]+only\b|"
     rf"\b(?:us|usa|uk|canada|eu|europe)[\s-]+only\b(?!\s*\))|"
     rf"\bonly\s+(?:in\s+)?(?:the\s+)?(?:{_FOREIGN_GEO})\b"
+    rf")"
+)
+
+# Explicit location line / LATAM labour pins when city field is empty.
+_BODY_GEO_LOCK = re.compile(
+    rf"(?i)(?:"
+    rf"location\s*:\s*(?:the\s+)?(?:{_FOREIGN_GEO})\b|"
+    rf"currently\s+residing\s+in\s+(?:the\s+)?(?:{_FOREIGN_GEO})\b|"
+    rf"(?:feriados|horario|calendario\s+laboral)\s+de\s+chile\b|"
+    rf"horarios?\s+de\s+oficina\s+[^\n.]{{0,40}}\bchile\b|"
+    rf"(?:connection|overlap|available)\s+during\s+latam\b|"
+    rf"top\s*talent\s+from\s+latam\b|"
+    rf"t[ií]tulo\s+profesional[^\n.]{{0,60}}\bchile\b|"
+    # Hard timezone band that excludes AZ (UTC+4), e.g. "REMOTE (CET ±2h)".
+    rf"(?:remote|fully\s+remote|hybrid)\s+[^\n.]{{0,40}}"
+    rf"\b(?:CET|CEST|GMT|UTC)\s*[±+\-]\s*\d|"
+    rf"\b(?:within|inside)\s+(?:the\s+)?(?:CET|CEST)\s*[±+\-]\s*\d|"
+    # India-local stipend (Rs / INR) on remote ads.
+    rf"(?:stipend|salary|compensation|pay)\s*:?\s*Rs\.?\s*[\d,]+|"
+    rf"\bRs\.?\s*[\d,]+\s*per\s+month\b"
     rf")"
 )
 
@@ -915,6 +960,8 @@ def foreign_locked_remote(title: str, place: str, text: str) -> bool:
         return True
     if _COUNTRY_REMOTE_LOCK.search(sample):
         return True
+    if _BODY_GEO_LOCK.search(sample):
+        return True
     # Americas/AMER pin in place or title (e.g. "Engineer (AMER)").
     if _AMERICAS_LOCK.search(place or "") and not re.search(
         r"(?i)\beméa\b|\bemea\b|worldwide|anywhere", place or ""
@@ -922,7 +969,10 @@ def foreign_locked_remote(title: str, place: str, text: str) -> bool:
         return True
     if re.search(
         r"(?i)\(\s*AMER\s*\)|(?:^|[\s\-–/])AMER(?:\s|$|\))|"
-        r"\bmiddle\s+east\b|\bMENA\b|\bAPAC\b|\bLATAM\b",
+        # Trailing " - NA" / "(NA)" region pin (not the word CANADA).
+        r"(?:^|[\s\-–/])NA(?:\s*$|\s*[)\]])|"
+        r"\bmiddle\s+east\b|\bMENA\b|\bAPAC\b|\bLATAM\b|"
+        r"\ben\s+brasil\b|\bin\s+brazil\b",
         title or "",
     ):
         if not _place_fully_open(place) and not re.search(

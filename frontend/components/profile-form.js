@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { clearMeCache, fetchMe } from "../lib/me-client";
 import { exportMyData, saveCompanyProfile, saveConsents } from "../lib/server/refresh";
+import { BoardSideNav } from "./board-side-nav";
 import { ConsentFields, grantsFromPayload } from "./consent-fields";
-import { PageChrome } from "./page-chrome";
-import { RegisterChoice } from "./register-choice";
-import { Shell } from "./shell";
 import { useInitialMe } from "./me-seed";
+import { Shell } from "./shell";
 
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -26,6 +26,48 @@ function applyMe(data, setters) {
 
 function consentsLang(locale) {
   return locale === "en" || locale === "ru" ? locale : "az";
+}
+
+function ProfileHero({ locale, showApplicant, guest }) {
+  const t = text(locale);
+  const back = hrefFor(locale, { mode: "profile" });
+  return (
+    <header className="profile-board-head">
+      <div className="profile-board-head-copy">
+        <h1 id="profile-front-title" className="profile-board-title">
+          {t.profileTitle}
+        </h1>
+        {guest ? <p className="profile-board-gate-hint">{t.profileGateTitle}</p> : null}
+      </div>
+      {showApplicant ? (
+        <a className="btn small ink" href={hrefFor(locale, { mode: "profileReview" })}>
+          {t.profileReviewOpen}
+        </a>
+      ) : null}
+      {guest ? (
+        <div className="profile-board-gate-actions">
+          <a className="btn small board-auth-signin" href={loginHref({ intent: "job_candidate", returnTo: back })}>
+            {t.signIn}
+          </a>
+          <a className="btn small primary" href={loginHref({ intent: "job_candidate", returnTo: back })}>
+            {t.createAccount}
+          </a>
+        </div>
+      ) : null}
+    </header>
+  );
+}
+
+function ProfileGateEmployer({ locale }) {
+  const t = text(locale);
+  return (
+    <a
+      className="profile-board-gate-employer"
+      href={loginHref({ intent: "job_employer", returnTo: hrefFor(locale, { mode: "post" }) })}
+    >
+      {t.profileGateEmployer}
+    </a>
+  );
 }
 
 export function ProfileForm({ locale }) {
@@ -238,174 +280,203 @@ export function ProfileForm({ locale }) {
 
   return (
     <Shell locale={locale} mode="profile">
-      {me === undefined ? null : showCompany || showApplicant ? (
-        <div className="h2-candidate profile-page">
-          <PageChrome
-            backHref={hrefFor(locale)}
-            backLabel={t.breadcrumbHome}
-            title={t.profileTitle}
-            actions={
-              showApplicant ? (
-                <a className="btn small ink" href={hrefFor(locale, { mode: "profileReview" })}>
-                  {t.profileReviewOpen}
-                </a>
-              ) : null
-            }
-          />
-          <div className={layoutClass}>
-            {showCompany ? (
-              <form className="h2-panel h2-form profile-panel" onSubmit={saveCompany}>
-                <h2 className="h2-panel-title">{t.companyTitle}</h2>
-                {companyError ? <p className="note">{companyError}</p> : null}
-                {companyNote ? <p className="note">{companyNote}</p> : null}
-                <div className="profile-grid">
-                  <label>
-                    <span className="profile-field-label">{t.companyName}</span>
-                    <input value={companyName} maxLength={120} required onChange={(event) => setCompanyName(event.target.value)} />
-                  </label>
-                  <label>
-                    <span className="profile-field-label">{t.companyCity}</span>
-                    <input value={city} maxLength={80} required onChange={(event) => setCity(event.target.value)} />
-                  </label>
-                  <label className="profile-span">
-                    <span className="profile-field-label">{t.companyAbout}</span>
-                    <textarea value={about} maxLength={400} required rows={3} onChange={(event) => setAbout(event.target.value)} />
-                  </label>
-                </div>
-                <div className="ad-actions profile-panel-actions">
-                  <button type="submit" className="btn ink">{t.companySave}</button>
-                </div>
-              </form>
-            ) : null}
-            {showApplicant ? (
-              <form className="h2-panel h2-form profile-panel profile-applicant" onSubmit={saveApplicant}>
-                <h2 className="h2-panel-title">{t.profileApplicantTitle}</h2>
-                {applicantError ? <p className="note">{applicantError}</p> : null}
-                {applicantNote ? <p className="note">{applicantNote}</p> : null}
-                <div className="profile-grid">
-                  <label className="profile-span">
-                    <span className="profile-field-label">{t.profileName}</span>
-                    <input value={displayName} maxLength={80} required onChange={(event) => setDisplayName(event.target.value)} />
-                  </label>
-                  <label>
-                    <span className="profile-field-label">
-                      {t.applyPhone}
-                      <span className="hint">{t.adOptional}</span>
-                    </span>
-                    <input type="tel" value={phone} maxLength={40} onChange={(event) => setPhone(event.target.value)} />
-                  </label>
-                  <label>
-                    <span className="profile-field-label">
-                      {t.applyEmail}
-                      <span className="hint">{t.adOptional}</span>
-                    </span>
-                    <input type="email" value={email} maxLength={120} onChange={(event) => setEmail(event.target.value)} />
-                  </label>
-                </div>
-                <div className="ad-actions profile-panel-actions">
-                  <button type="submit" className="btn ink">{t.companySave}</button>
-                </div>
-              </form>
-            ) : null}
-            {hasPrivacy ? (
-              <form className="h2-panel h2-form profile-panel profile-privacy" onSubmit={savePrivacy}>
-                <div className="profile-privacy-head">
-                  <h2 className="h2-panel-title">{t.privacyTitle}</h2>
-                  <a className="profile-privacy-link" href={hrefFor(locale, { mode: "emailSettings" })}>
-                    {t.emailSettingsOpen}
-                  </a>
-                </div>
-                {privacyError ? <p className="note">{privacyError}</p> : null}
-                {privacyNote ? <p className="note">{privacyNote}</p> : null}
-                <ConsentFields
-                  payload={consentPayload}
-                  grants={grants}
-                  visibility={visibility}
-                  onGrantChange={(kind, value) => setGrants((current) => ({ ...current, [kind]: value }))}
-                  onVisibilityChange={setVisibility}
-                  showVisibility={false}
-                  showMeta={false}
-                  idPrefix="profile-consent"
-                />
-                <div className="ad-actions profile-panel-actions">
-                  {visibilityLevels.length ? (
-                    <div className="profile-visibility-pill">
-                      <span className="profile-visibility-dot" aria-hidden="true" />
-                      <span>
-                        {t.privacyVisibilityLabel}: {visibilityLabel}
-                      </span>
-                      <select
-                        aria-label={t.privacyVisibilityLabel}
-                        value={visibility}
-                        onChange={(event) => setVisibility(event.target.value)}
-                      >
-                        {visibilityLevels.map((level) => (
-                          <option key={level.id} value={level.id}>
-                            {level.label}
-                          </option>
+      <div className="home home-board profile-board">
+        <div className="home-board-shell companies-board-shell profile-board-shell">
+          <BoardSideNav locale={locale} active="profile" />
+          <div className="home-board-main">
+            {me === undefined ? null : showCompany || showApplicant ? (
+              <>
+                <ProfileHero locale={locale} showApplicant={showApplicant} />
+                <div className={`profile-page ${layoutClass}`}>
+                  {showCompany ? (
+                    <form className="h2-panel h2-form profile-panel" onSubmit={saveCompany}>
+                      <h2 className="h2-panel-title">{t.companyTitle}</h2>
+                      {companyError ? <p className="note">{companyError}</p> : null}
+                      {companyNote ? <p className="note">{companyNote}</p> : null}
+                      <div className="profile-grid">
+                        <label>
+                          <span className="profile-field-label">{t.companyName}</span>
+                          <input
+                            value={companyName}
+                            maxLength={120}
+                            required
+                            onChange={(event) => setCompanyName(event.target.value)}
+                          />
+                        </label>
+                        <label>
+                          <span className="profile-field-label">{t.companyCity}</span>
+                          <input
+                            value={city}
+                            maxLength={80}
+                            required
+                            onChange={(event) => setCity(event.target.value)}
+                          />
+                        </label>
+                        <label className="profile-span">
+                          <span className="profile-field-label">{t.companyAbout}</span>
+                          <textarea
+                            value={about}
+                            maxLength={400}
+                            required
+                            rows={3}
+                            onChange={(event) => setAbout(event.target.value)}
+                          />
+                        </label>
+                      </div>
+                      <div className="ad-actions profile-panel-actions">
+                        <button type="submit" className="btn ink">
+                          {t.companySave}
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
+                  {showApplicant ? (
+                    <form className="h2-panel h2-form profile-panel profile-applicant" onSubmit={saveApplicant}>
+                      <h2 className="h2-panel-title">{t.profileApplicantTitle}</h2>
+                      {applicantError ? <p className="note">{applicantError}</p> : null}
+                      {applicantNote ? <p className="note">{applicantNote}</p> : null}
+                      <div className="profile-grid">
+                        <label className="profile-span">
+                          <span className="profile-field-label">{t.profileName}</span>
+                          <input
+                            value={displayName}
+                            maxLength={80}
+                            required
+                            onChange={(event) => setDisplayName(event.target.value)}
+                          />
+                        </label>
+                        <label>
+                          <span className="profile-field-label">
+                            {t.applyPhone}
+                            <span className="hint">{t.adOptional}</span>
+                          </span>
+                          <input
+                            type="tel"
+                            value={phone}
+                            maxLength={40}
+                            onChange={(event) => setPhone(event.target.value)}
+                          />
+                        </label>
+                        <label>
+                          <span className="profile-field-label">
+                            {t.applyEmail}
+                            <span className="hint">{t.adOptional}</span>
+                          </span>
+                          <input
+                            type="email"
+                            value={email}
+                            maxLength={120}
+                            onChange={(event) => setEmail(event.target.value)}
+                          />
+                        </label>
+                      </div>
+                      <div className="ad-actions profile-panel-actions">
+                        <button type="submit" className="btn ink">
+                          {t.companySave}
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
+                  {hasPrivacy ? (
+                    <form className="h2-panel h2-form profile-panel profile-privacy" onSubmit={savePrivacy}>
+                      <div className="profile-privacy-head">
+                        <h2 className="h2-panel-title">{t.privacyTitle}</h2>
+                        <a className="profile-privacy-link" href={hrefFor(locale, { mode: "emailSettings" })}>
+                          {t.emailSettingsOpen}
+                        </a>
+                      </div>
+                      {privacyError ? <p className="note">{privacyError}</p> : null}
+                      {privacyNote ? <p className="note">{privacyNote}</p> : null}
+                      <ConsentFields
+                        payload={consentPayload}
+                        grants={grants}
+                        visibility={visibility}
+                        onGrantChange={(kind, value) => setGrants((current) => ({ ...current, [kind]: value }))}
+                        onVisibilityChange={setVisibility}
+                        showVisibility={false}
+                        showMeta={false}
+                        idPrefix="profile-consent"
+                      />
+                      <div className="ad-actions profile-panel-actions">
+                        {visibilityLevels.length ? (
+                          <div className="profile-visibility-pill">
+                            <span className="profile-visibility-dot" aria-hidden="true" />
+                            <span>
+                              {t.privacyVisibilityLabel}: {visibilityLabel}
+                            </span>
+                            <select
+                              aria-label={t.privacyVisibilityLabel}
+                              value={visibility}
+                              onChange={(event) => setVisibility(event.target.value)}
+                            >
+                              {visibilityLevels.map((level) => (
+                                <option key={level.id} value={level.id}>
+                                  {level.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <span className="profile-visibility-pill">
+                            <span className="profile-visibility-dot" aria-hidden="true" />
+                            <span>
+                              {t.privacyVisibilityLabel}: {visibilityLabel}
+                            </span>
+                          </span>
+                        )}
+                        <button type="submit" className="btn ink">
+                          {t.companySave}
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
+                  {privacyRights.length ? (
+                    <div className="profile-rights">
+                      <div className="profile-rights-grid">
+                        {privacyRights.map((right) => (
+                          <div key={right.id} className="profile-right-card">
+                            <strong>{right.label}</strong>
+                            <div className="profile-right-actions">
+                              {right.id === "export" ? (
+                                <button
+                                  type="button"
+                                  className="btn"
+                                  disabled={Boolean(privacyBusy)}
+                                  onClick={downloadExport}
+                                >
+                                  {t.privacyExportAction}
+                                </button>
+                              ) : null}
+                              {right.id === "delete" ? (
+                                <button
+                                  type="button"
+                                  className="btn profile-right-danger"
+                                  disabled={Boolean(privacyBusy)}
+                                  onClick={deleteMyData}
+                                >
+                                  {t.privacyDeleteAction}
+                                </button>
+                              ) : null}
+                              {right.id === "who_viewed" ? (
+                                <span className="profile-right-soon">{t.privacyWhoViewedSoon}</span>
+                              ) : null}
+                            </div>
+                          </div>
                         ))}
-                      </select>
-                    </div>
-                  ) : (
-                    <span className="profile-visibility-pill">
-                      <span className="profile-visibility-dot" aria-hidden="true" />
-                      <span>
-                        {t.privacyVisibilityLabel}: {visibilityLabel}
-                      </span>
-                    </span>
-                  )}
-                  <button type="submit" className="btn ink">{t.companySave}</button>
-                </div>
-              </form>
-            ) : null}
-            {privacyRights.length ? (
-              <div className="profile-rights">
-                <div className="profile-rights-grid">
-                  {privacyRights.map((right) => (
-                    <div key={right.id} className="profile-right-card">
-                      <strong>{right.label}</strong>
-                      {right.description ? <p className="hint">{right.description}</p> : null}
-                      <div className="profile-right-actions">
-                        {right.id === "export" ? (
-                          <button
-                            type="button"
-                            className="btn"
-                            disabled={Boolean(privacyBusy)}
-                            onClick={downloadExport}
-                          >
-                            {t.privacyExportAction}
-                          </button>
-                        ) : null}
-                        {right.id === "delete" ? (
-                          <button
-                            type="button"
-                            className="btn profile-right-danger"
-                            disabled={Boolean(privacyBusy)}
-                            onClick={deleteMyData}
-                          >
-                            {t.privacyDeleteAction}
-                          </button>
-                        ) : null}
-                        {right.id === "who_viewed" ? (
-                          <span className="profile-right-soon">{t.privacyWhoViewedSoon}</span>
-                        ) : null}
                       </div>
                     </div>
-                  ))}
+                  ) : null}
                 </div>
-              </div>
-            ) : null}
+              </>
+            ) : (
+              <>
+                <ProfileHero locale={locale} showApplicant={false} />
+                <ProfileGate locale={locale} />
+              </>
+            )}
           </div>
         </div>
-      ) : (
-        <div className="h2-candidate">
-          <PageChrome backHref={hrefFor(locale)} backLabel={t.breadcrumbHome} title={t.profileTitle} />
-          <div className="h2-empty h2-gate">
-            <p>{t.profileGate}</p>
-            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "profile" })} />
-          </div>
-        </div>
-      )}
+      </div>
     </Shell>
   );
 }

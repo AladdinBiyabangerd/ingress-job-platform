@@ -1,17 +1,24 @@
 # Current task
 
 ## Completed
-- Production crawl market rules tightened from real DB samples
-- Bugs fixed: EMEA-in-title unlock; reloc flag bypassing geo-lock; weak domestic reloc assistance
-- `finish_item` + `purge-market` share the same rules
+- Job ops status API + Academy staff page (prior)
+- Profile review density pass (`refine` strip + surface)
+- `/settings/notifications` density pass (surface): match profile Option A / review scale
 
-## Rule summary (crawl-time)
-1. Geo-locked remote → drop (US/UK/DE/CA/India/city pins, Germany-wide, US-based, onsite-heavy)
-2. Title EMEA does not unlock country-scoped remote place
-3. Office abroad → keep only with international visa/reloc offer
-4. Unclear → AI market_fit; reject URLs remembered
+## Current state
+- Notifications settings scoped under `.email-settings`
+- Channel cards → divider list rows (no 64px min card grid)
+- Selects 36px; switches 36×20; actions 32px
+- Summary rail merged (stat + plan in one panel); push nested in channels panel
+- Guest gate compact (~320px) with Sign in / Create account (same as profile/review)
+
+## Decisions
+- Density owned under `.email-settings` so `.h2-candidate` / `.btn` base sizes do not re-inflate
+- Settings pattern: list rows + switches, not marketing channel cards
+
+## Remaining work
+- Optional: verify authenticated form live once logged in (CSS already scoped)
 
 ## Relevant files
-- `worker/worker/techstack.py`
-- `worker/worker/market_fit.py`, `market_purge.py`, `runner.py`
-- `worker/tests/test_az_market.py`
+- `frontend/components/email-settings.js`
+- `frontend/app/globals.css` (email-settings block)

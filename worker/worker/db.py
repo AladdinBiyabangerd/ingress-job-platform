@@ -419,6 +419,8 @@ class Store:
                     sync_job_skills(self.conn, int(existing["job_id"]), stack)
                 return "updated"
             job = self.conn.execute("SELECT id FROM jobs WHERE norm_key = ?", (key,)).fetchone()
+            if job is None and not city:
+                job = self._legacy_remote_twin(title, company)
             if job:
                 job_id = int(job["id"])
                 kind = "updated"
@@ -599,6 +601,23 @@ class Store:
                 (REEXTRACT_STACK_STEP, now_iso()),
             )
         return updated
+
+    def _legacy_remote_twin(self, title: str, company: str):
+        """Same title and company saved earlier with a raw remote label as the
+        place ("remote worldwide", "remote"): the same ad, so no second row."""
+        from worker.place import is_remote_place
+
+        prefix = norm_key(title, company, "")  # "title|company|"
+        rows = self.conn.execute(
+            "SELECT id, norm_key FROM jobs WHERE norm_key >= ? AND norm_key < ? "
+            "AND COALESCE(merged_into, 0) = 0",
+            (prefix, prefix + "\uffff"),
+        ).fetchall()
+        for row in rows:
+            tail = str(row["norm_key"])[len(prefix):]
+            if tail and is_remote_place(tail):
+                return row
+        return None
 
     def _set_norm_key(self, job_id: int, key: str) -> None:
         other = self.conn.execute(

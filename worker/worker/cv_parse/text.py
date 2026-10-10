@@ -137,7 +137,7 @@ def _decode(data: bytes) -> str:
 
 def _normalize(text: str) -> str:
     text = text.replace("\r\n", "\n").replace("\r", "\n")
-    text = text.replace("\xa0", " ").replace("\ufeff", "")
+    text = text.replace("\xa0", " ").replace("\ufeff", "").replace("\xad", "-")
     lines = [_WS.sub(" ", line).rstrip() for line in text.split("\n")]
     return _BLANK.sub("\n\n", "\n".join(lines)).strip()
 
@@ -175,4 +175,46 @@ def _from_docx(data: bytes) -> str:
             cells = [c for c in cells if c]
             if cells:
                 parts.append(" | ".join(cells))
-    return _normalize("\n".join(parts))
+    base = _normalize("\n".join(parts))
+    # Nested tables / text boxes (sidebar templates) are invisible to doc.paragraphs;
+    # when a document-order walk finds clearly more text, prefer it.
+    full = _normalize("\n".join(_docx_all_paragraphs(doc)))
+    if len(full) > len(base) * 1.15:
+        return full
+    return base
+
+
+def _docx_all_paragraphs(doc) -> list[str]:
+    """Every paragraph in document order, including nested tables and text boxes.
+
+    mc:Fallback copies of text boxes are skipped so each box is read once.
+    """
+    ns = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    mc = "{http://schemas.openxmlformats.org/markup-compatibility/2006}"
+    out: list[str] = []
+    try:
+        for para in doc.element.body.iter(f"{ns}p"):
+            anc = para.getparent()
+            skip = False
+            while anc is not None:
+                if anc.tag == f"{mc}Fallback":
+                    skip = True
+                    break
+                anc = anc.getparent()
+            if skip:
+                continue
+            chunks: list[str] = []
+            for node in para.iter():
+                if node.tag == f"{ns}t":
+                    chunks.append(node.text or "")
+                elif node.tag in (f"{ns}tab",):
+                    chunks.append(" ")
+                elif node.tag == f"{ns}br":
+                    chunks.append("\n")
+            text = "".join(chunks)
+            for line in text.split("\n"):
+                if line.strip():
+                    out.append(line.strip())
+    except Exception:
+        return []
+    return out

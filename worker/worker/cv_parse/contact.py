@@ -58,12 +58,32 @@ def extract_contact(text: str, *, default_region: str = "AZ") -> dict:
     }
 
 
+_LOC_REJECT = re.compile(
+    r"(?i)\b(university|universitet|college|institute|school|phd|bsc|msc|bachelor|master|"
+    r"degree|thesis|engineer|developer|manager|intern|designer|analyst|inc|llc|ltd|corp|"
+    r"company|science|engineering|présent|present)\b"
+)
+
+
 def _guess_location(text: str) -> tuple[str, str]:
-    """Best-effort city/country from early 'City, Country' lines."""
+    """Best-effort city/country from 'City, Country' lines in the header block.
+
+    Only lines above the first section heading count, so education / job rows
+    ("PhD Princeton University, Computer Science") are never read as a place.
+    """
+    from worker.cv_parse.sections import _heading_name
+
     for raw in (text or "").splitlines()[:14]:
-        line = raw.strip()
-        if not line or "@" in line or "http" in line.lower():
+        line = re.sub(r"^[^\w]+", "", raw.strip(), flags=re.UNICODE)  # drop 📍 / bullets
+        if line and _heading_name(line):
+            break
+        if not line or "@" in line or "http" in line.lower() or re.search(r"\d", line):
             continue
+        if _LOC_REJECT.search(line):
+            continue
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) >= 3 and all(2 <= len(p) <= 40 for p in parts[-2:]):
+            return parts[-2][:80], parts[-1][:80]
         low = line.lower()
         if any(k in low for k in ("email", "tel", "phone", "telefon", "linkedin", "github", "veb", "сайт")):
             continue
@@ -157,6 +177,12 @@ def _portfolio(text: str, linkedin: str, github: str) -> str:
 def _guess_name(text: str, email: str) -> str:
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     for line in lines[:8]:
+        # "Jane Doe Email: jane@x.com" - keep only the part before the label.
+        head = re.split(
+            r"(?i)\b(?:e-?mail|mobile|phone|tel|telefon|linkedin|github|web(?:site)?)\s*:", line
+        )[0].strip()
+        if head and head != line and _NAME_LINE.match(head):
+            return head[:120]
         if email and email.lower() in line.lower():
             continue
         if _EMAIL.search(line) or _PHONE_CANDIDATE.fullmatch(line):

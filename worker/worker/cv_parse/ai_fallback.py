@@ -281,7 +281,7 @@ def _merge(rules: dict, llm: dict, text: str) -> dict:
 
     years = llm.get("total_years")
     if isinstance(years, (int, float)) and 0 <= float(years) <= 60:
-        out["total_years"] = round(float(years), 1)
+        out["total_years"] = float(max(0, int(round(float(years)))))
 
     work = _filter_work(llm.get("work_history"), text)
     rules_work = rules.get("work_history") if isinstance(rules.get("work_history"), list) else []
@@ -358,9 +358,10 @@ def filter_skills(raw: object, text: str) -> list[dict]:
         seen.add(canonical)
         years_f = None
         if isinstance(years, (int, float)) and 0 <= float(years) <= 60:
-            years_f = round(float(years), 1)
+            years_f = float(years)
             if conf is not None and conf <= SKILL_CONF_WEAK:
-                years_f = round(years_f * SKILL_YEARS_WEAK_FACTOR, 1)
+                years_f = years_f * SKILL_YEARS_WEAK_FACTOR
+            years_f = float(max(0, int(round(years_f))))
         row: dict[str, Any] = {
             "name": canonical,
             "years": years_f,

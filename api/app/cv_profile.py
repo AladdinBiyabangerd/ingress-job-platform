@@ -114,15 +114,27 @@ def _as_str(value: object, *, max_len: int) -> str:
 
 
 def _as_float(value: object) -> float | None:
+    """Parse a non-negative float (confidence, etc.). Keeps 2 decimal places."""
     if value is None or value == "":
         return None
     try:
-        number = float(value)
+        raw = value
+        if isinstance(raw, str):
+            raw = raw.strip().replace(",", ".")
+        number = float(raw)
     except (TypeError, ValueError):
         return None
     if number < 0 or number > SKILL_YEARS_MAX:
         return None
     return round(number, 2)
+
+
+def _as_years(value: object) -> float | None:
+    """Experience years as whole years (1, 2, 3…) — drop fake precision like 1.28."""
+    number = _as_float(value)
+    if number is None:
+        return None
+    return float(max(0, int(round(number))))
 
 
 def _normalize_skill(item: object) -> dict | None:
@@ -136,7 +148,7 @@ def _normalize_skill(item: object) -> dict | None:
     name = _as_str(item.get("name"), max_len=SKILL_NAME_MAX)
     if not name:
         return None
-    years = _as_float(item.get("years"))
+    years = _as_years(item.get("years"))
     level = _as_str(item.get("level"), max_len=40)
     source = _as_str(item.get("source") or "user", max_len=40) or "user"
     return {"name": name, "years": years, "level": level, "source": source}
@@ -251,7 +263,7 @@ def normalize_profile_data(raw: object, *, base: dict | None = None) -> dict:
         seniority = _as_str(incoming.get("seniority"), max_len=40).lower()
         data["seniority"] = seniority if seniority in SENIORITY_VALUES else data.get("seniority") or ""
     if "total_years" in incoming:
-        data["total_years"] = _as_float(incoming.get("total_years"))
+        data["total_years"] = _as_years(incoming.get("total_years"))
 
     if "skills" in incoming and isinstance(incoming.get("skills"), list):
         skills = []
@@ -415,8 +427,7 @@ def _profile_payload(conn, *, user_id: str) -> dict:
     total_years = _row_get(row, "total_years", 5)
     if total_years is None:
         total_years = profile.get("total_years")
-    else:
-        total_years = _as_float(total_years)
+    total_years = _as_years(total_years)
     profile["headline"] = headline
     profile["seniority"] = seniority
     profile["total_years"] = total_years
@@ -602,7 +613,7 @@ def save_profile(
                 # Explicit null clears; omitted leaves merged value.
                 if total_years is not None or "total_years" in (data or {}):
                     source = total_years if total_years is not None else data.get("total_years")
-                    merged["total_years"] = _as_float(source)
+                    merged["total_years"] = _as_years(source)
 
             now = _now()
             encoded = json.dumps(merged, ensure_ascii=False, separators=(",", ":"))

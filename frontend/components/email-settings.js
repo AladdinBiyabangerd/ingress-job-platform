@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { roadmapEnabled } from "../lib/product-features";
@@ -11,7 +12,6 @@ import {
   pushSupported,
 } from "../lib/web-push";
 import { PageChrome } from "./page-chrome";
-import { RegisterChoice } from "./register-choice";
 import { Shell } from "./shell";
 import { useInitialMe } from "./me-seed";
 
@@ -291,6 +291,7 @@ export function EmailSettings({ locale, initialPrefs = null }) {
   ].filter(Boolean).length;
   const consentOn = !prefs || prefs.emails_consent !== false;
   const langLabel = String(language || fallbackLang).toUpperCase();
+  const returnTo = hrefFor(locale, { mode: "emailSettings" });
 
   return (
     <Shell locale={locale} mode="emailSettings">
@@ -305,13 +306,11 @@ export function EmailSettings({ locale, initialPrefs = null }) {
                 {t.emailSettingsPrivacyLink}
               </a>
             }
-          >
-            <p className="es-lede">{t.emailSettingsLede}</p>
-          </PageChrome>
+          />
 
           <form className="es-form" onSubmit={save}>
-            {error ? <p className="note">{error}</p> : null}
-            {note ? <p className="note">{note}</p> : null}
+            {error ? <p className="note es-flash">{error}</p> : null}
+            {note ? <p className="note es-flash">{note}</p> : null}
             {prefs && !prefs.emails_consent ? (
               <p className="hint es-consent-banner">
                 {t.emailSettingsConsentOff}{" "}
@@ -321,18 +320,19 @@ export function EmailSettings({ locale, initialPrefs = null }) {
 
             <div className="es-layout">
               <aside className="es-rail" aria-label={t.emailSettingsCurrentPlan}>
-                <div className="es-stat">
-                  <div className="es-stat-num">
-                    {activeCount}/{channelTotal}
+                <div className="h2-panel es-summary">
+                  <div className="es-stat-row">
+                    <div>
+                      <div className="es-stat-num">
+                        {activeCount}/{channelTotal}
+                      </div>
+                      <div className="es-stat-lbl">{t.emailSettingsActiveKinds}</div>
+                    </div>
+                    <span className={`es-pill${pushSubActive ? " is-on" : ""}`}>
+                      <i aria-hidden="true" />
+                      {pushSubActive ? t.emailSettingsPushSubOn : t.emailSettingsPushSubOff}
+                    </span>
                   </div>
-                  <div className="es-stat-lbl">{t.emailSettingsActiveKinds}</div>
-                  <span className={`es-pill${pushSubActive ? " is-on" : ""}`}>
-                    <i aria-hidden="true" />
-                    {pushSubActive ? t.emailSettingsPushSubOn : t.emailSettingsPushSubOff}
-                  </span>
-                </div>
-                <div className="h2-panel es-plan">
-                  <p className="h2-panel-title">{t.emailSettingsCurrentPlan}</p>
                   <dl className="es-plan-list">
                     <div>
                       <dt>{t.emailSettingsPlanFrequency}</dt>
@@ -359,7 +359,6 @@ export function EmailSettings({ locale, initialPrefs = null }) {
               <div className="es-board">
                 <div className="h2-panel es-panel">
                   <p className="h2-panel-title">{t.emailSettingsDelivery}</p>
-                  <p className="es-sub">{t.emailSettingsDeliverySub}</p>
                   <div className="es-delivery">
                     <label className="es-field">
                       {t.emailSettingsFrequency}
@@ -399,7 +398,6 @@ export function EmailSettings({ locale, initialPrefs = null }) {
 
                 <div className="h2-panel es-panel">
                   <p className="h2-panel-title">{t.emailSettingsChannels}</p>
-                  <p className="es-sub">{t.emailSettingsChannelsSub}</p>
                   <div className="es-channels">
                     <ChannelCard
                       title={t.emailSettingsDigest}
@@ -440,33 +438,38 @@ export function EmailSettings({ locale, initialPrefs = null }) {
                       onChange={setPushEnabled}
                     />
                   </div>
-                </div>
 
-                <div className="es-push">
-                  <div className="es-push-copy">
-                    <strong>{t.emailSettingsPushSubTitle}</strong>
-                    <p className="hint">{t.emailSettingsPushHint}</p>
-                    {pushNote ? <p className="note">{pushNote}</p> : null}
-                  </div>
-                  <div className="es-push-actions">
-                    <button
-                      type="button"
-                      className="btn"
-                      disabled={pushBusy || !pushSupported()}
-                      onClick={onEnablePush}
-                    >
-                      {t.emailSettingsPushEnable}
-                    </button>
-                    {pushSubActive || pushEnabled ? (
-                      <button type="button" className="btn" disabled={pushBusy} onClick={onDisablePush}>
-                        {t.emailSettingsPushDisable}
+                  <div className="es-push">
+                    <div className="es-push-copy">
+                      <strong>{t.emailSettingsPushSubTitle}</strong>
+                      <p className="hint">{t.emailSettingsPushHint}</p>
+                      {pushNote ? <p className="note">{pushNote}</p> : null}
+                    </div>
+                    <div className="es-push-actions">
+                      <button
+                        type="button"
+                        className="btn small"
+                        disabled={pushBusy || !pushSupported()}
+                        onClick={onEnablePush}
+                      >
+                        {t.emailSettingsPushEnable}
                       </button>
-                    ) : null}
+                      {pushSubActive || pushEnabled ? (
+                        <button
+                          type="button"
+                          className="btn small"
+                          disabled={pushBusy}
+                          onClick={onDisablePush}
+                        >
+                          {t.emailSettingsPushDisable}
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
 
                 <div className="es-save">
-                  <button type="submit" className="btn ink" disabled={busy}>
+                  <button type="submit" className="btn small ink" disabled={busy}>
                     {t.companySave}
                   </button>
                 </div>
@@ -475,15 +478,29 @@ export function EmailSettings({ locale, initialPrefs = null }) {
           </form>
         </div>
       ) : me === undefined ? null : (
-        <div className="h2-candidate">
+        <div className="h2-candidate email-settings">
           <PageChrome
+            className="email-settings-chrome"
             backHref={hrefFor(locale)}
             backLabel={t.breadcrumbHome}
             title={t.emailSettingsTitle}
           />
-          <div className="h2-empty h2-gate">
+          <div className="h2-panel es-gate">
             <p>{t.emailSettingsGate}</p>
-            <RegisterChoice locale={locale} returnTo={hrefFor(locale, { mode: "emailSettings" })} />
+            <div className="es-gate-actions">
+              <a
+                className="btn small board-auth-signin"
+                href={loginHref({ intent: "job_candidate", returnTo })}
+              >
+                {t.signIn}
+              </a>
+              <a
+                className="btn small primary"
+                href={loginHref({ intent: "job_candidate", returnTo })}
+              >
+                {t.createAccount}
+              </a>
+            </div>
           </div>
         </div>
       )}

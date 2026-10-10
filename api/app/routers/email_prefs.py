@@ -173,3 +173,21 @@ def trigger_engagement_jobs(
     """Worker trigger for match_new / match_near engagement fanout."""
     _require_internal_token(x_internal_token)
     return run_engagement_jobs(dry_run=dry_run)
+
+
+@router.get("/internal/ops-status")
+def internal_ops_status(
+    days: int = Query(default=7, ge=1, le=90),
+    x_internal_token: str | None = Header(default=None, alias="X-Internal-Token"),
+) -> dict:
+    """Academy / ops dashboards: AI health + crawl funnel (shared internal token)."""
+    from app.cabinet_store import _LOCK, _connect
+    from app.ops_status import build_ops_status
+
+    _require_internal_token(x_internal_token)
+    with _LOCK:
+        conn = _connect()
+        try:
+            return build_ops_status(conn, days=days)
+        finally:
+            conn.close()

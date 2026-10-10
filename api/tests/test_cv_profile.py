@@ -31,7 +31,7 @@ SAMPLE = {
     "headline": "Backend Developer",
     "summary": "Backend engineer focused on APIs and data pipelines.",
     "seniority": "middle",
-    "total_years": 5.5,
+    "total_years": 5,
     "work_history": [
         {
             "title": "Backend Developer",
@@ -431,7 +431,7 @@ class CvProfileTests(unittest.TestCase):
                 INSERT INTO candidate_profile (
                     user_id, cv_file_key, data, headline, seniority, total_years,
                     status, parse_method, confidence, visibility, updated_at
-                ) VALUES (?, ?, ?, 'Backend Developer', 'middle', 5.5,
+                ) VALUES (?, ?, ?, 'Backend Developer', 'middle', 5,
                           'draft', 'rules', 0.9, 'hidden', ?)
                 """,
                 ("person-7", stored, json.dumps(SAMPLE), now),

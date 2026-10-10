@@ -14,6 +14,9 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
         "employment",
         "professional experience",
         "work history",
+        "employment history",
+        "relevant experience",
+        "internships",
         "career",
         "təcrübə",
         "iş təcrübəsi",
@@ -25,6 +28,9 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
     "education": (
         "education",
         "academic",
+        "academic background",
+        "education and training",
+        "education & training",
         "təhsil",
         "образование",
         "учеба",
@@ -36,6 +42,15 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
         "technologies",
         "tech stack",
         "tools",
+        "key skills",
+        "core skills",
+        "core competencies",
+        "competencies",
+        "technical expertise",
+        "skills & tools",
+        "skills and tools",
+        "strengths",
+        "programming",
         "bacarıqlar",
         "bacariqlar",
         "texniki bacarıqlar",
@@ -55,6 +70,9 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
     "summary": (
         "summary",
         "profile",
+        "professional summary",
+        "career summary",
+        "personal statement",
         "about",
         "about me",
         "objective",
@@ -82,12 +100,24 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
         "sertifikatlar",
         "сертификаты",
     ),
+    # Sections we do not parse; they exist so they end the previous section
+    # instead of leaking their lines into experience / skills.
+    "awards": ("awards", "honors", "achievements", "mükafatlar", "наградa", "награды"),
+    "publications": ("publications", "papers", "nəşrlər", "публикации"),
+    "volunteer": ("volunteering", "volunteer experience", "könüllü", "волонтерство"),
+    "interests": ("interests", "hobbies", "maraqlar", "хобби", "интересы"),
+    "references": ("references", "referanslar", "рекомендации"),
+    "additional": ("additional information", "əlavə məlumat", "дополнительно"),
+    "coursework": ("coursework", "courses", "kurslar", "курсы"),
+    "links": ("links",),
 }
 
 _ALIAS_TO_CANON: dict[str, str] = {}
 for _canon, _aliases in _HEADINGS.items():
     for _alias in _aliases:
         _ALIAS_TO_CANON[fold_az(_alias)] = _canon
+
+_SPACELESS_TO_CANON: dict[str, str] = {k.replace(" ", ""): v for k, v in _ALIAS_TO_CANON.items()}
 
 _HEADING_RE = re.compile(
     r"^\s*(?P<title>[A-Za-zА-Яа-яƏəÖöÜüĞğÇçŞşİı /&+\-]{2,60})\s*:?\s*$",
@@ -123,8 +153,17 @@ def _heading_name(line: str) -> str | None:
     if not m:
         return None
     title = fold_az(re.sub(r"\s+", " ", m.group("title")).strip().rstrip(":"))
+    # ASCII capital I folds to dotless ı (AZ rule); ALL-CAPS English headings
+    # ("EDUCATION") need the plain-i form too.
+    ascii_title = title.replace("ı", "i")
     if title in _ALIAS_TO_CANON:
         return _ALIAS_TO_CANON[title]
+    if ascii_title in _ALIAS_TO_CANON:
+        return _ALIAS_TO_CANON[ascii_title]
+    # PDFs that lose word spaces: "WorkExperience".
+    if ascii_title.replace(" ", "") in _SPACELESS_TO_CANON and len(ascii_title) <= 40:
+        return _SPACELESS_TO_CANON[ascii_title.replace(" ", "")]
+    title = ascii_title if ascii_title in _ALIAS_TO_CANON else title
     title = re.sub(r"^(?:[0-9ivx]+\.|[0-9]+)\)?\s*", "", title).strip()
     if title in _ALIAS_TO_CANON:
         return _ALIAS_TO_CANON[title]
@@ -132,13 +171,13 @@ def _heading_name(line: str) -> str | None:
     words = title.split()
     if 1 < len(words) <= 5:
         for word in reversed(words):
-            canon = _ALIAS_TO_CANON.get(word)
+            canon = _ALIAS_TO_CANON.get(word) or _ALIAS_TO_CANON.get(word.replace("ı", "i"))
             if canon:
                 return canon
         # Also try adjacent bigrams ("iş təcrübəsi", "texniki bacarıqlar").
         for i in range(len(words) - 1, 0, -1):
             bigram = f"{words[i - 1]} {words[i]}"
-            canon = _ALIAS_TO_CANON.get(bigram)
+            canon = _ALIAS_TO_CANON.get(bigram) or _ALIAS_TO_CANON.get(bigram.replace("ı", "i"))
             if canon:
                 return canon
     return None

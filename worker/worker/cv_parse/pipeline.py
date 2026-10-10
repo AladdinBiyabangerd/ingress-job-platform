@@ -9,12 +9,14 @@ from datetime import date
 from worker.cv_parse.ai_fallback import maybe_ai_fallback
 from worker.cv_parse.contact import extract_contact
 from worker.cv_parse.dates import find_ranges, iso_month, merge_years
+from worker.cv_parse.jobs import normalize_experience
 from worker.cv_parse.locale import fold_az
-from worker.cv_parse.sections import split_sections
+from worker.cv_parse.jobs import _ROLE as _ROLE_WORDS
+from worker.cv_parse.sections import _heading_name, split_sections
 from worker.cv_parse.text import extract
 from worker.techstack import find_stack
 
-PARSER_VERSION = "1.6"
+PARSER_VERSION = "1.7"
 
 # Intern calendar time counts at half weight vs professional roles for total_years /
 # skill years. 6 months intern ≠ 6 months senior IC time.
@@ -187,10 +189,15 @@ def _profile_summary(sections: dict[str, str]) -> str:
     return "\n".join(lines)[:2000]
 
 
+_LOCATION_LIKE = re.compile(r"^[^\W\d_][\w .'’-]+,\s*[A-Za-z .]{2,30}$")
+
+
 def _headline(text: str, sections: dict[str, str], work: list[dict]) -> str:
     for line in text.splitlines()[:12]:
         line = line.strip()
-        if not line or len(line) > 80:
+        if line and _heading_name(line):
+            break  # header block ended; later lines are section content
+        if not line or len(line) > 80 or find_ranges(line):
             continue
         low = line.lower()
         if any(
@@ -216,10 +223,18 @@ def _headline(text: str, sections: dict[str, str], work: list[dict]) -> str:
             line,
         ):
             return line[:120]
+    if work and work[0].get("title") and _ROLE_WORDS.search(str(work[0]["title"])):
+        return str(work[0]["title"])[:120]
     summary = sections.get("summary") or ""
     for line in summary.splitlines():
         line = line.strip()
-        if 3 <= len(line) <= 80 and not line.lower().startswith("i am"):
+        if (
+            3 <= len(line) <= 80
+            and not line.lower().startswith("i am")
+            and re.search(r"[^\W\d_]{3}", line)
+            and not _LOCATION_LIKE.match(line)
+            and "@" not in line
+        ):
             return line[:120]
     if work and work[0].get("title"):
         return str(work[0]["title"])[:120]
@@ -315,14 +330,15 @@ def _experience_years(dated_jobs: list[dict]) -> tuple[float, float, float]:
     ]
     pro_years = merge_years(pro)
     intern_years = merge_years(intern)
-    total = round(pro_years + intern_years * _INTERN_YEAR_WEIGHT, 2)
+    # Whole years — avoid fake precision like 1.28
+    total = float(max(0, int(round(pro_years + intern_years * _INTERN_YEAR_WEIGHT))))
     return pro_years, intern_years, total
 
 
 def _work_history(experience_text: str) -> tuple[list[dict], list[dict]]:
     if not experience_text.strip():
         return [], []
-    blocks = _split_jobs(experience_text)
+    blocks = _split_jobs(normalize_experience(experience_text))
     history: list[dict] = []
     dated: list[dict] = []
     for block in blocks:
@@ -521,7 +537,7 @@ def _skill_years(name: str, jobs: list[dict]) -> float | None:
                     pro.append((start, end))
     if not pro and not intern:
         return None
-    return round(merge_years(pro) + merge_years(intern) * _INTERN_YEAR_WEIGHT, 2)
+    return float(max(0, int(round(merge_years(pro) + merge_years(intern) * _INTERN_YEAR_WEIGHT))))
 
 
 def _level_for_years(years: float | None) -> str:
