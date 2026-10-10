@@ -105,9 +105,21 @@ def place_key(value: str) -> str:
     return key
 
 
+_WORK_MODE = re.compile(r"(?i)\b(?:hybrid|on[\s-]?site|office[\s-]based|in[\s-]office)\b")
+_UK_POSTCODE = re.compile(r"(?i)^[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}$")
+
+
+def _strip_work_mode(raw: str) -> str:
+    """"Hybrid" or "Cambridge / Hybrid" is a work mode, not a city."""
+    if _UK_POSTCODE.match(raw.strip()):
+        return ""
+    cleaned = _WORK_MODE.sub(" ", raw)
+    return clean_place(re.sub(r"\s*[/|,-]\s*(?=[/|,-]|$)", " ", cleaned))
+
+
 def normalize_city(value: str) -> str:
     """Storage form: empty for remote labels; canon city when known."""
-    raw = clean_place(value)
+    raw = _strip_work_mode(clean_place(value))
     if not raw or is_remote_place(raw):
         return ""
     key = place_key(raw)

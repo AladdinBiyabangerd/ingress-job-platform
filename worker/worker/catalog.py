@@ -134,6 +134,29 @@ SOURCES: list[dict] = [
         credit_note="Working Nomads public jobs API. Name Working Nomads as the source.",
     ),
     _row(
+        "Jobgether",
+        "https://jobgether.com/",
+        "official_api",
+        "https://jobgether.com/astroapi/ai/jobs.json",
+        enabled=True,
+        go="go",
+        note=(
+            "robots.txt Allow: /astroapi/ai/jobs.json. Yalnız IT title/jobFunctions; "
+            "remote bayrağı. Ən çox 5 səhifə/pass. HTML scraping yox."
+        ),
+        credit_note="Jobgether public astroapi jobs JSON. The link opens the Jobgether offer URL.",
+    ),
+    _row(
+        "RemoteYeah",
+        "https://remoteyeah.com/",
+        "rss",
+        "https://remoteyeah.com/rss.xml",
+        enabled=True,
+        go="go",
+        note="Açıq RSS (~300 remote). Qeyri-texniki title-lar is_tech_job ilə düşür; geo gate finish_item-də.",
+        credit_note="RemoteYeah public RSS feed.",
+    ),
+    _row(
         "4 Day Week",
         "https://4dayweek.io/",
         "official_api",
@@ -250,7 +273,7 @@ SOURCES: list[dict] = [
         'https://apply.workable.com/api/v1/widget/accounts',
         enabled=True,
         go="go",
-        note='Workable açıq karyera widget API (?details=true): Skroutz, Blueground, Persado, Epignosis (Yunanıstan/Avropa). Az elan.',
+        note='Workable açıq karyera widget API (?details=true): Skroutz, Blueground, Persado, Epignosis, Mercari, Hugging Face, 1Password, PeopleCert, Orfium. Az elan.',
         credit_note="Employer's public Workable careers widget. The link opens the employer's posting on apply.workable.com.",
     ),
     _row(
@@ -260,7 +283,7 @@ SOURCES: list[dict] = [
         'https://bunq.recruitee.com/api/offers/',
         enabled=True,
         go="go",
-        note='Recruitee açıq karyera API (/api/offers/): bunq, Channable. Az elan.',
+        note='Recruitee açıq karyera API (/api/offers/): bunq, Channable, Effectory, MailerLite, Adjust. Az elan.',
         credit_note="Employer's public Recruitee careers API. The link opens the employer's posting.",
     ),
     _row(

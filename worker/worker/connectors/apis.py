@@ -130,6 +130,64 @@ class JobicyConnector(FeedConnector):
         return out
 
 
+class JobgetherConnector(FeedConnector):
+    """https://jobgether.com — public astroapi JSON (robots Allow: /astroapi/ai/jobs.json)."""
+
+    name = "Jobgether"
+    entry_url = "https://jobgether.com/astroapi/ai/jobs.json"
+    require_remote_or_relocation = True
+    min_interval_hours = 3
+    max_pages = 5
+    # Feed has no description; the public offer page fills JobPosting text.
+    detail = True
+    credit_note = "Jobgether public astroapi jobs JSON. The link opens the Jobgether offer URL."
+
+    def feed_items(self) -> list[dict]:
+        out: list[dict] = []
+        seen: set[str] = set()
+        for page in range(1, self.max_pages + 1):
+            url = self.entry_url if page == 1 else f"{self.entry_url}?page={page}"
+            payload = self.client.get_json(url)
+            jobs = payload.get("jobs") if isinstance(payload, dict) else None
+            if not isinstance(jobs, list):
+                raise SourceFailed("jobgether payload had no jobs list")
+            for job in jobs:
+                if not isinstance(job, dict):
+                    continue
+                source_url = clean(job.get("url"))
+                if not source_url or source_url in seen:
+                    continue
+                funcs = [clean(f) for f in (job.get("jobFunctions") or []) if clean(f)]
+                title = clean(job.get("title"))
+                if not title:
+                    continue
+                remote_raw = clean(job.get("remote"))
+                remote = bool(re.search(r"(?i)\bremote\b", remote_raw)) if remote_raw else None
+                place = clean(job.get("location"))
+                city = place
+                if remote and place and not re.search(r"(?i)\bremote\b", place):
+                    city = f"Remote ({place})"
+                elif remote and not place:
+                    city = "Remote"
+                seen.add(source_url)
+                out.append({
+                    "title": title,
+                    "company": job.get("company"),
+                    "city": city,
+                    "text": "",
+                    "source_url": source_url,
+                    "external_id": job.get("id"),
+                    "tags": funcs,
+                    "category": funcs,
+                    "remote": True if remote else None,
+                    "_stamp": job.get("postedAt"),
+                })
+            page_info = payload.get("pagination") if isinstance(payload, dict) else None
+            if not isinstance(page_info, dict) or not page_info.get("hasMore"):
+                break
+        return out
+
+
 class WorkingNomadsConnector(FeedConnector):
     """Working Nomads public jobs API linked from workingnomads.com."""
 

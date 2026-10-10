@@ -14,6 +14,7 @@ from worker.connectors.apis import (
     FourDayWeekConnector,
     HimalayasConnector,
     HnWhoIsHiringConnector,
+    JobgetherConnector,
     JobicyConnector,
     WorkingNomadsConnector,
 )
@@ -43,6 +44,7 @@ from worker.connectors.rssboards import (
     JobspressoConnector,
     PythonOrgJobsConnector,
     RealWorkFromAnywhereConnector,
+    RemoteYeahConnector,
 )
 from worker.connectors.wellfound import WellfoundConnector
 from worker.connectors.weworkremotely import WeWorkRemotelyConnector
@@ -79,6 +81,8 @@ BUILDERS = {
     "Himalayas": HimalayasConnector,
     "Jobicy": JobicyConnector,
     "Working Nomads": WorkingNomadsConnector,
+    "Jobgether": JobgetherConnector,
+    "RemoteYeah": RemoteYeahConnector,
     "4 Day Week": FourDayWeekConnector,
     "HN Who is hiring": HnWhoIsHiringConnector,
     "Python.org Jobs": PythonOrgJobsConnector,

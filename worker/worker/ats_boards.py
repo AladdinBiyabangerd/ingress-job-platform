@@ -2,9 +2,10 @@
 
 Plain data, no imports: catalog.py builds the source rows from it and
 connectors/ats.py builds one connector per group. Every slug was checked on
-2026-10-05: the board answered, robots.txt allowed it and it listed tech roles.
-Companies that hire remotely or sponsor visas/relocation were preferred.
-Each group reads at most ATS_MAX_BOARDS boards per pass; larger groups rotate.
+2026-10-05 (base set) or 2026-10-10 (expansions): the board answered, robots.txt
+allowed it and it listed tech roles. Companies that hire remotely or sponsor
+visas/relocation were preferred. Each group reads at most ATS_MAX_BOARDS
+boards per pass; larger groups rotate.
 """
 
 ATS_MAX_BOARDS = 12
@@ -14,26 +15,35 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
     # ---- Greenhouse (boards-api.greenhouse.io)
     ("Greenhouse boards (UK & Ireland)", "greenhouse", "Böyük Britaniya və İrlandiya", (
         "monzo", "deliveroo", "gocardless", "graphcore", "intercom", "tide", "tines", "cleo",
-        "stabilityai", "sumup", "canonical")),
+        "stabilityai", "sumup", "canonical", "form3")),
     ("Greenhouse boards (DACH)", "greenhouse", "Almaniya, Avstriya, İsveçrə", (
         "n26", "hellofresh", "getyourguide", "celonis", "helsing", "contentful", "trivago",
         "commercetools", "parloa", "raisin", "scandit", "solarisbank", "staffbase", "bitpanda",
-        "gostudent")),
+        "gostudent", "traderepublicbank", "flix")),
     ("Greenhouse boards (Benelux & France)", "greenhouse", "Benilüks və Fransa", (
         "adyen", "elastic", "doctolib", "algolia", "catawiki", "dataiku", "mirakl")),
     ("Greenhouse boards (Nordics & Baltics)", "greenhouse", "Skandinaviya və Baltikyanı", (
-        "wolt", "oura", "relex", "truecaller", "veriff", "mentimeter", "trustpilot", "yousician")),
+        "wolt", "oura", "relex", "truecaller", "veriff", "mentimeter", "trustpilot", "yousician",
+        "neo4j")),
     ("Greenhouse boards (Southern & Eastern Europe)", "greenhouse", "Cənubi və Şərqi Avropa", (
-        "cabify", "feedzai", "swordhealth", "typeform", "wallapop")),
+        "cabify", "feedzai", "swordhealth", "typeform", "wallapop", "transfergo", "jetbrains",
+        "nix", "bloomreach")),
     ("Greenhouse boards (US West)", "greenhouse", "ABŞ qərb sahili", (
         "affirm", "coinbase", "instacart", "reddit", "samsara", "mercury", "tailscale", "twilio",
         "webflow", "pinterest", "databricks", "stripe", "airbnb", "discord", "dropbox", "vercel",
-        "planetscale", "calendly", "nextdoor", "gusto", "cloudflare", "figma", "anthropic", "lyft")),
+        "planetscale", "calendly", "nextdoor", "gusto", "cloudflare", "figma", "anthropic", "lyft",
+        "robinhood", "asana", "scaleai", "brex", "chime", "boxinc", "lattice", "waymo", "block",
+        "twitch", "okta", "zscaler", "fastly", "cockroachlabs", "fivetran", "mixpanel",
+        "launchdarkly", "coursera", "udacity", "roblox", "pagerduty", "bitwarden", "netlify",
+        "togetherai", "epicgames", "riotgames", "medium", "gemini", "ripple", "fireblocks",
+        "circleci", "nuro")),
     ("Greenhouse boards (US East)", "greenhouse", "ABŞ şərq sahili", (
         "datadog", "mongodb", "gitlab", "toast", "zocdoc", "justworks", "duolingo", "squarespace",
-        "klaviyo", "peloton", "oscar", "betterment", "attentive", "yext", "grafanalabs")),
+        "klaviyo", "peloton", "oscar", "betterment", "attentive", "yext", "grafanalabs",
+        "pendo", "classpass", "udemy", "khanacademy", "fanduel", "thenewyorktimes", "hp",
+        "constantcontact", "braze", "gongio", "salesloft", "apolloio", "zoominfo", "sproutsocial")),
     ("Greenhouse boards (Canada)", "greenhouse", "Kanada", (
-        "d2l", "faire", "geotab", "hootsuite", "ritual", "shakepay")),
+        "d2l", "faire", "geotab", "hootsuite", "ritual", "shakepay", "lucidsoftware", "leagueinc")),
     ("Greenhouse boards (Latin America)", "greenhouse", "Latın Amerikası", (
         "gympass", "clara", "ebanx", "quintoandar", "stone", "vtex", "wizeline")),
     ("Greenhouse boards (India)", "greenhouse", "Hindistan", (
@@ -56,14 +66,14 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
         "palantir", "toptal", "anchorage", "olo", "fullscript", "outreach", "jumpcloud", "ro",
         "zoox", "wattpad", "relay", "dlocal", "kavak")),
     ("Lever boards (India)", "lever", "Hindistan", (
-        "meesho", "paytm", "zeta", "mindtickle", "fampay")),
+        "meesho", "paytm", "zeta", "mindtickle", "fampay", "cred")),
     ("Lever boards (Asia-Pacific)", "lever", "Şərqi və Cənub-Şərqi Asiya, Avstraliya", (
         "woven-by-toyota", "crypto", "lalamove", "nium", "ninjavan", "binance", "deputy",
         "immutable")),
     # ---- Teamtailor ({company}.teamtailor.com/jobs.rss)
     ("Teamtailor boards (Nordics)", "teamtailor", "Skandinaviya", (
         "tibber", "polestar", "anyfin", "instabee", "templafy", "detectify", "doktor", "bannerflow",
-        "brite", "lunar", "storytel", "naturalcycles", "fishbrain", "quinyx", "hedvig")),
+        "brite", "lunar", "storytel", "naturalcycles", "fishbrain", "quinyx", "hedvig", "bambuser")),
     ("Teamtailor boards (Rest of Europe)", "teamtailor", "Baltikyanı və digər Avropa", (
         "starship", "carvertical", "seedtag")),
 ]

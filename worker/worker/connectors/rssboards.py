@@ -209,3 +209,44 @@ class JobspressoConnector(FeedConnector):
                 "remote": True,
             })
         return out
+
+
+class RemoteYeahConnector(FeedConnector):
+    """https://remoteyeah.com/rss.xml — remote engineering feed (~300 items)."""
+
+    name = "RemoteYeah"
+    entry_url = "https://remoteyeah.com/rss.xml"
+    remote_default = True
+    min_interval_hours = 3
+    credit_note = "RemoteYeah public RSS feed."
+
+    def feed_items(self) -> list[dict]:
+        out: list[dict] = []
+        for it in read_rss(self.client, self.entry_url):
+            full = clean(first(it.get("title")))
+            company = clean(first(it.get("company")))
+            title = full
+            if company and " at " in full and full.endswith(company):
+                title = full[: -len(company)].rstrip().removesuffix(" at").strip()
+            elif " at " in full:
+                title, _, company = full.rpartition(" at ")
+                title, company = title.strip(), company.strip()
+            desc = first(it.get("description")) or first(it.get("encoded"))
+            place = ""
+            m = re.search(r"(?i)Locations?:\s*([^<\n]+)", desc)
+            if m:
+                place = clean(m.group(1))
+            city = place or "Remote"
+            if place and not re.search(r"(?i)\bremote\b", place):
+                city = f"Remote ({place})"
+            link = first(it.get("link"))
+            out.append({
+                "title": title,
+                "company": company,
+                "city": city,
+                "text": text_from_html(desc),
+                "source_url": link,
+                "external_id": link.rstrip("/").rsplit("/", 1)[-1] if link else "",
+                "remote": True,
+            })
+        return out

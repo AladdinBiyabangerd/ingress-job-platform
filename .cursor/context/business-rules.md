@@ -3,6 +3,12 @@
 ## Market focus
 - Primary market: **Azerbaijan** (candidates in AZ / open to AZ-reachable roles).
 
+## Crawl source go/no-go (2026-10-10)
+- Prefer ATS slug expansion over fragile HTML boards.
+- **No crawl** without PoliteClient robots allow (Reed `/api/1.0/` is the only owner-approved exception).
+- Remotive (`Disallow: /api/*`), Landing.jobs (`Disallow: /api/`), Ashby (`api.ashbyhq.com` robots HTTP 401), NoFluff/JustJoin (robots), DevIT/GermanTech JobsLight (signup HTML) → do not enable until robots/API is clean.
+- Jobgether + RemoteYeah are enabled; The Muse deferred (US-heavy).
+
 ## Crawl / scrape geo gate
 - Collect foreign **remote** and **relocation** IT ads.
 - **Reject** remote ads geo-locked to a foreign country or region (e.g. “Remote, Canada”, “US only”, “Remote - California”, “US based”, US clearance).

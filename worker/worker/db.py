@@ -608,6 +608,9 @@ class Store:
         from worker.place import is_remote_place
 
         prefix = norm_key(title, company, "")  # "title|company|"
+        twin = self._spaced_company_twin(title, company)
+        if twin is not None:
+            return twin
         rows = self.conn.execute(
             "SELECT id, norm_key FROM jobs WHERE norm_key >= ? AND norm_key < ? "
             "AND COALESCE(merged_into, 0) = 0",
@@ -616,6 +619,29 @@ class Store:
         for row in rows:
             tail = str(row["norm_key"])[len(prefix):]
             if tail and is_remote_place(tail):
+                return row
+        return None
+
+    def _spaced_company_twin(self, title: str, company: str):
+        """"Duck Duck Go" and "DuckDuckGo": same title, company equal once the
+        spaces are gone, and the stored place is empty or a remote label."""
+        from worker.place import is_remote_place
+
+        title_key = norm_key(title, "", "").split("|", 1)[0]
+        squash = lambda value: "".join(str(value).split())
+        wanted = squash(norm_key("", company, "").split("|")[1])
+        if not title_key or not wanted:
+            return None
+        rows = self.conn.execute(
+            "SELECT id, norm_key FROM jobs WHERE norm_key >= ? AND norm_key < ? "
+            "AND COALESCE(merged_into, 0) = 0",
+            (title_key + "|", title_key + "|\uffff"),
+        ).fetchall()
+        for row in rows:
+            parts = str(row["norm_key"]).split("|")
+            if len(parts) != 3 or squash(parts[1]) != wanted:
+                continue
+            if not parts[2] or is_remote_place(parts[2]):
                 return row
         return None
 

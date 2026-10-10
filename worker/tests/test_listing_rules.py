@@ -7,7 +7,8 @@ import unittest
 from pathlib import Path
 
 from worker.db import Store
-from worker.techstack import classify_category, is_tech_job
+from worker.place import normalize_city
+from worker.techstack import classify_category, enrich, is_tech_job, relocation_flag
 
 
 class CategoryRulesTest(unittest.TestCase):
@@ -33,8 +34,23 @@ class CategoryRulesTest(unittest.TestCase):
             "VP of Trust & Safety",
             "Mobile Growth & Operations Manager",
             "Production Engineer – UAV Platform",
+            "Head of Crypto",
+            "Crypto Business Development Manager",
+            "Director of Crypto Partnerships",
         ]:
             self.assertFalse(is_tech_job(title), title)
+
+    def test_pm_game_and_crypto_engineer_titles_kept(self):
+        for title in [
+            "Game Designer / Project Manager",
+            "Senior Game Designer",
+            "Technical Project Manager",
+            "Program Manager, Platform",
+            "Delivery Manager",
+            "Crypto Engineer",
+            "Blockchain Developer",
+        ]:
+            self.assertTrue(is_tech_job(title), title)
 
     def test_it_titles_kept(self):
         for title in ["Senior Software Engineer, Quality", "QA Engineer", "Site Reliability Engineer, Vehicle SW"]:
@@ -73,6 +89,50 @@ class RemoteDuplicateTest(unittest.TestCase):
         store.upsert(_item(""))
         item = _item("Berlin, Germany")
         self.assertEqual(store.upsert(item), "created")
+
+
+class SecondAuditRulesTest(unittest.TestCase):
+    def test_security_and_mobile_titles(self):
+        self.assertEqual(classify_category("", "Head of Infrastructure and Cloud Security", []), "Security")
+        self.assertEqual(classify_category("", "Especialista Senior en Seguridad de Infraestructura", []), "Security")
+        self.assertNotEqual(classify_category("", "Senior Mobile Traffic Infrastructure Engineer (Keitaro)", []), "Mobile")
+        self.assertEqual(classify_category("", "Front-end Android Sr", []), "Mobile")
+
+    def test_spanish_security_title_is_tech(self):
+        self.assertTrue(is_tech_job("Especialista Senior en Seguridad de Infraestructura"))
+        self.assertTrue(is_tech_job("Desarrollador/a Full-Stack (Node.js/angular)"))
+
+    def test_html_negated_visa_is_not_relocation(self):
+        text = "<p>Cast AI <u><em>does not</em></u><em> provide any form of visa sponsorship/work permit.</em></p>"
+        self.assertFalse(relocation_flag("Senior ML Engineer", "", text))
+        self.assertTrue(relocation_flag("Developer", "", "<p>Visa sponsorship + relocation support</p>"))
+
+    def test_remote_default_relocation_dropped_without_text(self):
+        item = {"title": "Applied AI Engineer", "city": "", "text": "Build agents. Fully remote role.",
+                "remote": True}
+        self.assertFalse(enrich(item, relocation_default=True)["relocation"])
+        item = {"title": "Dev", "city": "", "text": "Fully remote role. Relocation support offered.", "remote": True}
+        self.assertTrue(enrich(item, relocation_default=True)["relocation"])
+
+    def test_work_mode_is_not_a_city(self):
+        self.assertEqual(normalize_city("Hybrid"), "")
+        self.assertEqual(normalize_city("Cambridge / Hybrid"), "Cambridge")
+        self.assertEqual(normalize_city("NE61SF"), "")
+        self.assertEqual(normalize_city("Berlin, Germany"), "Berlin, Germany")
+
+    def test_spaced_company_is_same_remote_ad(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        store = Store(Path(tmp.name) / "t.sqlite", sqlite_only=True)
+        self.addCleanup(store.close)
+        first = _item("")
+        first["company"] = "DuckDuckGo"
+        self.assertEqual(store.upsert(first), "created")
+        second = _item("")
+        second["company"] = "Duck Duck Go"
+        second["source_url"] = "https://e.test/ddg2"
+        self.assertEqual(store.upsert(second), "updated")
+        self.assertEqual(store.conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0], 1)
 
 
 if __name__ == "__main__":

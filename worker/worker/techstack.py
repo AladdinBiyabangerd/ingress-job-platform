@@ -365,12 +365,15 @@ _TECH_TITLE = re.compile(
     r"engineering manager|\bux\b|\bui\b|ui/ux|ux/ui|product design|interaction design|"
     r"web design|visual design|design engineer|design system|"
     r"product manager|product owner|technical product|technical project|it project|"
+    r"project manager|program(?:me)? manager|delivery manager|game design|"
     r"scrum master|agile coach|\bit\b|helpdesk|help desk|technical support engineer|"
     r"blockchain|smart contract|web3|solidity|game (?:dev|programmer)|gameplay|"
     r"embedded|firmware|robotics|technical writer|developer (?:advocate|relations)|devrel|"
     r"python|java\b|javascript|typescript|golang|\bgo\b(?![\s-]+to\b)|ruby|\bphp\b|rust\b|elixir|"
     r"node|react|vue|angular|\.net|c\+\+|c#|kotlin|swift|flutter|django|laravel|rails|"
     r"kubernetes|\baws\b|salesforce developer|odoo|"
+    r"desarrollador|desenvolvedor|ingenier[oa] de (?:software|datos)|seguridad (?:de la )?(?:informaci|inform|de infra|ciber)|"
+    r"seguridad de infraestructura|ciberseguridad|seguran[cç]a da informa|analista (?:qa|de (?:datos|sistemas|calidad))|"
     r"proqramç|proqramlaşdırma|разработчик|программист|тестировщик|девопс",
     re.IGNORECASE,
 )
@@ -503,10 +506,22 @@ def source_category_verdict(category: object) -> bool | None:
     return None
 
 
+# Crypto leadership / business roles are not engineering jobs; "Crypto Engineer" stays.
+_CRYPTO_BIZ_TITLE = re.compile(
+    r"(?:head|director|chief|vp|vice president|lead|manager|officer|specialist|analyst|sales|marketing|growth)"
+    r"\W+(?:of\W+)?(?:\w+\W+){0,2}crypto(?:currency)?\b|"
+    r"\bcrypto(?:currency)?\W+(?:head|director|manager|officer|sales|marketing|growth|partnerships?|"
+    r"business|strategy|specialist|analyst|lead)\b",
+    re.IGNORECASE,
+)
+
+
 def is_tech_job(title: str, category: object = "", tags: object = None) -> bool:
     """The source category wins when it is clear; otherwise the title decides."""
     title = title or ""
     if _PHYSICAL_TITLE.search(title):
+        return False
+    if _CRYPTO_BIZ_TITLE.search(title) and not _STRONG_TITLE.search(title):
         return False
     non_tech = bool(_NON_TECH_TITLE.search(title))
     strong = bool(_STRONG_TITLE.search(title))
@@ -543,8 +558,8 @@ _CATEGORY_RULES: list[tuple[str, re.Pattern[str]]] = [
     ("Full-stack", re.compile(r"full ?stack")),
     ("QA", re.compile(r"\bqa\b|quality assurance|\bsdet\b|\btest(?:er|ers|ing)?\b|"
                       r"software quality|quality engineer|automation (?:qa|test)")),
-    ("Security", re.compile(r"secur|cyber|pen ?test|penetration|infosec|\bsoc\b|appsec")),
-    ("Mobile", re.compile(r"mobile|\bios\b|android|flutter|react native|\bswift\b|xamarin")),
+    ("Security", re.compile(r"secur|seguridad|cyber|pen ?test|penetration|infosec|\bsoc\b|appsec")),
+    ("Mobile", re.compile(r"mobile(?! traffic)|\bios\b|android|flutter|react native|\bswift\b|xamarin")),
     ("Data/ML", re.compile(r"\bdata\b|machine learning|\bml\b|mlops|\bai\b|artificial intelligence|"
                            r"\bllms?\b|\bnlp\b|computer vision|deep learning|analytics|\bbi\b|"
                            r"business intelligence|\betl\b|database|\bdba\b|scientist|data science")),
@@ -622,6 +637,12 @@ def classify_category(category: object, title: str = "", stack: list[str] | None
         # "QA Engineer" is QA whatever the source board or stack says
         # (Azure, DevOps, security boards must not move it).
         return "QA"
+    if from_title == "DevOps/Cloud" and re.search(r"(?i)security|seguridad|cyber", title or ""):
+        # "Head of Infrastructure and Cloud Security" is a security role.
+        return "Security"
+    if from_title == "Frontend" and re.search(r"(?i)\b(?:android|ios)\b", title or ""):
+        # "Front-end Android" is a mobile role.
+        return "Mobile"
     for raw in _split_tags(category):
         if _value_verdict(_clean_cat(raw)) is False:
             continue
@@ -700,7 +721,16 @@ def _positive(pattern: re.Pattern[str], text: str) -> bool:
     return False
 
 
+_TAGS = re.compile(r"<[^>]{1,200}>")
+
+
+def _plain(text: str) -> str:
+    """Drop HTML tags so "does <u>not</u> sponsor" still reads as a negation."""
+    return html.unescape(_TAGS.sub(" ", text or "")).replace("\xa0", " ")
+
+
 def remote_flag(title: str, place: str, text: str) -> bool:
+    text = _plain(text)
     head = f"{title} | {place}"
     if _REMOTE_PLACE.search(place or "") and not _HYBRID.search(place or ""):
         return _positive(_REMOTE_PLACE, place)
@@ -712,6 +742,7 @@ def remote_flag(title: str, place: str, text: str) -> bool:
 
 
 def relocation_flag(title: str, place: str, text: str) -> bool:
+    text = _plain(text)
     sample = f"{title}\n{place}\n{(text or '')[:15000]}"
     if _positive(_RELOCATION, sample):
         return True
@@ -1093,5 +1124,9 @@ def enrich(item: dict, *, remote_default: bool = False, relocation_default: bool
     relocation = item.get("relocation")
     if not relocation:
         relocation = relocation_default or relocation_flag(title, place, text)
+    if relocation and item["remote"] and not relocation_flag(title, place, text):
+        # A remote ad whose text never mentions relocation or a visa (the flag
+        # came from a source default or a merged twin) is not a relocation offer.
+        relocation = False
     item["relocation"] = bool(relocation)
     return item

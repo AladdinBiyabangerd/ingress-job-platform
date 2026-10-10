@@ -234,7 +234,11 @@ class WorkableConnector(AtsConnector):
 
     name = "Workable boards (Europe)"
     entry_url = "https://apply.workable.com/api/v1/widget/accounts"
-    boards = ("skroutz", "blueground", "persado", "epignosis")
+    # mercari / huggingface / 1password / peoplecert / orfium checked 2026-10-10.
+    boards = (
+        "skroutz", "blueground", "persado", "epignosis", "mercari", "huggingface",
+        "1password", "peoplecert", "orfium",
+    )
     credit_note = "Employer's public Workable careers widget. The link opens the employer's posting on apply.workable.com."
 
     def board_items(self, slug: str) -> list[dict]:
@@ -331,7 +335,8 @@ class RecruiteeConnector(AtsConnector):
 
     name = "Recruitee boards (Netherlands)"
     entry_url = "https://bunq.recruitee.com/api/offers/"
-    boards = ("bunq", "channable")
+    # effectory / mailerlite / adjust checked 2026-10-10 (public offers API, tech roles).
+    boards = ("bunq", "channable", "effectory", "mailerlite", "adjust")
     credit_note = "Employer's public Recruitee careers API. The link opens the employer's posting."
 
     def board_items(self, slug: str) -> list[dict]:
