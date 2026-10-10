@@ -1,0 +1,43 @@
+षდ
+(+86)188-8888-8888 | mail@example.com | blog.example.com 1 | github.com/example
+৥
+ն࿐ |νಆ࿐ჽ |ള 2021.09i2024.06Ď
+GP A: 3.62/4.0ཟູمဒb2024ࢽ
+ളb
+іᄝ XXXં໓uXXXv b
+ն࿐ |࿐ჽ |࿐࿐ൖ 2017.09i2021.06
+GP A: 3.7/4.0(ህြభ 3%)ն࿐ള XYZč2 ՑĎ đZYXb
+ඌି৯2
+• ე࿽:ე࿽ཋᇅb ӈႨRust, Golang, Python,C++ Ġ ඃ༑C, JavaScriptࢳLua, Java, TypeScriptb
+•ቔੀ: Linux, Shell, (Neo)Vim, Git, GitHub, GitLab.
+• ః෰:ဒđඃ༑ Kubernetes൐Ⴈb
+৥
+ࣘABCDඳ |ൌ༝ള/XXXX 2020.10i2021.03
+•ᄳ XXX҆ඇbݖFaaSaKafkaༀbཟഈ
+܂SDKဢླ౰b
+• ҕა XXX॥b
+৥
+BusTubႿ C++ඔऌ९ | CMU 15-445 ज़ӱ
+•ބLRU-K֥ؿB+ཿҠቔb
+•ཿა༯๷b
+• ҐႨ 2PLྛ෭b
+•b
+Multi-Raft҃ൔ KV թԥ༢๤ | MIT 6.824 ज़ӱ
+• ൌགྷਔ Raftିb
+•Ⴟ Raft֥KV ඔऌ९b
+• ҐႨ Multi-Raftb
+•ಪ്b
+ZYXაൌགྷ |აൌགྷ 2021.11i2022.07
+• ۴ऌ ZYX (Rustࡏ)đمb
+•๽๳ਈĠTPS Ⴎ 1K֞6Kb
+•b
+BIThesis Кࣘ৘۽ն࿐иഡ LATEX ଆϰࠢކ|ᆀčषჷཛଢĎ 2020.04ࣂ
+•ஆϱေ౰đ০Ⴈ LaT eX3 (expl3)สଆϰb
+•Ⴟ GitHub ActionsӮb
+•b
+ࢲ
+•പb
+•ࠛXXXb
+• Ⴕੂ୍ Linux࠯
+ᅚb
+1b 2೤іൕb

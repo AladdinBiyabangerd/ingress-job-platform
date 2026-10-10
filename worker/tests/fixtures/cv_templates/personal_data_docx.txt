@@ -1,0 +1,33 @@
+JOHN T. DOE
+Address : Lawaan 1, Talisay City, Cebu
+Contact No. : +63 900 000 0000
+Email Add. : john.doe@example.com
+Github : github.com/johndoe/
+Portfolio : johndoe.example.com/portfolio
+PERSONAL DATA
+Date of Birth : January 1, 1990
+Place of Birth : San Isidro, Talisay City, Cebu
+Gender : Male
+Marital Status : Single
+Citizenship : Filipino
+CAREER OBJECTIVE
+To obtain a position in a respective company, so I can apply my training and knowledge. I'm a reliable and motivated front-end developer, interested in new technologies, and looking forward to learning a new skill.
+EDUCATION
+Bachelor of Science in Computer Engineering | 2014 – 2019
+University of The Visayas – Jakosalem St, Cebu City, 6000 Cebu
+LICENSES AND CERTIFICATIONS
+National Certificate II – Computer System Servicing
+Certificate No. 000000000
+WORK EXPERIENCE & OJT
+Mindweb eSolutions - Sangi Tabunok, Talisay City, Cebu
+Android Developer | OJT 2019
+Asian Wave Seafood
+Web Developer February 2020 | July 2020
+Basubas St, Tipolo, Mandaue City, 6014 Cebu
+Mindweb eSolutions
+Software Engineer - South Agora, San Isidro, Talisay Cebu
+October 2020 – January 2022
+FAMILIARITY OF THE FOLLOWING TECHNOLOGIES
+HTML, CSS, JavaScript, jQuery, Bootstrap5, Git, SQL, Java, C, C++, .NET Razor Page, ReactJS, Redux, JWT
+FAMILIARITY OF THE FOLLOWING SOFTWARE
+Android Studio, Eclipse IDE, NetBeans IDE, Turbo C, Dev C, Arduino, XAMPP, Wampp, Affinity Photo, Affinity Designer, CMDER, Code Block, Proteus ISIS, Just Color Picker, Notepad++, Sublime, Postman, Git Bash, Visual Studio Code, Visual Studio

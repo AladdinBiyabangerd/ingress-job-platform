@@ -1,0 +1,77 @@
+JAN EXAMPLE
+CONSULTANT/ SOFTWARE ENG.
+Bremen, Germany
++49 176 *** *** **
+info@example.com
+www.example.com
+github.com/example
+@Kuester_Jan
+I am a digital media
+graduate with working
+experience in research
+projects as well as in
+the private sector.
+M.Sc.
+Digital Media
+as latest degree from
+University of Bremen
+And I am always looking for new exciting
+and interdisciplinary
+projects worldwide.
+SKILLS AND TECHNOLOGIES
+The biggest part I contribute to my work is in the
+area of Software Engineering.
+LANGUAGES
+German (native)
+English (c1)
+Design
+Consulting
+Research
+Projects
+Software Engineering
+Javascript
+Blaze
+Metor
+Bootstrap
+MongoDB
+HTML/CSS
+La Tex
+Currently, I develop realtime apps with Me-
+teor and Blaze.
+Formerly I worked with
+Java and XPages.
+I regularly use Me-
+teor, Git and Webstorm for my dev
+projects.
+Webstorm Git Sourcetree Linux Office
+ACTVITIES
+7
+years
+of participation at
+Global Game Jam
+In my freetime I read lots
+of news and help others on
+Stackoverflow. Via bodyweight training I keep my
+body and mind in balance.
+Game Dev
+Fitness
+News
+Stackoverflow
+EXPERIENCE AND EDUCATION
+Experience Events Education
+2007
+2021
+10/2007 Bachelor Studies
+5/2009 Semester Abroad
+6/2010 Student Assistant @UB
+6/2011 PM Training
+1/2012 Scientific Employee @UB
+11/2012 Master Project - PrIMA
+9/2013 DELFI Conference
+11/2014 IT Consultant @We4IT
+7/2015 M.Sc. Graduation
+5/2016 Startup Weekend
+9/2016 Software Engineer @UB
+10/2018 Software Engineer @UB
+10/2020 Meteor Impact Conference
+@UB = University of Bremen

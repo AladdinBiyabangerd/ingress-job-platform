@@ -1,0 +1,40 @@
+BASE ROVER
+Resume Template
+Email: user@example.com
+Mobile: 123 456 7890
+LinkedIn: linkedin.com/username
+GitHub: github.com/username
+EDUCATION
+University of Post Graduation, City | Degree Name 2024
+• Cumulative GPA: 3.69
+• magna cum laude
+• Related Coursework: Computer Architecture, Database Management, Cybersecurity
+EXPERIENCE
+Company ABC City, State (or Remote)
+Position Title Month Year - Month Year
+• Beginning with your most recent position, describe your experience, skills, and resulting
+outcomes in bullet or paragraph form.
+• Begin each line with an action verb and include details that will help the reader understand
+your accomplishments, skills, knowledge, abilities, or achievements.
+• Quantify where possible. Do not use personal pronouns; each line should be a phrase rather
+than a full sentence.
+Position Title Mar 2020 - Nov 2022
+Company XYZ City, State
+• XYZ method - Accomplished [X] as measured by [Y], by doing [Z].
+• CAR method - Context, Action, Result.
+• STAR method - Situation, Task, Action, Result.
+• Be consistent with headers and sub-headers.
+CERTIFICATION & A W ARDS
+Some programming bootcamp, Location. 2023
+Forbes Top 15 Procrastinators under 15. 2022
+Perticipation award for attending workshop. 2021
+SKILLS & INTERESTS
+Technical List computer software and programming languages
+Language List foreign languages and your level of fluency
+Laboratory List scientific / research lab techniques or tools [If Applicable]
+Interests List activities you enjoy that may spark interview conversation
+PROJECTS
+Project Neme | github.com/project-link 2019
+• Tech used, Language, Frameworks etc.
+• Implemented ABC feature
+• Optimised XYZ by 50%

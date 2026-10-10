@@ -1,0 +1,115 @@
+Alex Example
+DevOpsEngineer · SoftwareArchitect
+Mapo-gu, Seoul, Republic of Korea
+📱 (+1) 555-010-0199 | 🖂 alex@example.com | HOUSE-CHIMNEY www.example.com | GITHUB-SQUARE alexexample | LINKEDIN alexexample
+“Bethechangethatyouwanttoseeintheworld.”
+Summary
+Seasoned SRE/DevOps leader currently on a career sabbatical cherishing family moments, seeking high-impact opportunities in fast-growing
+start-up companies. With 15+ years of hands-on software engineering expertise — specializing in service architecture, DevOps & SRE practices,
+infrastructureoperations,andsecurityengineering—proveninscalinginfrastructureteamsasleadengineerandfoundingmemberattwofintech
+companies. Delivered technical advisory and consulting for DeFi, AI, and B2B SaaS startups, optimizing cloud-native architectures (AWS multiaccount,Kubernetes,Terraform)forreliabilityandscalability.
+Passionate to contribute to open-source projects and tech communities through knowledge sharing knowledge and experience. Big fan of
+terminal-centricworkflowsonmacOSwithzsh,Tmux,NeoVim,andchezmoi;relentlesslyoptimizespersonalsetupsandexperimentswithClaude
+Code-poweredAIworkflowstotacklecomplexchallengesfaster.
+WorkExperience
+DunamuInc. Seoul,S.Korea
+DevOpsEngineer Sep. 2023-Mar. 2024
+• Ledservicemeshtechnologyresearchandimplementationacrossenterprisecross-clusterenvironments,evaluatingIstio,Cilium,Kuma,Consul,andAWSVPCLatticeforenhancedsecurityandscalability.
+• DesignedTerraformmodulestoefficientlymanageandscaleinfrastructureacrossdozensofAWSaccounts,enablingstandardized,repeatable
+deployments.
+DanggeunPayInc. (KarrotPay) Seoul,S.Korea
+FoundingMember&SiteReliabilityEngineer&InfrastructureTeamLead Mar. 2021-Jun. 2023
+• Everythingthatmatters.
+• DesignedandprovisionedtheentireinfrastructureontheAWScloudtomeetsecuritycomplianceandacquireabusinesslicenseforfinancial
+servicesinKorea.
+• Continuouslyimprovedtheinfrastructurearchitecturesincelaunchingtheservice. (currently3.6millionusers)
+• Establishedastandardizedbasefordeclarativemanagementofinfrastructuresandservicedeployments,enablingoperationalefficiencyand
+consistency. Over90%ofAWSresourceswereallmanagedthroughstandardizedterraformmodules. Alladd-onsandserviceworkloadsonthe
+KubernetesclusterweremanagedonaGitOpsbasiswithKustomizeandArgoCD.
+• Savedover30%oftheoverallAWScostsbyestablishingaquarterlypurchasingstrategiyforRI(ReservedInstance)andSP(SavingsPlan)and
+byintroducingGravitoninstances.
+• EstablishedacorearchitectureforregulatingofoutboundDNStrafficinmulti-accountandmulti-VPCenvironmentsutilizingAWSRoute53DNS
+FirewallandFMS.Thissignificantlyincreasedthelevelofsecurityconfidenceinthefinancialsector’ssegregatedenvironment.
+• Introduced Okta employee identity solution in the company, establishing security policies and configuring SSO integration with over 20 enterprise systems including AWS, GitHub, Slack, Google Workspace. Set up a Hub and Spoke architecture, enabling a collaborative account
+structurewiththeparentcompany,DaangnMarket.
+DanggeunMarketInc. Seoul,S.Korea
+SiteReliabilityEngineer Feb. 2021-Mar. 2021
+February10,2026 AlexExample · Résumé 1
+Kasa Seoul,S.Korea
+FoundingMember&DirectorofInfrastructureDivision Jun. 2018-Jan. 2021
+• Designedon-boardingprocesstoguidenewengineers,helpthemtofocusontherighttasks,andsetexpectationstohelpthembesuccessful
+atInfrastructureteam.
+• Migrated the orchestration system from DC/OS to Kubernetes which is based on AWS EKS. Managed 3 Kubernetes clusters and 300+ pods.
+ManagedallKubernetesmanifestsdeclarativelywithKustomizeandArgoCD.
+• DesignedandmanagedcomplexnetworkconfigurationsonAWSwith4VPCand100+subnets. Separatedthedevelopmentnetworkandoperationnetworkaccordingtofinancialregulations. EstablisheddedicatednetworkconnectionsfromAWSVPCtopartners’on-premisenetwork
+basedonAWSDirectConnectwithsecureconnectionusingIPsecVPN.ProvisionedOpenVPNserverswithLDAPintegration.
+• Provisioned a observability system with Kafka, Elastic Stack(Filebeat, Heartbeat, APM Server, Logstash, Elasticsearch, Kibana). Collected log,
+uptime,tracingdatafromhosts,containers,podsandmore. TheESclusterwhichhas9nodesprocessedmorethan1billiondocumentsper
+month. WroteTerraformmoduletoeasilyprovisionESclusteronAWSEC2instances.
+• Provisioned a monitoring system with Kafka, Telegraf, InfluxDB, Grafana. Collected metrics from hosts, containers, pods and more. Wrote
+TerraformmoduletoeasilyprovisionInfluxDBwithHAonAWSEC2instances.
+• IntroducedKongAPIGatewaytoeasilyconnectallAPImicroserviceswithadeclarativemanagementmethodbasedonTerraformandAtlantis
+tocollaborateandauditchangehistory.
+• ProvisionedtheDirectoryServiceforemployeeidentitymanagementbasedonOpenLDAPwhichguaranteesHAwithmulti-masterreplication.
+• ImplementedWorkermicroservicesconsumingKafkaeventtopicsforemail,SMS,KakaotalkandSlacknotification. Developedin-houseframeworktoeasilybuildKafkaconsumermicroservicewithcommonfeaturesincludingretryonfailure,DLQ(DeadLetterQueue),eventroutingand
+more.
+• IntroducedElasticAPMtohelpdistributedtracing,trouble-shootingandperformancetestinginMSA.
+Omnious. Co.,Ltd. Seoul,S.Korea
+SoftwareArchitect Jun. 2017-May. 2018
+• Provisionedaneasilymanagablehybridinfrastructure(AmazonAWS+On-premise)utilizingIaC(InfrastructureasCode)toolslikeAnsible,Packer
+andTerraform.
+• BuiltfullyautomatedCI/CDpipelinesonCircleCIforcontainerizedapplicationsusingDocker,AWSECRandRancher.
+• DesignedanoverallservicearchitectureandpipelinesoftheMachineLearningbasedFashionTaggingAPISaaSproductwiththemicro-services
+architecture.
+• ImplementedseveralAPImicroservicesinNode.jsKoaandintheserverlessAWSLambdafunctions.
+• Deployedacentralizedloggingenvironment(ELK,Filebeat,CloudWatch,S3)whichgatherlogdatafromdockercontainersandAWSresources.
+• Deployedacentralizedmonitoringenvironment(Grafana,InfluxDB,CollectD)whichgathersystemmetricsaswellasdockerrun-timemetrics.
+PLATCorp. Seoul,S.Korea
+Co-founder&SoftwareEngineer Jan. 2016-Jun. 2017
+• ImplementedRESTfulAPIserverforcarrentalbookingapplication(CARPLATinGooglePlay).
+• Built and deployed overall service infrastructure utilizing Docker container, CircleCI, and several AWS stack(Including EC2, ECS, Route 53, S3,
+CloudFront,RDS,ElastiCache,IAM),focusingonhigh-availability,faulttolerance,andauto-scaling.
+• Developedaneasy-to-usePaymentmodulewhichconnectstomajorPG(PaymentGateway)companiesinKorea.
+R.O.KCyberCommand,MND Seoul,S.Korea
+SoftwareEngineer&SecurityResearcher(CompulsoryMilitaryService) Aug. 2014-Apr. 2016
+• Leadengineeronagent-lessbacktrackingsystemthatcandiscoverclientdevice’sfingerprint(includingpublicandprivateIP)independentlyof
+theProxy,VPNandNAT.
+ShitOneCorp. Seoul,S.Korea
+SoftwareEngineer Dec. 2011-Feb. 2012
+• Developedaproxydrivesmartphoneapplicationwhichconnectsproxydriverandcustomer.
+• Implemented overall Android application logic and wrote API server for community service, along with lead engineer who designed bidding
+protocolonrawsocketandimplementedAPIserverforbidding.
+Honors&Awards
+InternationalAwards
+2021 2ndPlace,AWSASEANAI/MLGameDay Online
+2020 Finalist,DEFCON28thCTFHackingCompetitionWorldFinal LasVegas,U.S.A
+2018 Finalist,DEFCON26thCTFHackingCompetitionWorldFinal LasVegas,U.S.A
+2017 Finalist,DEFCON25thCTFHackingCompetitionWorldFinal LasVegas,U.S.A
+2014 Finalist,DEFCON22ndCTFHackingCompetitionWorldFinal LasVegas,U.S.A
+2013 Finalist,DEFCON21stCTFHackingCompetitionWorldFinal LasVegas,U.S.A
+2011 Finalist,DEFCON19thCTFHackingCompetitionWorldFinal LasVegas,U.S.A
+DomesticAwards
+February10,2026 AlexExample · Résumé 2
+2021 2ndPlace,AWSKoreaGameDay Seoul,S.Korea
+2015 3rdPlace,WITHCONHackingCompetitionFinal Seoul,S.Korea
+2017 SilverPrize,KISAHDCONHackingCompetitionFinal Seoul,S.Korea
+2013 SilverPrize,KISAHDCONHackingCompetitionFinal Seoul,S.Korea
+Community
+2022- AWSCommunityBuilder(Container) ,AmazonWebServices(AWS)
+2022- HashiCorpAmbassador,HashiCorp
+2018- OrganizerofHashiCorpKoreaUserGroup ,HashiCorp
+Certificates
+2023 AWSCertifiedAdvancedNetworking-Specialty ,AmazonWebServices(AWS)
+2022 AWSCertifiedSecurity-Specialty ,AmazonWebServices(AWS)
+2022 AWSCertifiedSolutionsArchitect–Professional ,AmazonWebServices(AWS)
+2021 AWSCertifiedSysOpsAdministrator–Associate ,AmazonWebServices(AWS)
+2020 CertifiedKubernetesApplicationDeveloper(CKAD) ,TheLinuxFoundation
+2024 HashiCorpCertified: TerraformAuthoringandOperationsProfessional ,HashiCorp
+2023 HashiCorpCertified: TerraformAssociate(003),HashiCorp
+2024 HashiCorpCertified: ConsulAssociate(003) ,HashiCorp
+2025 HashiCorpCertified: VaultAssociate(003),HashiCorp
+Education
+POSTECH(PohangUniversityofScienceandTechnology) Pohang,S.Korea
+B.S.inComputerScienceandEngineering Mar. 2010-Aug. 2017
+• GotaChunShin-IlScholarshipwhichisgiventopromisingstudentsinCSEDept.
+February10,2026 AlexExample · Résumé 3

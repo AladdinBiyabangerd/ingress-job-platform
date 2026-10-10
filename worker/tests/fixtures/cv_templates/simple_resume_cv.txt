@@ -1,0 +1,149 @@
+John Doe
+17 Prime Avenue, Apt 37, Springfield, Pennsylvania 10111, USA
+johndoe@example.com ● +1 (555) 101-1001 ● http://www.example.com/~johndoe
+EDUCATION First American University, Springfield, Massachusetts, USA
+■ Ph.D. in Geophysical Engineering Dec 2009 – Jul 2014
+● Thesis: A Statistical Approach to Quantifying Climate Change
+● Adviser: Prof. Jonathan Public
+● Focus: Climate change, metrology, lasers, statistics.
+■ M.B.A. Nov 2008 – Jun 2009
+■ M.S. in Geophysical Engineering Aug 2006 – Aug 2008
+● Cumulative GPA: 3.7 / 4.0
+Science College, Springfield, Pennsylvania, USA
+■ B.S. in Geography May 2002 – May 2005
+● Graduated with College Honors.
+● Cumulative GPA: 3.96 / 4.00
+RESEARCH
+EXPERIENCE
+Institute for Advanced Research , Science College
+■ Undergraduate Research Student, Science Department May 2004 – May 2005
+● Project: Investigations on the Use of Lasers to Measure Climate Change
+● Supervisors: Prof. Jane Citizen and Dr Ann Yone
+● Focus: Climate change, lasers, statistical analysis, data analytics.
+PUBLICATIONS JOURNALS
+[10] J. Doe, J. Citizen, and A. Yone, “On lasers and climate change,” Journal of Science , vol. 89, no. 2,
+pp. 4123–4133, Feb 2008.
+[1] J. Doe and J. Citizen, “Measuring the extent of climate change,” Global Scientific Journal , vol. 12,
+no. 4, pp. 330–352, Dec 2006.
+CONFERENCES
+[1000] J. Doe, J. Citizen, and A. Yone, “On lasers and climate change,” in Proceedings of the Laser
+Symposium, Las Vegas, Nevada, USA, Jan 2007.
+[100] A. Yone and J. Doe, “Climate change and general relativity,” in Proceedings of the International
+Astronomical Conference, Sydney, Australia, Aug 2006.
+[10] J. Doe and J. Citizen, “Measuring the extent of climate change,” in Proceedings of the
+International Climate Change Conference , London, UK, Nov 2005.
+A W ARDS &
+SCHOLARSHIPS
+■ Dean’s List, Fall 2002 through Spring 2005, Science College 2002 – 2005
+For attaining a semester GPA of at least 3.75.
+■ Undergraduate Researcher Award, Science College May 2005
+For outstanding scientific contributions in the fields of lasers and climate change.
+■ Chess Tournament, First Prize, Science College Mar 2003
+Awarded at the Tenth Annual Chess Tournament held during Open House.
+■ International Science Scholarship, Dec 2001
+Global Science, Technology, Engineering, and Mathematics Foundation
+Full-tuition scholarship with stipend for undergraduate studies. One of 42 awardees in the world.
+PROFESSIONAL
+AFFILIATIONS
+& ACTIVITIES
+Joint Society of Earth Scientists and Global Think Tank on Climate Resiliency ,
+North Attleborough, Massachusetts, USA
+■ Member 2009 – Present
+Page 1 of 3
+CAMPUS
+ACTIVITIES
+First Volunteers Club, First American University
+■ President Aug 2006 – Aug 2007
+● Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+● Curabitur vitae laoreet velit, vel ultricies est. Nam nec elit ac ante facilisis ultrices.
+○ Wel turpis efficitur, non lacinia orci maximus.
+○ Proin rhoncus, felis vel hendrerit lacinia.
+● Integer sit amet turpis dolor. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc at orci eu leo vulputate
+finibus sed et sem.
+● Suspendisse volutpat sapien et mi cursus, gravida ornare mauris sollicitudin.
+OTHER WORK
+EXPERIENCE
+Alpha Engineering Firm, Oakland, Ohio, USA
+■ Project Officer, Department of Meteorological Sciences, Oct 2007 – Jan 2008
+Research & Development Division
+● Nullam venenatis egestas nisl eget elementum.
+● Nulla finibus justo vel turpis efficitur, non lacinia orci maximus. Proin rhoncus, felis vel hendrerit lacinia, enim ipsum
+ultricies massa, sit amet interdum nisi massa sit amet justo.
+● Etiam vitae eros mollis, consectetur quam quis, molestie massa.
+LANGUAGES ■ English: Native language.
+■ Spanish: Fluent (speaking, reading, writing).
+■ Latin: Intermediate (reading); basic (speaking, writing).
+SKILLS TEX, LATEX, XƎLATEX, MA TLAB, Mathematica, Maple, R, Tableau, Adobe Photoshop, Adobe Illustrator,
+Microsoft Word, Microsoft Excel, Microsoft PowerPoint.
+INTERESTS Digital photography, typography, swimming.
+REFERENCES ■ Professor Jonathan Public
+Professor of Geology and Mechanical Engineering
+First American University
+1000 First Avenue, Springfield, Massachusetts 22222, USA
+jonathanpublic@example.com ● +1 (555) 222-2222
+■ Dr Alice Bob Carol
+Director, Research & Development
+Alpha Engineering Firm
+20 North Street, Oakland, Ohio 33333, USA
+alicebobcarol@example.com ● +1 (555) 333-3333
+MULTILINGUAL
+UNICODE
+EXAMPLES
+■ Assortment of unicode characters from http://www.ltg.ed.ac.uk/~richard/unicode-sample.html
+Latin Extended-A Ā ā Ă ă Ą ą Ć ć Ĉ ĉ Ċ ċ Č č Ď ď Đ đ Ē ē Ĕ ĕ Ė ė Ę ę Ě ě Ĝ ĝ Ğ ğ Ġ ġ Ģ ģ Ĥ ĥ Ħ ħ Ĩ ĩ Ī ī Ĭ ĭ Į į İ ı Ĳ ĳ Ĵ
+ĵ Latin Extended-B ƀ Ɓ Ƃ ƃ Ƅ ƅ Ɔ Ƈ ƈ Ɖ Ɗ Ƌ ƌ ƍ Ǝ Ə Ɛ Ƒ ƒ Ɠ Ɣ ƕ Ɩ Ɨ Ƙ ƙ ƚ ƛ Ɯ Ɲ ƞ Ɵ Ơ ơ Ƣ ƣ Ƥ ƥ Ʀ Ƨ ƨ Ʃ ƪ ƫ Ƭ ƭ Ʈ Ư ư
+Ʊ Ʋ Ƴ ƴ Ƶ Latin Extended Additional Ḁ ḁ Ḃ ḃ Ḅ ḅ Ḇ ḇ Ḉ ḉ Ḋ ḋ Ḍ ḍ Ḏ ḏ Ḑ ḑ Ḓ ḓ Ḕ ḕ Ḗ ḗ Ḙ ḙ Ḛ ḛ Ḝ ḝ Ḟ ḟ Ḡ ḡ Ḣ ḣ Ḥ ḥ Ḧ
+ḧ Ḩ ḩ Ḫ ḫ Ḭ ḭ Ḯ ḯ Ḱ ḱ Ḳ ḳ Ḵ ḵ Greek ʹ ͵ ͺ ; ΄ ΅ Ά · Έ Ή Ί Ό Ύ Ώ ΐ Α Β Γ Δ Ε Ζ Η Θ Ι Κ Λ Μ Ν Ξ Ο Π Ρ Σ Τ Υ Φ Χ Ψ Ω Ϊ
+Ϋ ά έ ή ί ΰ α β γ δ ε ζ η θ Cyrillic Ё Ђ Ѓ Є Ѕ І Ї Ј Љ Њ Ћ Ќ Ў Џ А Б В Г Д Е Ж З И Й К Л М Н О П Р С Т У Ф Х Ц
+Ч Ш Щ Ъ Ы Ь Э Ю Я а б в г д е ж з Hebrewְֱ֪֧֦֥֤֣֭֮֔֓֒֯֬֫֩֨֡֠֟֞֝ײױװתשרקצץפףעסנןמםלכךיטחזוהדגבא
+Armenian Ա Բ Գ Դ Ե Զ Է Ը Թ Ժ Ի Լ Խ Ծ Կ Հ Ձ Ղ Ճ Մ Յ Ն Շ Ո Չ Պ Ջ Ռ Ս Վ Տ Ր Ց Ւ Փ Ք Օ Ֆ ՙ ՚ ՛ ՜ ՝ ՞ ՟ ա բ գ դ
+ե զ Thai ก ข ฃ ค ฅ ฆ ง จ ฉ ช ซ ฌ ญ ฎ ฏ ฐ ฑ ฒ ณ ด ต ถ ท ธ น บ ป ผ ฝ พ ฟ ภ ม ย ร ฤ ล ฦ ว ศ ษ ส ห ฬ อ ฮ ฯ ะ ั า ำ ิ
+Page 2 of 3
+THIS IS A
+SECTION
+WITH
+USAGE NOTES
+THIS IS A SUBSECTION
+■ Use \Section{a}{b}{c} and \SubSection{a}{b}{c} to create sections and subsections, where a is the
+heading displayed on the page, b is the PDF bookmark heading, and c is the internal PDF link (must
+be unique). Sections and subsections will appear in the PDF bookmarks. Note the CamelCase command
+names.
+■ Use \Entry, \BulletItem, \SubBulletItem, \SubSubBulletItem, \Item, \SubItem, \SubSubItem,
+\NumberedItem, etc., to create entries in the main body of the CV .
+■ Enclose entry details between \begin{Detail} and \end{Detail} so that they are typeset in a smaller font.
+This is an example of entry detail text enclosed in a Detail environment.
+■ Use \Gap and \BigGap to insert vertical spaces between entries to improve layout.
+THIS IS ANOTHER SUBSECTION
+This is a plain \Entry, followed by an \hfill and a date range Oct 2015 – Dec 2015
+■ This is a \BulletItem.
+This is an \Item, which has no bullet. Note the alignment with the \BulletItem above.
+● This is a \SubBulletItem.
+This is a \SubItem, which has no bullet. Note the alignment with the \SubBulletItem above.
+○ This is a \SubSubBulletItem.
+This is a \SubSubItem, which has no bullet. Note the alignment with the \SubSubBulletItem
+above.
+[42] This is a \NumberedItem. Change the value of the macro \MaxNumberedItem to adjust the
+indentation width.
+LINE, PARAGRAPH, AND PAGE BREAKS
+■ To create a new line within the same paragraph (i.e., preserving the same paragraph indentation), use
+\newline instead of \\; the latter will reset the paragraph indentation.
+■ To create a new paragraph, use \par or simply leave an empty line. Paragraph indentations (from \Entry,
+\BulletItem, \SubBulletItem, \SubSubBulletItem, \Item, \SubItem, \SubSubItem, \NumberedItem,
+etc.) do not carry across different paragraphs.
+■ To create a new page, use \newpage.
+DATES
+■ Use the following macros to specify and display dates consistently:
+● \DatestampYMD{yyyy}{MM}{dd} (e.g., \DatestampYMD{2008}{01}{15})
+● \DatestampYM{yyyy}{MM} (e.g., \DatestampYM{2008}{01})
+● \DatestampY{yyyy} (e.g., \DatestampY{2008})
+■ Change the date format option passed to the document class to adjust how dates are displayed throughout
+the document:
+● MMMyyyy (“Jan 2008”)
+● ddMMMyyyy (“15 Jan 2008”)
+● MMMMyyyy (“January 2008”)
+● ddMMMMyyyy (“15 January 2008”)
+● yyyyMMdd (“2008-01-15”)
+● yyyyMM (“2008-01”)
+● yyyy (“2008”)
+[CV compiled on 2018-12-02 for Acme Corporation ]
+Page 3 of 3
