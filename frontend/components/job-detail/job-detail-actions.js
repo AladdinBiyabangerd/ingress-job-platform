@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { loginHref } from "../../lib/auth-link";
+import { beginLogin } from "../../lib/auth-link";
 import { text } from "../../lib/copy";
 import { applyToJob } from "../../lib/server/refresh";
 import { SaveJobButton } from "../save-job-button";
@@ -38,7 +38,7 @@ export function JobDetailActions({
       return;
     }
     if (isGuest) {
-      window.location.href = loginHref({ intent: "job_candidate", returnTo: model.returnTo });
+      beginLogin({ intent: "job_candidate", returnTo: model.returnTo });
       return;
     }
     if (!isExternal) {
@@ -50,7 +50,7 @@ export function JobDetailActions({
     try {
       const res = await applyToJob(model.jobId);
       if (res.status === 401 || res.status === 403) {
-        window.location.href = loginHref({ intent: "job_candidate", returnTo: model.returnTo });
+        beginLogin({ intent: "job_candidate", returnTo: model.returnTo });
         return;
       }
       if (res.ok && typeof res.data?.url === "string" && res.data.url) {
@@ -59,7 +59,7 @@ export function JobDetailActions({
       }
       const orig = await fetch(`/api/auth/jobs/${model.jobId}/original`, { cache: "no-store" });
       if (orig.status === 401 || orig.status === 403) {
-        window.location.href = loginHref({ intent: "job_candidate", returnTo: model.returnTo });
+        beginLogin({ intent: "job_candidate", returnTo: model.returnTo });
         return;
       }
       const data = await orig.json().catch(() => ({}));

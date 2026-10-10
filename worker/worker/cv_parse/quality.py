@@ -12,6 +12,8 @@ import os
 import re
 from datetime import date
 
+from worker.cv_parse.text import looks_garbled
+
 QUALITY_THRESHOLD = 0.65
 QUALITY_VERSION = "q1"
 
@@ -29,12 +31,43 @@ ISSUE_PART = {
     "work_missing_company": "work_history",
     "work_date_order": "work_history",
     "work_future_date": "work_history",
+    "work_absurd_date": "work_history",
+    "placeholder_text": "",
     "education_missing": "education",
     "skills_thin": "skills",
     "text_too_short": "",
+    "text_garbled": "",
 }
+# Unreadable input: AI cannot recover anything from it, so no AI call is made.
+NO_AI = {"text_too_short", "text_garbled"}
 # Issues that force the AI regardless of the numeric score.
-CRITICAL = {"work_missing", "work_garbage_title", "work_date_order", "city_is_education"}
+CRITICAL = {
+    "work_missing", "work_garbage_title", "work_date_order", "city_is_education",
+    "work_absurd_date", "placeholder_text",
+}
+ALL_PARTS = ("contact", "headline", "work_history", "education", "skills")
+PLACEHOLDER_SCORE_CAP = 0.45
+
+# Template sample text that was never replaced by real data (Lorem ipsum, "Month Year", ...).
+_PLACEHOLDER_STRONG = re.compile(r"(?i)lorem ipsum|dolor sit amet|consectetur adipiscing")
+_PLACEHOLDER_WEAK = re.compile(
+    r"(?i)\b(?:month|mon\.?)\s+(?:year|yyyy|20xx)\b|\b(?:year|yyyy)\s*[–-]\s*(?:year|yyyy)\b|\b20xx\b|"
+    r"\bjob title\b|\bposition title\b|\bcompany (?:name|abc)\b|\bname of university\b|"
+    r"\bcity,\s*state\b|\b(?:first|your)\s+(?:last|name)\b|\bemail@email\.com\b|\byour[_ ]?(?:id|email|name)\b|"
+    r"\bdegree,\s*(?:institution|major)\b|\bsub-?achievement\b|\bresum[eé] title\b"
+)
+# A 4-digit "year" that no CV date can be (1000-1949 or 2100-2999), e.g. 18xx / 2333.
+_ABSURD_YEAR = re.compile(r"(?<!\d)(?:1[0-8]\d{2}|19[0-4]\d|2[1-9]\d{2})(?!\d)")
+_DATE_FRAGMENT = re.compile(r"^\W*\d{1,4}\s*[/.\-]\s*\d{1,4}\W*$")
+
+
+def is_placeholder_text(text: str) -> bool:
+    """True when the CV still holds template sample text instead of real data."""
+    sample = text or ""
+    lines = [ln for ln in sample.splitlines() if ln.strip()]
+    if lines and sum(1 for ln in lines if _PLACEHOLDER_STRONG.search(ln)) / len(lines) >= 0.25:
+        return True  # a stray "lorem ipsum" bullet is not enough; a quarter of the lines is
+    return len(_PLACEHOLDER_WEAK.findall(sample)) >= 4
 
 _DEGREE = re.compile(
     r"(?i)\b(bsc|msc|phd|b\.?s\.?|m\.?s\.?|bachelor|master|bakalavr|magistr|бакалавр|магистр|"
@@ -64,7 +97,7 @@ def _garbage_title(title: str, company: str) -> bool:
     t = _s(title)
     if not t or len(t) > 100 or len(t.split()) > 12:
         return True
-    if t[0] in _BULLET or _DATE_LIKE.match(t):
+    if t[0] in _BULLET or _DATE_LIKE.match(t) or _DATE_FRAGMENT.match(t) or _ABSURD_YEAR.search(t):
         return True
     if _DEGREE.search(t) or (_CITY_LIKE.match(t) and len(t.split()) <= 4 and "," in t):
         return True
@@ -88,6 +121,10 @@ def assess(profile: dict, text: str = "") -> dict:
 
     if len((text or "").strip()) < 120:
         issues.append("text_too_short")
+    elif looks_garbled(text):
+        issues.append("text_garbled")
+    elif is_placeholder_text(text):
+        issues.append("placeholder_text")
 
     # name (0.10)
     name = _s(contact.get("full_name"))
@@ -122,6 +159,7 @@ def assess(profile: dict, text: str = "") -> dict:
         issues.append("work_missing")
     else:
         good = 0
+        absurd = 0
         garbage = no_company = undated = order = future = 0
         today = date.today()
         for job in work:
@@ -133,6 +171,11 @@ def assess(profile: dict, text: str = "") -> dict:
                 no_company += 1
                 ok = False
             start, end = _ym(job.get("start")), _ym(job.get("end"))
+            if any(y and not 1950 <= y[0] <= date.today().year + 1 for y in (start, end)) or _ABSURD_YEAR.search(
+                f"{_s(job.get('company'))} {_s(job.get('title'))}"
+            ):
+                absurd += 1
+                ok = False
             if not start:
                 undated += 1
                 ok = False
@@ -146,6 +189,7 @@ def assess(profile: dict, text: str = "") -> dict:
             good += ok
         score += 0.35 * (good / len(work))
         for code, n in (
+            ("work_absurd_date", absurd),
             ("work_garbage_title", garbage),
             ("work_missing_company", no_company),
             ("work_undated", undated),
@@ -176,11 +220,16 @@ def assess(profile: dict, text: str = "") -> dict:
     # section coverage (0.10)
     score += 0.10 * len(sections & {"experience", "education", "skills"}) / 3
 
+    if "placeholder_text" in issues:
+        score = min(score, PLACEHOLDER_SCORE_CAP)  # sample text is not a real CV: always low quality
     score = round(max(0.0, min(1.0, score)), 2)
     th = threshold()
     weak = sorted({ISSUE_PART[i] for i in issues if ISSUE_PART.get(i)})
+    if "placeholder_text" in issues:
+        weak = sorted(ALL_PARTS)
     critical = [i for i in issues if i in CRITICAL]
-    needs_ai = bool((score < th or critical) and (text or "").strip())
+    unreadable = any(i in NO_AI for i in issues)
+    needs_ai = bool((score < th or critical) and (text or "").strip() and not unreadable)
     return {
         "score": score,
         "issues": issues,

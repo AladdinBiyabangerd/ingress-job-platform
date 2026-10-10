@@ -352,6 +352,24 @@ def normalize_profile_data(raw: object, *, base: dict | None = None) -> dict:
                     if _as_str(i, max_len=40)
                 ][:20],
             }
+        template_in = meta_in.get("template") if isinstance(meta_in.get("template"), dict) else None
+        if template_in is not None:
+            tpl_id = _as_str(template_in.get("id"), max_len=40)
+            conf = _as_float(template_in.get("confidence"))
+            meta["template"] = {
+                "id": tpl_id or None,
+                "name": _as_str(template_in.get("name"), max_len=80) if tpl_id else "",
+                "confidence": None if conf is None else max(0.0, min(1.0, conf)),
+                "applied": bool(template_in.get("applied")) if tpl_id else False,
+            }
+        ocr_in = meta_in.get("ocr") if isinstance(meta_in.get("ocr"), dict) else None
+        if ocr_in is not None:
+            status = _as_str(ocr_in.get("status"), max_len=20)
+            if status in {"used", "unavailable", "disabled", "empty"}:
+                meta["ocr"] = {"status": status}
+                reason = _as_str(ocr_in.get("reason"), max_len=60)
+                if reason:
+                    meta["ocr"]["reason"] = reason
         data["parse_meta"] = meta
 
     # Keep top-level mirrors in sync with columns the UI edits.

@@ -2,7 +2,16 @@ import { cache } from "react";
 import { hrefFor } from "../copy";
 import { getMe } from "./me";
 
-const EMPTY_PROFILE = { company_name: "", city: "", about: "", complete: false };
+const EMPTY_PROFILE = {
+  company_name: "",
+  city: "",
+  about: "",
+  address: "",
+  website: "",
+  industry: "",
+  size: "",
+  complete: false,
+};
 
 export function companyLoginPath(locale) {
   // No registration_intent: session restore must not re-grant JOB_EMPLOYER after

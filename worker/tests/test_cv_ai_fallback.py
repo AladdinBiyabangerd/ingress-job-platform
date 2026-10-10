@@ -23,6 +23,7 @@ email@example.com
 
 Did stuff at companies for a while.
 Used java and spring sometimes.
+Worked with several teams on delivery of internal tools and customer projects.
 """
 
 
@@ -292,7 +293,7 @@ class AiFallbackTest(unittest.TestCase):
             "languages": [],
             "education": [],
         }
-        text = "Managed Java delivery with Spring services and Kafka events."
+        text = "Managed Java delivery with Spring services and Kafka events. " * 3
         env = {"CV_AI_FALLBACK_ENABLED": "1", "OPENAI_API_KEY": "sk-test", "AI_GATEWAY_ENABLED": "1"}
         with patch.dict(os.environ, env, clear=False):
             with patch(

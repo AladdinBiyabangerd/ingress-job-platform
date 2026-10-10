@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { loginHref } from "../lib/auth-link";
+import { LoginLink } from "./login-link";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import {
@@ -1279,6 +1279,7 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
                 {reviewTab === "cvcheck" ? (
                   <ProfileReviewCvCheck
                     t={t}
+                    locale={locale}
                     confidence={payload?.confidence}
                     parseMeta={payload?.profile?.parse_meta}
                     values={{ fullName, email, phone, city, headline, work, education, skills, languages }}
@@ -1329,24 +1330,20 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
           <div className="h2-panel profile-review-gate">
             <p>{t.profileGate}</p>
             <div className="profile-review-gate-actions">
-              <a
+              <LoginLink
                 className="btn small board-auth-signin"
-                href={loginHref({
-                  intent: "job_candidate",
-                  returnTo: hrefFor(locale, { mode: "profileReview" }),
-                })}
+                intent="job_candidate"
+                returnTo={hrefFor(locale, { mode: "profileReview" })}
               >
                 {t.signIn}
-              </a>
-              <a
+              </LoginLink>
+              <LoginLink
                 className="btn small primary"
-                href={loginHref({
-                  intent: "job_candidate",
-                  returnTo: hrefFor(locale, { mode: "profileReview" }),
-                })}
+                intent="job_candidate"
+                returnTo={hrefFor(locale, { mode: "profileReview" })}
               >
                 {t.createAccount}
-              </a>
+              </LoginLink>
             </div>
           </div>
         </div>

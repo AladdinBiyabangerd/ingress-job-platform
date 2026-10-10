@@ -1,10 +1,9 @@
-import { loginHref } from "../../lib/auth-link";
 import { text } from "../../lib/copy";
+import { LoginLink } from "../login-link";
 import { JdIcon } from "./jd-icons";
 
 export function JobDetailGuestGate({ locale, returnTo, className = "" }) {
   const t = text(locale);
-  const href = loginHref({ intent: "job_candidate", returnTo });
 
   return (
     <aside className={`jd-guest-gate ${className}`.trim()} aria-label={t.jdGuestGateTitle}>
@@ -14,9 +13,9 @@ export function JobDetailGuestGate({ locale, returnTo, className = "" }) {
       <div className="jd-guest-gate-body">
         <p className="jd-guest-gate-title">{t.jdGuestGateTitle}</p>
         <p className="jd-guest-gate-text">{t.jdGuestGateBody}</p>
-        <a className="jd-guest-gate-link" href={href}>
+        <LoginLink className="jd-guest-gate-link" intent="job_candidate" returnTo={returnTo}>
           {t.jdGoAcademy}
-        </a>
+        </LoginLink>
       </div>
     </aside>
   );

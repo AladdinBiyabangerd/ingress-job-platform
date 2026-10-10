@@ -10,14 +10,18 @@ const dual = { authenticated: true, employer: true, candidate: true, staff: fals
 const staff = { authenticated: true, staff: true, employer: false, candidate: false };
 const noRole = { authenticated: true, employer: false, candidate: false, staff: false };
 
-test("before /me loads only the public tabs exist", () => {
-  assert.deepEqual(navTabs(undefined), ["browse", "companies"]);
-  assert.deepEqual(navTabs(null), ["browse", "companies"]);
+const PUBLIC_TABS = ["browse", "companies", "trends"];
+
+test("primary nav tabs are the same for every account", () => {
+  assert.deepEqual(navTabs(undefined), PUBLIC_TABS);
+  assert.deepEqual(navTabs(null), PUBLIC_TABS);
+  for (const me of [guest, candidate, studentCandidate, noRole, employer, dual, staff]) {
+    assert.deepEqual(navTabs(me), PUBLIC_TABS);
+  }
 });
 
-test("guests and candidate-only accounts never see Post or Moderation", () => {
+test("guests and candidate-only accounts never may post or moderate", () => {
   for (const me of [guest, candidate, studentCandidate, noRole]) {
-    assert.deepEqual(navTabs(me), ["browse", "companies"]);
     assert.equal(canPostJobs(me), false);
     assert.equal(isStaff(me), false);
   }
@@ -26,12 +30,14 @@ test("guests and candidate-only accounts never see Post or Moderation", () => {
 });
 
 test("employers, dual employer+candidate accounts and staff may post", () => {
-  assert.deepEqual(navTabs(employer), ["browse", "companies", "post"]);
-  assert.deepEqual(navTabs(dual), ["browse", "companies", "post"]);
+  assert.equal(canPostJobs(employer), true);
+  assert.equal(canPostJobs(dual), true);
   assert.equal(isCandidateOnly(dual), false);
-  assert.deepEqual(navTabs(staff), ["browse", "companies", "post", "admin"]);
+  assert.equal(canPostJobs(staff), true);
+  assert.equal(isStaff(staff), true);
 });
 
 test("a stale flag without authentication grants nothing", () => {
-  assert.deepEqual(navTabs({ authenticated: false, staff: true, employer: true }), ["browse", "companies"]);
+  assert.equal(canPostJobs({ authenticated: false, staff: true, employer: true }), false);
+  assert.equal(isStaff({ authenticated: false, staff: true, employer: true }), false);
 });

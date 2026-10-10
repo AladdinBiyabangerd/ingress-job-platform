@@ -56,9 +56,19 @@ export async function GET(request) {
   if (!data.access_token) return fail(request, config.origin, "invalid_token_response");
   let dest = safeReturnTo(data.return_to);
   if (data.me && data.me.needs_company_profile) dest = companyPath(dest);
+  const destUrl = new URL(dest, config.origin);
+  // Staff revoke / blocked upgrade: OAuth succeeds but employer scope is absent.
+  if (
+    data.intent === "job_employer"
+    && data.me
+    && !data.me.employer
+    && !data.me.staff
+  ) {
+    destUrl.searchParams.set("employer_denied", "1");
+  }
 
   return noStore(setAuthCookies(
-    NextResponse.redirect(new URL(dest, config.origin), 307),
+    NextResponse.redirect(destUrl, 307),
     authCookieEntries(data),
     request,
   ));

@@ -1,16 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { ingressUrl } from "../lib/ingress";
 import { clearMeCache, fetchMe } from "../lib/me-client";
 import { recommendationsEnabled, roadmapEnabled } from "../lib/product-features";
-import { navTabs } from "../lib/roles";
 import { useMediaQuery } from "../lib/use-media-query";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
 import { AccountBar } from "./account-bar";
 import { CommandPalette, useCommandPaletteHotkey } from "./command-palette";
+import { LoginLink } from "./login-link";
 import { useInitialMe } from "./me-seed";
 
 const LOCALES = ["az", "en", "ru"];
@@ -69,16 +68,59 @@ function MenuIcon({ open }) {
   );
 }
 
-function tabLabel(t, key) {
+/** Product primary tabs — same on board, talent, trends, and employer pages. */
+const PRIMARY_NAV = [
+  { key: "browse", mode: "browse" },
+  { key: "companies", mode: "companies" },
+  { key: "trends", mode: "trends" },
+  { key: "learning", external: true },
+];
+
+function primaryNavLabel(t, key) {
   if (key === "companies") return t.navCompanies;
   if (key === "trends") return t.navTrends;
-  if (key === "post") return t.post;
-  if (key === "admin") return t.admin;
-  return t.browse;
+  if (key === "learning") return t.navLearning;
+  return t.navJobs;
+}
+
+function primaryNavActive(mode, key, jobId) {
+  if (key === "browse") return mode === "browse" || Boolean(jobId);
+  if (key === "companies") return mode === "companies" || mode === "company";
+  if (key === "trends") return mode === "trends" || mode === "trend" || mode === "trendJobs";
+  return false;
+}
+
+function PrimaryNav({ locale, mode, jobId, className }) {
+  const t = text(locale);
+  return (
+    <nav className={className ? `primary-nav ${className}` : "primary-nav"} aria-label={t.browse}>
+      {PRIMARY_NAV.map((item) => {
+        const label = primaryNavLabel(t, item.key);
+        if (item.external) {
+          return (
+            <a key={item.key} href={ingressUrl(locale)} rel="noopener noreferrer" target="_blank">
+              {label}
+            </a>
+          );
+        }
+        const on = primaryNavActive(mode, item.key, jobId);
+        return (
+          <a
+            key={item.key}
+            href={hrefFor(locale, { mode: item.mode })}
+            className={on ? "on" : ""}
+            aria-current={on ? "page" : undefined}
+          >
+            {label}
+          </a>
+        );
+      })}
+    </nav>
+  );
 }
 
 /** Mobile drawer — account links match desktop AccountBar (incl. profileReview + admin). */
-function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
+function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef, jobId }) {
   const t = text(locale);
   const panelRef = useRef(null);
 
@@ -108,22 +150,34 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
   }, [onClose, toggleRef]);
 
   const back = returnTo || hrefFor(locale);
-  const links = navTabs(me).map((key) => ({ key, label: tabLabel(t, key) }));
 
   return (
     <nav id="mobile-nav" className="mobile-nav" aria-label={t.menuLabel} ref={panelRef}>
       <ul className="mobile-nav-links">
-        {links.map((link) => (
-          <li key={link.key}>
-            <a
-              href={hrefFor(locale, { mode: link.key })}
-              className={mode === link.key ? "on" : ""}
-              aria-current={mode === link.key ? "page" : undefined}
-            >
-              {link.label}
-            </a>
-          </li>
-        ))}
+        {PRIMARY_NAV.map((item) => {
+          const label = primaryNavLabel(t, item.key);
+          if (item.external) {
+            return (
+              <li key={item.key}>
+                <a href={ingressUrl(locale)} rel="noopener noreferrer" target="_blank">
+                  {label}
+                </a>
+              </li>
+            );
+          }
+          const on = primaryNavActive(mode, item.key, jobId);
+          return (
+            <li key={item.key}>
+              <a
+                href={hrefFor(locale, { mode: item.mode })}
+                className={on ? "on" : ""}
+                aria-current={on ? "page" : undefined}
+              >
+                {label}
+              </a>
+            </li>
+          );
+        })}
       </ul>
       {me?.authenticated ? (
         <ul className="mobile-nav-links mobile-nav-account">
@@ -215,10 +269,12 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef }) {
           <p className="mobile-nav-note">{t.register} · {t.registerAsk}</p>
           <ul className="mobile-nav-links">
             <li>
-              <a href={loginHref({ intent: "job_candidate", returnTo: back })}>{t.registerCreator}</a>
+              <LoginLink intent="job_candidate" returnTo={back}>{t.registerCreator}</LoginLink>
             </li>
             <li>
-              <a href={loginHref({ intent: "job_employer", returnTo: hrefFor(locale, { mode: "post" }) })}>{t.registerPoster}</a>
+              <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "post" })}>
+                {t.registerPoster}
+              </LoginLink>
             </li>
           </ul>
         </div>
@@ -236,17 +292,17 @@ function BoardAuthActions({ locale, returnTo, me, onMe }) {
   }
   return (
     <div className="board-auth">
-      <a className="btn board-auth-signin" href={loginHref({ intent: "job_candidate", returnTo: back })}>
+      <LoginLink className="btn board-auth-signin" intent="job_candidate" returnTo={back}>
         {t.signIn}
-      </a>
-      <a className="btn primary board-auth-create" href={loginHref({ intent: "job_candidate", returnTo: back })}>
+      </LoginLink>
+      <LoginLink className="btn primary board-auth-create" intent="job_candidate" returnTo={back}>
         {t.createAccount}
-      </a>
+      </LoginLink>
     </div>
   );
 }
 
-/** Board chrome: Jobs · Companies · Learning header + wrap-board. */
+/** Board chrome: Jobs · Companies · Trends · Learning header + wrap-board. */
 const BOARD_SHELL_MODES = new Set(["browse", "companies", "saved", "applications", "profile"]);
 
 function BoardBottomNav({ locale, mode }) {
@@ -379,8 +435,6 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
     };
   }, [isBoard, initialMe]);
 
-  const nav = navTabs(me);
-
   return (
     <>
       <a className="skip-link" href="#main">
@@ -393,40 +447,12 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
               <img className="mark" src="/ingress-mark.svg" alt="" aria-hidden="true" />
               <span className="brand-text">Ingress Job</span>
             </a>
-            {isBoard ? (
-              <nav className="primary-nav board-primary-nav" aria-label={t.browse}>
-                <a
-                  href={hrefFor(locale)}
-                  className={mode === "browse" || jobId ? "on" : ""}
-                  aria-current={mode === "browse" || jobId ? "page" : undefined}
-                >
-                  {t.navJobs}
-                </a>
-                <a
-                  href={hrefFor(locale, { mode: "companies" })}
-                  className={mode === "companies" ? "on" : ""}
-                  aria-current={mode === "companies" ? "page" : undefined}
-                >
-                  {t.navCompanies}
-                </a>
-                <a href={ingressUrl(locale)} rel="noopener noreferrer" target="_blank">
-                  {t.navLearning}
-                </a>
-              </nav>
-            ) : (
-              <nav className="primary-nav" aria-label={t.browse}>
-                {nav.map((key) => (
-                  <a
-                    key={key}
-                    className={mode === key ? "on" : ""}
-                    href={hrefFor(locale, { mode: key })}
-                    aria-current={mode === key ? "page" : undefined}
-                  >
-                    {tabLabel(t, key)}
-                  </a>
-                ))}
-              </nav>
-            )}
+            <PrimaryNav
+              locale={locale}
+              mode={mode}
+              jobId={jobId}
+              className={isBoard ? "board-primary-nav" : undefined}
+            />
           </div>
           <div className="top-right">
             {!isBoard ? (
@@ -455,7 +481,15 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
           </div>
         </div>
         {menuOpen && compact ? (
-          <MobileNav locale={locale} mode={mode} me={me} returnTo={returnTo} onClose={closeMenu} toggleRef={toggleRef} />
+          <MobileNav
+            locale={locale}
+            mode={mode}
+            me={me}
+            returnTo={returnTo}
+            onClose={closeMenu}
+            toggleRef={toggleRef}
+            jobId={jobId}
+          />
         ) : null}
       </header>
       <CommandPalette locale={locale} me={me} open={cmdOpen} onOpenChange={setCmdOpen} />

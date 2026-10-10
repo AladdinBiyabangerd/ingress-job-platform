@@ -1,7 +1,7 @@
 "use client";
 
-import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
+import { LoginLink } from "./login-link";
 
 function MatchRing({ percent }) {
   const size = 96;
@@ -52,16 +52,15 @@ function MatchRing({ percent }) {
 export function MatchAside({ locale, authenticated, topScore = null, jobTitle = "" }) {
   const t = text(locale);
   const recoHref = hrefFor(locale, { mode: "recommendations" });
-  const login = loginHref({ intent: "job_candidate", returnTo: recoHref });
 
   if (!authenticated) {
     return (
       <aside className="side-widget match-aside match-aside-guest" aria-labelledby="match-aside-title">
         <h2 id="match-aside-title">{t.matchAsideTitle}</h2>
         <p className="match-aside-guest-line">{t.matchAsideGuest}</p>
-        <a className="side-widget-link" href={login}>
+        <LoginLink className="side-widget-link" intent="job_candidate" returnTo={recoHref}>
           {t.matchAsideGuestCta}
-        </a>
+        </LoginLink>
       </aside>
     );
   }

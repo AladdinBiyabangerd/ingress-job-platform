@@ -20,11 +20,25 @@ _ACCOUNTS_ENSURED: set[str] = set()
 NAME_MAX = 120
 CITY_MAX = 80
 ABOUT_MAX = 400
+ADDRESS_MAX = 160
+WEBSITE_MAX = 200
+INDUSTRY_MAX = 80
+SIZE_MAX = 40
 CANDIDATE_NAME_MAX = 80
 PHONE_MAX = 40
 EMAIL_MAX = 120
 _PHONE_RE = re.compile(r"^[0-9+\-() ]{5,40}$")
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_WEBSITE_RE = re.compile(
+    r"^(https?://)?([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(/[\w\-./?%&=+#]*)?$",
+)
+_COMPANY_COLUMNS = {
+    "address": "TEXT NOT NULL DEFAULT ''",
+    "website": "TEXT NOT NULL DEFAULT ''",
+    "industry": "TEXT NOT NULL DEFAULT ''",
+    "size": "TEXT NOT NULL DEFAULT ''",
+}
+_ALLOWED_SIZES = frozenset({"", "1-10", "11-50", "51-200", "201-1000", "1000+"})
 
 _SCHEMA_STATEMENTS = (
     """
@@ -33,6 +47,10 @@ _SCHEMA_STATEMENTS = (
         company_name TEXT NOT NULL,
         city TEXT NOT NULL,
         about TEXT NOT NULL,
+        address TEXT NOT NULL DEFAULT '',
+        website TEXT NOT NULL DEFAULT '',
+        industry TEXT NOT NULL DEFAULT '',
+        size TEXT NOT NULL DEFAULT '',
         updated_at TEXT NOT NULL
     )
     """,
@@ -73,9 +91,17 @@ _SCHEMA_STATEMENTS = (
 )
 
 
+def _ensure_company_columns(conn) -> None:
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(company_profiles)")}
+    for name, decl in _COMPANY_COLUMNS.items():
+        if name not in cols:
+            conn.execute(f"ALTER TABLE company_profiles ADD COLUMN {name} {decl}")
+
+
 def _apply_schema(conn) -> None:
     for statement in _SCHEMA_STATEMENTS:
         conn.execute(statement)
+    _ensure_company_columns(conn)
     conn.commit()
 
 
@@ -89,6 +115,9 @@ def _connect():
         if key not in _ACCOUNTS_ENSURED:
             _apply_schema(conn)
             _ACCOUNTS_ENSURED.add(key)
+        else:
+            _ensure_company_columns(conn)
+            conn.commit()
         return conn
 
     DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -98,6 +127,9 @@ def _connect():
     if key not in _ACCOUNTS_ENSURED:
         _apply_schema(conn)
         _ACCOUNTS_ENSURED.add(key)
+    else:
+        _ensure_company_columns(conn)
+        conn.commit()
     return conn
 
 
@@ -110,16 +142,37 @@ def _clean(value: str, limit: int) -> str:
     return text[:limit]
 
 
+def _row_get(row, key: str) -> str:
+    try:
+        value = row[key]
+    except (KeyError, IndexError):
+        return ""
+    return (value or "").strip()
+
+
 def _company_view(row) -> dict:
     if row is None:
-        return {"company_name": "", "city": "", "about": "", "complete": False}
-    name = (row["company_name"] or "").strip()
-    city = (row["city"] or "").strip()
-    about = (row["about"] or "").strip()
+        return {
+            "company_name": "",
+            "city": "",
+            "about": "",
+            "address": "",
+            "website": "",
+            "industry": "",
+            "size": "",
+            "complete": False,
+        }
+    name = _row_get(row, "company_name")
+    city = _row_get(row, "city")
+    about = _row_get(row, "about")
     return {
         "company_name": name,
         "city": city,
         "about": about,
+        "address": _row_get(row, "address"),
+        "website": _row_get(row, "website"),
+        "industry": _row_get(row, "industry"),
+        "size": _row_get(row, "size"),
         "complete": bool(name and city and about),
     }
 
@@ -141,7 +194,10 @@ def account_fields_for(subject: str) -> dict:
         conn = _connect()
         try:
             company = conn.execute(
-                "SELECT company_name, city, about FROM company_profiles WHERE subject = ?",
+                """
+                SELECT company_name, city, about, address, website, industry, size
+                FROM company_profiles WHERE subject = ?
+                """,
                 (who,),
             ).fetchone()
             candidate = conn.execute(
@@ -171,7 +227,10 @@ def profile_for(subject: str) -> dict:
         conn = _connect()
         try:
             row = conn.execute(
-                "SELECT company_name, city, about FROM company_profiles WHERE subject = ?",
+                """
+                SELECT company_name, city, about, address, website, industry, size
+                FROM company_profiles WHERE subject = ?
+                """,
                 (subject,),
             ).fetchone()
         finally:
@@ -179,10 +238,35 @@ def profile_for(subject: str) -> dict:
     return _company_view(row)
 
 
-def save_profile(subject: str, company_name: str, city: str, about: str) -> dict:
+def _normalize_website(value: str) -> str:
+    text = _clean(value, WEBSITE_MAX)
+    if not text:
+        return ""
+    if " " in text or not _WEBSITE_RE.fullmatch(text):
+        raise ValueError("website")
+    return text
+
+
+def save_profile(
+    subject: str,
+    company_name: str,
+    city: str,
+    about: str,
+    *,
+    address: str = "",
+    website: str = "",
+    industry: str = "",
+    size: str = "",
+) -> dict:
     name = _clean(company_name, NAME_MAX)
     city_value = _clean(city, CITY_MAX)
     about_value = _clean(about, ABOUT_MAX)
+    address_value = _clean(address, ADDRESS_MAX)
+    website_value = _normalize_website(website)
+    industry_value = _clean(industry, INDUSTRY_MAX)
+    size_value = _clean(size, SIZE_MAX)
+    if size_value not in _ALLOWED_SIZES:
+        raise ValueError("size")
     if not name or not city_value or not about_value:
         raise ValueError("incomplete")
     with _LOCK:
@@ -190,15 +274,31 @@ def save_profile(subject: str, company_name: str, city: str, about: str) -> dict
         try:
             conn.execute(
                 """
-                INSERT INTO company_profiles (subject, company_name, city, about, updated_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO company_profiles (
+                    subject, company_name, city, about, address, website, industry, size, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(subject) DO UPDATE SET
                     company_name = excluded.company_name,
                     city = excluded.city,
                     about = excluded.about,
+                    address = excluded.address,
+                    website = excluded.website,
+                    industry = excluded.industry,
+                    size = excluded.size,
                     updated_at = excluded.updated_at
                 """,
-                (subject, name, city_value, about_value, _now().isoformat()),
+                (
+                    subject,
+                    name,
+                    city_value,
+                    about_value,
+                    address_value,
+                    website_value,
+                    industry_value,
+                    size_value,
+                    _now().isoformat(),
+                ),
             )
             conn.commit()
         finally:

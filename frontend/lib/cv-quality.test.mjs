@@ -53,3 +53,14 @@ test("issueTarget maps issues to sections", () => {
   assert.equal(issueTarget("education_missing"), "education");
   assert.equal(issueTarget("name_missing"), "name");
 });
+
+test("cvFeedback: AI skipped for unreadable text is flagged", () => {
+  const f = cvFeedback({
+    ai_fallback: "skipped", ai_error: "text_too_short",
+    quality: { score: 0.2, threshold: 0.65, issues: ["text_too_short"] },
+  });
+  assert.equal(f.aiSkippedUnreadable, true);
+  const g = cvFeedback({ ai_fallback: "skipped", ai_error: "ai_disabled", quality: { score: 0.2, issues: ["text_garbled"] } });
+  assert.equal(g.aiSkippedUnreadable, false);
+  assert.deepEqual(g.issues, ["text_garbled"]);
+});

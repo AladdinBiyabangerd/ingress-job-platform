@@ -24,7 +24,8 @@ const KNOWN_ISSUES = new Set([
   "name_missing", "name_suspicious", "contact_missing", "city_is_education",
   "headline_missing", "headline_suspicious", "work_missing", "work_undated",
   "work_garbage_title", "work_missing_company", "work_date_order", "work_future_date",
-  "education_missing", "skills_thin", "text_too_short",
+  "work_absurd_date", "placeholder_text",
+  "education_missing", "skills_thin", "text_too_short", "text_garbled",
 ]);
 
 /** Which tab/field the "Fix" button of an issue should open. */
@@ -48,6 +49,7 @@ export function cvFeedback(meta) {
   if (meta.ai_fallback === "applied") ai = "applied";
   else if (meta.ai_fallback === "failed") ai = "failed";
   else if (meta.ai_fallback === "skipped") ai = "skipped";
+  const aiError = typeof meta.ai_error === "string" ? meta.ai_error : "";
   const issues = (Array.isArray(q.issues) ? q.issues : []).filter((c) => KNOWN_ISSUES.has(c));
   return {
     score,
@@ -55,6 +57,7 @@ export function cvFeedback(meta) {
     threshold,
     source: src,
     ai,
+    aiSkippedUnreadable: ai === "skipped" && (aiError === "text_too_short" || aiError === "text_garbled"),
     issues,
     level: score >= threshold ? (issues.length ? "partial" : "ok") : "low",
   };

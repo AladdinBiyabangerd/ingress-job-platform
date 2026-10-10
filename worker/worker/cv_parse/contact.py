@@ -187,7 +187,7 @@ def _guess_name(text: str, email: str) -> str:
             return head[:120]
         if len(line) < 40 and _heading_name(line):
             continue  # a section heading is never the name
-        line = re.sub(r"(?<=[a-zü])(?:RESUME|CV)$", "", line).strip()
+        line = re.sub(r"(?<=[A-Za-zü])RESUME$", "", line).strip()
         if re.search(r"\s[·•|]\s", line):
             # "Jan Küster · Consultant · Bremen · mail" header strip: first segment is the name.
             first = re.split(r"\s[·•|]\s", line)[0].strip()

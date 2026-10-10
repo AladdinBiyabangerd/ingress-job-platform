@@ -321,6 +321,10 @@ export async function saveCompanyProfile(payload) {
       company_name: source.company_name || "",
       city: source.city || "",
       about: source.about || "",
+      address: source.address || "",
+      website: source.website || "",
+      industry: source.industry || "",
+      size: source.size || "",
     },
   });
 }

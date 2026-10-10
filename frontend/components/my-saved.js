@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { refreshSavedJobs, unsaveJob } from "../lib/server/refresh";
+import { LoginLink } from "./login-link";
 import { useInitialMe } from "./me-seed";
 import { PageChrome } from "./page-chrome";
 import { preloadSavedIds } from "./save-job-button";
@@ -214,18 +214,12 @@ export function MySaved({
           <div className="h2-panel my-saved-gate">
             <p>{t.savedJobsGate}</p>
             <div className="my-saved-gate-actions">
-              <a
-                className="btn small board-auth-signin"
-                href={loginHref({ intent: "job_candidate", returnTo })}
-              >
+              <LoginLink className="btn small board-auth-signin" intent="job_candidate" returnTo={returnTo}>
                 {t.signIn}
-              </a>
-              <a
-                className="btn small primary"
-                href={loginHref({ intent: "job_candidate", returnTo })}
-              >
+              </LoginLink>
+              <LoginLink className="btn small primary" intent="job_candidate" returnTo={returnTo}>
                 {t.createAccount}
-              </a>
+              </LoginLink>
             </div>
           </div>
         </div>

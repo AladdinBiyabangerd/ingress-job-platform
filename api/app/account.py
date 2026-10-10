@@ -122,6 +122,10 @@ class CompanyIn(BaseModel):
     company_name: str = Field(max_length=120)
     city: str = Field(max_length=80)
     about: str = Field(max_length=400)
+    address: str = Field(default="", max_length=160)
+    website: str = Field(default="", max_length=200)
+    industry: str = Field(default="", max_length=80)
+    size: str = Field(default="", max_length=40)
 
 
 class TransactionIn(BaseModel):
@@ -281,12 +285,23 @@ def write_company_profile(body: CompanyIn, user: VerifiedAccess = Depends(curren
     if "job:employer" not in user.scopes and "job:staff" not in user.scopes:
         raise HTTPException(status_code=403, detail="Şirkət profili işəgötürən hesabı tələb edir")
     try:
-        profile = save_profile(user.subject, body.company_name, body.city, body.about)
+        profile = save_profile(
+            user.subject,
+            body.company_name,
+            body.city,
+            body.about,
+            address=body.address,
+            website=body.website,
+            industry=body.industry,
+            size=body.size,
+        )
     except ValueError as exc:
-        raise HTTPException(
-            status_code=422,
-            detail="Şirkət adı, şəhər və qısa təsvir doldurulmalıdır",
-        ) from exc
+        detail = {
+            "incomplete": "Şirkət adı, şəhər və qısa təsvir doldurulmalıdır",
+            "website": "Vebsayt ünvanı düzgün deyil",
+            "size": "Şirkət ölçüsü düzgün deyil",
+        }.get(str(exc), "Şirkət adı, şəhər və qısa təsvir doldurulmalıdır")
+        raise HTTPException(status_code=422, detail=detail) from exc
     return account_payload(
         VerifiedAccess(subject=user.subject, scopes=user.scopes)
     ) | {"company_profile": profile, "needs_company_profile": (
@@ -350,6 +365,7 @@ def exchange(body: ExchangeIn) -> dict:
     )
     issued = _tokens_from(payload, require_refresh=False, expected_nonce=row["nonce"])
     issued["return_to"] = safe_return_to(row["return_to"])
+    issued["intent"] = row["intent"]
     return issued
 
 

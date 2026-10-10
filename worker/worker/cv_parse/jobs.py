@@ -23,7 +23,7 @@ _ROLE = re.compile(
     r"lead\b|director|scientist|researcher|analyst|designer|architect|consultant|"
     r"specialist|officer|assistant|head\b|president|administrator|devops|\bsre\b|\bqa\b|"
     r"tester|professor|lecturer|accountant|teacher|coordinator|executive|associate|"
-    r"representative|technician|supervisor|advisor|fellow|member|mentor|student|"
+    r"employee|programmer|postdoc\w*|representative|technician|supervisor|advisor|fellow|member|mentor|student|"
     r"developer|mühəndis|menecer|müəllim|təcrübəçi|разработчик|инженер|менеджер|"
     r"аналитик|дизайнер|стажёр|стажер|директор|руководитель|специалист)"
 )
@@ -38,7 +38,7 @@ _DURATION = re.compile(
     r"(?i)^\s*\d+\s*(?:years?|yrs?|months?|mos?|il|ay|год(?:а)?|лет|мес\w*)"
     r"(?:\s+\d+\s*(?:months?|mos?|ay|мес\w*))?\s*$"
 )
-_STRONG_SEP = re.compile(r"\s+[|–—@]\s+|\s+-\s+|\s+at\s+|\s+в\s+|\s+də\s+")
+_STRONG_SEP = re.compile(r"\s+[|–—@]\s+|\s+-\s+|(?<=[A-Za-z)])-\s+(?=[A-Z])|\s+at\s+|\s+в\s+|\s+də\s+")
 
 
 def clean_line(line: str) -> str:
@@ -60,8 +60,12 @@ def _date_span(line: str) -> tuple[int, int, str] | None:
 
 
 def _is_anchor(line: str) -> bool:
-    if not line or len(line) > 160 or _is_bullet(line) and len(line) > 60:
+    if not line or len(line) > 160:
         return False
+    if _is_bullet(line) and len(line) > 60:
+        # "■ Role, Dept   May 2004 – May 2005": a bullet-marked header ends with its date range.
+        span = _date_span(line)
+        return bool(span and span[1] >= len(line.rstrip()) - 1)
     return bool(find_ranges(line))
 
 
@@ -116,12 +120,53 @@ def _pieces(line: str) -> list[str]:
     return out
 
 
+_ORG_WORD = (
+    r"University|Universit[äaé]t?|Institute|Institut|College|School|Hospital|Bank|Ministry|"
+    r"Department|Laborator(?:y|ies)|Lab"
+)
+# Glued "Title Company" on one line (no separator): split before an organisation keyword...
+_GLUE_ORG = re.compile(rf"\s(?=(?:{_ORG_WORD})\s+(?:of\b|[A-Z]))")
+# ...or before "<Name> <legal/org suffix>" at the end ("... Notes Domino We4IT GmbH Bremen").
+_GLUE_SUFFIX = re.compile(
+    r"\s(?P<co>[A-Z][\w&.-]*\s+(?:GmbH|AG|Inc\.?|LLC|Ltd\.?|Corp\.?|Co\.?|S\.?A\.?|B\.?V\.?|PLC|Group|"
+    r"Technologies|Solutions|Systems|Labs|Software|Consulting|Agency|Studio))(?:\s+[A-Z][a-z]+)?$"
+)
+_GLUE_DOMAIN = re.compile(r"\s(?P<co>[a-z0-9][\w-]*(?:\.[\w-]+)*\.[a-z]{2,})$")
+
+
+def split_glued(piece: str) -> tuple[str, str] | None:
+    """Split one glued line like "IT Consultant for X We4IT GmbH Bremen" into (title, company).
+
+    Only used when the line has no separator at all. Needs >= 2 words of title before the
+    company marker, so plain titles are never cut.
+    """
+    piece = clean_line(piece)
+    if len(piece.split()) < 4 or not piece[:1].isupper():
+        return None
+    for rx in (_GLUE_ORG, _GLUE_SUFFIX, _GLUE_DOMAIN):
+        m = rx.search(piece)
+        if not m:
+            continue
+        if rx is _GLUE_ORG:
+            title, company = piece[: m.start()], piece[m.end() :]
+        else:
+            title, company = piece[: m.start()], m.group("co")
+        title = title.strip(" ,-–—|")
+        if len(title.split()) >= 2 and company.strip() and (_ROLE.search(title) or rx is not _GLUE_ORG):
+            return title[:120], company.strip()[:120]
+    return None
+
+
 def _title_company(headers: list[str]) -> tuple[str, str]:
     pieces: list[str] = []
     for h in headers:
         pieces.extend(_pieces(h))
     if not pieces:
         return "", ""
+    if len(pieces) == 1:
+        glued = split_glued(pieces[0])
+        if glued:
+            return glued
     title = next((p for p in pieces if _ROLE.search(p)), pieces[0])
     others = [p for p in pieces if p != title]
     company = next((p for p in others if not _LOC_ONLY.match(p)), others[0] if others else "")
@@ -142,16 +187,22 @@ def _trailing_mode(lines: list[str], anchors: list[int]) -> bool:
     return long_bullets >= 2
 
 
-def normalize_experience(text: str) -> str:
-    """Rewrite varied experience layouts into title / company|date / body blocks."""
+def normalize_experience(text: str, layout: str | None = None) -> str:
+    """Rewrite varied experience layouts into title / company|date / body blocks.
+
+    ``layout`` ("leading" | "trailing" | "date_first") is an optional template hint that
+    overrides auto-detection; unknown values fall back to auto-detection.
+    """
     lines = [clean_line(ln) for ln in (text or "").splitlines()]
     lines = [ln for ln in lines if ln]
     anchors = [i for i, ln in enumerate(lines) if _is_anchor(ln)]
     if not anchors:
         return "\n".join(lines)
-    if _trailing_mode(lines, anchors):
+    if layout == "leading":
+        return "\n".join(_normalize_leading(lines, anchors))
+    if layout == "trailing" or (layout is None and _trailing_mode(lines, anchors)):
         return "\n".join(_normalize_trailing(lines, anchors))
-    if _date_first_mode(lines, anchors):
+    if layout == "date_first" or (layout is None and _date_first_mode(lines, anchors)):
         return "\n".join(_normalize_date_first(lines, anchors))
     return "\n".join(_normalize_leading(lines, anchors))
 

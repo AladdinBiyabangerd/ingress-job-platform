@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loginHref } from "../lib/auth-link";
+import { beginLogin } from "../lib/auth-link";
 import { applyFormFromJob } from "../lib/apply-form";
 import { text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
@@ -90,7 +90,7 @@ export function AccountActions({ locale, jobId, returnTo, onsite, hasOriginal, f
     if (kind === "apply") {
       const res = await applyToJob(jobId);
       if (res.status === 401 || res.status === 403) {
-        window.location.href = loginHref({ intent: "job_candidate", returnTo });
+        beginLogin({ intent: "job_candidate", returnTo });
         return;
       }
       if (res.ok && typeof res.data.url === "string" && res.data.url) {
@@ -105,7 +105,7 @@ export function AccountActions({ locale, jobId, returnTo, onsite, hasOriginal, f
       cache: "no-store",
     });
     if (res.status === 401 || res.status === 403) {
-      window.location.href = loginHref({ intent: "job_candidate", returnTo });
+      beginLogin({ intent: "job_candidate", returnTo });
       return;
     }
     const data = await res.json().catch(() => ({}));
@@ -162,7 +162,7 @@ export function AccountActions({ locale, jobId, returnTo, onsite, hasOriginal, f
     const res = await applyToJob(jobId, body);
     setBusy(false);
     if (res.status === 401 || res.status === 403) {
-      window.location.href = loginHref({ intent: "job_candidate", returnTo });
+      beginLogin({ intent: "job_candidate", returnTo });
       return;
     }
     if (res.status === 409) {

@@ -478,6 +478,33 @@ class ParseMetaQualityTest(unittest.TestCase):
         self.assertEqual(meta["quality"]["issues"], ["work_undated"])
         self.assertNotIn("junk", meta["quality"])
 
+    def test_template_meta_survives_normalize(self):
+        from app.cv_profile import _empty_profile, normalize_profile_data
+
+        out = normalize_profile_data(
+            {"parse_meta": {"template": {"id": "vantage_typst", "name": "Typst Vantage",
+                                         "confidence": 1.0, "applied": True, "hints": {"x": 1}}}},
+            base=_empty_profile(),
+        )
+        self.assertEqual(
+            out["parse_meta"]["template"],
+            {"id": "vantage_typst", "name": "Typst Vantage", "confidence": 1.0, "applied": True},
+        )
+        none = normalize_profile_data({"parse_meta": {"template": {"id": None}}}, base=_empty_profile())
+        self.assertEqual(none["parse_meta"]["template"]["id"], None)
+        self.assertFalse(none["parse_meta"]["template"]["applied"])
+
+    def test_ocr_meta_is_whitelisted(self):
+        from app.cv_profile import _empty_profile, normalize_profile_data
+
+        out = normalize_profile_data(
+            {"parse_meta": {"ocr": {"status": "unavailable", "reason": "tesseract_missing", "junk": 1}}},
+            base=_empty_profile(),
+        )
+        self.assertEqual(out["parse_meta"]["ocr"], {"status": "unavailable", "reason": "tesseract_missing"})
+        bad = normalize_profile_data({"parse_meta": {"ocr": {"status": "<script>"}}}, base=_empty_profile())
+        self.assertNotIn("ocr", bad["parse_meta"])
+
 
 if __name__ == "__main__":
     unittest.main()

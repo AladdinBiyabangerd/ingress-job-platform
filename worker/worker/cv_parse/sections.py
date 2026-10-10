@@ -113,10 +113,11 @@ _HEADINGS: dict[str, tuple[str, ...]] = {
     ),
     # Sections we do not parse; they exist so they end the previous section
     # instead of leaking their lines into experience / skills.
-    "awards": ("awards", "honors", "achievements", "mükafatlar", "наградa", "награды"),
-    "publications": ("publications", "papers", "nəşrlər", "публикации"),
+    "awards": ("awards", "honors", "honours", "honors and awards", "selected distinctions", "distinctions", "grants", "fellowships", "scholarships", "achievements", "mükafatlar", "наградa", "награды"),
+    "publications": ("publications", "selected publications", "journals", "conferences", "preprints", "presentations", "invited talks", "talks", "patents", "papers", "nəşrlər", "публикации"),
     "volunteer": ("volunteering", "volunteer experience", "könüllü", "волонтерство"),
-    "interests": ("interests", "hobbies", "maraqlar", "хобби", "интересы"),
+    "interests": ("interests", "research interests", "hobbies", "maraqlar", "хобби", "интересы"),
+    "memberships": ("memberships", "professional memberships", "professional service", "affiliations", "service"),
     "references": ("references", "referanslar", "рекомендации"),
     "additional": ("additional information", "əlavə məlumat", "дополнительно"),
     "coursework": ("coursework", "courses", "kurslar", "курсы"),
@@ -149,7 +150,7 @@ def _fuzzy_heading(title: str) -> str | None:
     return _ALIAS_TO_CANON[best[0]] if best else None
 
 
-_INLINE_HEADING = re.compile(r"^(?P<head>[A-Z][A-Z &/]{3,28}?)\s+(?P<rest>[A-Z][a-z].{6,})$")
+_INLINE_HEADING = re.compile(r"^(?P<head>[A-Z][A-Z &/]{3,28}?)\s+(?P<rest>\S.{6,})$")
 
 
 def _split_inline_heading(line: str) -> tuple[str, str] | None:
@@ -161,7 +162,7 @@ def _split_inline_heading(line: str) -> tuple[str, str] | None:
     return (canon, m.group("rest")) if canon else None
 
 
-def split_sections(text: str) -> dict[str, str]:
+def split_sections(text: str, extra_headings: dict[str, str] | None = None) -> dict[str, str]:
     """Split CV text into named sections. Unknown preamble → ``other``."""
     buckets: dict[str, list[str]] = {key: [] for key in _HEADINGS}
     buckets["other"] = []
@@ -195,8 +196,12 @@ def split_sections(text: str) -> dict[str, str]:
                 buckets[current].append("")
             continue
         heading = _heading_name(line)
+        if not heading and extra_headings:
+            heading = extra_headings.get(fold_az(line.rstrip(":").strip()).replace("ı", "i"))
         if heading:
             current = heading
+            if current not in buckets:
+                buckets[current] = []
             continue
         buckets[current].append(line)
     return {

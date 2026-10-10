@@ -226,6 +226,7 @@ class AuthRefreshTests(unittest.TestCase):
         data = response.json()
         self.assertEqual(data["access_token"], "access-new")
         self.assertEqual(data["return_to"], "/profile")
+        self.assertEqual(data["intent"], "job_candidate")
         form = self._posted_form(mocked)
         self.assertEqual(form.get("client_secret"), ["test-job-oidc-secret"])
         self.assertEqual(form.get("grant_type"), ["authorization_code"])

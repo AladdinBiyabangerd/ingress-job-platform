@@ -168,6 +168,10 @@ Hər iki tərəfi `1` etmədən tam açılmır. Env boş / `0` / `false` / `off`
 
 CV faylı `BUCKET_NAME`, `BUCKET_ACCESS_KEY` və `BUCKET_SECRET_KEY` üçünün də olduğu vaxt anbara gedir. Əks falda `api/data` altında qalır və git-ə düşmür.
 
+## CV üçün OCR (isteğe bağlı)
+
+Skan və ya oxunmaz PDF-lər üçün `tesseract` quraşdırılıbsa OCR avtomatik işləyir, yoxdursa atlanır və `parse_meta.ocr` bunu qeyd edir. Quraşdırma və dəyişənlər: [docs/cv-ocr.md](docs/cv-ocr.md).
+
 ## Railway
 
 Servislər (`api`, `web`, saatlıq `worker`) və mühit dəyişənlərinin adları: [docs/railway.md](docs/railway.md).

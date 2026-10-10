@@ -37,6 +37,7 @@ email@example.com
 
 Did stuff at companies for a while.
 Used java and spring sometimes.
+Worked with several teams on delivery of internal tools and customer projects.
 """
 
 ENV = {"CV_AI_FALLBACK_ENABLED": "1", "OPENAI_API_KEY": "sk-test", "AI_GATEWAY_ENABLED": "1"}
@@ -118,6 +119,31 @@ class AutoFlowTest(unittest.TestCase):
         self.assertIn("quality", meta["ai_reasons"])
         self.assertGreater(meta["quality"]["score"], meta["quality"]["score_before"])
         self.assertEqual(out["contact"]["email"], "email@example.com")
+
+    def test_too_short_text_never_calls_ai(self):
+        short = "Someone\nemail@example.com\nDid stuff."
+        rules = parse_text(short)
+        with patch.dict(os.environ, ENV, clear=False), patch("worker.cv_parse.ai_fallback.complete_json") as api:
+            out = maybe_ai_fallback(rules, short, conn=self.store.conn)
+        api.assert_not_called()
+        meta = out["parse_meta"]
+        self.assertEqual(meta["ai_fallback"], "skipped")
+        self.assertEqual(meta["ai_error"], "text_too_short")
+        self.assertIn("text_too_short", meta["quality"]["issues"])
+        self.assertFalse(assess_quality(rules, short)["needs_ai"])
+
+    def test_empty_text_never_calls_ai(self):
+        with patch.dict(os.environ, ENV, clear=False), patch("worker.cv_parse.ai_fallback.complete_json") as api:
+            out = maybe_ai_fallback(parse_text(""), "", conn=self.store.conn)
+        api.assert_not_called()
+        self.assertEqual(out["parse_meta"].get("ai_fallback"), "skipped")
+
+    def test_garbled_text_never_calls_ai(self):
+        noise = "\u0b85\u0b86\u0b87" * 60 + " email@example.com"
+        with patch.dict(os.environ, ENV, clear=False), patch("worker.cv_parse.ai_fallback.complete_json") as api:
+            out = maybe_ai_fallback(parse_text(noise), noise, conn=self.store.conn)
+        api.assert_not_called()
+        self.assertEqual(out["parse_meta"]["ai_error"], "text_garbled")
 
     def test_ai_failure_keeps_rules(self):
         rules = parse_text(POOR)

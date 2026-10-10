@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { clearMeCache, fetchMe } from "../lib/me-client";
-import { exportMyData, saveCompanyProfile, saveConsents } from "../lib/server/refresh";
+import { exportMyData, saveConsents } from "../lib/server/refresh";
 import { BoardSideNav } from "./board-side-nav";
 import { ConsentFields, grantsFromPayload } from "./consent-fields";
+import { LoginLink } from "./login-link";
 import { useInitialMe } from "./me-seed";
 import { Shell } from "./shell";
 
@@ -46,12 +46,12 @@ function ProfileHero({ locale, showApplicant, guest }) {
       ) : null}
       {guest ? (
         <div className="profile-board-gate-actions">
-          <a className="btn small board-auth-signin" href={loginHref({ intent: "job_candidate", returnTo: back })}>
+          <LoginLink className="btn small board-auth-signin" intent="job_candidate" returnTo={back}>
             {t.signIn}
-          </a>
-          <a className="btn small primary" href={loginHref({ intent: "job_candidate", returnTo: back })}>
+          </LoginLink>
+          <LoginLink className="btn small primary" intent="job_candidate" returnTo={back}>
             {t.createAccount}
-          </a>
+          </LoginLink>
         </div>
       ) : null}
     </header>
@@ -61,12 +61,13 @@ function ProfileHero({ locale, showApplicant, guest }) {
 function ProfileGateEmployer({ locale }) {
   const t = text(locale);
   return (
-    <a
+    <LoginLink
       className="profile-board-gate-employer"
-      href={loginHref({ intent: "job_employer", returnTo: hrefFor(locale, { mode: "post" }) })}
+      intent="job_employer"
+      returnTo={hrefFor(locale, { mode: "post" })}
     >
       {t.profileGateEmployer}
-    </a>
+    </LoginLink>
   );
 }
 

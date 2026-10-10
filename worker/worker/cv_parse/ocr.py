@@ -40,6 +40,20 @@ def tesseract_available() -> bool:
         return False
 
 
+def ocr_unavailable_reason() -> str | None:
+    """Why OCR cannot run right now (None when it can). Never raises."""
+    if not ocr_env_enabled():
+        return "disabled"
+    if shutil.which("tesseract") is None:
+        return "tesseract_missing"
+    for mod in ("pytesseract", "PIL", "pypdfium2"):
+        try:
+            __import__(mod)
+        except Exception:
+            return f"python_dep_missing:{mod}"
+    return None if tesseract_available() else "tesseract_unusable"
+
+
 def ocr_enabled() -> bool:
     return ocr_env_enabled() and tesseract_available()
 

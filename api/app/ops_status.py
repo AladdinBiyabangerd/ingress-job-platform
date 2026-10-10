@@ -363,15 +363,28 @@ def _crawl_funnel(conn: sqlite3.Connection | None, *, days: int) -> dict:
         for r in last_rows
     }
 
+    # Same visibility rules as the public board (sqlite_jobs._PUBLISHED_WHERE /
+    # query_jobs total) — unique open ads, including employer-posted ones.
+    board_live_row = conn.execute(
+        """
+        SELECT COUNT(*) AS published_live
+        FROM jobs j
+        WHERE j.status = 'published'
+          AND COALESCE(j.hidden, 0) = 0
+          AND (j.merged_into IS NULL OR j.merged_into = 0)
+        """
+    ).fetchone()
+    board_live = int(_cell(board_live_row, "published_live", 0) or 0)
+
+    # Per-source live count for the funnel table only (may overlap across sources).
     live_rows = conn.execute(
         """
         SELECT js.source_name, COUNT(DISTINCT j.id) AS published_live
         FROM jobs j
         JOIN job_sources js ON js.job_id = j.id
-        WHERE COALESCE(j.owner_subject, '') = ''
-          AND LOWER(j.status) = 'published'
+        WHERE j.status = 'published'
           AND COALESCE(j.hidden, 0) = 0
-          AND COALESCE(j.merged_into, 0) = 0
+          AND (j.merged_into IS NULL OR j.merged_into = 0)
         GROUP BY js.source_name
         """
     ).fetchall()
@@ -381,7 +394,12 @@ def _crawl_funnel(conn: sqlite3.Connection | None, *, days: int) -> dict:
     }
 
     out_sources: list[dict] = []
-    totals = {"fetched": 0, "selected": 0, "selected_new": 0, "published_live": 0}
+    totals = {
+        "fetched": 0,
+        "selected": 0,
+        "selected_new": 0,
+        "published_live": board_live,
+    }
 
     for row in sources:
         sid = int(_cell(row, "id", 0))
@@ -420,7 +438,6 @@ def _crawl_funnel(conn: sqlite3.Connection | None, *, days: int) -> dict:
         totals["fetched"] += metrics["fetched"]
         totals["selected"] += selected
         totals["selected_new"] += metrics["selected_new"]
-        totals["published_live"] += published_live
 
     # Prefer sources with activity first, then name.
     out_sources.sort(

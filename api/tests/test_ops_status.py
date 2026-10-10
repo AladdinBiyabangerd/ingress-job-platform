@@ -113,6 +113,67 @@ class OpsStatusTests(unittest.TestCase):
         self.assertEqual(sources["Remote OK"]["fetched"], 10)
         self.assertEqual(sources["Remote OK"]["selected"], 5)
         self.assertEqual(sources["Remote OK"]["published_live"], 1)
+        # KPI matches public board total (unique open ads), not sum of sources.
+        self.assertEqual(body["crawl"]["totals"]["published_live"], 1)
+
+    def test_published_live_total_matches_board_not_source_sum(self):
+        """Board COUNT(*) rules; multi-source + employer ads must not skew the KPI."""
+        from app.cabinet_store import _LOCK, _connect
+        from app.ops_status import _CRAWL_RUNS_DDL
+
+        with _LOCK:
+            conn = _connect()
+            try:
+                conn.executescript(_CRAWL_RUNS_DDL)
+                conn.execute(
+                    """
+                    INSERT INTO crawl_sources
+                    (id, name, homepage, connector, entry_url, enabled, go_decision, api_key_env)
+                    VALUES
+                      (1, 'Remote OK', 'https://remoteok.com', 'remoteok', 'https://remoteok.com', 1, 'go', ''),
+                      (2, 'Other', 'https://other.example', 'other', 'https://other.example', 1, 'go', '')
+                    """
+                )
+                # Scraped job linked to two sources → would double-count if totals summed rows.
+                conn.execute(
+                    """
+                    INSERT INTO jobs (title, company, city, text, status, created_at, norm_key, owner_subject, hidden)
+                    VALUES ('Dev', 'Co', '', 'text', 'published', '2099-01-01T00:00:00+00:00', 'k-multi', '', 0)
+                    """
+                )
+                job_id = conn.execute("SELECT id FROM jobs WHERE norm_key = 'k-multi'").fetchone()[0]
+                conn.execute(
+                    """
+                    INSERT INTO job_sources (job_id, source_name, source_url, last_seen)
+                    VALUES
+                      (?, 'Remote OK', 'https://remoteok.com/1', '2099-01-01T00:00:00+00:00'),
+                      (?, 'Other', 'https://other.example/1', '2099-01-01T00:00:00+00:00')
+                    """,
+                    (job_id, job_id),
+                )
+                # Employer-posted ad (no crawl source) — public board includes it.
+                conn.execute(
+                    """
+                    INSERT INTO jobs (title, company, city, text, status, created_at, norm_key, owner_subject, hidden)
+                    VALUES ('Hire', 'Acme', 'Baku', 'text', 'published', '2099-01-01T00:00:00+00:00', 'k-owner', 'employer-1', 0)
+                    """
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+        with self._auth("job:staff", "ops-staff"):
+            res = self.client.get(
+                "/api/v1/admin/ops-status?days=7",
+                headers={"Authorization": "Bearer test"},
+            )
+        self.assertEqual(res.status_code, 200, res.text)
+        body = res.json()
+        sources = {s["name"]: s for s in body["crawl"]["sources"]}
+        self.assertEqual(sources["Remote OK"]["published_live"], 1)
+        self.assertEqual(sources["Other"]["published_live"], 1)
+        # 1 multi-source scraped + 1 employer = 2 unique open ads (not 1+1 scraped only).
+        self.assertEqual(body["crawl"]["totals"]["published_live"], 2)
 
     def test_internal_ops_status_requires_token(self):
         denied = self.client.get("/api/v1/internal/ops-status")

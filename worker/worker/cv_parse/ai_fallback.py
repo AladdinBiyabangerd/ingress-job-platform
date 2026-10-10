@@ -230,6 +230,14 @@ def maybe_ai_fallback(
     _record_quality(meta, quality)
     meta["parse_source"] = "rules"
 
+    unreadable = [code for code in ("text_too_short", "text_garbled") if code in quality["issues"]]
+    if unreadable:
+        # Too little / unreadable text (empty, scanned without OCR, garbled glyphs): AI has
+        # nothing to work with, so skip the call and keep the rules result.
+        meta["ai_fallback"] = "skipped"
+        meta["ai_error"] = unreadable[0]
+        return profile
+
     thin = dictionary_skill_count(profile) < THIN_SKILLS_THRESHOLD
     low_conf = conf < low_confidence_threshold()
     if not (quality["needs_ai"] or low_conf or thin):

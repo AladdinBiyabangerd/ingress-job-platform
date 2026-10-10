@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loginHref } from "../lib/auth-link";
+import { beginLogin } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { saveJob, unsaveJob } from "../lib/server/refresh";
@@ -88,7 +88,7 @@ export function SaveJobButton({ locale, jobId, returnTo, className = "", icon = 
     event.preventDefault();
     event.stopPropagation();
     if (!me?.authenticated) {
-      window.location.href = loginHref({ returnTo: back });
+      beginLogin({ returnTo: back });
       return;
     }
     if (busy) return;

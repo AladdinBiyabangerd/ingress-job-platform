@@ -14,6 +14,7 @@ from pathlib import Path
 from worker.cv_parse.ocr import (
     MIN_DIGITAL_PDF_CHARS,
     ocr_enabled,
+    ocr_unavailable_reason,
     ocr_env_enabled,
     ocr_image_bytes,
     ocr_pdf_bytes,
@@ -34,6 +35,9 @@ class ExtractResult:
     text: str
     source: str = ""  # text | pdf | docx | ocr | pdf+ocr
     error: str | None = None
+    # OCR outcome, only set when OCR was needed (image, scan, garbled text layer):
+    # used | unavailable | disabled | empty
+    ocr: str | None = None
 
 
 def unsupported_reason(filename: str = "", content_type: str = "") -> str | None:
@@ -74,8 +78,8 @@ def extract(data: bytes, filename: str = "", content_type: str = "") -> ExtractR
     if _is_image(ext, ctype):
         text = _normalize(ocr_image_bytes(data))
         if text:
-            return ExtractResult(text=text, source="ocr")
-        return ExtractResult(text="", source="ocr", error="ocr_empty")
+            return ExtractResult(text=text, source="ocr", ocr="used")
+        return ExtractResult(text="", source="ocr", error="ocr_empty", ocr="empty")
 
     if ext in _PDF_EXTS or "pdf" in ctype or data[:4] == b"%PDF":
         return _extract_pdf(data)
@@ -104,26 +108,61 @@ def _is_image(ext: str, ctype: str) -> bool:
     return ext in _IMAGE_EXTS or ctype.startswith("image/")
 
 
+_READABLE = (
+    (0x0000, 0x024F),  # Latin (+ extended)
+    (0x0370, 0x03FF),  # Greek
+    (0x0400, 0x052F),  # Cyrillic
+    (0x0590, 0x06FF),  # Hebrew, Arabic
+    (0x1E00, 0x1FFF),  # Latin extended additional, Greek extended
+    (0x3040, 0x30FF),  # Kana
+    (0x4E00, 0x9FFF),  # CJK
+    (0xAC00, 0xD7AF),  # Hangul
+)
+
+
+def looks_garbled(text: str) -> bool:
+    """True when a text layer holds many glyphs from scripts nobody writes CVs in.
+
+    PDF fonts without a ToUnicode map decode to Georgian / Tibetan / Sinhala / PUA noise.
+    Real Latin, Cyrillic, CJK, Arabic, Hebrew or Greek text never trips this.
+    """
+    letters = [c for c in text if c.isalpha()]
+    if len(letters) < 60:
+        return False
+    bad = sum(1 for c in letters if not any(lo <= ord(c) <= hi for lo, hi in _READABLE))
+    return bad / len(letters) > 0.15
+
+
 def _extract_pdf(data: bytes) -> ExtractResult:
+    """Digital text layer first; OCR (optional) only for scans / garbled / empty layers."""
     digital = _from_pdf(data)
+    garbled = digital if looks_garbled(digital) else ""
+    if garbled:
+        digital = ""  # let OCR try; keep the noise only when OCR cannot replace it
     if len(digital) >= MIN_DIGITAL_PDF_CHARS:
         return ExtractResult(text=digital, source="pdf")
+
+    # Layer is empty, thin or garbled: OCR is the optional rescue. Failure never breaks parsing.
     if not ocr_env_enabled():
-        if digital:
-            return ExtractResult(text=digital, source="pdf")
-        return ExtractResult(text="", source="pdf", error="ocr_disabled")
-    if not ocr_enabled():
-        if digital:
-            return ExtractResult(text=digital, source="pdf")
-        return ExtractResult(text="", source="pdf", error="ocr_unavailable")
-    ocr_text = _normalize(ocr_pdf_bytes(data))
-    if ocr_text:
-        source = "pdf+ocr" if digital else "ocr"
-        # Prefer OCR when digital extract was too thin.
-        return ExtractResult(text=ocr_text, source=source)
+        status = "disabled"
+    elif not ocr_enabled():
+        status = "unavailable"
+    else:
+        status = ""
+    if not status:
+        try:
+            ocr_text = _normalize(ocr_pdf_bytes(data))
+        except Exception:  # OCR is optional
+            ocr_text = ""
+        if ocr_text and not looks_garbled(ocr_text):
+            return ExtractResult(text=ocr_text, source="pdf+ocr" if digital else "ocr", ocr="used")
+        status = "empty"
+    if garbled:
+        return ExtractResult(text=garbled, source="pdf", error="text_garbled", ocr=status)
     if digital:
-        return ExtractResult(text=digital, source="pdf")
-    return ExtractResult(text="", source="ocr", error="ocr_empty")
+        return ExtractResult(text=digital, source="pdf", ocr=status)
+    return ExtractResult(text="", source="pdf" if status != "empty" else "ocr", error=f"ocr_{status}", ocr=status)
+
 
 
 def _decode(data: bytes) -> str:

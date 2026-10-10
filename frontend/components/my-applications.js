@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { refreshMyApplications } from "../lib/server/refresh";
 import { ApplicationsBoard } from "./applications-board";
+import { LoginLink } from "./login-link";
 import { useInitialMe } from "./me-seed";
 import { PageChrome } from "./page-chrome";
 import { Shell } from "./shell";
@@ -83,18 +83,12 @@ export function MyApplications({ locale, initialItems = null }) {
           <div className="h2-panel my-applications-gate">
             <p>{t.applicationsGate}</p>
             <div className="my-applications-gate-actions">
-              <a
-                className="btn small board-auth-signin"
-                href={loginHref({ intent: "job_candidate", returnTo })}
-              >
+              <LoginLink className="btn small board-auth-signin" intent="job_candidate" returnTo={returnTo}>
                 {t.signIn}
-              </a>
-              <a
-                className="btn small primary"
-                href={loginHref({ intent: "job_candidate", returnTo })}
-              >
+              </LoginLink>
+              <LoginLink className="btn small primary" intent="job_candidate" returnTo={returnTo}>
                 {t.createAccount}
-              </a>
+              </LoginLink>
             </div>
           </div>
         </div>

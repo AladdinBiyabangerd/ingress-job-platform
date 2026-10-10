@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loginHref } from "../../lib/auth-link";
+import { beginLogin } from "../../lib/auth-link";
 import { applyFormFromJob } from "../../lib/apply-form";
 import { text } from "../../lib/copy";
 import { fetchMe } from "../../lib/me-client";
@@ -132,7 +132,7 @@ export function JobDetailApplyForm({ locale, jobId, returnTo, form, open }) {
     const res = await applyToJob(jobId, body);
     setBusy(false);
     if (res.status === 401 || res.status === 403) {
-      window.location.href = loginHref({ intent: "job_candidate", returnTo });
+      beginLogin({ intent: "job_candidate", returnTo });
       return;
     }
     if (res.status === 409) {

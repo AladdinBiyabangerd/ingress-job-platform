@@ -1,7 +1,7 @@
 "use client";
 
 import { hrefFor, text } from "../lib/copy";
-import { loginHref } from "../lib/auth-link";
+import { LoginLink } from "./login-link";
 import { recommendationsEnabled } from "../lib/product-features";
 import { AcademyCourseLinks, SkillRow, sharePct } from "./skill-gap-bits";
 import { PageChrome } from "./page-chrome";
@@ -127,9 +127,9 @@ function AsideActions({ t, data, marketCourses, showGuestCta, detailHref, jobsHr
           {t.trendsDetailJobs}
         </a>
         {showGuestCta ? (
-          <a className="btn" href={loginHref({ intent: "job_candidate", returnTo: detailHref })}>
+          <LoginLink className="btn" intent="job_candidate" returnTo={detailHref}>
             {t.trendsDetailGuestCta}
-          </a>
+          </LoginLink>
         ) : null}
       </div>
       {data.as_of ? <p className="hint td-a-asof">{t.trendsAsOf(data.as_of)}</p> : null}

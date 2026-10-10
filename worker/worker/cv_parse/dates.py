@@ -126,7 +126,7 @@ _RANGE = re.compile(
     rf"|"
     rf"(?:0?[1-9]|1[0-2])[\./\-](?:19|20)\d{{2}}"
     rf")"
-    rf"\s*(?:–|—|-|to|until|через|dək|:)\s*"
+    rf"\s*(?:–|—|-|to|until|через|dək|:|\|)\s*"
     rf"(?P<end>"
     rf"{_PRESENT_TOKEN}|"
     rf"{_MONTH_YEAR}"

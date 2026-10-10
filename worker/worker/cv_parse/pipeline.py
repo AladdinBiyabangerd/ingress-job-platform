@@ -13,10 +13,13 @@ from worker.cv_parse.jobs import normalize_experience
 from worker.cv_parse.locale import fold_az
 from worker.cv_parse.jobs import _ROLE as _ROLE_WORDS
 from worker.cv_parse.sections import _heading_name, split_sections
+from worker.cv_parse.templates import apply_text_hints, detect_template
+from worker.cv_parse.quality import assess as assess_quality
+from worker.cv_parse.ocr import ocr_unavailable_reason
 from worker.cv_parse.text import extract
 from worker.techstack import find_stack
 
-PARSER_VERSION = "1.7"
+PARSER_VERSION = "1.8"
 
 # Intern calendar time counts at half weight vs professional roles for total_years /
 # skill years. 6 months intern ≠ 6 months senior IC time.
@@ -87,6 +90,10 @@ def parse_bytes(
     meta["source"] = "upload"
     if extracted.source:
         meta["text_extract"] = extracted.source
+    if extracted.ocr:
+        # ocr: used | unavailable | disabled | empty (only present when OCR was needed)
+        reason = ocr_unavailable_reason() if extracted.ocr in ("unavailable", "disabled") else None
+        meta["ocr"] = {"status": extracted.ocr, **({"reason": reason} if reason else {})}
     if extracted.error and not extracted.text:
         meta["confidence"] = 0.0
         meta["error"] = extracted.error
@@ -148,14 +155,49 @@ def _since_to_present(text: str) -> str:
     return _SINCE.sub(lambda m: f"{m.group(1)} – Present", text)
 
 
-def parse_text(text: str) -> dict:
-    """Rules-only parse of already-extracted CV text → profile JSON."""
+def parse_text(text: str, *, use_templates: bool = True) -> dict:
+    """Rules-only parse of already-extracted CV text → profile JSON.
+
+    Layers: (a) optional template hints when a known template is recognised, (b) the
+    generic rules parser, which is always run first and is the default result. The
+    hinted parse replaces it only when its quality score is strictly higher. Template
+    detection is best-effort and can never break generic parsing.
+    ``parse_meta.template`` records ``{"id": <id>|None, ...}``.
+    """
+    profile = _parse_text(text)
+    meta = profile["parse_meta"]
+    meta["template"] = {"id": None}
+    if not use_templates or not (text or "").strip():
+        return profile
+    try:
+        found = detect_template(text)
+        if not found:
+            return profile
+        info = {"id": found["id"], "name": found["name"], "confidence": found["confidence"], "applied": False}
+        meta["template"] = info
+        hints = found.get("hints") or {}
+        if hints:
+            hinted = _parse_text(text, hints)
+            if assess_quality(hinted, text)["score"] > assess_quality(profile, text)["score"]:
+                hinted["parse_meta"]["template"] = {**info, "applied": True}
+                return hinted
+    except Exception:  # template layer is optional; the generic result stands
+        meta["template"] = {"id": None}
+    return profile
+
+
+def _parse_text(text: str, hints: dict | None = None) -> dict:
+    hints = hints or {}
+    if hints:
+        text = apply_text_hints(text or "", hints)
     body = _join_wrapped_dates(_since_to_present((text or "").strip()))
-    sections = split_sections(body) if body else {}
+    sections = split_sections(body, extra_headings=hints.get("headings")) if body else {}
     # Re-join inside sections too (PDF wraps often land inside a section body).
     sections = {key: _join_wrapped_dates(val) for key, val in sections.items()}
     contact = extract_contact(body) if body else extract_contact("")
-    work_history, dated_jobs = _work_history(sections.get("experience", "") or body)
+    work_history, dated_jobs = _work_history(
+        sections.get("experience", "") or body, layout=hints.get("layout")
+    )
     pro_years, intern_years, total_years = _experience_years(dated_jobs)
     skills = _skills(body, sections, dated_jobs)
     education = _education(sections.get("education", ""))
@@ -359,10 +401,10 @@ def _experience_years(dated_jobs: list[dict]) -> tuple[float, float, float]:
     return pro_years, intern_years, total
 
 
-def _work_history(experience_text: str) -> tuple[list[dict], list[dict]]:
+def _work_history(experience_text: str, layout: str | None = None) -> tuple[list[dict], list[dict]]:
     if not experience_text.strip():
         return [], []
-    blocks = _split_jobs(normalize_experience(experience_text))
+    blocks = _split_jobs(normalize_experience(experience_text, layout=layout))
     history: list[dict] = []
     dated: list[dict] = []
     for block in blocks:
@@ -413,6 +455,8 @@ def _looks_like_education_job(block: str, title: str, company: str) -> bool:
     if re.search(
         r"(?i)\b("
         r"developer|engineer|intern|internship|mentor|lecturer|müəllim|"
+        r"employee|programmer|assistant|researcher|scientist|staff|consultant|manager|analyst|"
+        r"postdoc\w*|professor|officer|administrator|"
         r"разработчик|инженер|стажёр|стажер"
         r")\b",
         sample,
@@ -491,6 +535,8 @@ def _title_company(block: str) -> tuple[str, str]:
         company = re.split(r"\s+[–—-]\s+", company)[0].strip()
         if company and not find_ranges(company):
             return title, company[:120]
+        if not company and company_line.lstrip().startswith("|") and not find_ranges(title):
+            return title, ""  # "Title" + "| <dates>": a job without a company line
     for line in lines[:4]:
         if find_ranges(line) and "|" not in line and len(line) < 40:
             continue

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { loginHref } from "../lib/auth-link";
 import { hrefFor, text } from "../lib/copy";
 import { clearMeCache, fetchMe } from "../lib/me-client";
 import { recommendationsEnabled, roadmapEnabled } from "../lib/product-features";
+import { LoginLink } from "./login-link";
 import { NotificationsBell } from "./notifications-bell";
 import { RegisterChoice } from "./register-choice";
 import { useInitialMe } from "./me-seed";
@@ -116,6 +116,11 @@ export function AccountBar({ locale, returnTo, onMe }) {
                     {t.profileOpen}
                   </a>
                 ) : null}
+                {me.employer || me.staff ? (
+                  <a role="menuitem" href={hrefFor(locale, { mode: "company" })} onClick={() => setOpen(false)}>
+                    {t.companyOpen}
+                  </a>
+                ) : null}
                 {me.candidate || me.staff ? (
                   <a role="menuitem" href={hrefFor(locale, { mode: "profileReview" })} onClick={() => setOpen(false)}>
                     {t.profileReviewOpen}
@@ -159,20 +164,20 @@ export function AccountBar({ locale, returnTo, onMe }) {
                 {showEmployerUpgrade ? (
                   <div className="account-dropdown-group" role="group" aria-label={t.registerEmployerUpgrade}>
                     <p>{t.registerEmployerUpgrade}</p>
-                    <a href={loginHref({ intent: "job_employer", returnTo: hrefFor(locale, { mode: "post" }) })}>
+                    <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "post" })}>
                       {t.registerPoster}
-                    </a>
+                    </LoginLink>
                   </div>
                 ) : null}
                 {showRegister ? (
                   <div className="account-dropdown-group" role="group" aria-label={t.registerAsk}>
                     <p>{t.registerAsk}</p>
-                    <a href={loginHref({ intent: "job_employer", returnTo: hrefFor(locale, { mode: "post" }) })}>
+                    <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "post" })}>
                       {t.registerPoster}
-                    </a>
-                    <a href={loginHref({ intent: "job_candidate", returnTo: back })}>
+                    </LoginLink>
+                    <LoginLink intent="job_candidate" returnTo={back}>
                       {t.registerCreator}
-                    </a>
+                    </LoginLink>
                   </div>
                 ) : null}
                 <form
