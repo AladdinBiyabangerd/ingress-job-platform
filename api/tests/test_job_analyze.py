@@ -348,6 +348,47 @@ class JobAnalyzeTests(unittest.TestCase):
         self.assertEqual(res.status_code, 200, res.text)
         self.assertTrue(res.json()["ok"])
 
+    def test_az_user_prompt_requires_orthography(self):
+        from app.job_analyze import PROMPT_VERSION, _SYSTEM, _build_ai_user
+
+        self.assertEqual(PROMPT_VERSION, "job-analyze-v2")
+        self.assertIn("tələb", _SYSTEM)
+        job = {
+            "id": 1,
+            "title": "Java Dev",
+            "company": "Acme",
+            "city": "",
+            "salary": "",
+            "remote": True,
+            "relocation": False,
+            "text": "Java",
+        }
+        fit = {
+            "score": 0.5,
+            "confidence": 0.5,
+            "have": ["Java"],
+            "missing": ["Kafka"],
+            "components": {"skills": 0.5},
+            "job_seniority": "middle",
+        }
+        az = _build_ai_user(
+            lang="az",
+            profile_version="v1",
+            job=job,
+            fit=fit,
+            profile={"preferences": {}},
+        )
+        en = _build_ai_user(
+            lang="en",
+            profile_version="v1",
+            job=job,
+            fit=fit,
+            profile={"preferences": {}},
+        )
+        self.assertIn("Azerbaijani orthography required", az)
+        self.assertIn("tələblərə", az)
+        self.assertNotIn("Azerbaijani orthography required", en)
+
 
 if __name__ == "__main__":
     unittest.main()

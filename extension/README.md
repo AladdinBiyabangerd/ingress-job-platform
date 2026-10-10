@@ -2,7 +2,7 @@
 
 Chrome extension. "Start" basırsınız, LinkedIn-də elanlara özünüz baxırsınız, "Stop" basanda baxdığınız bütün elanlar bir dəfəyə Ingress Job platformasına göndərilir.
 
-**Necə işləyir:** extension ekranda görünən elanı oxuyur (başlıq, şirkət, yer, təsvir, müraciət linki, tarix, iş növü). LinkedIn-ə əlavə sorğu göndərmir, elanlar arasında özü keçmir, Apply basmır. Təsvir kəsilməsin deyə yalnız "Show more / Daha fazla" düyməsini bir dəfə aça bilər. Hər elan LinkedIn id-sinə görə saxlanır (daha dolu təsvir gələndə yenilənir). "Easy Apply" elanlarında yalnız LinkedIn ünvanı saxlanır.
+**Necə işləyir:** extension ekranda görünən elanı oxuyur (başlıq, şirkət, yer, təsvir, müraciət linki, tarix, iş növü). LinkedIn-ə əlavə sorğu göndərmir, elanlar arasında özü keçmir, Apply basmır. Təsvirdəki "… more / Show more / Daha fazla" düymələrini özü açır və **açılana qədər** elanı saxlamır (sən basmağa ehtiyac yoxdur). Hər elan LinkedIn id-sinə görə saxlanır. "Easy Apply" elanlarında yalnız LinkedIn ünvanı saxlanır.
 
 ## 1. API tərəfi (bir dəfəlik)
 

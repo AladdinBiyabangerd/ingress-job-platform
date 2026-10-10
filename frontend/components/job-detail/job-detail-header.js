@@ -45,21 +45,23 @@ export function JobDetailHeader({
           <h1 className="jd-title">{model.title}</h1>
           {model.intro ? <p className="jd-intro">{model.intro}</p> : null}
         </div>
+      </div>
 
-        <div className="jd-header-actions">
-          <JobDetailActions
-            locale={locale}
-            model={model}
-            layout="desktop"
-            onRevealForm={onRevealForm}
-            onRevealAnalyze={onRevealAnalyze}
-            onRevealApplyDraft={onRevealApplyDraft}
-            formOpen={formOpen}
-            analyzeOpen={analyzeOpen}
-            applyDraftOpen={applyDraftOpen}
-            preview={preview}
-          />
-        </div>
+      <JobDetailMeta meta={model.meta} />
+
+      <div className="jd-header-actions">
+        <JobDetailActions
+          locale={locale}
+          model={model}
+          layout="desktop"
+          onRevealForm={onRevealForm}
+          onRevealAnalyze={onRevealAnalyze}
+          onRevealApplyDraft={onRevealApplyDraft}
+          formOpen={formOpen}
+          analyzeOpen={analyzeOpen}
+          applyDraftOpen={applyDraftOpen}
+          preview={preview}
+        />
       </div>
 
       <div className="jd-header-mobile-actions">
@@ -76,8 +78,6 @@ export function JobDetailHeader({
           preview={preview}
         />
       </div>
-
-      <JobDetailMeta meta={model.meta} />
     </header>
   );
 }

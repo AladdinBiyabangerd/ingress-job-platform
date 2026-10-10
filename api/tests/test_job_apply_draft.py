@@ -303,6 +303,41 @@ class JobApplyDraftTests(unittest.TestCase):
         self.assertIsNotNone(out)
         self.assertLessEqual(len(out), MESSAGE_MAX)
 
+    def test_az_user_prompt_requires_orthography(self):
+        from app.job_apply_draft import PROMPT_VERSION, _SYSTEM, _build_user
+
+        self.assertEqual(PROMPT_VERSION, "job-apply-draft-v2")
+        self.assertIn("yaşayıram", _SYSTEM)
+        job = {
+            "id": 1,
+            "title": "Java Dev",
+            "company": "Acme",
+            "city": "",
+            "salary": "",
+            "remote": True,
+            "relocation": False,
+            "text": "Java Spring",
+        }
+        az = _build_user(
+            lang="az",
+            profile_version="v1",
+            job=job,
+            profile={"preferences": {"remote": True}},
+            have=["Java"],
+            missing=["Kafka"],
+        )
+        en = _build_user(
+            lang="en",
+            profile_version="v1",
+            job=job,
+            profile={"preferences": {"remote": True}},
+            have=["Java"],
+            missing=["Kafka"],
+        )
+        self.assertIn("Azerbaijani orthography required", az)
+        self.assertIn("yaşayıram", az)
+        self.assertNotIn("Azerbaijani orthography required", en)
+
     def test_independent_of_recommendations_flag(self):
         subject = "draft-flag"
         self._seed_profile(subject)

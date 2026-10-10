@@ -129,24 +129,6 @@ export function JobDetailView({ locale, model: baseModel }) {
               preview={preview}
             />
 
-            <JobDetailAnalyzePanel
-              locale={locale}
-              jobId={model.jobId}
-              returnTo={model.returnTo}
-              open={analyzeOpen}
-              preview={preview}
-            />
-
-            <JobDetailApplyDraftPanel
-              locale={locale}
-              jobId={model.jobId}
-              returnTo={model.returnTo}
-              listingType={model.listingType}
-              open={applyDraftOpen}
-              preview={preview}
-              onMessage={onDraftMessage}
-            />
-
             {showInlineGate ? (
               <JobDetailGuestGate locale={locale} returnTo={model.returnTo} className="jd-guest-gate-inline" />
             ) : null}
@@ -168,19 +150,9 @@ export function JobDetailView({ locale, model: baseModel }) {
                 draftMessage={draftMessage}
               />
             ) : null}
-
-            <div className="jd-sidebar-mobile">
-              <JobDetailCompanySidebar
-                locale={locale}
-                model={model}
-                onRevealForm={revealForm}
-                formOpen={formOpen}
-                preview={preview}
-              />
-            </div>
           </div>
 
-          <div className="jd-sidebar-desktop">
+          <aside className="jd-aside">
             <JobDetailCompanySidebar
               locale={locale}
               model={model}
@@ -188,7 +160,25 @@ export function JobDetailView({ locale, model: baseModel }) {
               formOpen={formOpen}
               preview={preview}
             />
-          </div>
+
+            <JobDetailAnalyzePanel
+              locale={locale}
+              jobId={model.jobId}
+              returnTo={model.returnTo}
+              open={analyzeOpen}
+              preview={preview}
+            />
+
+            <JobDetailApplyDraftPanel
+              locale={locale}
+              jobId={model.jobId}
+              returnTo={model.returnTo}
+              listingType={model.listingType}
+              open={applyDraftOpen}
+              preview={preview}
+              onMessage={onDraftMessage}
+            />
+          </aside>
         </div>
       </div>
 

@@ -17,10 +17,61 @@
   const ABOUT_COMPANY = /^(about the company|about us|şirket hakkında|şirkət haqqında|şirkət barədə|о компании|über das unternehmen|à propos de l.entreprise|acerca de la empresa)$/;
   // Təsvirin sonu: Premium təklifi və ya şirkət bölməsi (daxili başlıqlara ("Requirements" və s.) güvənmirik)
   const END_BLOCK = /^(job search faster with premium|get hired faster with premium|try premium|reactivate premium|retry premium|see how you compare|premium ile|premium ilə|premium ile daha hızlı|попробуйте premium|ищите работу быстрее с premium)/;
-  // Təsvirə aid olmayan LinkedIn interfeys sətirləri
-  const NOISE = /^(your profile and resume are missing|profiliniz ve özgeçmişiniz|show match details|eşleşme ayrıntılarını göster|beta\b|is this information helpful|bu bilgi yararlı mı|see how you compare|tailor my resume|resume builder|job match summary not available|this job post doesn.t have enough information|responses managed off linkedin|show more|show less|see more|see less|read more|daha fazla göster|daha az göster|daha fazla|daha çox|\d+\+? (people|applicants|kişi)|over \d+ (applicants|people)|\d+ (applicants|kişi))/;
-  const SHOW_MORE = /(show more|see more|read more|daha fazla|daha çox|voir plus|ver más|siehe mehr|показать ещё|показать еще|ещё|еще)/;
-  const SHOW_LESS = /(show less|see less|daha az|voir moins|ver menos|weniger|скрыть|свернуть)/;
+  // Təsvirə aid olmayan LinkedIn interfeys sətirləri (+ expand/collapse etiketləri, çoxdil)
+  // Tək "." yox — Base360.ai / .NET sətirlərini kəsməsin; yalnız … və ya ...
+  // "… more" / "… daha fazla" / "… показать ещё" (bir neçə söz)
+  const ELLIPSIS_MORE = "(?:…|\\.{2,3})\\s*\\S+(?:\\s+\\S+){0,5}";
+  const NOISE = new RegExp(
+    "^(your profile and resume are missing|profiliniz ve özgeçmişiniz|show match details|eşleşme ayrıntılarını göster|beta\\b|is this information helpful|bu bilgi yararlı mı|see how you compare|tailor my resume|resume builder|job match summary not available|this job post doesn.t have enough information|responses managed off linkedin|show more|show less|see more|see less|read more|" +
+      ELLIPSIS_MORE +
+      "|daha fazla( göster)?|daha az( göster)?|daha çox( göstər)?|voir plus|voir moins|ver más|ver menos|siehe mehr|weniger anzeigen|показать ещё|ещё|еще|mehr anzeigen|mostra di più|ver mais|zobacz więcej|もっと見る|더보기|查看更多|عرض المزيد|\\d+\\+? (people|applicants|kişi|kişiler|человек)|over \\d+ (applicants|people)|\\d+ (applicants|kişi))$",
+    "i"
+  );
+  // Expand düyməsi: LinkedIn UI dili dəyişəndə mətn dəyişir; class ilə də tutulur.
+  // en/tr/az/ru/de/fr/es/pt/it/nl/pl/uk/ar/ja/ko/zh/sv/… + "… more" / "… daha fazla"
+  // Qısa sözləri (^…$) anchor edirik ki, "we ship more" / ".NET" təsvir sətiri silinməsin.
+  const SHOW_MORE = new RegExp(
+    [
+      "^(?:show more|see more|read more|more)$",
+      "^(?:daha fazla(?: göster)?|daha çox(?: göstər)?|ətraflı)$",
+      "^(?:voir plus|afficher plus|plus)$",
+      "^(?:ver más|mostrar más|más)$",
+      "^(?:ver mais|mostrar mais|mais)$",
+      "^(?:mehr anzeigen|mehr sehen|mehr|weiterlesen)$",
+      "^(?:mostra di più|vedi di più|di più|altro)$",
+      "^(?:meer weergeven|meer zien|meer)$",
+      "^(?:zobacz więcej|więcej)$",
+      "^(?:показать ещё|показать еще|подробнее|ещё|еще|ще)$",
+      "^(?:показати ще|більше)$",
+      "^(?:visa mer|se mer|vis mere|näytä lisää)$",
+      "^(?:zobrazit více|více|mai mult|további|több)$",
+      "^(?:περισσότερα|और देखें|selengkapnya|tampilkan selengkapnya)$",
+      "^(?:xem thêm|ดูเพิ่มเติม|もっと見る|さらに表示|더보기|더 보기)$",
+      "^(?:查看更多|展开|顯示更多|عرض المزيد|المزيد|הצג עוד|עוד)$",
+      "^" + ELLIPSIS_MORE + "$", // "… more", "… daha fazla", "… ещё"
+    ].join("|"),
+    "i"
+  );
+  const SHOW_LESS = new RegExp(
+    [
+      "^(?:show less|see less|read less|less)$",
+      "^(?:daha az(?: göster)?|daha az göstər)$",
+      "^(?:voir moins|afficher moins|moins)$",
+      "^(?:ver menos|mostrar menos|menos)$",
+      "^(?:weniger(?: anzeigen)?)$",
+      "^(?:mostra meno|vedi meno|meno)$",
+      "^(?:minder weergeven|minder)$",
+      "^(?:zobacz mniej|mniej)$",
+      "^(?:свернуть|скрыть|меньше|менше)$",
+      "^(?:visa mindre|se mindre|näytä vähemmän)$",
+      "^(?:zobrazit méně|mai puțin|kevesebb)$",
+      "^(?:λιγότερα|कम देखें|sembunyikan|ẩn bớt)$",
+      "^(?:簡易表示|간략히|收起|عرض أقل|הצג פחות)$",
+      "^(?:…|\\.{2,3})\\s*(?:less|az|moins|menos|weniger|meno|minder)$",
+    ].join("|"),
+    "i"
+  );
+  const SHOW_MORE_CLASS = /inline-show-more-text__button|show-more-less-html__button|show-more-text|artdeco-button--show-more/i;
   const EASY = /(easy apply|kolay başvuru|asan müraciət|быстрая подача|candidature simplifiée|solicitud sencilla|einfach bewerben)/;
   const APPLY = /(^|\s)(apply|başvur|müraciət|подать|откликнуться|bewerben|postuler|candidatar|solicitar)/;
   const REMOTE = /^(remote|uzaktan|uzaqdan|удал[её]нно|удал[её]нная работа|fernarbeit|à distance|remoto)$/;
@@ -85,14 +136,47 @@
     );
   }
 
-  // Qeyd zamanı yalnız təsvirin "Show more" düyməsi (elanlar arası keçid / Apply yox).
+  function descriptionPane(doc) {
+    return (
+      descriptionRoot(doc) ||
+      doc.querySelector(
+        ".jobs-search__job-details--container, .scaffold-layout__detail, .jobs-details, [class*='job-details']"
+      ) ||
+      findHeading(doc, ABOUT_JOB)?.closest("section, article, div") ||
+      null
+    );
+  }
+
+  function btnLabel(btn) {
+    return lc((btn.getAttribute("aria-label") || text(btn)).replace(/\s+/g, " ").trim());
+  }
+
+  function btnClassBlob(btn) {
+    const p = btn.parentElement;
+    return [btn.className, btn.getAttribute("class"), p && p.className].filter(Boolean).join(" ");
+  }
+
+  // Qeyd zamanı yalnız təsvirin expand düyməsi (elanlar arası keçid / Apply yox).
+  // 1) LinkedIn class (dildən asılı deyil)  2) çoxdilli düymə mətni / aria-label
   function findShowMore(doc) {
-    const root = descriptionRoot(doc) || findHeading(doc, ABOUT_JOB)?.closest("section,article,div") || null;
+    const root = descriptionPane(doc);
     if (!root) return null;
-    for (const btn of root.querySelectorAll('button, a[role="button"], span[role="button"]')) {
+    const ranked = [
+      ...root.querySelectorAll(
+        "button.inline-show-more-text__button, button.show-more-less-html__button, [class*='inline-show-more'] button, [class*='show-more-text'] button, [class*='show-more-less'] button, button[class*='show-more']"
+      ),
+      ...root.querySelectorAll('button, a[role="button"], span[role="button"]'),
+    ];
+    const seen = new Set();
+    for (const btn of ranked) {
+      if (seen.has(btn)) continue;
+      seen.add(btn);
       if (btn.getAttribute("aria-expanded") === "true") continue;
-      const label = lc(btn.getAttribute("aria-label") || text(btn));
-      if (!label || SHOW_LESS.test(label) || !SHOW_MORE.test(label)) continue;
+      const label = btnLabel(btn);
+      if (label && SHOW_LESS.test(label)) continue;
+      const byClass = SHOW_MORE_CLASS.test(btnClassBlob(btn));
+      if (byClass) return btn;
+      if (!label || label.length > 80 || !SHOW_MORE.test(label)) continue;
       return btn;
     }
     return null;
@@ -137,6 +221,8 @@
       if (ABOUT_COMPANY.test(l) || END_BLOCK.test(l)) break;
       if (ABOUT_JOB.test(l) && !out.length) continue;
       if (NOISE.test(l)) continue;
+      // "… more" / "Daha fazla göster" / digər dil expand sətirləri təsvirə düşməsin
+      if (l.length < 48 && (SHOW_MORE.test(l) || SHOW_LESS.test(l))) continue;
       out.push(line);
     }
     return out.join("\n").trim();

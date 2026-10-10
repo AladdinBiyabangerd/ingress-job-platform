@@ -23,7 +23,8 @@ from app.role_suggestions import (
 log = logging.getLogger("ingress-job.api.job_apply_draft")
 
 PURPOSE = "job_apply_draft"
-PROMPT_VERSION = "job-apply-draft-v1"
+# v2: stronger Azerbaijani orthography (no TR/FR bleed, correct conjugations).
+PROMPT_VERSION = "job-apply-draft-v2"
 MESSAGE_MAX = 2000
 MESSAGE_MIN = 80
 
@@ -42,7 +43,11 @@ _SYSTEM = (
     "'great fit', 'perfect candidate', vague praise. "
     "Length: about 900–1400 characters, at most 2000. Three to five short paragraphs. "
     "Write the message field in the language named in the context. "
-    "For Azerbaijani use ə, ı, ö, ü, ğ, ş, ç. "
+    "Spelling: correct orthography for that language. For Azerbaijani use ə, ı, ö, ü, ğ, ş, ç; "
+    "do not mix Turkish conjugations or French accents into AZ prose "
+    "(yaşayıram not yaşayırəm; yaratdım not yaradım; düzgünlüyünü not düzgünlüğünü; "
+    "strategiya not stratəjiya; üstünlük verirəm not préfər). "
+    "Prefer native AZ wording (inkişaf/CI prosesləri — not avadanlıq for tooling). "
     "Voice: first person."
 )
 
@@ -117,8 +122,16 @@ def _build_user(
         f"Relocation: {'yes' if job.get('relocation') else 'no'}",
         "JobDescription:",
         jd or "(empty)",
-        "Return JSON with message and language matching OutputLanguageCode.",
     ]
+    if locale == "az":
+        lines.append(
+            "Azerbaijani orthography required: ə ı ö ü ğ ş ç. "
+            "Correct: yaşayıram, yaratdım, düzgünlüyünü, strategiya, üstünlük verirəm, "
+            "təcrübə, tələblər. "
+            "Incorrect: yaşayırəm, yaradım, düzgünlüğünü, stratəjiya, préfər, tecrube, talablar. "
+            "Do not mix Turkish or English spelling into Azerbaijani prose."
+        )
+    lines.append("Return JSON with message and language matching OutputLanguageCode.")
     return "\n".join(lines)
 
 

@@ -87,6 +87,53 @@ test("findShowMore + hidden full description via textContent", { skip: !JSDOM &&
   assert.doesNotMatch(job.description, /^Short teaser only\.?$/);
 });
 
+test("findShowMore matches LinkedIn ellipsis more label", { skip: !JSDOM && "jsdom yoxdur" }, () => {
+  const html = `<!doctype html><html><body>
+    <div class="scaffold-layout__detail">
+      <div id="job-details"><p>Teaser…</p>
+        <button class="inline-show-more-text__button" aria-expanded="false">… more</button>
+      </div>
+    </div>
+  </body></html>`;
+  const { window } = new JSDOM(html);
+  const btn = findShowMore(window.document);
+  assert.ok(btn, "… more button not found");
+  assert.match(btn.textContent, /more/i);
+});
+
+test("findShowMore multilingual labels + class without english", { skip: !JSDOM && "jsdom yoxdur" }, () => {
+  const labels = [
+    "… more",
+    "… daha fazla",
+    "Daha fazla göster",
+    "daha çox göstər",
+    "… ещё",
+    "Показать ещё",
+    "Mehr anzeigen",
+    "… mehr",
+    "Voir plus",
+    "Ver más",
+    "Ver mais",
+    "Mostra di più",
+    "Zobacz więcej",
+    "もっと見る",
+    "더보기",
+    "查看更多",
+    "عرض المزيد",
+  ];
+  for (const label of labels) {
+    const html = `<!doctype html><html><body><div id="job-details"><p>Teaser</p>
+      <button aria-expanded="false">${label}</button></div></body></html>`;
+    const { window } = new JSDOM(html);
+    assert.ok(findShowMore(window.document), `label not matched: ${label}`);
+  }
+  // Class kifayətdir — naməlum dil mətni olsa belə.
+  const byClass = new JSDOM(`<!doctype html><html><body><div id="job-details">
+    <button class="inline-show-more-text__button" aria-expanded="false">xyz_unknown_locale</button>
+  </div></body></html>`);
+  assert.ok(findShowMore(byClass.window.document), "class-based show-more");
+});
+
 // EN (Easy Apply / xarici Apply) nümunələri, sintetik düzənlər: test/fixtures.js
 const { CASES } = require("./fixtures.js");
 function withInnerText(window) {

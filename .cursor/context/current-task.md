@@ -1,22 +1,22 @@
 # Current task
 
 ## Completed
-- LinkedIn extension debug: hard refresh after Reload fixes empty capture
-- Auto full description: `richText` (hidden DOM) + JSON-LD prefer longer + auto-click Show more once per job
-- Popup «LinkedIn script aktiv» via `content_hello`
+- Job detail desktop: company about card removed
+- Analiz et + Müraciət mətni moved to single right `jd-aside` (CTA above)
+- Mobile: same aside stacks under JD (no double mount)
+- Aside sticky + max-height scroll when report is tall
 
 ## Current state
-- Extension changes are local (Chrome Load unpacked); Railway web/API deploy not required for this
-- Settings: site URL = web origin; `JOB_IMPORT_TOKEN` on API service
+- Local frontend change; needs web deploy for prod
 
 ## Decisions
-- Keep diagnostic UX (script status, subdomain matches, logs)
-- Only auto-click description «Show more»; never Apply / job navigation
+- One aside column (not duplicate desktop/mobile mounts) so analyze fetch runs once
+- Apply form stays in main under description
 
 ## Remaining work
-- Manual QA: Start → open job → confirm full description without manual Show more
-- Optional: quiet console logs later
+- Visual QA desktop + mobile on a live job detail
 
 ## Relevant files
-- `extension/content.js`, `extension/extract.js`, `extension/popup.js`, `extension/manifest.json`
-- `extension/test/extract.test.js`
+- `frontend/components/job-detail/job-detail-view.js`
+- `frontend/components/job-detail/job-detail-company-sidebar.js`
+- `frontend/app/globals.css`
