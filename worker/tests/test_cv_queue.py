@@ -228,6 +228,42 @@ class CvQueueTest(unittest.TestCase):
         self.assertEqual(profile["parse_method"], "rules")
         self.assertTrue(profile["headline"])
 
+    def test_commit_before_ai_so_status_is_visible(self):
+        """Pollers must see done before optional AI/embed finishes."""
+        stored = self._write_sample_cv()
+        queue_id = enqueue_parse(
+            self.store.conn,
+            user_id="cand-commit",
+            cv_file_key=stored,
+            cv_name="cv.docx",
+        )
+        self.store.conn.commit()
+        seen_status = []
+
+        def slow_ai(profile, text, **_kwargs):
+            row = self.store.conn.execute(
+                "SELECT status FROM parse_cv_queue WHERE id = ?",
+                (queue_id,),
+            ).fetchone()
+            # Separate connection: only committed rows are visible.
+            import sqlite3
+
+            with sqlite3.connect(self.store.path) as other:
+                other.row_factory = sqlite3.Row
+                visible = other.execute(
+                    "SELECT status FROM parse_cv_queue WHERE id = ?",
+                    (queue_id,),
+                ).fetchone()
+            seen_status.append((row["status"], visible["status"] if visible else None))
+            return profile
+
+        with patch("worker.cv_parse.ai_fallback.maybe_ai_fallback", side_effect=slow_ai):
+            drain_parse_cv_queue(self.store.conn, cv_root=self.cvs)
+        self.store.conn.commit()
+        self.assertTrue(seen_status)
+        _local, visible = seen_status[0]
+        self.assertEqual(visible, "done")
+
     def test_stale_processing_is_reclaimed_and_done(self):
         stored = self._write_sample_cv()
         self.store.conn.execute(

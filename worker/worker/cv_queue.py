@@ -361,11 +361,23 @@ def _queue_status(conn, queue_id: int) -> str:
     return str(row[0] or "")
 
 
+def _commit(conn) -> None:
+    """Flush so other API connections (profile poll) can see done/failed."""
+    commit = getattr(conn, "commit", None)
+    if not callable(commit):
+        return
+    try:
+        commit()
+    except Exception:
+        log.warning("cv_queue commit failed", exc_info=True)
+
+
 def _process_one(conn, row: sqlite3.Row, *, root: Path | None) -> str:
     stored = row["cv_file_key"] or ""
     data = read_cv(stored, root=root)
     if data is None:
         _finish(conn, int(row["id"]), status="failed", error="cv_missing")
+        _commit(conn)
         return "failed"
     # Rules-only first: partial extract is enough to unblock the review UI.
     # AI is optional polish and must not keep parse_status at "processing".
@@ -385,10 +397,14 @@ def _process_one(conn, row: sqlite3.Row, *, root: Path | None) -> str:
     err = str(meta.get("error") or "")
     if err and not (profile.get("skills") or profile.get("work_history")):
         _finish(conn, int(row["id"]), status="failed", error=err[:1000])
+        _commit(conn)
         return "failed"
     _finish(conn, int(row["id"]), status="done", error=err[:1000] if err else "")
     if _queue_status(conn, int(row["id"])) != "done":
         return "failed"
+    # Commit before AI/embed — otherwise pollers keep seeing "processing"
+    # until the whole drain transaction ends (can be tens of seconds).
+    _commit(conn)
 
     profile = _maybe_ai_enhance(
         conn,
@@ -403,6 +419,7 @@ def _process_one(conn, row: sqlite3.Row, *, root: Path | None) -> str:
         embed_profile(conn, user_id=str(row["user_id"] or ""), profile=profile)
     except Exception:
         pass
+    _commit(conn)
     return "done"
 
 
@@ -478,6 +495,7 @@ def drain_parse_cv_queue(
                 status=status,
                 error=f"{type(exc).__name__}: {exc}"[:1000],
             )
+            _commit(conn)
             stats["failed"] = stats.get("failed", 0) + 1
     return stats
 

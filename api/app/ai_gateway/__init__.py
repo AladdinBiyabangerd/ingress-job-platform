@@ -5,6 +5,7 @@ from __future__ import annotations
 from app.ai_gateway.gateway import (
     EmbedResult,
     GatewayResult,
+    any_provider_key,
     complete_json,
     daily_call_limit,
     embed,
@@ -18,6 +19,7 @@ from app.ai_gateway.redact import mask_pii
 __all__ = [
     "EmbedResult",
     "GatewayResult",
+    "any_provider_key",
     "complete_json",
     "daily_call_limit",
     "embed",

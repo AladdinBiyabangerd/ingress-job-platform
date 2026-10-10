@@ -1,26 +1,24 @@
 # Current task
 
 ## Completed
-- Candidate → employer upgrade: CTAs grant `job_employer` via Academy and open `/company`
+- Rules-first CV parse (prior commit `c8defa8`)
+- Root cause of remaining stall: `done` was uncommitted until AI/embed finished
+- Mid-drain `_commit()` after rules `done` so `/profile` poll sees it
+- Export `any_provider_key` from worker/api `ai_gateway` (fixes tidy ImportError)
 
 ## Current state
-- Upgrade / “Elan paylaşan” / post become-employer links use `returnTo=/company`
-- Company form gates candidate-only users with become-employer LoginLink (no 403 form)
-- Guest `/company` login path includes `intent=job_employer`
-- Mobile nav shows employer upgrade for candidates
+- Local tests green (`tests.test_cv_queue`)
+- Needs commit + Railway redeploy (API installs worker from git SHA)
 
 ## Decisions
-- Roles still come from Academy (`registration_intent` + `existing_account` when signed in)
-- Session restore on company page stays plain login (no re-grant after staff revoke)
-- Incomplete profile still forced to `/company` in auth callback
+- Commit before optional AI/embed so UI unblocks immediately
 
 ## Remaining work
-- Manual: candidate account → “Elan paylaşan” → Academy grants role → company form
+- Commit/push and redeploy API + worker
+- Re-upload CV to verify “Təhlil” clears within seconds
 
 ## Relevant files
-- `frontend/components/account-bar.js`
-- `frontend/components/company-form.js`
-- `frontend/components/post-page.js`
-- `frontend/components/register-choice.js`
-- `frontend/components/shell.js`
-- `frontend/lib/server/company.js`
+- `worker/worker/cv_queue.py`
+- `worker/worker/ai_gateway/__init__.py`
+- `api/app/ai_gateway/__init__.py`
+- `worker/tests/test_cv_queue.py`
