@@ -20,6 +20,7 @@ from typing import Any
 
 _ID_PK = re.compile(r"\bid\s+integer\s+primary\s+key\b", re.IGNORECASE)
 _GROUP = re.compile(r"\bgroup_concat\b", re.IGNORECASE)
+_COLLATE_NOCASE = re.compile(r"\s+COLLATE\s+NOCASE\b", re.IGNORECASE)
 _INSERT = re.compile(r"^\s*insert\s+into\s+([A-Za-z_][A-Za-z0-9_]*)\b", re.IGNORECASE)
 _RETURNING = re.compile(r"\breturning\b", re.IGNORECASE)
 _TABLE_INFO = re.compile(
@@ -130,6 +131,8 @@ def adapt_sql(sql: str) -> str:
         sql,
     )
     rewritten = _GROUP.sub("string_agg", rewritten)
+    # SQLite NOCASE collation does not exist on Postgres UTF8.
+    rewritten = _COLLATE_NOCASE.sub("", rewritten)
     return translate_sql(rewritten)
 
 

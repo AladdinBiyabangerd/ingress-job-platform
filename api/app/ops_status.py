@@ -315,7 +315,7 @@ def _crawl_funnel(conn: sqlite3.Connection | None, *, days: int) -> dict:
         """
         SELECT id, name, homepage, enabled, go_decision, api_key_env, note
         FROM crawl_sources
-        ORDER BY name COLLATE NOCASE
+        ORDER BY LOWER(name)
         """
     ).fetchall()
 
