@@ -1,24 +1,26 @@
 # Current task
 
 ## Completed
-- `/company` expanded: address, website, industry, size (+ API/DB)
-- Account menu “Şirkət məlumatları” for employer/staff
-- Profile no longer edits company inline → link card to `/company`
-- Form uses full page width with sectioned layout
+- Candidate → employer upgrade: CTAs grant `job_employer` via Academy and open `/company`
 
 ## Current state
-- Required: name, city, about → complete / post gate
-- Optional: address, website, industry, size
-- First save → `/post`; later saves stay on `/company`
+- Upgrade / “Elan paylaşan” / post become-employer links use `returnTo=/company`
+- Company form gates candidate-only users with become-employer LoginLink (no 403 form)
+- Guest `/company` login path includes `intent=job_employer`
+- Mobile nav shows employer upgrade for candidates
 
 ## Decisions
-- Company owned on `/company` page, not Profile form
+- Roles still come from Academy (`registration_intent` + `existing_account` when signed in)
+- Session restore on company page stays plain login (no re-grant after staff revoke)
+- Incomplete profile still forced to `/company` in auth callback
 
 ## Remaining work
-- Restart API if long-lived process so column migration runs
-- Live check while logged in
+- Manual: candidate account → “Elan paylaşan” → Academy grants role → company form
 
 ## Relevant files
-- `api/app/profiles.py`, `api/app/account.py`
-- `frontend/components/company-form.js`, `account-bar.js`, `profile-form.js`
-- `frontend/lib/copy.js`, `frontend/app/globals.css`
+- `frontend/components/account-bar.js`
+- `frontend/components/company-form.js`
+- `frontend/components/post-page.js`
+- `frontend/components/register-choice.js`
+- `frontend/components/shell.js`
+- `frontend/lib/server/company.js`

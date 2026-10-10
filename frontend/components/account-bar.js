@@ -164,7 +164,7 @@ export function AccountBar({ locale, returnTo, onMe }) {
                 {showEmployerUpgrade ? (
                   <div className="account-dropdown-group" role="group" aria-label={t.registerEmployerUpgrade}>
                     <p>{t.registerEmployerUpgrade}</p>
-                    <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "post" })}>
+                    <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "company" })}>
                       {t.registerPoster}
                     </LoginLink>
                   </div>
@@ -172,7 +172,7 @@ export function AccountBar({ locale, returnTo, onMe }) {
                 {showRegister ? (
                   <div className="account-dropdown-group" role="group" aria-label={t.registerAsk}>
                     <p>{t.registerAsk}</p>
-                    <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "post" })}>
+                    <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "company" })}>
                       {t.registerPoster}
                     </LoginLink>
                     <LoginLink intent="job_candidate" returnTo={back}>

@@ -49,7 +49,8 @@ export function PostPage({ locale, initialJobs = null, initialApplications = nul
   }, [initialMe, locale]);
 
   const canPost = canPostJobs(me) && !me.needs_company_profile;
-  const back = hrefFor(locale, { mode: "post" });
+  const companyReturn = hrefFor(locale, { mode: "company" });
+  const postReturn = hrefFor(locale, { mode: "post" });
 
   return (
     <Shell locale={locale} mode="post">
@@ -68,7 +69,7 @@ export function PostPage({ locale, initialJobs = null, initialApplications = nul
             {employerDenied ? <p className="note" role="alert">{t.postEmployerDenied}</p> : null}
             <div className="post-cabinet-gate-actions">
               <a className="btn small" href={hrefFor(locale)}>{t.postBackToJobs}</a>
-              <LoginLink className="btn small primary" intent="job_employer" returnTo={back}>
+              <LoginLink className="btn small primary" intent="job_employer" returnTo={companyReturn}>
                 {t.postBecomeEmployer}
               </LoginLink>
             </div>
@@ -85,10 +86,10 @@ export function PostPage({ locale, initialJobs = null, initialApplications = nul
           <div className="h2-panel post-cabinet-gate">
             <p>{t.postBody}</p>
             <div className="post-cabinet-gate-actions">
-              <LoginLink className="btn small board-auth-signin" intent="job_employer" returnTo={back}>
+              <LoginLink className="btn small board-auth-signin" intent="job_employer" returnTo={postReturn}>
                 {t.signIn}
               </LoginLink>
-              <LoginLink className="btn small primary" intent="job_employer" returnTo={back}>
+              <LoginLink className="btn small primary" intent="job_employer" returnTo={companyReturn}>
                 {t.createAccount}
               </LoginLink>
             </div>

@@ -14,9 +14,9 @@ const EMPTY_PROFILE = {
 };
 
 export function companyLoginPath(locale) {
-  // No registration_intent: session restore must not re-grant JOB_EMPLOYER after
-  // staff revoked it. Become-employer CTAs elsewhere still send job_employer.
-  return `/api/auth/login?returnTo=${encodeURIComponent(hrefFor(locale, { mode: "company" }))}`;
+  // Guests landing on /company: start OAuth with employer intent, then the form.
+  // Signed-in session restore must not use this path (see CompanyForm plain login).
+  return `/api/auth/login?intent=job_employer&returnTo=${encodeURIComponent(hrefFor(locale, { mode: "company" }))}`;
 }
 
 export function isGuestMe(me) {

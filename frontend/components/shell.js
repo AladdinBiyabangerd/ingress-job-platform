@@ -254,6 +254,13 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef, jobId }) {
               </a>
             </li>
           ) : null}
+          {me.candidate && !me.employer && !me.staff ? (
+            <li>
+              <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "company" })}>
+                {t.registerPoster}
+              </LoginLink>
+            </li>
+          ) : null}
           <li>
             <form
               method="post"
@@ -272,7 +279,7 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef, jobId }) {
               <LoginLink intent="job_candidate" returnTo={back}>{t.registerCreator}</LoginLink>
             </li>
             <li>
-              <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "post" })}>
+              <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "company" })}>
                 {t.registerPoster}
               </LoginLink>
             </li>

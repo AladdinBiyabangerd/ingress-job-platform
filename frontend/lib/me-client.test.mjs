@@ -37,8 +37,9 @@ test("fetchMe returns seeded identity without calling the BFF", async () => {
 
 test("fetchMe hits /api/auth/me when the cache is empty", async () => {
   installStorage();
+  globalThis.document = { documentElement: { lang: "ru" } };
   globalThis.fetch = async (url) => {
-    assert.equal(url, "/api/auth/me");
+    assert.equal(url, "/api/auth/me?lang=ru");
     return { json: async () => ({ authenticated: false }) };
   };
   const me = await fetchMe();

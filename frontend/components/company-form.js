@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { clearMeCache, fetchMe } from "../lib/me-client";
+import { canPostJobs } from "../lib/roles";
 import { saveCompanyProfile } from "../lib/server/refresh";
+import { LoginLink } from "./login-link";
 import { useInitialMe } from "./me-seed";
 import { PageChrome } from "./page-chrome";
 import { Shell } from "./shell";
@@ -25,7 +27,7 @@ function fieldsFrom(me, profile) {
   };
 }
 
-function loginHref(locale) {
+function sessionRestoreHref(locale) {
   // Plain login — do not pass job_employer intent (staff revoke must stick).
   return `/api/auth/login?returnTo=${encodeURIComponent(hrefFor(locale, { mode: "company" }))}`;
 }
@@ -51,6 +53,8 @@ export function CompanyForm({ locale, initialMe, initialProfile = null }) {
   const seed = fieldsFrom(meSeed, initialProfile);
   const nameRef = useRef(null);
   const focusedRef = useRef(false);
+  const companyReturn = hrefFor(locale, { mode: "company" });
+  const [me, setMe] = useState(() => (seededMe && meSeed.authenticated ? meSeed : null));
   const [companyName, setCompanyName] = useState(() => seed.companyName);
   const [city, setCity] = useState(() => seed.city);
   const [about, setAbout] = useState(() => seed.about);
@@ -63,14 +67,24 @@ export function CompanyForm({ locale, initialMe, initialProfile = null }) {
   const [note, setNote] = useState("");
   const [ready, setReady] = useState(() => Boolean(seededMe && meSeed.authenticated));
   const [saving, setSaving] = useState(false);
+  const [employerDenied, setEmployerDenied] = useState(false);
 
   useEffect(() => {
-    function apply(me) {
-      if (!me?.authenticated) {
-        window.location.href = loginHref(locale);
+    setEmployerDenied(new URLSearchParams(window.location.search).get("employer_denied") === "1");
+  }, []);
+
+  useEffect(() => {
+    function apply(nextMe) {
+      if (!nextMe?.authenticated) {
+        window.location.href = sessionRestoreHref(locale);
         return;
       }
-      const fields = fieldsFrom(me, initialProfile);
+      setMe(nextMe);
+      if (!canPostJobs(nextMe)) {
+        setReady(true);
+        return;
+      }
+      const fields = fieldsFrom(nextMe, initialProfile);
       setCompanyName(fields.companyName);
       setCity(fields.city);
       setAbout(fields.about);
@@ -87,9 +101,9 @@ export function CompanyForm({ locale, initialMe, initialProfile = null }) {
     }
     let cancelled = false;
     fetchMe()
-      .then((me) => {
+      .then((nextMe) => {
         if (cancelled) return;
-        apply(me);
+        apply(nextMe);
       })
       .catch(() => {
         if (!cancelled) setError(t.ssoError);
@@ -147,6 +161,8 @@ export function CompanyForm({ locale, initialMe, initialProfile = null }) {
     setSaving(false);
   }
 
+  const canEditCompany = canPostJobs(me);
+
   return (
     <Shell locale={locale} mode="company">
       <div className="h2-employer company-profile">
@@ -166,7 +182,21 @@ export function CompanyForm({ locale, initialMe, initialProfile = null }) {
             {note}
           </p>
         ) : null}
-        {ready ? (
+        {ready && !canEditCompany ? (
+          <div className="h2-panel company-profile-gate">
+            <p>{t.postCandidateBody}</p>
+            {employerDenied ? (
+              <p className="note" role="alert">{t.postEmployerDenied}</p>
+            ) : null}
+            <div className="post-cabinet-gate-actions">
+              <a className="btn small" href={hrefFor(locale)}>{t.postBackToJobs}</a>
+              <LoginLink className="btn small primary" intent="job_employer" returnTo={companyReturn}>
+                {t.postBecomeEmployer}
+              </LoginLink>
+            </div>
+          </div>
+        ) : null}
+        {ready && canEditCompany ? (
           <form className="h2-panel h2-form company-profile-form" onSubmit={onSubmit} noValidate>
             <section className="company-profile-section" aria-labelledby="company-basics-title">
               <h2 id="company-basics-title" className="company-profile-section-title">

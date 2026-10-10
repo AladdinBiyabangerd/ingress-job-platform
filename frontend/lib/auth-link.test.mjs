@@ -5,8 +5,8 @@ import { loginHref } from "./auth-link.js";
 describe("loginHref", () => {
   it("builds the OAuth start path with intent and returnTo", () => {
     assert.equal(
-      loginHref({ intent: "job_employer", returnTo: "/post" }),
-      "/api/auth/login?intent=job_employer&returnTo=%2Fpost",
+      loginHref({ intent: "job_employer", returnTo: "/company" }),
+      "/api/auth/login?intent=job_employer&returnTo=%2Fcompany",
     );
   });
 

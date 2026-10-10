@@ -60,7 +60,7 @@ function ProfileGateEmployer({ locale }) {
     <LoginLink
       className="profile-board-gate-employer"
       intent="job_employer"
-      returnTo={hrefFor(locale, { mode: "post" })}
+      returnTo={hrefFor(locale, { mode: "company" })}
     >
       {t.profileGateEmployer}
     </LoginLink>
@@ -423,8 +423,8 @@ export function ProfileForm({ locale }) {
               </>
             ) : (
               <>
-                <ProfileHero locale={locale} showApplicant={false} />
-                <ProfileGate locale={locale} />
+                <ProfileHero locale={locale} showApplicant={false} guest />
+                <ProfileGateEmployer locale={locale} />
               </>
             )}
           </div>

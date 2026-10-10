@@ -6,8 +6,8 @@
  * and staff (job:staff). There is no separate "active account type": an
  * account that holds job:employer may post (the API checks the same scope),
  * even if Academy also gave it job:candidate and STUDENT. A candidate-only
- * account (no employer, no staff) cannot post. Guests see neither tab; company
- * sign-up stays in the "Register" menu, which links to /post after sign-in.
+ * account (no employer, no staff) cannot post until they take an employer
+ * upgrade CTA (registration_intent=job_employer → /company form).
  *
  * `me` is null/undefined until SSR getMe or the client BFF has run, so the
  * restricted tabs stay hidden until identity is known.

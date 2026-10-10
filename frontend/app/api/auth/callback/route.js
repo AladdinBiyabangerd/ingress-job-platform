@@ -55,6 +55,7 @@ export async function GET(request) {
   const data = await exchanged.json();
   if (!data.access_token) return fail(request, config.origin, "invalid_token_response");
   let dest = safeReturnTo(data.return_to);
+  // Incomplete company profile always opens onboarding before the post cabinet.
   if (data.me && data.me.needs_company_profile) dest = companyPath(dest);
   const destUrl = new URL(dest, config.origin);
   // Staff revoke / blocked upgrade: OAuth succeeds but employer scope is absent.

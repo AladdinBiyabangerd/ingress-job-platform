@@ -16,7 +16,7 @@ export function RegisterChoice({ locale, returnTo }) {
       {open ? (
         <div className="register-menu" role="group" aria-label={t.registerAsk}>
           <p>{t.registerAsk}</p>
-          <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "post" })}>
+          <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "company" })}>
             {t.registerPoster}
           </LoginLink>
           <LoginLink intent="job_candidate" returnTo={back}>
