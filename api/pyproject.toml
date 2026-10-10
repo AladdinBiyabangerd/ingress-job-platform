@@ -22,6 +22,8 @@ dependencies = [
   "pytesseract>=0.3.10,<1",
   "pypdfium2>=4.30,<5",
   "pywebpush>=2.0,<3",
+  # worker.db / worker.parsing: LinkedIn import runs the crawler acceptance rules
+  "beautifulsoup4>=4.12,<5",
 ]
 
 [project.optional-dependencies]

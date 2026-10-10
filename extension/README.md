@@ -15,7 +15,7 @@ Chrome extension. "Start" basırsınız, LinkedIn-də elanlara özünüz baxırs
    JOB_IMPORT_TOKEN=<yaratdığınız token>
    ```
    Token qoyulmayıbsa endpoint `503` qaytarır. Sonra API-ni yenidən başladın (`./scripts/dev-api.sh`).
-3. Endpoint: `POST <sayt>/api/v1/import/linkedin-jobs` (başlıq `X-Import-Token`). API-nin ictimai domeni yoxdur, ona görə extension **saytın (frontend) ünvanına** göndərir; Next.js route (`frontend/app/api/v1/import/linkedin-jobs/route.js`) sorğunu token başlığı ilə API-yə ötürür (`JOB_API_BASE_URL` / lokal `127.0.0.1:8010`). Canlıda `JOB_IMPORT_TOKEN` **API servisində** olmalıdır. Elanlar `linkedin-extension` mənbəsi ilə dərhal dərc olunur və "Toplanmış elanlar" siyahısında görünür. Təkrarlar LinkedIn id və mənbə ünvanına görə atılır.
+3. Endpoint: `POST <sayt>/api/v1/import/linkedin-jobs` (başlıq `X-Import-Token`). API-nin ictimai domeni yoxdur, ona görə extension **saytın (frontend) ünvanına** göndərir; Next.js route (`frontend/app/api/v1/import/linkedin-jobs/route.js`) sorğunu token başlığı ilə API-yə ötürür (`JOB_API_BASE_URL` / lokal `127.0.0.1:8010`). Canlıda `JOB_IMPORT_TOKEN` **API servisində** olmalıdır. Extension heç nəyi süzmür, elanı olduğu kimi göndərir. API isə hər elanı **crawler ilə eyni qaydalardan** keçirir (`worker/worker/acceptance.py` → `finish_item`: IT rolu, uzaqdan/relokasiya, AZ bazarı geo-qaydaları, rədd olunmuş URL yaddaşı, AI market-fit) və eyni `Store.upsert` ilə yazır; status da crawled elanlarla eynidir. Qaydaya uyğun gəlməyən elan `rejected` sayılır. Mənbə adı `linkedin-extension`. Prod API image-i `worker` paketini quraşdırır; paket yoxdursa endpoint 503 qaytarır. Təkrarlar LinkedIn id və mənbə ünvanına görə atılır.
 
 ## 2. Extension-i Chrome-a əlavə etmək
 
@@ -37,11 +37,14 @@ Popup-da **Ayarlar** (və ya extension üzərində sağ klik → Options):
 2. Extension ikonuna basın → **Start** (ikonda qırmızı say görünür).
 3. `linkedin.com/jobs` səhifələrində elanlara adi qaydada baxın (axtarış nəticələrində sağdakı detal panelində də işləyir). Elanın təsviri yüklənəndə avtomatik tutulur.
 4. Popup-da siyahıya baxın, lazımsızı ✕ ilə silin.
-5. **Stop və göndər** basın. Nəticə: yaradıldı / təkrar / xəta. Uğurdan sonra siyahı təmizlənir; bir göndərişdə ən çox 200 elan.
+5. **Stop və göndər** basın. Nəticə: yaradıldı / təkrar / qaydalara uyğun deyil / xəta. Uğurdan sonra siyahı təmizlənir; bir göndərişdə ən çox 200 elan.
 
 ## Qeydlər
 
 - LinkedIn səhifə strukturunu tez-tez dəyişir; boş sahə qalırsa `content.js`-dəki selektorları yeniləmək lazım ola bilər.
 - Başlıq və təsvir platformanın limitlərinə qədər kəsilir (başlıq 140, mətn 8000 simvol).
 - Xarici müraciət linki varsa orijinal ünvan o olur, yoxsa LinkedIn ünvanı. Qonaqlara bu ünvan göstərilmir.
-- Test: `cd api && .venv/bin/python -m unittest tests.test_linkedin_import`
+- Dil: səhifə türkcə, azərbaycanca, ingiliscə, rusca (və s.) ola bilər; başlıqlar ("İş ilanı hakkında", "Şirket hakkında"), düymələr (Başvur, Apply, Kolay Başvuru) çoxdilli tanınır. Yeni elan düzəni (`/jobs/search-results/?currentJobId=…`) və `/jobs/view/<id>` dəstəklənir. Xarici müraciət linki `linkedin.com/safety/go/?url=…` içindən çıxarılır (utm_* təmizlənir).
+- Testlər: `cd api && .venv/bin/python -m unittest tests.test_linkedin_import`; extension: `cd extension && npm i --no-save jsdom && node --test test/` (jsdom yoxdursa yalnız URL testləri işləyir).
+
+- Easy Apply / Kolay Başvuru elanları da tutulur: xarici link olmadıqda müraciət linki `https://www.linkedin.com/jobs/view/<id>/` olur.

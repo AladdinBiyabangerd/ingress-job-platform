@@ -102,6 +102,19 @@ wheels = [
 ]
 
 [[package]]
+name = "beautifulsoup4"
+version = "4.15.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "soupsieve" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/43/65/318323f98dbee45d42dff61d8f047181bc6f2268a9068cfad035a46be5af/beautifulsoup4-4.15.0.tar.gz", hash = "sha256:288e3ca7d54b06f2ac191970bc275c1939cb46d450b255bf6718b04aa37ab4f7", size = 632571, upload-time = "2026-06-07T16:44:20.453Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/88/c6/92fcd42f1ba33e1184263f25bfabf3d27c383410470f169e4b8163bf9c17/beautifulsoup4-4.15.0-py3-none-any.whl", hash = "sha256:d6f88de62e1d4e38ecb1077eb9724cd0eff29d2a08ca16a401e9b9e93f117cf9", size = 109924, upload-time = "2026-06-07T16:44:21.566Z" },
+]
+
+[[package]]
 name = "boto3"
 version = "1.43.108"
 source = { registry = "https://pypi.org/simple" }
@@ -390,6 +403,7 @@ name = "ingress-job-api"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [
+    { name = "beautifulsoup4" },
     { name = "boto3" },
     { name = "fastapi" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
@@ -416,6 +430,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "beautifulsoup4", specifier = ">=4.12,<5" },
     { name = "boto3", specifier = ">=1.34,<2" },
     { name = "fastapi", specifier = ">=0.115,<1" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.28,<1" },
@@ -986,6 +1001,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
+]
+
+[[package]]
+name = "soupsieve"
+version = "3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6a/a9/4af6e80fab273e06a9682fe8c9984c4b031dc07c7d425568835286bcdfad/soupsieve-3.0.tar.gz", hash = "sha256:1136e639f72f95f1a9351b4587f640553d08d41a5653b187da30d6c9200c296c", size = 115160, upload-time = "2026-10-10T13:04:39.305Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2d/7e/5db89afeaa5cea03b6db658faa9e04482f2ee5a30a8eb2f2277662364171/soupsieve-3.0-py3-none-any.whl", hash = "sha256:6abca899ac412ad87154fd65928da2fc0cff3df490767b7c9dd7726bf661e954", size = 41605, upload-time = "2026-10-10T13:04:37.759Z" },
 ]
 
 [[package]]

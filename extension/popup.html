@@ -2,21 +2,37 @@
 <html lang="az">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="ui.css" />
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <header>
-    <strong>Ingress Job</strong>
-    <span id="state" class="pill">dayandı</span>
+  <header class="top">
+    <div class="brand">
+      <img src="icons/logo.svg" alt="" />
+      <div><b>Ingress Job</b><small>LinkedIn qeyd</small></div>
+    </div>
+    <span id="state" class="pill" role="status">dayandı</span>
   </header>
-  <div class="row">
-    <button id="toggle" class="primary">Start</button>
-    <button id="clear" title="Siyahını təmizlə">Təmizlə</button>
-  </div>
-  <p id="count">Toplanan elan: 0</p>
-  <div id="result" class="result" hidden></div>
-  <ul id="list"></ul>
-  <footer><a href="#" id="opts">Ayarlar</a></footer>
+
+  <section class="card hero" aria-label="Qeyd">
+    <div class="counter"><span class="n" id="num">0</span><span class="l" id="count">Toplanan elan: 0</span></div>
+    <div class="actions">
+      <button id="toggle" class="btn primary main">Start</button>
+      <button id="clear" class="btn ghost" title="Siyahını təmizlə">Təmizlə</button>
+    </div>
+    <p class="hint" id="hint">Start basın, LinkedIn-də elanlara adi qaydada baxın. Stop basanda hamısı göndərilir.</p>
+  </section>
+
+  <div id="result" class="result" role="status" aria-live="polite" hidden></div>
+
+  <section class="section">
+    <h3>Toplanan elanlar</h3>
+    <ul id="list"></ul>
+    <div id="empty" class="empty" hidden><b>Hələ elan yoxdur</b>Start basın və LinkedIn elanlarını açın.</div>
+  </section>
+
+  <footer><span>Yalnız baxdığınız elanlar saxlanır</span><a href="#" id="opts">Ayarlar</a></footer>
   <script src="popup.js"></script>
 </body>
 </html>

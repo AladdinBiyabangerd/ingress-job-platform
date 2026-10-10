@@ -28,6 +28,7 @@
         "https://www.linkedin.com/jobs/*"
       ],
       "js": [
+        "extract.js",
         "content.js"
       ],
       "run_at": "document_idle"

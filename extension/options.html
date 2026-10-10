@@ -1,15 +1,39 @@
 <!doctype html>
 <html lang="az">
-<head><meta charset="utf-8" /><title>Ingress Job – Ayarlar</title>
-<style>body{font:14px system-ui;max-width:480px;margin:30px auto}label{display:block;margin:14px 0 4px}input{width:100%;padding:8px;box-sizing:border-box}button{margin-top:16px;padding:8px 16px}</style></head>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ingress Job – Ayarlar</title>
+  <link rel="stylesheet" href="ui.css" />
+  <link rel="stylesheet" href="options.css" />
+</head>
 <body>
-  <h2>Ingress Job – Ayarlar</h2>
-  <label for="apiBase">Sayt (web) ünvanı</label>
-  <input id="apiBase" placeholder="http://localhost:3010" />
-  <small>API-yə birbaşa yox, saytın ünvanını yazın: lokal <code>http://localhost:3010</code>, canlı üçün saytın domeni (məs. <code>https://your-site.example</code>). Sorğu <code>/api/v1/import/linkedin-jobs</code> ilə saytdan API-yə ötürülür.</small>
-  <label for="token">Import token (.env-dəki JOB_IMPORT_TOKEN)</label>
-  <input id="token" type="password" autocomplete="off" />
-  <button id="save">Yadda saxla</button> <span id="msg"></span>
+  <main class="wrap">
+    <header class="brand head">
+      <img src="icons/logo.svg" alt="" />
+      <div><b>Ingress Job</b><small>Extension ayarları</small></div>
+    </header>
+
+    <form class="card form" id="form" novalidate>
+      <div class="field">
+        <label for="apiBase">Sayt (web) ünvanı</label>
+        <input id="apiBase" type="url" placeholder="http://localhost:3010" autocomplete="off" spellcheck="false" />
+        <small>API-nin yox, saytın ünvanını yazın: lokal <code>http://localhost:3010</code>, canlı üçün saytın domeni (məs. <code>https://your-site.example</code>). Sorğu <code>/api/v1/import/linkedin-jobs</code> ilə saytdan API-yə ötürülür.</small>
+      </div>
+      <div class="field">
+        <label for="token">Import token</label>
+        <div class="secret">
+          <input id="token" type="password" placeholder="JOB_IMPORT_TOKEN dəyəri" autocomplete="off" spellcheck="false" />
+          <button type="button" id="peek" class="btn peek" aria-pressed="false">Göstər</button>
+        </div>
+        <small>API servisinin <code>.env</code> faylındakı <code>JOB_IMPORT_TOKEN</code> ilə eyni olmalıdır.</small>
+      </div>
+      <div class="row">
+        <button id="save" type="submit" class="btn primary">Yadda saxla</button>
+        <span id="msg" class="msg" role="status" aria-live="polite"></span>
+      </div>
+    </form>
+  </main>
   <script src="options.js"></script>
 </body>
 </html>

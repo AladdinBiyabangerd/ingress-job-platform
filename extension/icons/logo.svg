@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Ingress Job mark</title>
+  <desc id="desc">Blue rounded diamond with connected white and cyan nodes.</desc>
+  <defs>
+    <linearGradient id="blue" x1="32" y1="8" x2="32" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4C8DFF"/>
+      <stop offset="1" stop-color="#001FFF"/>
+    </linearGradient>
+    <clipPath id="diamond">
+      <rect x="9" y="9" width="46" height="46" rx="8" transform="rotate(45 32 32)"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#diamond)">
+    <rect width="64" height="64" fill="url(#blue)"/>
+    <path d="M8 32H56" stroke="#fff" stroke-width="2"/>
+    <path d="M21 22H43" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="21" cy="22" r="4.25" fill="none" stroke="#fff" stroke-width="2.5"/>
+    <circle cx="43" cy="22" r="4.25" fill="none" stroke="#fff" stroke-width="2.5"/>
+    <path d="M32 43V49" stroke="#0DC6FF" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="32" cy="43" r="4.25" fill="none" stroke="#0DC6FF" stroke-width="2.5"/>
+  </g>
+</svg>

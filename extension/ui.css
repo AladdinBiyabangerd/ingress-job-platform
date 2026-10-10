@@ -1,0 +1,42 @@
+@font-face { font-family: "Plus Jakarta Sans"; font-weight: 400; font-style: normal; font-display: swap; src: url("fonts/plus-jakarta-sans-latin-ext-400-normal.woff2") format("woff2"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: "Plus Jakarta Sans"; font-weight: 400; font-style: normal; font-display: swap; src: url("fonts/plus-jakarta-sans-latin-400-normal.woff2") format("woff2"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "Plus Jakarta Sans"; font-weight: 500; font-style: normal; font-display: swap; src: url("fonts/plus-jakarta-sans-latin-ext-500-normal.woff2") format("woff2"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: "Plus Jakarta Sans"; font-weight: 500; font-style: normal; font-display: swap; src: url("fonts/plus-jakarta-sans-latin-500-normal.woff2") format("woff2"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "Plus Jakarta Sans"; font-weight: 600; font-style: normal; font-display: swap; src: url("fonts/plus-jakarta-sans-latin-ext-600-normal.woff2") format("woff2"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: "Plus Jakarta Sans"; font-weight: 600; font-style: normal; font-display: swap; src: url("fonts/plus-jakarta-sans-latin-600-normal.woff2") format("woff2"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "Plus Jakarta Sans"; font-weight: 700; font-style: normal; font-display: swap; src: url("fonts/plus-jakarta-sans-latin-ext-700-normal.woff2") format("woff2"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: "Plus Jakarta Sans"; font-weight: 700; font-style: normal; font-display: swap; src: url("fonts/plus-jakarta-sans-latin-700-normal.woff2") format("woff2"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+
+:root {
+  --brand: #001fff; --brand-deep: #092f84; --brand-soft: #eef3ff; --brand-bright: #0dc6ff;
+  --brand-border: #cbd5ff; --ink: #101828; --canvas: #f5f7fc; --surface: #fff;
+  --muted: #667085; --border: #e4e9f2;
+  --ok: #067647; --ok-bg: #ecfdf3; --ok-border: #abefc6;
+  --warn: #b54708; --warn-bg: #fffaeb; --warn-border: #fedf89;
+  --err: #b42318; --err-bg: #fef3f2; --err-border: #fecdca;
+  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+  --shadow-soft: 0 1px 2px rgb(16 24 40 / 5%);
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--canvas); color: var(--ink); }
+body { font: 400 13px/1.45 "Plus Jakarta Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+button { font: inherit; cursor: pointer; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand img { width: 32px; height: 32px; display: block; }
+.brand b { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.brand small { display: block; color: var(--muted); font-size: 11px; font-weight: 500; margin-top: -1px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-soft); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--ink); font-weight: 600; transition: background 140ms var(--ease), border-color 140ms var(--ease), transform 140ms var(--ease); }
+.btn:hover { background: var(--brand-soft); border-color: var(--brand-border); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .65; cursor: wait; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn.primary:hover { background: var(--brand-deep); border-color: var(--brand-deep); }
+.btn.stop { background: var(--err); border-color: var(--err); color: #fff; }
+.btn.stop:hover { background: #912018; border-color: #912018; }
+.spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgb(255 255 255 / 45%); border-top-color: #fff; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { * { animation-duration: .001ms !important; transition: none !important; } }

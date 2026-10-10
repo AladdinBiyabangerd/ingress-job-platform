@@ -8,7 +8,7 @@ import os
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.linkedin_import import import_jobs
+from app.linkedin_import import WorkerUnavailable, import_jobs
 
 router = APIRouter(prefix="/api/v1/import", tags=["import"])
 
@@ -18,14 +18,14 @@ MAX_BATCH = 200
 class LinkedInJobIn(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    linkedin_id: str = Field(max_length=20)
-    title: str = Field(max_length=300)
-    company: str = Field(default="", max_length=300)
-    location: str = Field(default="", max_length=300)
-    description: str = Field(default="", max_length=60000)
-    apply_url: str = Field(default="", max_length=2000)
-    posted: str = Field(default="", max_length=100)
-    employment_type: str = Field(default="", max_length=100)
+    linkedin_id: str
+    title: str
+    company: str = ""
+    location: str = ""
+    description: str = ""
+    apply_url: str = ""
+    posted: str = ""
+    employment_type: str = ""
     remote: bool = False
 
 
@@ -55,4 +55,7 @@ def linkedin_jobs(
     provided = _token(authorization, x_import_token)
     if not provided or not hmac.compare_digest(provided.encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="unauthorized")
-    return import_jobs([job.model_dump() for job in body.jobs])
+    try:
+        return import_jobs([job.model_dump() for job in body.jobs])
+    except WorkerUnavailable as exc:
+        raise HTTPException(status_code=503, detail="worker_package_unavailable") from exc

@@ -1,4 +1,4 @@
-"""LinkedIn extension import: token auth, create, dedupe."""
+"""LinkedIn extension import: token auth, same acceptance rules as the crawler."""
 
 import tempfile
 import unittest
@@ -23,20 +23,21 @@ class LinkedInImportTests(unittest.TestCase):
         self.path_patch.stop()
         self.tmp.cleanup()
 
-    def _job(self, lid="1234567890", **extra):
+    def _job(self, lid="4300000001", **extra):
         job = {
             "linkedin_id": lid,
-            "title": "Python Developer",
-            "company": "Acme",
-            "location": "Baku",
-            "description": "Build APIs.",
-            "apply_url": "https://acme.example/apply/1",
+            "title": "Senior Site Reliability Engineer / Kubernetes (Remote)",
+            "company": "Pragmatike",
+            "location": "Worldwide",
+            "description": "Run Kubernetes clusters on AWS. Fully remote, work from anywhere.",
+            "apply_url": "https://jobs.ashbyhq.com/pragmatike/4cc505dc",
+            "remote": True,
         }
         job.update(extra)
         return job
 
     def _post(self, jobs, token="secret"):
-        with patch.dict("os.environ", {"JOB_IMPORT_TOKEN": "secret"}):
+        with patch.dict("os.environ", {"JOB_IMPORT_TOKEN": "secret", "AI_MARKET_FIT_ENABLED": "0"}):
             return self.client.post(
                 "/api/v1/import/linkedin-jobs",
                 headers={"X-Import-Token": token},
@@ -49,20 +50,24 @@ class LinkedInImportTests(unittest.TestCase):
             r = self.client.post("/api/v1/import/linkedin-jobs", json={"jobs": []})
         self.assertEqual(r.status_code, 503)
 
-    def test_create_then_duplicate(self):
-        r = self._post([self._job(), self._job(), self._job("999999999", title="")])
+    def test_crawler_rules_apply(self):
+        sales = self._job("4300000002", title="Sales Manager", description="Sell things. Remote.", apply_url="https://x.example/2")
+        r = self._post([self._job(), sales, self._job()])
         self.assertEqual(r.status_code, 200, r.text)
         body = r.json()
-        self.assertEqual((body["created"], body["duplicates"], body["errors"]), (1, 1, 1))
+        self.assertEqual((body["created"], body["rejected"], body["duplicates"]), (1, 1, 1), body)
         again = self._post([self._job()]).json()
         self.assertEqual((again["created"], again["duplicates"]), (0, 1))
         conn = _connect()
         try:
-            row = conn.execute("SELECT source_name, source_url FROM job_sources").fetchone()
+            row = conn.execute(
+                "SELECT s.source_name, s.source_url, j.status FROM job_sources s JOIN jobs j ON j.id = s.job_id"
+            ).fetchone()
         finally:
             conn.close()
         self.assertEqual(row[0], "linkedin-extension")
-        self.assertEqual(row[1], "https://acme.example/apply/1")
+        self.assertEqual(row[1], "https://jobs.ashbyhq.com/pragmatike/4cc505dc")
+        self.assertEqual(row[2], "published")
 
 
 if __name__ == "__main__":

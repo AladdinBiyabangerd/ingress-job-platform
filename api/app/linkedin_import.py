@@ -1,72 +1,77 @@
 """Batch import of ads the user viewed on LinkedIn (Chrome extension).
 
-Rows are written like collected ads: empty owner_subject, source_name
-'linkedin-extension'. Dedupe is by LinkedIn job id / source URL.
-The original URL is stored in job_sources and is not shown to guests.
+The extension captures pages as-is. Nothing is judged here: every ad goes
+through the same acceptance rules and the same store upsert as the hourly
+crawler (worker.acceptance.finish_item, worker.db.Store.upsert), so status,
+tech/market/geo checks and rejected-URL memory behave exactly like crawled ads.
+Only a title and a URL/LinkedIn id are required to try.
 """
 
 from __future__ import annotations
 
-import re
-import sqlite3
-from urllib.parse import urlsplit
-
-from app.cabinet_store import PUBLISHED, _LOCK, _connect, _now
+import sys
+from pathlib import Path
 
 SOURCE_NAME = "linkedin-extension"
-_ID = re.compile(r"^\d{5,20}$")
-_AZ = re.compile(r"[əğıöşüçƏĞİÖŞÜÇ]")
-_RU = re.compile(r"[а-яА-ЯёЁ]")
 
 
-def _http(value: str) -> str:
-    text = (value or "").strip()
-    if not text or len(text) > 500 or any(c.isspace() for c in text):
-        return ""
-    parts = urlsplit(text)
-    if parts.scheme not in {"http", "https"} or not parts.netloc or parts.username or parts.password:
-        return ""
-    return text
+class WorkerUnavailable(RuntimeError):
+    pass
 
 
-def _language(text: str) -> str:
-    if _RU.search(text):
-        return "ru"
-    if _AZ.search(text):
-        return "az"
-    return "en"
+def _worker():
+    try:
+        import worker.acceptance  # noqa: F401
+    except ImportError:
+        repo_worker = Path(__file__).resolve().parents[2] / "worker"
+        if repo_worker.is_dir() and str(repo_worker) not in sys.path:
+            sys.path.insert(0, str(repo_worker))
+        try:
+            import worker.acceptance  # noqa: F401
+        except ImportError as exc:
+            raise WorkerUnavailable(str(exc)) from exc
+    from worker.acceptance import finish_item
+    from worker.db import Store
+    from worker.market_fit import is_rejected
+
+    return finish_item, Store, is_rejected
 
 
-def _job_type(remote: bool, employment: str) -> str:
-    return "uzaqdan" if remote else ""
+class _Connector:
+    """Stand-in for a crawler connector: same attributes finish_item reads."""
+
+    name = SOURCE_NAME
+    remote_default = False
+    relocation_default = False
+    require_remote_or_relocation = False
+    credit_note = ""
+
+    def __init__(self, store) -> None:
+        self.store = store
 
 
 def import_jobs(items: list[dict]) -> dict:
-    """items are validated dicts. Returns created/duplicates/errors counts and details."""
+    finish_item, Store, is_rejected = _worker()
+    from app.sqlite_jobs import DB_PATH
+
     created: list[dict] = []
     duplicates: list[dict] = []
+    rejected: list[dict] = []
     errors: list[dict] = []
-    now = _now()
-    with _LOCK:
-        conn = _connect()
-        try:
-            for item in items:
-                lid = str(item.get("linkedin_id") or "").strip()
-                title = (item.get("title") or "").strip()[:140]
-                company = (item.get("company") or "").strip()[:120]
-                if not _ID.match(lid) or not title:
-                    errors.append({"linkedin_id": lid, "error": "Başlıq və ya LinkedIn id yanlışdır"})
-                    continue
+    store = Store(Path(DB_PATH))
+    try:
+        connector = _Connector(store)
+        for raw in items:
+            lid = str(raw.get("linkedin_id") or "").strip()
+            title = str(raw.get("title") or "").strip()
+            if not lid or not title:
+                errors.append({"linkedin_id": lid, "error": "title/id missing"})
+                continue
+            try:
                 li_url = f"https://www.linkedin.com/jobs/view/{lid}/"
-                apply_url = _http(item.get("apply_url") or "")
-                source_url = apply_url or li_url
-                remote = bool(item.get("remote"))
-                location = (item.get("location") or "").strip()[:80]
-                text = (item.get("description") or "").replace("\r\n", "\n").strip()[:8000]
-                posted = (item.get("posted") or "").strip()[:60]
-                employment = (item.get("employment_type") or "").strip()[:60]
-                note = " | ".join(p for p in (f"LinkedIn {li_url}", posted, employment) if p)[:300]
-                dup = conn.execute(
+                apply_url = str(raw.get("apply_url") or "").strip()
+                source_url = apply_url if apply_url.startswith(("http://", "https://")) else li_url
+                dup = store.conn.execute(
                     "SELECT job_id FROM job_sources WHERE source_url IN (?, ?) "
                     "OR (source_name = ? AND external_id = ?)",
                     (li_url, source_url, SOURCE_NAME, lid),
@@ -74,52 +79,50 @@ def import_jobs(items: list[dict]) -> dict:
                 if dup is not None:
                     duplicates.append({"linkedin_id": lid, "job_id": int(dup[0])})
                     continue
-                try:
-                    cur = conn.execute(
-                        """
-                        INSERT INTO jobs (
-                            title, company, city, text, cleaned_text, status, created_at, norm_key,
-                            owner_subject, language, salary, job_type, remote, updated_at
-                        ) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, '', ?, '', ?, ?, ?)
-                        """,
-                        (
-                            title,
-                            company,
-                            "" if remote else location,
-                            text,
-                            PUBLISHED,
-                            now,
-                            f"{SOURCE_NAME}:{lid}",
-                            _language(f"{title} {text}"),
-                            _job_type(remote, employment),
-                            1 if remote else 0,
-                            now,
-                        ),
-                    )
-                    job_id = int(cur.lastrowid)
-                    conn.execute(
-                        """
-                        INSERT INTO job_sources (
-                            job_id, source_name, source_url, external_id, last_seen, credit_note
-                        ) VALUES (?, ?, ?, ?, ?, ?)
-                        """,
-                        (job_id, SOURCE_NAME, source_url, lid, now, note),
-                    )
-                    conn.commit()
-                    created.append({"linkedin_id": lid, "job_id": job_id})
-                except sqlite3.IntegrityError:
-                    conn.rollback()
+                if is_rejected(store.conn, li_url):
+                    rejected.append({"linkedin_id": lid, "reason": "previously_rejected"})
+                    continue
+                note = " | ".join(
+                    p for p in (f"LinkedIn {li_url}", str(raw.get("posted") or "").strip(),
+                                str(raw.get("employment_type") or "").strip()) if p
+                )
+                item = {
+                    "title": title,
+                    "company": str(raw.get("company") or "").strip(),
+                    "city": str(raw.get("location") or "").strip(),
+                    "text": str(raw.get("description") or "").strip(),
+                    "source_url": source_url,
+                    "external_id": lid,
+                    "credit_note": note[:300],
+                }
+                if raw.get("remote"):
+                    item["remote"] = True
+                accepted = finish_item(connector, item)
+                store.conn.commit()
+                if not accepted:
+                    rejected.append({"linkedin_id": lid, "reason": "rules"})
+                    continue
+                accepted["source_name"] = SOURCE_NAME
+                kind = store.upsert(accepted)
+                if kind == "created":
+                    created.append({"linkedin_id": lid})
+                else:
                     duplicates.append({"linkedin_id": lid, "job_id": None})
-                except Exception as exc:  # one bad row must not stop the batch
-                    conn.rollback()
-                    errors.append({"linkedin_id": lid, "error": str(exc)[:120]})
-        finally:
-            conn.close()
+            except Exception as exc:  # one bad row must not stop the batch
+                try:
+                    store.conn.rollback()
+                except Exception:
+                    pass
+                errors.append({"linkedin_id": lid, "error": str(exc)[:120]})
+    finally:
+        store.close()
     return {
         "created": len(created),
         "duplicates": len(duplicates),
+        "rejected": len(rejected),
         "errors": len(errors),
         "created_items": created,
         "duplicate_items": duplicates,
+        "rejected_items": rejected,
         "error_items": errors,
     }
