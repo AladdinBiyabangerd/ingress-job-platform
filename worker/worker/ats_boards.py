@@ -109,6 +109,9 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
         "onepath", "recast", "selinicapital", "siliconranch", "turbineone", "zambold",
         "tekmetric", "telnyx54", "warp", "wooga", "voyagertechnologiesinc", "wayvia",
         "wonderschool", "zenbusiness")),
+    ("Greenhouse boards (Remote & relocation 6)", "greenhouse", "Remote və ya relocation siqnallı lövhələr (süpürmə 2026-10-11, 2-ci dalğa)", (
+        "soraunion", "sandtechholdingslimited", "linkedinlimitedpostings", "vetto",
+        "testlio", "twindo", "rootstocklabsltd", "offshorelaunch")),
     # ---- Lever (api.lever.co)
     ("Lever boards (Europe)", "lever", "Avropa", (
         "spotify", "qonto", "swile", "aircall", "zopa", "farfetch", "malt", "blablacar",
