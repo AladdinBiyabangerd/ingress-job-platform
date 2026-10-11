@@ -243,8 +243,8 @@ _TECH: list[tuple[str, re.Pattern[str], tuple[str, ...], str]] = [
     ("Ethereum", _ci(r"ethereum|evm"), ("evm",), "web3"),
     ("OWASP", _cs(r"OWASP"), ("owasp",), "security"),
     ("SIEM", _ci(r"siem"), (), "security"),
-    ("EDR", _ci(r"edr"), (), "security"),
-    ("WAF", _ci(r"waf"), (), "security"),
+    ("EDR", _cs(r"EDR"), (), "security"),
+    ("WAF", _cs(r"WAF"), (), "security"),
     ("ISO 27001", _ci(r"iso\s*27001"), ("iso27001",), "security"),
     (
         "Incident Response",
@@ -280,6 +280,37 @@ _TECH: list[tuple[str, re.Pattern[str], tuple[str, ...], str]] = [
     ),
     ("Endpoint Security", _ci(r"endpoint\s+security"), (), "security"),
 ]
+
+def _extra_pattern(
+    name: str, aliases: tuple[str, ...], rx: str | None, case_sensitive: bool
+) -> re.Pattern[str]:
+    if rx is None:
+        parts: list[str] = []
+        for word in (name, *aliases):
+            esc = re.escape(word).replace(r"\ ", r"[\s-]?")
+            if esc not in parts:
+                parts.append(esc)
+        rx = "|".join(parts)
+    return _cs(rx) if case_sensitive else _ci(rx)
+
+
+def _load_extra() -> None:
+    from worker.techstack_extra import SPECS
+
+    have = {name for name, _p, _e, _c in _TECH}
+    for name, cat, aliases, rx, case_sensitive in SPECS:
+        if name in have:
+            continue
+        have.add(name)
+        _TECH.append((name, _extra_pattern(name, aliases, rx, case_sensitive), aliases, cat))
+
+
+_load_extra()
+
+# Vocabulary-only categories: matched in CVs (``find_stack``) but never shown as
+# job-ad chips, so generic words cannot crowd out concrete tools in MAX_STACK.
+from worker.techstack_extra import NON_CHIP_CATEGORIES as _NON_CHIP  # noqa: E402
+
 
 _ALIASES: dict[str, str] = {}
 for _name, _pattern, _extra, _cat in _TECH:
@@ -368,7 +399,7 @@ def extract_stack(text: str, tags: object = None, title: str = "") -> list[str]:
     sample = f"{title}\n{text or ''}"[:30000]
     scored: list[tuple[int, int, str]] = []
     for name, pattern, _extra, _cat in _TECH:
-        if name in found:
+        if name in found or _cat in _NON_CHIP:
             continue
         hits = list(pattern.finditer(sample))
         if hits:

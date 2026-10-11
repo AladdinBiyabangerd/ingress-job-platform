@@ -1,6 +1,6 @@
 {
-  "version": "1.3",
-  "generated_at": "2026-10-06T10:30:00Z",
+  "version": "1.4",
+  "generated_at": "2026-10-11T23:10:00Z",
   "source": {
     "plan": "docs/ingress-job-cv-ai-plan.pdf §6.1",
     "categories": "worker/worker/techstack.py CATEGORIES",
@@ -16,9 +16,12 @@
         "Java Backend Developer",
         "Backend Java Developer",
         "Java Software Engineer",
-        "Spring Boot Developer",
         "Java Programmer",
-        "J2EE Developer"
+        "J2EE Developer",
+        "Java proqramçı",
+        "Java разработчик",
+        "Разработчик Java",
+        "Desarrollador Java"
       ],
       "signature_skills": [
         {
@@ -84,7 +87,10 @@
         "Backend Python Developer",
         "Python Software Engineer",
         "Python Programmer",
-        "Django Developer"
+        "Python proqramçı",
+        "Python разработчик",
+        "Разработчик Python",
+        "Desarrollador Python"
       ],
       "signature_skills": [
         {
@@ -152,7 +158,8 @@
         "Go Engineer",
         "Golang Engineer",
         "Go Backend Developer",
-        "Golang Backend Engineer"
+        "Golang Backend Engineer",
+        "Go Software Engineer"
       ],
       "signature_skills": [
         {
@@ -206,7 +213,10 @@
         ".NET Engineer",
         "C# Engineer",
         ".NET Backend Developer",
-        "ASP.NET Core Developer"
+        "ASP.NET Core Developer",
+        ".NET Software Engineer",
+        "Разработчик .NET",
+        "Desarrollador .NET"
       ],
       "signature_skills": [
         {
@@ -265,7 +275,9 @@
         "Node.js Backend Developer",
         "Express Developer",
         "Node.js Engineer",
-        "TypeScript Backend Developer"
+        "TypeScript Backend Developer",
+        "NodeJS Developer",
+        "Express.js Developer"
       ],
       "signature_skills": [
         {
@@ -332,7 +344,10 @@
         "PHP Engineer",
         "PHP Backend Developer",
         "Backend PHP Developer",
-        "Laravel Developer"
+        "PHP Programmer",
+        "PHP proqramçı",
+        "PHP разработчик",
+        "Desarrollador PHP"
       ],
       "signature_skills": [
         {
@@ -380,7 +395,6 @@
       "category": "Backend",
       "synonyms": [
         "Ruby Engineer",
-        "Ruby on Rails Developer",
         "Rails Developer",
         "RoR Developer"
       ],
@@ -421,7 +435,8 @@
       "synonyms": [
         "Rust Engineer",
         "Rust Backend Developer",
-        "Systems Rust Developer"
+        "Systems Rust Developer",
+        "Rust Software Engineer"
       ],
       "signature_skills": [
         {
@@ -550,7 +565,9 @@
       "synonyms": [
         "C++ Engineer",
         "CPP Developer",
-        "C++ Software Engineer"
+        "C++ Software Engineer",
+        "C/C++ Developer",
+        "Разработчик C++"
       ],
       "signature_skills": [
         {
@@ -628,8 +645,16 @@
       "synonyms": [
         "Backend Developer",
         "Server-side Engineer",
-        "API Engineer",
-        "Backend Software Engineer"
+        "Backend Software Engineer",
+        "Back-end Engineer",
+        "Back End Developer",
+        "Server-side Developer",
+        "Бэкенд-разработчик",
+        "Desarrollador Backend",
+        "Backend Proqramçı",
+        "Бэкенд разработчик",
+        "Backend разработчик",
+        "Ingeniero Backend"
       ],
       "signature_skills": [
         {
@@ -719,7 +744,11 @@
         "React Frontend Developer",
         "React Software Engineer",
         "React.js Engineer",
-        "Frontend React Developer"
+        "Frontend React Developer",
+        "ReactJS Developer",
+        "React Native Web Developer",
+        "Разработчик React",
+        "Desarrollador React"
       ],
       "signature_skills": [
         {
@@ -782,7 +811,8 @@
       "synonyms": [
         "Angular Engineer",
         "Angular Frontend Developer",
-        "Angular Software Engineer"
+        "Angular Software Engineer",
+        "AngularJS Developer"
       ],
       "signature_skills": [
         {
@@ -826,7 +856,8 @@
         "Vue Developer",
         "Vue Engineer",
         "Nuxt Developer",
-        "Vue Frontend Developer"
+        "Vue Frontend Developer",
+        "VueJS Developer"
       ],
       "signature_skills": [
         {
@@ -959,10 +990,18 @@
         "Frontend Developer",
         "Front-end Engineer",
         "UI Engineer",
-        "Web Developer",
         "Client-side Engineer",
         "Front End Developer",
-        "UI Developer"
+        "UI Developer",
+        "Front-end Developer",
+        "Frontend Software Engineer",
+        "UI Developer (Frontend)",
+        "Frontend proqramçı",
+        "Фронтенд-разработчик",
+        "Фронтенд разработчик",
+        "Frontend разработчик",
+        "Desarrollador Frontend",
+        "Ingeniero Frontend"
       ],
       "signature_skills": [
         {
@@ -1189,7 +1228,14 @@
         "Full-stack Developer",
         "Software Engineer Full Stack",
         "Fullstack Developer",
-        "Full Stack Software Engineer"
+        "Full Stack Software Engineer",
+        "Full Stack Engineer",
+        "Full-stack Software Engineer",
+        "Fullstack Proqramçı",
+        "Фулстек разработчик",
+        "Fullstack разработчик",
+        "Desarrollador Full Stack",
+        "Desarrollador Fullstack"
       ],
       "signature_skills": [
         {
@@ -1254,8 +1300,10 @@
       "category": "Mobile",
       "synonyms": [
         "Android Engineer",
-        "Kotlin Android Developer",
-        "Android Software Engineer"
+        "Android Software Engineer",
+        "Android proqramçı",
+        "Android разработчик",
+        "Desarrollador Android"
       ],
       "signature_skills": [
         {
@@ -1293,9 +1341,12 @@
       "category": "Mobile",
       "synonyms": [
         "iOS Engineer",
-        "Swift Developer",
         "Swift iOS Developer",
-        "Apple iOS Developer"
+        "Apple iOS Developer",
+        "iOS proqramçı",
+        "iOS разработчик",
+        "Desarrollador iOS",
+        "iPhone Developer"
       ],
       "signature_skills": [
         {
@@ -1326,7 +1377,8 @@
       "synonyms": [
         "Flutter Engineer",
         "Dart Flutter Developer",
-        "Flutter Mobile Developer"
+        "Flutter Mobile Developer",
+        "Dart Developer"
       ],
       "signature_skills": [
         {
@@ -1396,7 +1448,13 @@
       "synonyms": [
         "Mobile Developer",
         "Mobile Software Engineer",
-        "Cross-platform Mobile Developer"
+        "Cross-platform Mobile Developer",
+        "Mobil Proqramçı",
+        "Mobil tətbiq developeri",
+        "Мобильный разработчик",
+        "Разработчик мобильных приложений",
+        "Desarrollador Móvil",
+        "Desarrollador de Aplicaciones Móviles"
       ],
       "signature_skills": [
         {
@@ -1449,7 +1507,15 @@
         "DevOps Specialist",
         "DevOps SRE",
         "CI/CD Engineer",
-        "Infrastructure Engineer"
+        "Infrastructure Engineer",
+        "DevOps Architect",
+        "Site Operations Engineer",
+        "DevOps mühəndisi",
+        "Инженер DevOps",
+        "Ingeniero DevOps",
+        "Девопс инженер",
+        "DevOps инженер",
+        "Ingeniero de Infraestructura"
       ],
       "signature_skills": [
         {
@@ -1531,9 +1597,10 @@
       "synonyms": [
         "Site Reliability Engineer",
         "Reliability Engineer",
-        "Production Engineer",
         "SRE Engineer",
-        "Site Reliability"
+        "Site Reliability",
+        "SRE Lead",
+        "Site Reliability Engineering Lead"
       ],
       "signature_skills": [
         {
@@ -1599,12 +1666,11 @@
       "category": "DevOps/Cloud",
       "synonyms": [
         "Cloud Developer",
-        "AWS Engineer",
         "Cloud Infrastructure Engineer",
-        "GCP Engineer",
-        "Azure Engineer",
         "AWS Cloud Engineer",
-        "Cloud Ops Engineer"
+        "Cloud Ops Engineer",
+        "Cloud Platform Engineer",
+        "Cloud Administrator"
       ],
       "signature_skills": [
         {
@@ -1666,7 +1732,9 @@
       "synonyms": [
         "Platform Developer",
         "Internal Platform Engineer",
-        "Developer Platform Engineer"
+        "Developer Platform Engineer",
+        "Developer Experience Engineer",
+        "Developer Productivity Engineer"
       ],
       "signature_skills": [
         {
@@ -1725,8 +1793,15 @@
       "synonyms": [
         "Sysadmin",
         "Systems Administrator",
-        "Linux Administrator",
-        "System Admin"
+        "System Admin",
+        "IT System Administrator",
+        "Sistem administratoru",
+        "Системный администратор",
+        "Administrador de Sistemas",
+        "Sistem inzibatçısı",
+        "Сисадмин",
+        "Администратор сети",
+        "Administrador de Redes"
       ],
       "signature_skills": [
         {
@@ -1777,7 +1852,11 @@
       "synonyms": [
         "Network Administrator",
         "Network Specialist",
-        "Infrastructure Network Engineer"
+        "Infrastructure Network Engineer",
+        "Şəbəkə mühəndisi",
+        "Сетевой инженер",
+        "Ingeniero de Redes",
+        "Network Operations Engineer"
       ],
       "signature_skills": [
         {
@@ -1821,8 +1900,15 @@
         "ETL Engineer",
         "Data Platform Engineer",
         "Data Infrastructure Engineer",
-        "Big Data Engineer",
-        "ETL Developer"
+        "Data Pipeline Engineer",
+        "Analytics Data Engineer",
+        "Azure Data Engineer",
+        "Databricks Engineer",
+        "Ingeniero de Datos",
+        "Дата-инженер",
+        "Инженер данных",
+        "Инженер по данным",
+        "Ingeniero de Datos Senior"
       ],
       "signature_skills": [
         {
@@ -1888,11 +1974,19 @@
       "category": "Data/ML",
       "synonyms": [
         "Business Analyst Data",
-        "BI Analyst",
         "Reporting Analyst",
         "Insights Analyst",
-        "BI Developer",
-        "SQL Analyst"
+        "SQL Analyst",
+        "Data Analytics Specialist",
+        "Junior Data Analyst",
+        "Senior Data Analyst",
+        "Analytics Analyst",
+        "Verilənlər analitiki",
+        "Аналитик данных",
+        "Analista de Datos",
+        "Data analitik",
+        "Дата-аналитик",
+        "Analista de Datos Senior"
       ],
       "signature_skills": [
         {
@@ -1990,7 +2084,10 @@
         "DBA",
         "PostgreSQL DBA",
         "Database Engineer",
-        "SQL DBA"
+        "SQL DBA",
+        "Oracle DBA",
+        "Administrador de Bases de Datos",
+        "Администратор баз данных"
       ],
       "signature_skills": [
         {
@@ -2051,7 +2148,15 @@
         "Applied Scientist",
         "Research Data Scientist",
         "Data Science Engineer",
-        "ML Scientist"
+        "ML Scientist",
+        "Senior Data Scientist",
+        "Applied Data Scientist",
+        "Machine Learning Scientist",
+        "Científico de Datos",
+        "Специалист по Data Science",
+        "Дата-сайентист",
+        "Специалист по анализу данных",
+        "Data Scientist Senior"
       ],
       "signature_skills": [
         {
@@ -2109,11 +2214,13 @@
       "category": "Data/ML",
       "synonyms": [
         "Machine Learning Engineer",
-        "AI Engineer",
-        "Deep Learning Engineer",
         "Applied ML Engineer",
-        "LLM Engineer",
-        "Generative AI Engineer"
+        "Generative AI Engineer",
+        "Machine Learning Developer",
+        "ML Developer",
+        "AI/ML Engineer",
+        "Ingeniero de Machine Learning",
+        "Инженер машинного обучения"
       ],
       "signature_skills": [
         {
@@ -2192,7 +2299,8 @@
       "synonyms": [
         "ML Platform Engineer",
         "ML Infrastructure Engineer",
-        "AI Platform Engineer"
+        "AI Platform Engineer",
+        "ML Ops Engineer"
       ],
       "signature_skills": [
         {
@@ -2250,7 +2358,11 @@
         "QA Automation",
         "Automated Test Engineer",
         "AQA Engineer",
-        "Automation Tester"
+        "Automation Tester",
+        "QA Automation Developer",
+        "SDET (Automation)",
+        "Автоматизатор тестирования",
+        "Ingeniero de Automatización QA"
       ],
       "signature_skills": [
         {
@@ -2319,7 +2431,10 @@
         "Quality Assurance Tester",
         "Manual Tester",
         "QA Specialist",
-        "Software Tester"
+        "Software Tester",
+        "Manual QA Engineer",
+        "Manual Testing Engineer",
+        "Functional Tester"
       ],
       "signature_skills": [
         {
@@ -2360,7 +2475,9 @@
         "Quality Engineer",
         "Test Engineer",
         "Software Test Engineer",
-        "SDET Engineer"
+        "SDET Engineer",
+        "Software Engineer in Test",
+        "Test Developer"
       ],
       "signature_skills": [
         {
@@ -2424,8 +2541,9 @@
       "synonyms": [
         "Application Security Engineer",
         "Product Security Engineer",
-        "Penetration Tester",
-        "Security Consultant AppSec"
+        "Security Consultant AppSec",
+        "Software Security Engineer",
+        "Secure Code Reviewer"
       ],
       "signature_skills": [
         {
@@ -2473,8 +2591,20 @@
         "Information Security Engineer",
         "Cybersecurity Engineer",
         "IT Security Engineer",
-        "Cloud Security Engineer",
-        "Cyber Security Engineer"
+        "Cyber Security Engineer",
+        "InfoSec Engineer",
+        "Cyber Security Specialist",
+        "Application Security Specialist (Engineer)",
+        "Ingeniero de Seguridad",
+        "Kibertəhlükəsizlik mühəndisi",
+        "Kibertəhlükəsizlik mütəxəssisi",
+        "İnformasiya təhlükəsizliyi mütəxəssisi",
+        "Специалист по информационной безопасности",
+        "Специалист по ИБ",
+        "Инженер по информационной безопасности",
+        "Ingeniero de Ciberseguridad",
+        "Especialista en Ciberseguridad",
+        "Especialista en Seguridad de la Información"
       ],
       "signature_skills": [
         {
@@ -2512,38 +2642,6 @@
         {
           "skill": "OWASP",
           "weight": 0.55
-        },
-        {
-          "skill": "SIEM",
-          "weight": 0.7
-        },
-        {
-          "skill": "EDR",
-          "weight": 0.65
-        },
-        {
-          "skill": "Incident Response",
-          "weight": 0.7
-        },
-        {
-          "skill": "Vulnerability Management",
-          "weight": 0.65
-        },
-        {
-          "skill": "Penetration Testing",
-          "weight": 0.55
-        },
-        {
-          "skill": "IAM",
-          "weight": 0.6
-        },
-        {
-          "skill": "ISO 27001",
-          "weight": 0.55
-        },
-        {
-          "skill": "Cloud Security",
-          "weight": 0.65
         }
       ]
     },
@@ -2552,10 +2650,14 @@
       "category": "Security",
       "synonyms": [
         "Security Operations Analyst",
-        "Security Analyst",
         "SOC Engineer",
         "Cyber SOC Analyst",
-        "Blue Team Analyst"
+        "Blue Team Analyst",
+        "SOC Engineer (L1/L2)",
+        "Security Operations Center Analyst",
+        "Cyber Defense Analyst",
+        "SOC Tier 1 Analyst",
+        "Analista SOC"
       ],
       "signature_skills": [
         {
@@ -2593,38 +2695,6 @@
         {
           "skill": "OWASP",
           "weight": 0.3
-        },
-        {
-          "skill": "SIEM",
-          "weight": 0.85
-        },
-        {
-          "skill": "EDR",
-          "weight": 0.75
-        },
-        {
-          "skill": "Incident Response",
-          "weight": 0.8
-        },
-        {
-          "skill": "Vulnerability Management",
-          "weight": 0.5
-        },
-        {
-          "skill": "Penetration Testing",
-          "weight": 0.35
-        },
-        {
-          "skill": "IAM",
-          "weight": 0.45
-        },
-        {
-          "skill": "ISO 27001",
-          "weight": 0.4
-        },
-        {
-          "skill": "Cloud Security",
-          "weight": 0.45
         }
       ]
     },
@@ -2632,11 +2702,15 @@
       "canonical_name": "UI/UX Designer",
       "category": "Design/UX",
       "synonyms": [
-        "UX Designer",
-        "UI Designer",
         "User Experience Designer",
         "Interaction Designer",
-        "UX/UI Designer"
+        "UX/UI Designer",
+        "Web Designer (UI/UX)",
+        "Digital Product Designer",
+        "UI/UX Dizayner",
+        "UI/UX дизайнер",
+        "Diseñador UX/UI",
+        "Веб-дизайнер"
       ],
       "signature_skills": [
         {
@@ -2662,8 +2736,10 @@
       "category": "Design/UX",
       "synonyms": [
         "Senior Product Designer",
-        "Digital Product Designer",
-        "UX Product Designer"
+        "UX Product Designer",
+        "Lead Product Designer",
+        "Principal Product Designer",
+        "Head of Product Design"
       ],
       "signature_skills": [
         {
@@ -2690,8 +2766,18 @@
       "synonyms": [
         "PM",
         "Digital Product Manager",
-        "Technical Product Manager",
-        "Associate Product Manager"
+        "Associate Product Manager",
+        "Senior Product Manager",
+        "Group Product Manager",
+        "Lead Product Manager",
+        "Head of Product",
+        "Məhsul meneceri",
+        "Продакт-менеджер",
+        "Продакт менеджер",
+        "Менеджер продукта",
+        "Gerente de Producto",
+        "Product Owner (AZ/RU)",
+        "Responsable de Producto"
       ],
       "signature_skills": [
         {
@@ -2726,7 +2812,8 @@
       "synonyms": [
         "PO",
         "Technical Product Owner",
-        "Agile Product Owner"
+        "Agile Product Owner",
+        "Digital Product Owner"
       ],
       "signature_skills": [
         {
@@ -2751,10 +2838,12 @@
       "canonical_name": "Project Manager",
       "category": "Product",
       "synonyms": [
-        "Technical Project Manager",
-        "Delivery Manager",
         "Program Manager",
-        "IT Project Manager"
+        "IT Project Manager",
+        "Project Lead",
+        "IT Project Coordinator",
+        "Project Coordinator (IT)",
+        "Program Delivery Manager"
       ],
       "signature_skills": [
         {
@@ -2775,9 +2864,11 @@
       "canonical_name": "Scrum Master",
       "category": "Product",
       "synonyms": [
-        "Agile Coach",
         "Agile Scrum Master",
-        "Delivery Scrum Master"
+        "Delivery Scrum Master",
+        "Scrum Coach",
+        "Scrum Master / Agile Coach",
+        "Agile Project Manager"
       ],
       "signature_skills": [
         {
@@ -2805,7 +2896,11 @@
         "IT Support Specialist",
         "IT Technician",
         "IT Helpdesk",
-        "Desktop Support Engineer"
+        "Desktop Support Engineer",
+        "IT Support Engineer",
+        "IT dəstək mütəxəssisi",
+        "Техподдержка",
+        "Soporte Informático"
       ],
       "signature_skills": [
         {
@@ -2838,10 +2933,13 @@
       "canonical_name": "Support Engineer",
       "category": "IT Support",
       "synonyms": [
-        "Technical Support Engineer",
         "Customer Support Engineer",
         "Product Support Engineer",
-        "L2 Support Engineer"
+        "L2 Support Engineer",
+        "Support Engineer (EMEA)",
+        "Software Support Engineer",
+        "Production Support Engineer",
+        "Customer Success Engineer"
       ],
       "signature_skills": [
         {
@@ -2885,7 +2983,11 @@
         "Solution Architect",
         "Cloud Solutions Architect",
         "Systems Architect",
-        "Enterprise Solutions Architect"
+        "Enterprise Solutions Architect",
+        "Senior Solutions Architect",
+        "Technical Solutions Architect",
+        "Solutions Architect (EMEA)",
+        "Integration Architect"
       ],
       "signature_skills": [
         {
@@ -2945,8 +3047,11 @@
       "synonyms": [
         "Web3 Developer",
         "Smart Contract Developer",
-        "Solidity Developer",
-        "Crypto Developer"
+        "Crypto Developer",
+        "Blockchain Engineer",
+        "DApp Developer",
+        "Smart Contract Developer (Blockchain)",
+        "Validator Engineer"
       ],
       "signature_skills": [
         {
@@ -2983,10 +3088,16 @@
       "canonical_name": "Game Developer",
       "category": "Other tech",
       "synonyms": [
-        "Unity Developer",
         "Unreal Developer",
         "Game Engineer",
-        "Gameplay Programmer"
+        "Gameplay Programmer",
+        "Game Programmer",
+        "Game Software Engineer",
+        "Gameplay Engineer",
+        "Games Developer",
+        "Oyun proqramçısı",
+        "Разработчик игр",
+        "Desarrollador de Videojuegos"
       ],
       "signature_skills": [
         {
@@ -3019,7 +3130,9 @@
       "synonyms": [
         "WP Developer",
         "WordPress Engineer",
-        "CMS WordPress Developer"
+        "CMS WordPress Developer",
+        "WordPress Plugin Developer",
+        "Разработчик WordPress"
       ],
       "signature_skills": [
         {
@@ -3058,7 +3171,9 @@
       "synonyms": [
         "Shopify Engineer",
         "Shopify Theme Developer",
-        "Ecommerce Shopify Developer"
+        "Ecommerce Shopify Developer",
+        "Shopify Liquid Developer",
+        "Shopify Expert"
       ],
       "signature_skills": [
         {
@@ -3094,7 +3209,10 @@
         "Embedded Developer",
         "Firmware Engineer",
         "Embedded Systems Engineer",
-        "IoT Embedded Engineer"
+        "IoT Embedded Engineer",
+        "Embedded Software Developer",
+        "Firmware Developer (Embedded)",
+        "Embedded Systems Developer"
       ],
       "signature_skills": [
         {
@@ -3116,6 +3234,4115 @@
         {
           "skill": "Bash",
           "weight": 0.25
+        }
+      ]
+    },
+    {
+      "canonical_name": "Django Developer",
+      "category": "Backend",
+      "synonyms": [
+        "Django Engineer",
+        "Python Django Developer",
+        "Django Backend Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Python",
+          "weight": 1.0
+        },
+        {
+          "skill": "Django",
+          "weight": 0.9
+        },
+        {
+          "skill": "Django REST Framework",
+          "weight": 0.5
+        },
+        {
+          "skill": "PostgreSQL",
+          "weight": 0.45
+        },
+        {
+          "skill": "Celery",
+          "weight": 0.3
+        },
+        {
+          "skill": "Docker",
+          "weight": 0.3
+        },
+        {
+          "skill": "REST API",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Laravel Developer",
+      "category": "Backend",
+      "synonyms": [
+        "PHP Laravel Developer",
+        "Laravel Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "PHP",
+          "weight": 1.0
+        },
+        {
+          "skill": "Laravel",
+          "weight": 0.9
+        },
+        {
+          "skill": "MySQL",
+          "weight": 0.45
+        },
+        {
+          "skill": "Redis",
+          "weight": 0.25
+        },
+        {
+          "skill": "Docker",
+          "weight": 0.2
+        },
+        {
+          "skill": "Livewire",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Ruby on Rails Developer",
+      "category": "Backend",
+      "synonyms": [
+        "Rails Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Ruby on Rails",
+          "weight": 1.0
+        },
+        {
+          "skill": "Ruby",
+          "weight": 0.8
+        },
+        {
+          "skill": "PostgreSQL",
+          "weight": 0.45
+        },
+        {
+          "skill": "Redis",
+          "weight": 0.3
+        },
+        {
+          "skill": "Sidekiq",
+          "weight": 0.25
+        },
+        {
+          "skill": "RSpec",
+          "weight": 0.25
+        }
+      ]
+    },
+    {
+      "canonical_name": "C Developer",
+      "category": "Backend",
+      "synonyms": [
+        "C Programmer",
+        "C Software Engineer",
+        "Systems Programmer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "C",
+          "weight": 1.0
+        },
+        {
+          "skill": "Linux",
+          "weight": 0.5
+        },
+        {
+          "skill": "Linux Kernel",
+          "weight": 0.3
+        },
+        {
+          "skill": "Multithreading",
+          "weight": 0.3
+        },
+        {
+          "skill": "Git",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Perl Developer",
+      "category": "Backend",
+      "synonyms": [
+        "Perl Programmer",
+        "Perl Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Perl",
+          "weight": 1.0
+        },
+        {
+          "skill": "Linux",
+          "weight": 0.4
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.35
+        },
+        {
+          "skill": "Bash",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Clojure Developer",
+      "category": "Backend",
+      "synonyms": [
+        "Clojure Engineer",
+        "ClojureScript Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Clojure",
+          "weight": 1.0
+        },
+        {
+          "skill": "PostgreSQL",
+          "weight": 0.3
+        },
+        {
+          "skill": "Kafka",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Haskell Developer",
+      "category": "Backend",
+      "synonyms": [
+        "Haskell Engineer",
+        "Functional Programming Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Haskell",
+          "weight": 1.0
+        },
+        {
+          "skill": "PostgreSQL",
+          "weight": 0.25
+        }
+      ]
+    },
+    {
+      "canonical_name": "Software Engineer",
+      "category": "Backend",
+      "synonyms": [
+        "Software Developer",
+        "Programmer",
+        "Proqramçı",
+        "Proqram təminatı mühəndisi",
+        "Разработчик",
+        "Программист",
+        "Инженер-программист",
+        "Desarrollador de Software",
+        "Ingeniero de Software"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Git",
+          "weight": 0.5
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.4
+        },
+        {
+          "skill": "Docker",
+          "weight": 0.3
+        },
+        {
+          "skill": "REST API",
+          "weight": 0.3
+        },
+        {
+          "skill": "CI/CD",
+          "weight": 0.25
+        },
+        {
+          "skill": "Python",
+          "weight": 0.25
+        },
+        {
+          "skill": "Java",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "API Engineer",
+      "category": "Backend",
+      "synonyms": [
+        "Integration Engineer",
+        "API Developer",
+        "Integrations Developer",
+        "Middleware Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "REST API",
+          "weight": 0.8
+        },
+        {
+          "skill": "OpenAPI",
+          "weight": 0.5
+        },
+        {
+          "skill": "GraphQL",
+          "weight": 0.3
+        },
+        {
+          "skill": "OAuth",
+          "weight": 0.35
+        },
+        {
+          "skill": "Postman",
+          "weight": 0.3
+        },
+        {
+          "skill": "Microservices",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Microservices Engineer",
+      "category": "Backend",
+      "synonyms": [
+        "Distributed Systems Engineer",
+        "Backend Architect",
+        "Java Architect",
+        "Software Architect (Backend)"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Microservices",
+          "weight": 0.8
+        },
+        {
+          "skill": "Kafka",
+          "weight": 0.5
+        },
+        {
+          "skill": "Kubernetes",
+          "weight": 0.4
+        },
+        {
+          "skill": "Docker",
+          "weight": 0.4
+        },
+        {
+          "skill": "gRPC",
+          "weight": 0.35
+        },
+        {
+          "skill": "Distributed Systems",
+          "weight": 0.4
+        },
+        {
+          "skill": "Domain-Driven Design",
+          "weight": 0.25
+        }
+      ]
+    },
+    {
+      "canonical_name": "COBOL / Mainframe Developer",
+      "category": "Other tech",
+      "synonyms": [
+        "Mainframe Developer",
+        "COBOL Developer",
+        "COBOL Programmer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "COBOL",
+          "weight": 1.0
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Spring Boot Developer",
+      "category": "Backend",
+      "synonyms": [
+        "Spring Developer",
+        "Java Spring Developer",
+        "Spring Boot Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Java",
+          "weight": 0.9
+        },
+        {
+          "skill": "Spring",
+          "weight": 1.0
+        },
+        {
+          "skill": "Hibernate",
+          "weight": 0.4
+        },
+        {
+          "skill": "Maven",
+          "weight": 0.3
+        },
+        {
+          "skill": "PostgreSQL",
+          "weight": 0.35
+        },
+        {
+          "skill": "Microservices",
+          "weight": 0.35
+        },
+        {
+          "skill": "Mockito",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "TypeScript Developer",
+      "category": "Frontend",
+      "synonyms": [
+        "TypeScript Engineer",
+        "TS Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "TypeScript",
+          "weight": 1.0
+        },
+        {
+          "skill": "React",
+          "weight": 0.5
+        },
+        {
+          "skill": "Node.js",
+          "weight": 0.35
+        },
+        {
+          "skill": "Jest",
+          "weight": 0.25
+        },
+        {
+          "skill": "Git",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "JavaScript Developer",
+      "category": "Frontend",
+      "synonyms": [
+        "JS Developer",
+        "JavaScript Engineer",
+        "JavaScript Programmer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "JavaScript",
+          "weight": 1.0
+        },
+        {
+          "skill": "HTML",
+          "weight": 0.5
+        },
+        {
+          "skill": "CSS",
+          "weight": 0.5
+        },
+        {
+          "skill": "React",
+          "weight": 0.35
+        },
+        {
+          "skill": "Node.js",
+          "weight": 0.3
+        },
+        {
+          "skill": "Git",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Web Developer",
+      "category": "Frontend",
+      "synonyms": [
+        "Web Engineer",
+        "Website Developer",
+        "Veb Proqramçı",
+        "Веб-разработчик",
+        "Веб разработчик",
+        "Desarrollador Web"
+      ],
+      "signature_skills": [
+        {
+          "skill": "HTML",
+          "weight": 0.8
+        },
+        {
+          "skill": "CSS",
+          "weight": 0.8
+        },
+        {
+          "skill": "JavaScript",
+          "weight": 0.8
+        },
+        {
+          "skill": "PHP",
+          "weight": 0.3
+        },
+        {
+          "skill": "WordPress",
+          "weight": 0.25
+        },
+        {
+          "skill": "Git",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Design Engineer",
+      "category": "Frontend",
+      "synonyms": [
+        "Creative Technologist",
+        "Frontend Design Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "React",
+          "weight": 0.6
+        },
+        {
+          "skill": "CSS",
+          "weight": 0.6
+        },
+        {
+          "skill": "Figma",
+          "weight": 0.5
+        },
+        {
+          "skill": "Storybook",
+          "weight": 0.4
+        },
+        {
+          "skill": "TypeScript",
+          "weight": 0.4
+        },
+        {
+          "skill": "Design Systems",
+          "weight": 0.4
+        }
+      ]
+    },
+    {
+      "canonical_name": "Webflow Developer",
+      "category": "Frontend",
+      "synonyms": [
+        "Webflow Designer",
+        "No-Code Web Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Webflow",
+          "weight": 1.0
+        },
+        {
+          "skill": "CSS",
+          "weight": 0.5
+        },
+        {
+          "skill": "JavaScript",
+          "weight": 0.3
+        },
+        {
+          "skill": "Figma",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Accessibility Engineer",
+      "category": "Frontend",
+      "synonyms": [
+        "A11y Engineer",
+        "Web Accessibility Specialist"
+      ],
+      "signature_skills": [
+        {
+          "skill": "WCAG",
+          "weight": 1.0
+        },
+        {
+          "skill": "HTML",
+          "weight": 0.5
+        },
+        {
+          "skill": "CSS",
+          "weight": 0.4
+        },
+        {
+          "skill": "JavaScript",
+          "weight": 0.35
+        },
+        {
+          "skill": "Accessibility Testing",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Electron Developer",
+      "category": "Frontend",
+      "synonyms": [
+        "Desktop App Developer",
+        "Desktop Application Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Electron",
+          "weight": 1.0
+        },
+        {
+          "skill": "TypeScript",
+          "weight": 0.5
+        },
+        {
+          "skill": "Node.js",
+          "weight": 0.4
+        },
+        {
+          "skill": "React",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Full-stack Java Developer",
+      "category": "Full-stack",
+      "synonyms": [
+        "Fullstack Java Engineer",
+        "Full Stack Java Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Java",
+          "weight": 1.0
+        },
+        {
+          "skill": "Spring",
+          "weight": 0.7
+        },
+        {
+          "skill": "React",
+          "weight": 0.4
+        },
+        {
+          "skill": "Angular",
+          "weight": 0.3
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.4
+        },
+        {
+          "skill": "Docker",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Full-stack .NET Developer",
+      "category": "Full-stack",
+      "synonyms": [
+        "Fullstack .NET Engineer",
+        "Full Stack C# Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": ".NET",
+          "weight": 1.0
+        },
+        {
+          "skill": "C#",
+          "weight": 0.9
+        },
+        {
+          "skill": "SQL Server",
+          "weight": 0.4
+        },
+        {
+          "skill": "Angular",
+          "weight": 0.3
+        },
+        {
+          "skill": "React",
+          "weight": 0.3
+        },
+        {
+          "skill": "Entity Framework",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Full-stack TypeScript Developer",
+      "category": "Full-stack",
+      "synonyms": [
+        "Fullstack TypeScript Engineer",
+        "Full Stack Node Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "TypeScript",
+          "weight": 0.9
+        },
+        {
+          "skill": "React",
+          "weight": 0.6
+        },
+        {
+          "skill": "Node.js",
+          "weight": 0.6
+        },
+        {
+          "skill": "MongoDB",
+          "weight": 0.3
+        },
+        {
+          "skill": "PostgreSQL",
+          "weight": 0.3
+        },
+        {
+          "skill": "Next.js",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Full-stack Rails Developer",
+      "category": "Full-stack",
+      "synonyms": [
+        "Full Stack Ruby Developer",
+        "Rails Full Stack Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Ruby on Rails",
+          "weight": 1.0
+        },
+        {
+          "skill": "JavaScript",
+          "weight": 0.5
+        },
+        {
+          "skill": "React",
+          "weight": 0.3
+        },
+        {
+          "skill": "PostgreSQL",
+          "weight": 0.4
+        }
+      ]
+    },
+    {
+      "canonical_name": "Swift Developer",
+      "category": "Mobile",
+      "synonyms": [
+        "Swift Engineer",
+        "iOS Swift Developer",
+        "SwiftUI Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Swift",
+          "weight": 1.0
+        },
+        {
+          "skill": "iOS",
+          "weight": 0.8
+        },
+        {
+          "skill": "UIKit",
+          "weight": 0.45
+        },
+        {
+          "skill": "Xcode",
+          "weight": 0.4
+        },
+        {
+          "skill": "Core Data",
+          "weight": 0.25
+        }
+      ]
+    },
+    {
+      "canonical_name": "Kotlin Android Developer",
+      "category": "Mobile",
+      "synonyms": [
+        "Android Kotlin Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Kotlin",
+          "weight": 1.0
+        },
+        {
+          "skill": "Android",
+          "weight": 0.9
+        },
+        {
+          "skill": "Jetpack Compose",
+          "weight": 0.5
+        },
+        {
+          "skill": "Android Studio",
+          "weight": 0.3
+        },
+        {
+          "skill": "Gradle",
+          "weight": 0.25
+        },
+        {
+          "skill": "Retrofit",
+          "weight": 0.25
+        }
+      ]
+    },
+    {
+      "canonical_name": "Xamarin / MAUI Developer",
+      "category": "Mobile",
+      "synonyms": [
+        "Xamarin Developer",
+        ".NET MAUI Developer",
+        "C# Mobile Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Xamarin",
+          "weight": 0.9
+        },
+        {
+          "skill": ".NET MAUI",
+          "weight": 0.8
+        },
+        {
+          "skill": "C#",
+          "weight": 0.7
+        },
+        {
+          "skill": ".NET",
+          "weight": 0.4
+        }
+      ]
+    },
+    {
+      "canonical_name": "Kotlin Multiplatform Developer",
+      "category": "Mobile",
+      "synonyms": [
+        "KMP Developer",
+        "KMM Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Kotlin Multiplatform",
+          "weight": 1.0
+        },
+        {
+          "skill": "Kotlin",
+          "weight": 0.8
+        },
+        {
+          "skill": "Android",
+          "weight": 0.4
+        },
+        {
+          "skill": "iOS",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Cloud Architect",
+      "category": "DevOps/Cloud",
+      "synonyms": [
+        "AWS Solutions Architect",
+        "Azure Solutions Architect",
+        "GCP Cloud Architect"
+      ],
+      "signature_skills": [
+        {
+          "skill": "AWS",
+          "weight": 0.7
+        },
+        {
+          "skill": "Azure",
+          "weight": 0.6
+        },
+        {
+          "skill": "GCP",
+          "weight": 0.5
+        },
+        {
+          "skill": "Terraform",
+          "weight": 0.5
+        },
+        {
+          "skill": "Kubernetes",
+          "weight": 0.4
+        },
+        {
+          "skill": "Microservices",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "AWS Engineer",
+      "category": "DevOps/Cloud",
+      "synonyms": [
+        "AWS DevOps Engineer",
+        "AWS Cloud Developer",
+        "AWS Infrastructure Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "AWS",
+          "weight": 1.0
+        },
+        {
+          "skill": "Amazon EC2",
+          "weight": 0.4
+        },
+        {
+          "skill": "Amazon S3",
+          "weight": 0.4
+        },
+        {
+          "skill": "AWS Lambda",
+          "weight": 0.4
+        },
+        {
+          "skill": "CloudFormation",
+          "weight": 0.35
+        },
+        {
+          "skill": "Terraform",
+          "weight": 0.4
+        },
+        {
+          "skill": "CloudWatch",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Azure Engineer",
+      "category": "DevOps/Cloud",
+      "synonyms": [
+        "Azure DevOps Engineer",
+        "Azure Cloud Engineer",
+        "Azure Administrator"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Azure",
+          "weight": 1.0
+        },
+        {
+          "skill": "Azure DevOps",
+          "weight": 0.5
+        },
+        {
+          "skill": "Azure Functions",
+          "weight": 0.3
+        },
+        {
+          "skill": "Terraform",
+          "weight": 0.35
+        },
+        {
+          "skill": "PowerShell",
+          "weight": 0.3
+        },
+        {
+          "skill": "Microsoft Entra ID",
+          "weight": 0.25
+        }
+      ]
+    },
+    {
+      "canonical_name": "GCP Engineer",
+      "category": "DevOps/Cloud",
+      "synonyms": [
+        "Google Cloud Engineer",
+        "GCP DevOps Engineer",
+        "GCP Cloud Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "GCP",
+          "weight": 1.0
+        },
+        {
+          "skill": "Kubernetes",
+          "weight": 0.5
+        },
+        {
+          "skill": "Terraform",
+          "weight": 0.4
+        },
+        {
+          "skill": "BigQuery",
+          "weight": 0.3
+        },
+        {
+          "skill": "Cloud Run",
+          "weight": 0.3
+        },
+        {
+          "skill": "Pub/Sub",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Kubernetes Engineer",
+      "category": "DevOps/Cloud",
+      "synonyms": [
+        "K8s Engineer",
+        "Container Platform Engineer",
+        "Kubernetes Administrator"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Kubernetes",
+          "weight": 1.0
+        },
+        {
+          "skill": "Docker",
+          "weight": 0.7
+        },
+        {
+          "skill": "Helm",
+          "weight": 0.5
+        },
+        {
+          "skill": "Terraform",
+          "weight": 0.3
+        },
+        {
+          "skill": "Prometheus",
+          "weight": 0.3
+        },
+        {
+          "skill": "Argo CD",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "DevSecOps Engineer",
+      "category": "Security",
+      "synonyms": [
+        "DevSecOps Specialist",
+        "Security Automation Engineer",
+        "CI/CD Security Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "DevSecOps",
+          "weight": 0.9
+        },
+        {
+          "skill": "CI/CD",
+          "weight": 0.6
+        },
+        {
+          "skill": "Docker",
+          "weight": 0.4
+        },
+        {
+          "skill": "Kubernetes",
+          "weight": 0.4
+        },
+        {
+          "skill": "SAST",
+          "weight": 0.4
+        },
+        {
+          "skill": "Snyk",
+          "weight": 0.3
+        },
+        {
+          "skill": "Terraform",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Release Engineer",
+      "category": "DevOps/Cloud",
+      "synonyms": [
+        "Build Engineer",
+        "Build and Release Engineer",
+        "Release Manager (Engineering)",
+        "Build & Release Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "CI/CD",
+          "weight": 0.8
+        },
+        {
+          "skill": "Jenkins",
+          "weight": 0.5
+        },
+        {
+          "skill": "Git",
+          "weight": 0.5
+        },
+        {
+          "skill": "Gradle",
+          "weight": 0.3
+        },
+        {
+          "skill": "Maven",
+          "weight": 0.3
+        },
+        {
+          "skill": "Release Management",
+          "weight": 0.3
+        },
+        {
+          "skill": "Bash",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Linux Administrator",
+      "category": "DevOps/Cloud",
+      "synonyms": [
+        "Linux System Administrator",
+        "Linux Engineer",
+        "Unix Administrator",
+        "Linux Sysadmin",
+        "Администратор Linux",
+        "Administrador Linux"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Linux",
+          "weight": 1.0
+        },
+        {
+          "skill": "Bash",
+          "weight": 0.6
+        },
+        {
+          "skill": "Ansible",
+          "weight": 0.4
+        },
+        {
+          "skill": "Red Hat",
+          "weight": 0.4
+        },
+        {
+          "skill": "Nginx",
+          "weight": 0.3
+        },
+        {
+          "skill": "systemd",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Windows System Administrator",
+      "category": "DevOps/Cloud",
+      "synonyms": [
+        "Windows Administrator",
+        "Windows Systems Engineer",
+        "Microsoft Systems Administrator"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Windows Server",
+          "weight": 0.9
+        },
+        {
+          "skill": "Active Directory",
+          "weight": 0.8
+        },
+        {
+          "skill": "PowerShell",
+          "weight": 0.6
+        },
+        {
+          "skill": "Microsoft 365",
+          "weight": 0.4
+        },
+        {
+          "skill": "Intune",
+          "weight": 0.3
+        },
+        {
+          "skill": "VMware",
+          "weight": 0.25
+        }
+      ]
+    },
+    {
+      "canonical_name": "VMware Administrator",
+      "category": "DevOps/Cloud",
+      "synonyms": [
+        "Virtualization Engineer",
+        "VMware Engineer",
+        "Virtualization Administrator"
+      ],
+      "signature_skills": [
+        {
+          "skill": "VMware",
+          "weight": 1.0
+        },
+        {
+          "skill": "Linux",
+          "weight": 0.3
+        },
+        {
+          "skill": "Windows Server",
+          "weight": 0.3
+        },
+        {
+          "skill": "Hyper-V",
+          "weight": 0.3
+        },
+        {
+          "skill": "Proxmox",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Observability Engineer",
+      "category": "DevOps/Cloud",
+      "synonyms": [
+        "Monitoring Engineer",
+        "Observability Specialist"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Prometheus",
+          "weight": 0.6
+        },
+        {
+          "skill": "Grafana",
+          "weight": 0.6
+        },
+        {
+          "skill": "OpenTelemetry",
+          "weight": 0.5
+        },
+        {
+          "skill": "Datadog",
+          "weight": 0.4
+        },
+        {
+          "skill": "Kibana",
+          "weight": 0.35
+        },
+        {
+          "skill": "Jaeger",
+          "weight": 0.25
+        },
+        {
+          "skill": "SLO/SLI",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Systems Engineer",
+      "category": "DevOps/Cloud",
+      "synonyms": [
+        "Infrastructure Specialist",
+        "Systems Specialist",
+        "IT Systems Engineer",
+        "Sistem mühəndisi",
+        "Системный инженер",
+        "Ingeniero de Sistemas"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Linux",
+          "weight": 0.6
+        },
+        {
+          "skill": "Windows Server",
+          "weight": 0.4
+        },
+        {
+          "skill": "VMware",
+          "weight": 0.3
+        },
+        {
+          "skill": "Ansible",
+          "weight": 0.3
+        },
+        {
+          "skill": "PowerShell",
+          "weight": 0.3
+        },
+        {
+          "skill": "Bash",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Production Engineer",
+      "category": "DevOps/Cloud",
+      "synonyms": [
+        "Technical Operations Engineer",
+        "TechOps Engineer",
+        "Operations Engineer (Infrastructure)"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Linux",
+          "weight": 0.6
+        },
+        {
+          "skill": "Python",
+          "weight": 0.4
+        },
+        {
+          "skill": "Kubernetes",
+          "weight": 0.4
+        },
+        {
+          "skill": "Prometheus",
+          "weight": 0.3
+        },
+        {
+          "skill": "Bash",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Network Security Engineer",
+      "category": "Security",
+      "synonyms": [
+        "Network Security Specialist",
+        "Firewall Engineer",
+        "Network Security Administrator"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Network Security",
+          "weight": 0.9
+        },
+        {
+          "skill": "Firewall",
+          "weight": 0.6
+        },
+        {
+          "skill": "VPN",
+          "weight": 0.4
+        },
+        {
+          "skill": "Cisco",
+          "weight": 0.4
+        },
+        {
+          "skill": "IDS/IPS",
+          "weight": 0.3
+        },
+        {
+          "skill": "TCP/IP",
+          "weight": 0.4
+        }
+      ]
+    },
+    {
+      "canonical_name": "BI Developer",
+      "category": "Data/ML",
+      "synonyms": [
+        "Business Intelligence Developer",
+        "BI Engineer",
+        "Power BI Developer",
+        "Tableau Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Power BI",
+          "weight": 0.8
+        },
+        {
+          "skill": "Tableau",
+          "weight": 0.6
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.8
+        },
+        {
+          "skill": "Data Warehouse",
+          "weight": 0.4
+        },
+        {
+          "skill": "SSIS",
+          "weight": 0.3
+        },
+        {
+          "skill": "Data Modeling",
+          "weight": 0.4
+        },
+        {
+          "skill": "Excel",
+          "weight": 0.25
+        }
+      ]
+    },
+    {
+      "canonical_name": "BI Analyst",
+      "category": "Data/ML",
+      "synonyms": [
+        "Business Intelligence Analyst",
+        "Dashboard Analyst"
+      ],
+      "signature_skills": [
+        {
+          "skill": "SQL",
+          "weight": 0.8
+        },
+        {
+          "skill": "Power BI",
+          "weight": 0.6
+        },
+        {
+          "skill": "Tableau",
+          "weight": 0.5
+        },
+        {
+          "skill": "Excel",
+          "weight": 0.5
+        },
+        {
+          "skill": "Looker Studio",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Data Architect",
+      "category": "Data/ML",
+      "synonyms": [
+        "Data Platform Architect",
+        "Enterprise Data Architect"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Data Modeling",
+          "weight": 0.8
+        },
+        {
+          "skill": "Data Warehouse",
+          "weight": 0.6
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.6
+        },
+        {
+          "skill": "Snowflake",
+          "weight": 0.4
+        },
+        {
+          "skill": "Databricks",
+          "weight": 0.4
+        },
+        {
+          "skill": "Data Governance",
+          "weight": 0.4
+        },
+        {
+          "skill": "Spark",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Big Data Engineer",
+      "category": "Data/ML",
+      "synonyms": [
+        "Hadoop Engineer",
+        "Spark Engineer",
+        "Big Data Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Spark",
+          "weight": 0.9
+        },
+        {
+          "skill": "Hadoop",
+          "weight": 0.6
+        },
+        {
+          "skill": "Kafka",
+          "weight": 0.5
+        },
+        {
+          "skill": "Hive",
+          "weight": 0.4
+        },
+        {
+          "skill": "Python",
+          "weight": 0.4
+        },
+        {
+          "skill": "Scala",
+          "weight": 0.4
+        },
+        {
+          "skill": "Airflow",
+          "weight": 0.35
+        }
+      ]
+    },
+    {
+      "canonical_name": "ETL Developer",
+      "category": "Data/ML",
+      "synonyms": [
+        "Data Integration Engineer",
+        "Data Integration Developer",
+        "Informatica Developer",
+        "SSIS Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "ETL",
+          "weight": 0.9
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.9
+        },
+        {
+          "skill": "Informatica",
+          "weight": 0.5
+        },
+        {
+          "skill": "SSIS",
+          "weight": 0.4
+        },
+        {
+          "skill": "Airflow",
+          "weight": 0.3
+        },
+        {
+          "skill": "Data Warehouse",
+          "weight": 0.4
+        },
+        {
+          "skill": "Python",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Data Warehouse Engineer",
+      "category": "Data/ML",
+      "synonyms": [
+        "DWH Engineer",
+        "Data Warehouse Developer",
+        "Snowflake Engineer",
+        "Redshift Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Data Warehouse",
+          "weight": 0.9
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.8
+        },
+        {
+          "skill": "Snowflake",
+          "weight": 0.5
+        },
+        {
+          "skill": "dbt",
+          "weight": 0.4
+        },
+        {
+          "skill": "Data Modeling",
+          "weight": 0.5
+        },
+        {
+          "skill": "Airflow",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Research Scientist",
+      "category": "Data/ML",
+      "synonyms": [
+        "Machine Learning Researcher",
+        "AI Researcher",
+        "Research Engineer (ML)",
+        "Applied Research Scientist"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Python",
+          "weight": 0.7
+        },
+        {
+          "skill": "PyTorch",
+          "weight": 0.8
+        },
+        {
+          "skill": "Deep Learning",
+          "weight": 0.6
+        },
+        {
+          "skill": "Machine Learning",
+          "weight": 0.6
+        },
+        {
+          "skill": "JAX",
+          "weight": 0.25
+        },
+        {
+          "skill": "CUDA",
+          "weight": 0.25
+        }
+      ]
+    },
+    {
+      "canonical_name": "AI Engineer",
+      "category": "Data/ML",
+      "synonyms": [
+        "Artificial Intelligence Engineer",
+        "Applied AI Engineer",
+        "AI Software Engineer",
+        "Generative AI Developer",
+        "AI Developer",
+        "Ingeniero de IA"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Python",
+          "weight": 0.8
+        },
+        {
+          "skill": "LLM",
+          "weight": 0.6
+        },
+        {
+          "skill": "LangChain",
+          "weight": 0.5
+        },
+        {
+          "skill": "OpenAI",
+          "weight": 0.4
+        },
+        {
+          "skill": "RAG",
+          "weight": 0.45
+        },
+        {
+          "skill": "Vector Database",
+          "weight": 0.35
+        },
+        {
+          "skill": "Prompt Engineering",
+          "weight": 0.35
+        },
+        {
+          "skill": "Generative AI",
+          "weight": 0.4
+        }
+      ]
+    },
+    {
+      "canonical_name": "LLM Engineer",
+      "category": "Data/ML",
+      "synonyms": [
+        "Prompt Engineer",
+        "LLM Application Developer",
+        "LLMOps Engineer",
+        "Conversational AI Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "LLM",
+          "weight": 1.0
+        },
+        {
+          "skill": "Prompt Engineering",
+          "weight": 0.6
+        },
+        {
+          "skill": "RAG",
+          "weight": 0.6
+        },
+        {
+          "skill": "LangChain",
+          "weight": 0.5
+        },
+        {
+          "skill": "Fine-tuning",
+          "weight": 0.4
+        },
+        {
+          "skill": "Embeddings",
+          "weight": 0.4
+        },
+        {
+          "skill": "Python",
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "canonical_name": "AI Agent Engineer",
+      "category": "Data/ML",
+      "synonyms": [
+        "Agentic AI Engineer",
+        "Agent Developer",
+        "AI Agents Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "AI Agents",
+          "weight": 1.0
+        },
+        {
+          "skill": "LLM",
+          "weight": 0.7
+        },
+        {
+          "skill": "Python",
+          "weight": 0.6
+        },
+        {
+          "skill": "LangGraph",
+          "weight": 0.5
+        },
+        {
+          "skill": "Model Context Protocol",
+          "weight": 0.35
+        },
+        {
+          "skill": "RAG",
+          "weight": 0.35
+        },
+        {
+          "skill": "OpenAI",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "NLP Engineer",
+      "category": "Data/ML",
+      "synonyms": [
+        "Natural Language Processing Engineer",
+        "NLP Scientist",
+        "Computational Linguist"
+      ],
+      "signature_skills": [
+        {
+          "skill": "NLP",
+          "weight": 1.0
+        },
+        {
+          "skill": "Python",
+          "weight": 0.7
+        },
+        {
+          "skill": "spaCy",
+          "weight": 0.5
+        },
+        {
+          "skill": "Hugging Face",
+          "weight": 0.5
+        },
+        {
+          "skill": "BERT",
+          "weight": 0.4
+        },
+        {
+          "skill": "PyTorch",
+          "weight": 0.4
+        }
+      ]
+    },
+    {
+      "canonical_name": "Computer Vision Engineer",
+      "category": "Data/ML",
+      "synonyms": [
+        "CV Engineer",
+        "Vision Engineer",
+        "Image Processing Engineer",
+        "Perception Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Computer Vision",
+          "weight": 1.0
+        },
+        {
+          "skill": "OpenCV",
+          "weight": 0.6
+        },
+        {
+          "skill": "PyTorch",
+          "weight": 0.6
+        },
+        {
+          "skill": "Python",
+          "weight": 0.6
+        },
+        {
+          "skill": "C++",
+          "weight": 0.3
+        },
+        {
+          "skill": "CUDA",
+          "weight": 0.3
+        },
+        {
+          "skill": "ONNX",
+          "weight": 0.25
+        }
+      ]
+    },
+    {
+      "canonical_name": "Deep Learning Engineer",
+      "category": "Data/ML",
+      "synonyms": [
+        "Neural Network Engineer",
+        "DL Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Deep Learning",
+          "weight": 0.9
+        },
+        {
+          "skill": "PyTorch",
+          "weight": 0.7
+        },
+        {
+          "skill": "TensorFlow",
+          "weight": 0.6
+        },
+        {
+          "skill": "Python",
+          "weight": 0.6
+        },
+        {
+          "skill": "CUDA",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Recommender Systems Engineer",
+      "category": "Data/ML",
+      "synonyms": [
+        "Recommendation Engineer",
+        "Ranking Engineer",
+        "Search and Recommendations Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Recommender Systems",
+          "weight": 1.0
+        },
+        {
+          "skill": "Python",
+          "weight": 0.6
+        },
+        {
+          "skill": "Machine Learning",
+          "weight": 0.5
+        },
+        {
+          "skill": "Spark",
+          "weight": 0.3
+        },
+        {
+          "skill": "Embeddings",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Speech / Audio ML Engineer",
+      "category": "Data/ML",
+      "synonyms": [
+        "Speech Recognition Engineer",
+        "ASR Engineer",
+        "Voice AI Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Speech Recognition",
+          "weight": 1.0
+        },
+        {
+          "skill": "PyTorch",
+          "weight": 0.6
+        },
+        {
+          "skill": "Python",
+          "weight": 0.6
+        },
+        {
+          "skill": "Deep Learning",
+          "weight": 0.4
+        }
+      ]
+    },
+    {
+      "canonical_name": "Data Governance Analyst",
+      "category": "Data/ML",
+      "synonyms": [
+        "Data Quality Analyst",
+        "Data Steward",
+        "Data Quality Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Data Governance",
+          "weight": 1.0
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.6
+        },
+        {
+          "skill": "Data Modeling",
+          "weight": 0.3
+        },
+        {
+          "skill": "Great Expectations",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Product Analyst",
+      "category": "Data/ML",
+      "synonyms": [
+        "Growth Analyst",
+        "Marketing Analyst (Data)",
+        "Product Data Analyst",
+        "Analytics Specialist"
+      ],
+      "signature_skills": [
+        {
+          "skill": "SQL",
+          "weight": 0.8
+        },
+        {
+          "skill": "A/B Testing",
+          "weight": 0.6
+        },
+        {
+          "skill": "Product Analytics",
+          "weight": 0.5
+        },
+        {
+          "skill": "Mixpanel",
+          "weight": 0.4
+        },
+        {
+          "skill": "Google Analytics",
+          "weight": 0.4
+        },
+        {
+          "skill": "Python",
+          "weight": 0.3
+        },
+        {
+          "skill": "Excel",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Systems Analyst",
+      "category": "Data/ML",
+      "synonyms": [
+        "IT Analyst",
+        "Technical Analyst",
+        "Functional Analyst"
+      ],
+      "signature_skills": [
+        {
+          "skill": "SQL",
+          "weight": 0.6
+        },
+        {
+          "skill": "Business Analysis",
+          "weight": 0.6
+        },
+        {
+          "skill": "REST API",
+          "weight": 0.3
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.3
+        },
+        {
+          "skill": "Confluence",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "QA Engineer",
+      "category": "QA",
+      "synonyms": [
+        "Quality Assurance Engineer",
+        "Test mühəndisi",
+        "Tester",
+        "Тестировщик",
+        "Инженер по тестированию",
+        "QA инженер",
+        "Analista QA",
+        "Ingeniero QA",
+        "Probador de Software"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Test Cases",
+          "weight": 0.7
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.4
+        },
+        {
+          "skill": "Postman",
+          "weight": 0.4
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.3
+        },
+        {
+          "skill": "Manual Testing",
+          "weight": 0.5
+        },
+        {
+          "skill": "API Testing",
+          "weight": 0.35
+        },
+        {
+          "skill": "TestRail",
+          "weight": 0.25
+        }
+      ]
+    },
+    {
+      "canonical_name": "Performance Test Engineer",
+      "category": "QA",
+      "synonyms": [
+        "Performance Engineer",
+        "Load Test Engineer",
+        "Performance Tester",
+        "Load Testing Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "JMeter",
+          "weight": 0.8
+        },
+        {
+          "skill": "Gatling",
+          "weight": 0.5
+        },
+        {
+          "skill": "k6",
+          "weight": 0.5
+        },
+        {
+          "skill": "Performance Testing",
+          "weight": 0.7
+        },
+        {
+          "skill": "Grafana",
+          "weight": 0.3
+        },
+        {
+          "skill": "Locust",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "QA Lead",
+      "category": "QA",
+      "synonyms": [
+        "Test Lead",
+        "QA Team Lead",
+        "QA Manager",
+        "Test Manager",
+        "Head of QA"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Test Automation",
+          "weight": 0.5
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.5
+        },
+        {
+          "skill": "TestRail",
+          "weight": 0.4
+        },
+        {
+          "skill": "Test Cases",
+          "weight": 0.4
+        },
+        {
+          "skill": "Selenium",
+          "weight": 0.3
+        },
+        {
+          "skill": "CI/CD",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Mobile QA Engineer",
+      "category": "QA",
+      "synonyms": [
+        "Mobile Tester",
+        "Mobile Test Automation Engineer",
+        "iOS QA Engineer",
+        "Android QA Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Appium",
+          "weight": 0.8
+        },
+        {
+          "skill": "Mobile Testing",
+          "weight": 0.6
+        },
+        {
+          "skill": "Postman",
+          "weight": 0.3
+        },
+        {
+          "skill": "BrowserStack",
+          "weight": 0.3
+        },
+        {
+          "skill": "Detox",
+          "weight": 0.25
+        }
+      ]
+    },
+    {
+      "canonical_name": "Game QA Tester",
+      "category": "QA",
+      "synonyms": [
+        "Games Tester",
+        "Video Game QA",
+        "Game Tester"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Jira",
+          "weight": 0.5
+        },
+        {
+          "skill": "Test Cases",
+          "weight": 0.5
+        },
+        {
+          "skill": "Unity",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Test Automation Architect",
+      "category": "QA",
+      "synonyms": [
+        "Automation Architect",
+        "QA Architect",
+        "Principal SDET"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Test Automation",
+          "weight": 0.8
+        },
+        {
+          "skill": "Selenium",
+          "weight": 0.5
+        },
+        {
+          "skill": "Playwright",
+          "weight": 0.5
+        },
+        {
+          "skill": "CI/CD",
+          "weight": 0.5
+        },
+        {
+          "skill": "Java",
+          "weight": 0.3
+        },
+        {
+          "skill": "Python",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Accessibility Tester",
+      "category": "QA",
+      "synonyms": [
+        "A11y Tester",
+        "Accessibility QA"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Accessibility Testing",
+          "weight": 1.0
+        },
+        {
+          "skill": "WCAG",
+          "weight": 0.8
+        }
+      ]
+    },
+    {
+      "canonical_name": "Penetration Tester",
+      "category": "Security",
+      "synonyms": [
+        "Pentester",
+        "Ethical Hacker",
+        "Offensive Security Engineer",
+        "Offensive Security Specialist",
+        "Sızma testi mühəndisi",
+        "Пентестер",
+        "Специалист по тестированию на проникновение",
+        "Pentester Senior"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Penetration Testing",
+          "weight": 1.0
+        },
+        {
+          "skill": "Burp Suite",
+          "weight": 0.6
+        },
+        {
+          "skill": "Metasploit",
+          "weight": 0.5
+        },
+        {
+          "skill": "Nmap",
+          "weight": 0.4
+        },
+        {
+          "skill": "Kali Linux",
+          "weight": 0.4
+        },
+        {
+          "skill": "OWASP",
+          "weight": 0.5
+        },
+        {
+          "skill": "Python",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Red Team Operator",
+      "category": "Security",
+      "synonyms": [
+        "Red Team Engineer",
+        "Adversary Simulation Specialist"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Red Team",
+          "weight": 1.0
+        },
+        {
+          "skill": "Penetration Testing",
+          "weight": 0.6
+        },
+        {
+          "skill": "MITRE ATT&CK",
+          "weight": 0.4
+        },
+        {
+          "skill": "Python",
+          "weight": 0.3
+        },
+        {
+          "skill": "PowerShell",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Cloud Security Engineer",
+      "category": "Security",
+      "synonyms": [
+        "Cloud Security Specialist",
+        "Cloud Security Architect",
+        "AWS Security Engineer",
+        "Azure Security Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Cloud Security",
+          "weight": 1.0
+        },
+        {
+          "skill": "AWS",
+          "weight": 0.5
+        },
+        {
+          "skill": "Azure",
+          "weight": 0.4
+        },
+        {
+          "skill": "IAM",
+          "weight": 0.5
+        },
+        {
+          "skill": "Terraform",
+          "weight": 0.3
+        },
+        {
+          "skill": "Kubernetes",
+          "weight": 0.3
+        },
+        {
+          "skill": "Container Security",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Security Analyst",
+      "category": "Security",
+      "synonyms": [
+        "Information Security Analyst",
+        "Cyber Security Analyst",
+        "Cybersecurity Analyst",
+        "InfoSec Analyst",
+        "Analista de Seguridad",
+        "Analista de Ciberseguridad",
+        "Аналитик информационной безопасности",
+        "İnformasiya təhlükəsizliyi analitiki"
+      ],
+      "signature_skills": [
+        {
+          "skill": "SIEM",
+          "weight": 0.6
+        },
+        {
+          "skill": "Incident Response",
+          "weight": 0.5
+        },
+        {
+          "skill": "Vulnerability Management",
+          "weight": 0.4
+        },
+        {
+          "skill": "Splunk",
+          "weight": 0.3
+        },
+        {
+          "skill": "MITRE ATT&CK",
+          "weight": 0.3
+        },
+        {
+          "skill": "NIST",
+          "weight": 0.25
+        }
+      ]
+    },
+    {
+      "canonical_name": "Threat Intelligence Analyst",
+      "category": "Security",
+      "synonyms": [
+        "CTI Analyst",
+        "Cyber Threat Intelligence Analyst",
+        "Threat Hunter"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Threat Intelligence",
+          "weight": 1.0
+        },
+        {
+          "skill": "Threat Hunting",
+          "weight": 0.5
+        },
+        {
+          "skill": "MITRE ATT&CK",
+          "weight": 0.5
+        },
+        {
+          "skill": "SIEM",
+          "weight": 0.3
+        },
+        {
+          "skill": "Python",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Incident Responder",
+      "category": "Security",
+      "synonyms": [
+        "DFIR Analyst",
+        "Digital Forensics Analyst",
+        "Incident Response Engineer",
+        "Forensic Analyst",
+        "CSIRT Analyst"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Incident Response",
+          "weight": 1.0
+        },
+        {
+          "skill": "Digital Forensics",
+          "weight": 0.7
+        },
+        {
+          "skill": "SIEM",
+          "weight": 0.4
+        },
+        {
+          "skill": "EDR",
+          "weight": 0.4
+        },
+        {
+          "skill": "Malware Analysis",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Malware Analyst",
+      "category": "Security",
+      "synonyms": [
+        "Reverse Engineer",
+        "Malware Reverse Engineer",
+        "Threat Researcher"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Malware Analysis",
+          "weight": 1.0
+        },
+        {
+          "skill": "Assembly",
+          "weight": 0.4
+        },
+        {
+          "skill": "Python",
+          "weight": 0.4
+        },
+        {
+          "skill": "C",
+          "weight": 0.3
+        },
+        {
+          "skill": "C++",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "GRC Analyst",
+      "category": "Security",
+      "synonyms": [
+        "Security Compliance Analyst",
+        "Compliance Engineer (Security)",
+        "Information Security Officer",
+        "ISMS Specialist",
+        "Risk and Compliance Analyst",
+        "IT Auditor"
+      ],
+      "signature_skills": [
+        {
+          "skill": "GRC",
+          "weight": 0.8
+        },
+        {
+          "skill": "ISO 27001",
+          "weight": 0.7
+        },
+        {
+          "skill": "Risk Assessment",
+          "weight": 0.6
+        },
+        {
+          "skill": "SOC 2",
+          "weight": 0.5
+        },
+        {
+          "skill": "GDPR",
+          "weight": 0.4
+        },
+        {
+          "skill": "NIST",
+          "weight": 0.4
+        },
+        {
+          "skill": "PCI DSS",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "IAM Engineer",
+      "category": "Security",
+      "synonyms": [
+        "Identity and Access Management Engineer",
+        "Identity Engineer",
+        "IAM Analyst",
+        "IAM Specialist"
+      ],
+      "signature_skills": [
+        {
+          "skill": "IAM",
+          "weight": 1.0
+        },
+        {
+          "skill": "Okta",
+          "weight": 0.5
+        },
+        {
+          "skill": "Microsoft Entra ID",
+          "weight": 0.5
+        },
+        {
+          "skill": "SSO",
+          "weight": 0.5
+        },
+        {
+          "skill": "SAML",
+          "weight": 0.4
+        },
+        {
+          "skill": "OAuth",
+          "weight": 0.4
+        },
+        {
+          "skill": "Active Directory",
+          "weight": 0.4
+        },
+        {
+          "skill": "MFA",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Security Architect",
+      "category": "Security",
+      "synonyms": [
+        "Cybersecurity Architect",
+        "Enterprise Security Architect",
+        "Information Security Architect"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Zero Trust",
+          "weight": 0.5
+        },
+        {
+          "skill": "Threat Modeling",
+          "weight": 0.6
+        },
+        {
+          "skill": "Cloud Security",
+          "weight": 0.5
+        },
+        {
+          "skill": "IAM",
+          "weight": 0.4
+        },
+        {
+          "skill": "NIST",
+          "weight": 0.4
+        },
+        {
+          "skill": "Network Security",
+          "weight": 0.4
+        }
+      ]
+    },
+    {
+      "canonical_name": "Vulnerability Management Analyst",
+      "category": "Security",
+      "synonyms": [
+        "Vulnerability Analyst",
+        "Vulnerability Management Engineer",
+        "Vulnerability Assessment Specialist"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Vulnerability Management",
+          "weight": 1.0
+        },
+        {
+          "skill": "Nessus",
+          "weight": 0.6
+        },
+        {
+          "skill": "CIS Benchmarks",
+          "weight": 0.3
+        },
+        {
+          "skill": "SIEM",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Smart Contract Auditor",
+      "category": "Security",
+      "synonyms": [
+        "Web3 Security Researcher",
+        "Blockchain Security Engineer",
+        "Smart Contract Security Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Smart Contract Auditing",
+          "weight": 1.0
+        },
+        {
+          "skill": "Solidity",
+          "weight": 0.8
+        },
+        {
+          "skill": "Foundry",
+          "weight": 0.4
+        },
+        {
+          "skill": "Hardhat",
+          "weight": 0.3
+        },
+        {
+          "skill": "Ethereum",
+          "weight": 0.4
+        }
+      ]
+    },
+    {
+      "canonical_name": "Security Operations Engineer",
+      "category": "Security",
+      "synonyms": [
+        "SecOps Engineer",
+        "Detection Engineer",
+        "SIEM Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "SIEM",
+          "weight": 0.8
+        },
+        {
+          "skill": "Splunk",
+          "weight": 0.4
+        },
+        {
+          "skill": "Microsoft Sentinel",
+          "weight": 0.4
+        },
+        {
+          "skill": "SOAR",
+          "weight": 0.4
+        },
+        {
+          "skill": "Python",
+          "weight": 0.3
+        },
+        {
+          "skill": "EDR",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "UX Designer",
+      "category": "Design/UX",
+      "synonyms": [
+        "UX Specialist",
+        "UX Dizayner",
+        "UX-дизайнер",
+        "Diseñador UX"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Figma",
+          "weight": 0.8
+        },
+        {
+          "skill": "Wireframing",
+          "weight": 0.5
+        },
+        {
+          "skill": "Prototyping",
+          "weight": 0.5
+        },
+        {
+          "skill": "User Research",
+          "weight": 0.5
+        },
+        {
+          "skill": "Information Architecture",
+          "weight": 0.3
+        },
+        {
+          "skill": "Design Systems",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "UI Designer",
+      "category": "Design/UX",
+      "synonyms": [
+        "User Interface Designer",
+        "Visual UI Designer",
+        "UI Dizayner",
+        "UI-дизайнер",
+        "Diseñador UI",
+        "Web UI Designer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Figma",
+          "weight": 0.9
+        },
+        {
+          "skill": "Visual Design",
+          "weight": 0.5
+        },
+        {
+          "skill": "Design Systems",
+          "weight": 0.4
+        },
+        {
+          "skill": "Sketch",
+          "weight": 0.25
+        },
+        {
+          "skill": "Adobe XD",
+          "weight": 0.25
+        },
+        {
+          "skill": "Photoshop",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "UX Researcher",
+      "category": "Design/UX",
+      "synonyms": [
+        "User Researcher",
+        "Design Researcher",
+        "Usability Researcher",
+        "UX Research Lead"
+      ],
+      "signature_skills": [
+        {
+          "skill": "User Research",
+          "weight": 1.0
+        },
+        {
+          "skill": "A/B Testing",
+          "weight": 0.3
+        },
+        {
+          "skill": "Figma",
+          "weight": 0.2
+        },
+        {
+          "skill": "Excel",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Design Systems Designer",
+      "category": "Design/UX",
+      "synonyms": [
+        "Design System Designer",
+        "Design Systems Lead",
+        "Design Ops Specialist"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Design Systems",
+          "weight": 1.0
+        },
+        {
+          "skill": "Figma",
+          "weight": 0.8
+        },
+        {
+          "skill": "Storybook",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Motion Designer",
+      "category": "Design/UX",
+      "synonyms": [
+        "Motion Graphics Designer",
+        "Animation Designer",
+        "Lottie Animator"
+      ],
+      "signature_skills": [
+        {
+          "skill": "After Effects",
+          "weight": 0.8
+        },
+        {
+          "skill": "Figma",
+          "weight": 0.3
+        },
+        {
+          "skill": "Motion Design",
+          "weight": 0.6
+        }
+      ]
+    },
+    {
+      "canonical_name": "Visual Designer",
+      "category": "Design/UX",
+      "synonyms": [
+        "Graphic Designer (Digital)",
+        "Brand Designer",
+        "Digital Designer",
+        "Web Designer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Visual Design",
+          "weight": 0.6
+        },
+        {
+          "skill": "Figma",
+          "weight": 0.6
+        },
+        {
+          "skill": "Photoshop",
+          "weight": 0.5
+        },
+        {
+          "skill": "Adobe Illustrator",
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "canonical_name": "Game Designer",
+      "category": "Design/UX",
+      "synonyms": [
+        "Gameplay Designer",
+        "Level Designer",
+        "Systems Designer (Games)",
+        "Game Design Lead"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Unity",
+          "weight": 0.4
+        },
+        {
+          "skill": "Unreal Engine",
+          "weight": 0.3
+        },
+        {
+          "skill": "Prototyping",
+          "weight": 0.3
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "UX Writer",
+      "category": "Design/UX",
+      "synonyms": [
+        "Content Designer",
+        "Conversation Designer",
+        "Product Content Designer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "UX Writing",
+          "weight": 1.0
+        },
+        {
+          "skill": "Figma",
+          "weight": 0.4
+        }
+      ]
+    },
+    {
+      "canonical_name": "Technical Product Manager",
+      "category": "Product",
+      "synonyms": [
+        "TPM (Product)",
+        "Platform Product Manager",
+        "API Product Manager"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Jira",
+          "weight": 0.4
+        },
+        {
+          "skill": "REST API",
+          "weight": 0.4
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.3
+        },
+        {
+          "skill": "Product Roadmap",
+          "weight": 0.4
+        },
+        {
+          "skill": "User Stories",
+          "weight": 0.4
+        }
+      ]
+    },
+    {
+      "canonical_name": "Technical Program Manager",
+      "category": "Product",
+      "synonyms": [
+        "TPM",
+        "Technical Programme Manager",
+        "Engineering Program Manager"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Jira",
+          "weight": 0.5
+        },
+        {
+          "skill": "Agile",
+          "weight": 0.4
+        },
+        {
+          "skill": "Stakeholder Management",
+          "weight": 0.4
+        },
+        {
+          "skill": "Release Management",
+          "weight": 0.3
+        },
+        {
+          "skill": "OKRs",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Delivery Manager",
+      "category": "Product",
+      "synonyms": [
+        "IT Delivery Manager",
+        "Software Delivery Manager",
+        "Delivery Lead",
+        "Agile Delivery Manager"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Agile",
+          "weight": 0.7
+        },
+        {
+          "skill": "Scrum",
+          "weight": 0.5
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.5
+        },
+        {
+          "skill": "Stakeholder Management",
+          "weight": 0.4
+        },
+        {
+          "skill": "Release Management",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Technical Project Manager",
+      "category": "Product",
+      "synonyms": [
+        "Software Project Manager",
+        "Layihə meneceri",
+        "IT layihə meneceri",
+        "Менеджер проектов",
+        "Руководитель проектов",
+        "IT проект-менеджер",
+        "Jefe de Proyecto",
+        "Gerente de Proyectos TI"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Jira",
+          "weight": 0.6
+        },
+        {
+          "skill": "Agile",
+          "weight": 0.5
+        },
+        {
+          "skill": "Scrum",
+          "weight": 0.4
+        },
+        {
+          "skill": "MS Project",
+          "weight": 0.3
+        },
+        {
+          "skill": "PMP",
+          "weight": 0.3
+        },
+        {
+          "skill": "Stakeholder Management",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Business Analyst",
+      "category": "Product",
+      "synonyms": [
+        "IT Business Analyst",
+        "Biznes analitik",
+        "Бизнес-аналитик",
+        "Системный аналитик",
+        "Analista de Negocio",
+        "Requirements Analyst",
+        "BA"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Business Analysis",
+          "weight": 0.8
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.4
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.4
+        },
+        {
+          "skill": "Confluence",
+          "weight": 0.3
+        },
+        {
+          "skill": "User Stories",
+          "weight": 0.4
+        },
+        {
+          "skill": "Excel",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Agile Coach",
+      "category": "Product",
+      "synonyms": [
+        "Agile Delivery Coach",
+        "Enterprise Agile Coach",
+        "Agile Transformation Lead"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Agile",
+          "weight": 1.0
+        },
+        {
+          "skill": "Scrum",
+          "weight": 0.7
+        },
+        {
+          "skill": "Kanban",
+          "weight": 0.5
+        },
+        {
+          "skill": "SAFe",
+          "weight": 0.3
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Engineering Manager",
+      "category": "Product",
+      "synonyms": [
+        "Software Engineering Manager",
+        "Development Manager",
+        "Head of Engineering",
+        "Director of Engineering",
+        "VP of Engineering",
+        "Team Lead (Engineering)",
+        "Tech Lead",
+        "Technical Lead",
+        "Texniki rəhbər",
+        "Тимлид",
+        "Руководитель разработки",
+        "Líder Técnico",
+        "Gerente de Ingeniería"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Technical Leadership",
+          "weight": 0.9
+        },
+        {
+          "skill": "Agile",
+          "weight": 0.4
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.3
+        },
+        {
+          "skill": "System Design",
+          "weight": 0.4
+        },
+        {
+          "skill": "Code Review",
+          "weight": 0.4
+        },
+        {
+          "skill": "Git",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "CTO",
+      "category": "Product",
+      "synonyms": [
+        "Chief Technology Officer",
+        "Head of Technology",
+        "VP of Technology",
+        "Technical Director",
+        "Texniki direktor",
+        "Технический директор"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Technical Leadership",
+          "weight": 0.8
+        },
+        {
+          "skill": "System Design",
+          "weight": 0.5
+        },
+        {
+          "skill": "AWS",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Release Manager",
+      "category": "Product",
+      "synonyms": [
+        "Release Coordinator",
+        "Release Train Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Release Management",
+          "weight": 1.0
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.4
+        },
+        {
+          "skill": "CI/CD",
+          "weight": 0.4
+        },
+        {
+          "skill": "Agile",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Technical Support Engineer",
+      "category": "IT Support",
+      "synonyms": [
+        "Technical Support Specialist",
+        "Application Support Engineer",
+        "L3 Support Engineer",
+        "Tier 2 Support Engineer",
+        "Texniki dəstək mütəxəssisi",
+        "Инженер технической поддержки",
+        "Специалист технической поддержки",
+        "Ingeniero de Soporte Técnico",
+        "Soporte Técnico"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Technical Support",
+          "weight": 0.7
+        },
+        {
+          "skill": "Troubleshooting",
+          "weight": 0.6
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.4
+        },
+        {
+          "skill": "Linux",
+          "weight": 0.3
+        },
+        {
+          "skill": "REST API",
+          "weight": 0.3
+        },
+        {
+          "skill": "Zendesk",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Service Desk Analyst",
+      "category": "IT Support",
+      "synonyms": [
+        "Helpdesk Technician",
+        "Help Desk Analyst",
+        "IT Helpdesk Specialist",
+        "Service Desk Engineer",
+        "L1 Support",
+        "Tier 1 Support",
+        "Desktop Support Technician",
+        "Soporte IT",
+        "Техник поддержки"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Technical Support",
+          "weight": 0.6
+        },
+        {
+          "skill": "Windows",
+          "weight": 0.5
+        },
+        {
+          "skill": "Active Directory",
+          "weight": 0.5
+        },
+        {
+          "skill": "Microsoft 365",
+          "weight": 0.4
+        },
+        {
+          "skill": "ITIL",
+          "weight": 0.3
+        },
+        {
+          "skill": "ServiceNow",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "IT Administrator",
+      "category": "IT Support",
+      "synonyms": [
+        "IT Specialist",
+        "IT Officer",
+        "Network and Systems Administrator",
+        "IT mütəxəssisi",
+        "IT администратор",
+        "Администратор IT",
+        "Administrador de TI"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Windows",
+          "weight": 0.5
+        },
+        {
+          "skill": "Active Directory",
+          "weight": 0.5
+        },
+        {
+          "skill": "Microsoft 365",
+          "weight": 0.5
+        },
+        {
+          "skill": "Linux",
+          "weight": 0.3
+        },
+        {
+          "skill": "Cisco",
+          "weight": 0.3
+        },
+        {
+          "skill": "VMware",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Sales Engineer",
+      "category": "Other tech",
+      "synonyms": [
+        "Pre-sales Engineer",
+        "Presales Engineer",
+        "Solutions Consultant",
+        "Technical Sales Engineer",
+        "Pre-sales Consultant",
+        "Ingeniero Preventa",
+        "Pre-sales Solutions Architect"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Pre-sales",
+          "weight": 0.8
+        },
+        {
+          "skill": "Proof of Concept",
+          "weight": 0.5
+        },
+        {
+          "skill": "REST API",
+          "weight": 0.3
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.2
+        },
+        {
+          "skill": "Salesforce",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Solutions Engineer",
+      "category": "Other tech",
+      "synonyms": [
+        "Solution Engineer",
+        "Customer Solutions Engineer",
+        "Integration Solutions Engineer",
+        "Field Engineer (Software)",
+        "Implementation Engineer",
+        "Solutions Consultant (Technical)"
+      ],
+      "signature_skills": [
+        {
+          "skill": "REST API",
+          "weight": 0.6
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.5
+        },
+        {
+          "skill": "Troubleshooting",
+          "weight": 0.4
+        },
+        {
+          "skill": "Proof of Concept",
+          "weight": 0.4
+        },
+        {
+          "skill": "Python",
+          "weight": 0.3
+        },
+        {
+          "skill": "JavaScript",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Technical Account Manager",
+      "category": "Other tech",
+      "synonyms": [
+        "TAM",
+        "Technical Customer Success Manager",
+        "Technical CSM"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Customer Onboarding",
+          "weight": 0.6
+        },
+        {
+          "skill": "Troubleshooting",
+          "weight": 0.4
+        },
+        {
+          "skill": "Technical Support",
+          "weight": 0.4
+        },
+        {
+          "skill": "REST API",
+          "weight": 0.3
+        },
+        {
+          "skill": "Jira",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Salesforce Developer",
+      "category": "Other tech",
+      "synonyms": [
+        "Salesforce Engineer",
+        "Apex Developer",
+        "Salesforce Technical Consultant",
+        "Salesforce Administrator"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Salesforce",
+          "weight": 1.0
+        },
+        {
+          "skill": "Apex",
+          "weight": 0.7
+        },
+        {
+          "skill": "JavaScript",
+          "weight": 0.3
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.2
+        },
+        {
+          "skill": "REST API",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "SAP Consultant",
+      "category": "Other tech",
+      "synonyms": [
+        "SAP Developer",
+        "SAP ABAP Developer",
+        "ABAP Developer",
+        "SAP Functional Consultant",
+        "SAP Basis Administrator",
+        "SAP S/4HANA Consultant",
+        "SAP Analyst"
+      ],
+      "signature_skills": [
+        {
+          "skill": "SAP",
+          "weight": 1.0
+        },
+        {
+          "skill": "ABAP",
+          "weight": 0.7
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "ServiceNow Developer",
+      "category": "Other tech",
+      "synonyms": [
+        "ServiceNow Administrator",
+        "ServiceNow Engineer",
+        "ITSM Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "ServiceNow",
+          "weight": 1.0
+        },
+        {
+          "skill": "JavaScript",
+          "weight": 0.5
+        },
+        {
+          "skill": "ITIL",
+          "weight": 0.3
+        },
+        {
+          "skill": "REST API",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Dynamics 365 Developer",
+      "category": "Other tech",
+      "synonyms": [
+        "Dynamics CRM Developer",
+        "Microsoft Dynamics Consultant",
+        "D365 Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Dynamics 365",
+          "weight": 1.0
+        },
+        {
+          "skill": "C#",
+          "weight": 0.4
+        },
+        {
+          "skill": ".NET",
+          "weight": 0.3
+        },
+        {
+          "skill": "Power Apps",
+          "weight": 0.3
+        },
+        {
+          "skill": "SQL Server",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Low-Code Developer",
+      "category": "Other tech",
+      "synonyms": [
+        "OutSystems Developer",
+        "Mendix Developer",
+        "Power Platform Developer",
+        "Power Apps Developer",
+        "No-Code Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "OutSystems",
+          "weight": 0.6
+        },
+        {
+          "skill": "Mendix",
+          "weight": 0.5
+        },
+        {
+          "skill": "Power Apps",
+          "weight": 0.6
+        },
+        {
+          "skill": "Power Automate",
+          "weight": 0.4
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.3
+        },
+        {
+          "skill": "REST API",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "RPA Developer",
+      "category": "Other tech",
+      "synonyms": [
+        "UiPath Developer",
+        "Automation Developer (RPA)",
+        "RPA Engineer",
+        "Process Automation Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "UiPath",
+          "weight": 1.0
+        },
+        {
+          "skill": "SQL",
+          "weight": 0.3
+        },
+        {
+          "skill": "Excel",
+          "weight": 0.3
+        },
+        {
+          "skill": "Python",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Technical Writer",
+      "category": "Other tech",
+      "synonyms": [
+        "Documentation Engineer",
+        "API Technical Writer",
+        "Software Documentation Specialist",
+        "Texniki yazıçı",
+        "Технический писатель",
+        "Redactor Técnico",
+        "Escritor Técnico"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Technical Writing",
+          "weight": 1.0
+        },
+        {
+          "skill": "Markdown",
+          "weight": 0.5
+        },
+        {
+          "skill": "Docs as Code",
+          "weight": 0.4
+        },
+        {
+          "skill": "Git",
+          "weight": 0.3
+        },
+        {
+          "skill": "OpenAPI",
+          "weight": 0.25
+        },
+        {
+          "skill": "Confluence",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Developer Advocate",
+      "category": "Other tech",
+      "synonyms": [
+        "Developer Relations Engineer",
+        "DevRel Engineer",
+        "Developer Evangelist",
+        "Technical Evangelist"
+      ],
+      "signature_skills": [
+        {
+          "skill": "REST API",
+          "weight": 0.3
+        },
+        {
+          "skill": "Technical Writing",
+          "weight": 0.3
+        },
+        {
+          "skill": "JavaScript",
+          "weight": 0.2
+        },
+        {
+          "skill": "Python",
+          "weight": 0.2
+        },
+        {
+          "skill": "Git",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Solidity Developer",
+      "category": "Other tech",
+      "synonyms": [
+        "Smart Contract Engineer",
+        "Ethereum Developer",
+        "EVM Developer",
+        "Web3 Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Solidity",
+          "weight": 1.0
+        },
+        {
+          "skill": "Ethereum",
+          "weight": 0.6
+        },
+        {
+          "skill": "Hardhat",
+          "weight": 0.5
+        },
+        {
+          "skill": "Smart Contracts",
+          "weight": 0.6
+        },
+        {
+          "skill": "Web3.js",
+          "weight": 0.4
+        },
+        {
+          "skill": "TypeScript",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Solana / Rust Blockchain Developer",
+      "category": "Other tech",
+      "synonyms": [
+        "Solana Developer",
+        "Rust Blockchain Engineer",
+        "Substrate Developer",
+        "Blockchain Protocol Engineer",
+        "Blockchain Core Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Rust",
+          "weight": 0.8
+        },
+        {
+          "skill": "Solana",
+          "weight": 0.7
+        },
+        {
+          "skill": "Blockchain",
+          "weight": 0.5
+        },
+        {
+          "skill": "Cosmos SDK",
+          "weight": 0.3
+        },
+        {
+          "skill": "Smart Contracts",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Zero-Knowledge Engineer",
+      "category": "Other tech",
+      "synonyms": [
+        "ZK Engineer",
+        "Cryptography Engineer",
+        "ZK Protocol Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Zero-Knowledge Proofs",
+          "weight": 1.0
+        },
+        {
+          "skill": "Rust",
+          "weight": 0.5
+        },
+        {
+          "skill": "Cryptography",
+          "weight": 0.5
+        },
+        {
+          "skill": "Solidity",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Unity Developer",
+      "category": "Other tech",
+      "synonyms": [
+        "Unity 3D Developer",
+        "Unity Engineer",
+        "Unity C# Developer",
+        "Mobile Game Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Unity",
+          "weight": 1.0
+        },
+        {
+          "skill": "C#",
+          "weight": 0.8
+        },
+        {
+          "skill": "Git",
+          "weight": 0.2
+        },
+        {
+          "skill": "Photon",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Unreal Engine Developer",
+      "category": "Other tech",
+      "synonyms": [
+        "Unreal Engineer",
+        "UE5 Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Unreal Engine",
+          "weight": 1.0
+        },
+        {
+          "skill": "C++",
+          "weight": 0.8
+        },
+        {
+          "skill": "Perforce",
+          "weight": 0.3
+        },
+        {
+          "skill": "Game Engine",
+          "weight": 0.4
+        }
+      ]
+    },
+    {
+      "canonical_name": "Graphics Programmer",
+      "category": "Other tech",
+      "synonyms": [
+        "Rendering Engineer",
+        "Graphics Engineer",
+        "Game Engine Programmer",
+        "Engine Programmer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "C++",
+          "weight": 0.8
+        },
+        {
+          "skill": "OpenGL",
+          "weight": 0.8
+        },
+        {
+          "skill": "Shaders",
+          "weight": 0.6
+        },
+        {
+          "skill": "Game Engine",
+          "weight": 0.4
+        },
+        {
+          "skill": "CUDA",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Embedded Software Engineer",
+      "category": "Other tech",
+      "synonyms": [
+        "Embedded C Developer",
+        "Embedded C++ Developer",
+        "Firmware Developer",
+        "Ingeniero de Firmware",
+        "Встраиваемые системы инженер",
+        "Embedded proqramçı"
+      ],
+      "signature_skills": [
+        {
+          "skill": "C",
+          "weight": 0.9
+        },
+        {
+          "skill": "C++",
+          "weight": 0.6
+        },
+        {
+          "skill": "Firmware",
+          "weight": 0.7
+        },
+        {
+          "skill": "RTOS",
+          "weight": 0.5
+        },
+        {
+          "skill": "STM32",
+          "weight": 0.4
+        },
+        {
+          "skill": "I2C/SPI/UART",
+          "weight": 0.4
+        },
+        {
+          "skill": "AUTOSAR",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Embedded Linux Engineer",
+      "category": "Other tech",
+      "synonyms": [
+        "Linux Kernel Developer",
+        "Linux Driver Developer",
+        "BSP Engineer",
+        "Yocto Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "Embedded Linux",
+          "weight": 0.9
+        },
+        {
+          "skill": "Linux Kernel",
+          "weight": 0.7
+        },
+        {
+          "skill": "C",
+          "weight": 0.7
+        },
+        {
+          "skill": "Bash",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "FPGA Engineer",
+      "category": "Other tech",
+      "synonyms": [
+        "FPGA Developer",
+        "RTL Design Engineer",
+        "Digital Design Engineer",
+        "ASIC Verification Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "FPGA",
+          "weight": 1.0
+        },
+        {
+          "skill": "Verilog",
+          "weight": 0.6
+        },
+        {
+          "skill": "VHDL",
+          "weight": 0.6
+        },
+        {
+          "skill": "SystemVerilog",
+          "weight": 0.4
+        },
+        {
+          "skill": "Python",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "canonical_name": "Robotics Engineer",
+      "category": "Other tech",
+      "synonyms": [
+        "Robotics Software Engineer",
+        "ROS Developer",
+        "Autonomy Engineer",
+        "Robotics Developer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "ROS",
+          "weight": 0.9
+        },
+        {
+          "skill": "C++",
+          "weight": 0.6
+        },
+        {
+          "skill": "Python",
+          "weight": 0.6
+        },
+        {
+          "skill": "Linux",
+          "weight": 0.3
+        },
+        {
+          "skill": "Computer Vision",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "IoT Engineer",
+      "category": "Other tech",
+      "synonyms": [
+        "IoT Developer",
+        "Internet of Things Engineer",
+        "IIoT Engineer",
+        "IoT Solutions Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "IoT",
+          "weight": 0.9
+        },
+        {
+          "skill": "MQTT",
+          "weight": 0.6
+        },
+        {
+          "skill": "Bluetooth Low Energy",
+          "weight": 0.3
+        },
+        {
+          "skill": "Arduino",
+          "weight": 0.3
+        },
+        {
+          "skill": "AWS",
+          "weight": 0.3
+        },
+        {
+          "skill": "Python",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Automotive Software Engineer",
+      "category": "Other tech",
+      "synonyms": [
+        "AUTOSAR Engineer",
+        "Automotive Embedded Engineer",
+        "Vehicle Software Engineer"
+      ],
+      "signature_skills": [
+        {
+          "skill": "AUTOSAR",
+          "weight": 0.8
+        },
+        {
+          "skill": "C++",
+          "weight": 0.5
+        },
+        {
+          "skill": "C",
+          "weight": 0.5
+        },
+        {
+          "skill": "Simulink",
+          "weight": 0.3
+        },
+        {
+          "skill": "I2C/SPI/UART",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "canonical_name": "Software Architect",
+      "category": "Other tech",
+      "synonyms": [
+        "Solution Architect (Software)",
+        "Principal Engineer",
+        "Principal Software Engineer",
+        "Enterprise Architect",
+        "Chief Architect",
+        "Arquitecto de Software",
+        "Архитектор ПО",
+        "Proqram arxitekti"
+      ],
+      "signature_skills": [
+        {
+          "skill": "System Design",
+          "weight": 0.8
+        },
+        {
+          "skill": "Microservices",
+          "weight": 0.5
+        },
+        {
+          "skill": "Distributed Systems",
+          "weight": 0.4
+        },
+        {
+          "skill": "AWS",
+          "weight": 0.3
+        },
+        {
+          "skill": "Design Patterns",
+          "weight": 0.4
+        },
+        {
+          "skill": "Domain-Driven Design",
+          "weight": 0.3
         }
       ]
     }

@@ -1,13 +1,13 @@
 {
   "version": "1.0",
-  "generated_at": "2026-10-11T18:54:14Z",
+  "generated_at": "2026-10-11T19:05:37Z",
   "source": {
     "techstack_module": "worker/worker/techstack.py",
     "jobs_db": "worker/data/jobs.sqlite",
     "total_jobs": 449,
     "jobs_with_tech_stack": 374,
     "unique_skills_in_ads": 159,
-    "dictionary_size": 209
+    "dictionary_size": 709
   },
   "skills": [
     {
@@ -1592,6 +1592,339 @@
       "academy_course_ids": []
     },
     {
+      "canonical_name": ".NET MAUI",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "A/B Testing",
+      "synonyms": [
+        "a/b tests",
+        "ab testing"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "ABAP",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Accessibility Testing",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Active Directory",
+      "synonyms": [
+        "ad ds"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "ActiveMQ",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Actix",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Adobe Experience Manager",
+      "synonyms": [
+        "aem"
+      ],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Adobe Illustrator",
+      "synonyms": [
+        "illustrator"
+      ],
+      "category_hint": "design",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Adobe XD",
+      "synonyms": [
+        "xd"
+      ],
+      "category_hint": "design",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "After Effects",
+      "synonyms": [],
+      "category_hint": "design",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Agile",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "AI Agents",
+      "synonyms": [
+        "agentic",
+        "ai agent"
+      ],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "aiohttp",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Airbyte",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Akka",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Alembic",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Alibaba Cloud",
+      "synonyms": [
+        "aliyun"
+      ],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Allure",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Alpine.js",
+      "synonyms": [
+        "alpinejs"
+      ],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Amazon Athena",
+      "synonyms": [
+        "athena"
+      ],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Amazon Bedrock",
+      "synonyms": [
+        "bedrock"
+      ],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Amazon EC2",
+      "synonyms": [
+        "ec2"
+      ],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Amazon ECS",
+      "synonyms": [
+        "ecs",
+        "fargate"
+      ],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Amazon RDS",
+      "synonyms": [
+        "aurora",
+        "rds"
+      ],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Amazon S3",
+      "synonyms": [
+        "s3"
+      ],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Amazon SQS",
+      "synonyms": [
+        "sqs"
+      ],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Android Studio",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Angular Material",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Ant Design",
+      "synonyms": [
+        "antd"
+      ],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Anthropic",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Apache Camel",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Apache Druid",
+      "synonyms": [
+        "druid"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Apache Iceberg",
+      "synonyms": [
+        "iceberg"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Apache NiFi",
+      "synonyms": [
+        "nifi"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Apache Pulsar",
+      "synonyms": [
+        "pulsar"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Apex",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "API Gateway",
+      "synonyms": [],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "API Testing",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Apollo Client",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "App Store",
+      "synonyms": [
+        "google play"
+      ],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Application Security",
       "synonyms": [
         "appsec"
@@ -1605,9 +1938,199 @@
       ]
     },
     {
+      "canonical_name": "Arduino",
+      "synonyms": [],
+      "category_hint": "embedded",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "ARKit",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Assembly",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Astro",
       "synonyms": [],
       "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "asyncio",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Auth0",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "AUTOSAR",
+      "synonyms": [],
+      "category_hint": "embedded",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "AWS CDK",
+      "synonyms": [
+        "cdk"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "AWS Glue",
+      "synonyms": [
+        "glue"
+      ],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "AWS Lambda",
+      "synonyms": [
+        "lambda"
+      ],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "AWS Step Functions",
+      "synonyms": [
+        "step functions"
+      ],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Azure Data Factory",
+      "synonyms": [
+        "adf"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Azure DevOps",
+      "synonyms": [
+        "ado",
+        "azure pipelines"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Azure Functions",
+      "synonyms": [],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Azure ML",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Azure Service Bus",
+      "synonyms": [
+        "service bus"
+      ],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Azure Synapse",
+      "synonyms": [
+        "synapse"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Babel",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "BDD",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Beautiful Soup",
+      "synonyms": [
+        "beautifulsoup",
+        "bs4"
+      ],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "BentoML",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "BERT",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "BGP",
+      "synonyms": [
+        "ospf"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Bitbucket",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Bitcoin",
+      "synonyms": [],
+      "category_hint": "web3",
       "ad_count": 0,
       "academy_course_ids": []
     },
@@ -1622,9 +2145,141 @@
       ]
     },
     {
+      "canonical_name": "Blender",
+      "synonyms": [],
+      "category_hint": "gamedev",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "BLoC",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Blockchain",
+      "synonyms": [],
+      "category_hint": "web3",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Blue Team",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Bluetooth Low Energy",
+      "synonyms": [
+        "ble"
+      ],
+      "category_hint": "embedded",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "BrowserStack",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Burp Suite",
+      "synonyms": [
+        "burp"
+      ],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Business Analysis",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "CakePHP",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Capacitor",
       "synonyms": [],
       "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Chainlink",
+      "synonyms": [],
+      "category_hint": "web3",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Chakra UI",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Chaos Engineering",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Chef",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Cilium",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "CIS Benchmarks",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Cisco",
+      "synonyms": [
+        "mikrotik"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Citrix",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Clean Architecture",
+      "synonyms": [],
+      "category_hint": "concept",
       "ad_count": 0,
       "academy_course_ids": []
     },
@@ -1639,6 +2294,13 @@
       "academy_course_ids": []
     },
     {
+      "canonical_name": "Cloud Run",
+      "synonyms": [],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Cloud Security",
       "synonyms": [],
       "category_hint": "security",
@@ -1649,6 +2311,78 @@
       ]
     },
     {
+      "canonical_name": "CloudFront",
+      "synonyms": [],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "CloudWatch",
+      "synonyms": [],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "COBOL",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "CockroachDB",
+      "synonyms": [
+        "cockroach"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "CocoaPods",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Code Review",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "CodeIgniter",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "CoffeeScript",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Cognito",
+      "synonyms": [],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Confluence",
+      "synonyms": [],
+      "category_hint": "other",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Consul",
       "synonyms": [],
       "category_hint": "devops",
@@ -1656,6 +2390,78 @@
       "academy_course_ids": [
         "devops-engineer-az"
       ]
+    },
+    {
+      "canonical_name": "Container Security",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Contentful",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Core Data",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Cosmos DB",
+      "synonyms": [
+        "cosmosdb"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Cosmos SDK",
+      "synonyms": [],
+      "category_hint": "web3",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "CQRS",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Crossplane",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "CrowdStrike",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Cryptography",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Customer Onboarding",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
     },
     {
       "canonical_name": "D3.js",
@@ -1668,6 +2474,283 @@
       "academy_course_ids": []
     },
     {
+      "canonical_name": "Dagster",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Dapper",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Dask",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "DAST",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Data Governance",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Data Lake",
+      "synonyms": [
+        "data lakehouse"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Data Modeling",
+      "synonyms": [
+        "data modelling"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Data Pipelines",
+      "synonyms": [
+        "data pipeline"
+      ],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Data Visualization",
+      "synonyms": [
+        "data visualisation"
+      ],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Data Warehouse",
+      "synonyms": [
+        "data warehousing",
+        "dwh"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Dataflow",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Debezium",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Deep Learning",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "DeFi",
+      "synonyms": [],
+      "category_hint": "web3",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Delphi",
+      "synonyms": [
+        "object pascal"
+      ],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Delta Lake",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Deno",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Design Patterns",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Design Systems",
+      "synonyms": [
+        "design system"
+      ],
+      "category_hint": "design",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Design Thinking",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Detox",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "DevSecOps",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Digital Forensics",
+      "synonyms": [
+        "dfir"
+      ],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Distributed Systems",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Django REST Framework",
+      "synonyms": [
+        "drf"
+      ],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "DLP",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "DNS",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Docker Swarm",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Docs as Code",
+      "synonyms": [],
+      "category_hint": "other",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Domain-Driven Design",
+      "synonyms": [
+        "ddd"
+      ],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Dropwizard",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Drupal",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "DuckDB",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "DVC",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Dynamics 365",
+      "synonyms": [
+        "dynamics crm"
+      ],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Dynatrace",
+      "synonyms": [
+        "appdynamics"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "EDR",
       "synonyms": [],
       "category_hint": "security",
@@ -1676,6 +2759,29 @@
         "blue-team-analyst-az",
         "cybersecurity-az"
       ]
+    },
+    {
+      "canonical_name": "Electron",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Embedded Linux",
+      "synonyms": [],
+      "category_hint": "embedded",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Embeddings",
+      "synonyms": [
+        "embedding"
+      ],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
     },
     {
       "canonical_name": "Ember",
@@ -1696,6 +2802,67 @@
         "blue-team-analyst-az",
         "cybersecurity-az"
       ]
+    },
+    {
+      "canonical_name": "Envoy",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "esbuild",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "ESLint",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "ETL",
+      "synonyms": [
+        "elt"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Event-Driven Architecture",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Excel",
+      "synonyms": [
+        "microsoft excel",
+        "ms excel"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Exchange Online",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Expo",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
     },
     {
       "canonical_name": "Express",
@@ -1719,6 +2886,13 @@
       "academy_course_ids": []
     },
     {
+      "canonical_name": "FAISS",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Fastify",
       "synonyms": [],
       "category_hint": "backend",
@@ -1728,9 +2902,239 @@
       ]
     },
     {
+      "canonical_name": "Fastlane",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Feature Store",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Fine-tuning",
+      "synonyms": [
+        "finetuning"
+      ],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Firebase",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Firewall",
+      "synonyms": [
+        "firewalls"
+      ],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Firmware",
+      "synonyms": [],
+      "category_hint": "embedded",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Fluentd",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Flux CD",
+      "synonyms": [
+        "fluxcd"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Fortran",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Foundry",
+      "synonyms": [],
+      "category_hint": "web3",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "FPGA",
+      "synonyms": [],
+      "category_hint": "embedded",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Framer",
+      "synonyms": [],
+      "category_hint": "design",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Framer Motion",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Freshdesk",
+      "synonyms": [],
+      "category_hint": "other",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Game Engine",
+      "synonyms": [],
+      "category_hint": "gamedev",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Gatling",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "GDPR",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Generative AI",
+      "synonyms": [
+        "gen ai",
+        "genai"
+      ],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "GitOps",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Godot",
+      "synonyms": [],
+      "category_hint": "gamedev",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Google Analytics",
+      "synonyms": [
+        "ga4"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Google Sheets",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "GPT",
+      "synonyms": [
+        "chatgpt"
+      ],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Gradle",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "GraphQL Federation",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "GRC",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Great Expectations",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Greenplum",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Groovy",
       "synonyms": [],
       "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "GSAP",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Gunicorn",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Hardhat",
+      "synonyms": [],
+      "category_hint": "web3",
       "ad_count": 0,
       "academy_course_ids": []
     },
@@ -1759,6 +3163,39 @@
       ]
     },
     {
+      "canonical_name": "HTMX",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "HubSpot",
+      "synonyms": [],
+      "category_hint": "other",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Hyper-V",
+      "synonyms": [
+        "hyperv"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "I2C/SPI/UART",
+      "synonyms": [
+        "i2c",
+        "uart"
+      ],
+      "category_hint": "embedded",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "IAM",
       "synonyms": [
         "identity and access management"
@@ -1769,6 +3206,20 @@
         "cybersecurity-az",
         "comptia-security-az"
       ]
+    },
+    {
+      "canonical_name": "IBM Cloud",
+      "synonyms": [],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "IDS/IPS",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
     },
     {
       "canonical_name": "Incident Response",
@@ -1790,9 +3241,67 @@
       "academy_course_ids": []
     },
     {
+      "canonical_name": "Informatica",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Information Architecture",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Infrastructure as Code",
+      "synonyms": [
+        "iac"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Intercom",
+      "synonyms": [],
+      "category_hint": "other",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Intune",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "InVision",
+      "synonyms": [],
+      "category_hint": "design",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Ionic",
       "synonyms": [],
       "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "IoT",
+      "synonyms": [],
+      "category_hint": "embedded",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "IPFS",
+      "synonyms": [],
+      "category_hint": "web3",
       "ad_count": 0,
       "academy_course_ids": []
     },
@@ -1807,6 +3316,82 @@
         "cybersecurity-az",
         "comptia-security-az"
       ]
+    },
+    {
+      "canonical_name": "ITIL",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Jaeger",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Jakarta EE",
+      "synonyms": [
+        "j2ee",
+        "java ee"
+      ],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Jamf",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Jasmine",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "JAX",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "JDBC",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Jetpack",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "JFrog Artifactory",
+      "synonyms": [
+        "artifactory",
+        "jfrog"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Joomla",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
     },
     {
       "canonical_name": "JPA",
@@ -1828,9 +3413,25 @@
       ]
     },
     {
+      "canonical_name": "JSON",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Julia",
       "synonyms": [],
       "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Jupyter",
+      "synonyms": [
+        "jupyter notebook"
+      ],
+      "category_hint": "data",
       "ad_count": 0,
       "academy_course_ids": []
     },
@@ -1845,6 +3446,29 @@
       ]
     },
     {
+      "canonical_name": "Kali Linux",
+      "synonyms": [
+        "kali"
+      ],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Kanban",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Katalon",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Keras",
       "synonyms": [],
       "category_hint": "ml",
@@ -1854,9 +3478,238 @@
       ]
     },
     {
+      "canonical_name": "Kerberos",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Keycloak",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Kibana",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Kinesis",
+      "synonyms": [],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Knative",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Koa",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Kotlin Coroutines",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Kotlin Multiplatform",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Ktor",
       "synonyms": [],
       "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Kubeflow",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Kustomize",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "KVM",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "LangGraph",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Layer 2",
+      "synonyms": [],
+      "category_hint": "web3",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "LDAP",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Linkerd",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "LINQ",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Linux Kernel",
+      "synonyms": [
+        "device drivers"
+      ],
+      "category_hint": "embedded",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Lisp",
+      "synonyms": [
+        "common lisp"
+      ],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Livewire",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "LlamaIndex",
+      "synonyms": [
+        "llama index"
+      ],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Locust",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Lombok",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Looker Studio",
+      "synonyms": [
+        "data studio"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Machine Learning",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "macOS",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Magento",
+      "synonyms": [
+        "adobe commerce"
+      ],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Malware Analysis",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Mantine",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Manual Testing",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Markdown",
+      "synonyms": [],
+      "category_hint": "other",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Material Design",
+      "synonyms": [
+        "human interface guidelines"
+      ],
+      "category_hint": "concept",
       "ad_count": 0,
       "academy_course_ids": []
     },
@@ -1874,6 +3727,64 @@
       ]
     },
     {
+      "canonical_name": "Maven",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "MediatR",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Memcached",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Mendix",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Metabase",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Metasploit",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "MFA",
+      "synonyms": [
+        "2fa"
+      ],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Micro Frontends",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Micronaut",
       "synonyms": [],
       "category_hint": "backend",
@@ -1881,6 +3792,90 @@
       "academy_course_ids": [
         "senior-java-and-ai-engineer-az"
       ]
+    },
+    {
+      "canonical_name": "Microservices",
+      "synonyms": [
+        "microservice"
+      ],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Microsoft 365",
+      "synonyms": [
+        "m365",
+        "o365",
+        "office 365"
+      ],
+      "category_hint": "other",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Microsoft Entra ID",
+      "synonyms": [
+        "azure ad",
+        "entra id"
+      ],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Microsoft Sentinel",
+      "synonyms": [
+        "azure sentinel"
+      ],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "MicroStrategy",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Miro",
+      "synonyms": [],
+      "category_hint": "other",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "MITRE ATT&CK",
+      "synonyms": [
+        "att&ck",
+        "mitre"
+      ],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Mixpanel",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Mobile Testing",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "MobX",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
     },
     {
       "canonical_name": "Mocha",
@@ -1893,9 +3888,111 @@
       ]
     },
     {
+      "canonical_name": "Mockito",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Model Context Protocol",
+      "synonyms": [
+        "mcp"
+      ],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Module Federation",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Mongoose",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Motion Design",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "MQTT",
+      "synonyms": [
+        "modbus"
+      ],
+      "category_hint": "embedded",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "MS Project",
+      "synonyms": [],
+      "category_hint": "other",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Multithreading",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "MVVM",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Nagios",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "NativeScript",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "NATS",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Neo4j",
       "synonyms": [],
       "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Nessus",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "NetSuite",
+      "synonyms": [],
+      "category_hint": "backend",
       "ad_count": 0,
       "academy_course_ids": []
     },
@@ -1910,6 +4007,76 @@
       ]
     },
     {
+      "canonical_name": "NFT",
+      "synonyms": [],
+      "category_hint": "web3",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "NgRx",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "NIST",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Nmap",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Nomad",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "NoSQL",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Notion",
+      "synonyms": [],
+      "category_hint": "other",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "npm",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "NuGet",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "NUnit",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Nuxt",
       "synonyms": [
         "nuxt.js",
@@ -1920,6 +4087,141 @@
       "academy_course_ids": [
         "advanced-frontend-development-az"
       ]
+    },
+    {
+      "canonical_name": "OAuth",
+      "synonyms": [
+        "oauth2",
+        "oidc",
+        "openid connect"
+      ],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "OCaml",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "OCR",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Octopus Deploy",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "OKRs",
+      "synonyms": [
+        "okr"
+      ],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Okta",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "ONNX",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "OOP",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "OpenAPI",
+      "synonyms": [
+        "swagger"
+      ],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "OpenCV",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "OpenGL",
+      "synonyms": [],
+      "category_hint": "gamedev",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Oracle Cloud",
+      "synonyms": [
+        "oci"
+      ],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "OutSystems",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Packer",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Pact",
+      "synonyms": [
+        "contract testing"
+      ],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "PagerDuty",
+      "synonyms": [
+        "opsgenie"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "PCI DSS",
+      "synonyms": [
+        "pci-dss"
+      ],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
     },
     {
       "canonical_name": "Penetration Testing",
@@ -1936,6 +4238,158 @@
       ]
     },
     {
+      "canonical_name": "Perforce",
+      "synonyms": [
+        "p4"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Performance Testing",
+      "synonyms": [
+        "load testing"
+      ],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Photon",
+      "synonyms": [],
+      "category_hint": "gamedev",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Photoshop",
+      "synonyms": [
+        "adobe photoshop"
+      ],
+      "category_hint": "design",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "PHPUnit",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Pinecone",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "PKI",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "PlanetScale",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Play Framework",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "PMP",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "pnpm",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Podman",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Power Apps",
+      "synonyms": [
+        "powerapps"
+      ],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Power Automate",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Pre-sales",
+      "synonyms": [
+        "presales"
+      ],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Preact",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Prefect",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Presto",
+      "synonyms": [
+        "prestodb"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Prettier",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "PRINCE2",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Prisma",
       "synonyms": [],
       "category_hint": "backend",
@@ -1943,6 +4397,133 @@
       "academy_course_ids": [
         "advanced-backend-microservices-development-az"
       ]
+    },
+    {
+      "canonical_name": "Product Analytics",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Product Discovery",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Product Roadmap",
+      "synonyms": [
+        "roadmapping"
+      ],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Productboard",
+      "synonyms": [],
+      "category_hint": "other",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Prolog",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Prompt Engineering",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Proof of Concept",
+      "synonyms": [
+        "poc"
+      ],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Protobuf",
+      "synonyms": [
+        "protocol buffers"
+      ],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Prototyping",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Proxmox",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Pub/Sub",
+      "synonyms": [
+        "pubsub"
+      ],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Puppet",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Puppeteer",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Push Notifications",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "PWA",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Pydantic",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Qlik",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
     },
     {
       "canonical_name": "Quarkus",
@@ -1955,12 +4536,306 @@
       ]
     },
     {
+      "canonical_name": "Qwik",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "R",
       "synonyms": [
         "r programming",
         "rstudio"
       ],
       "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Radix UI",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Rancher",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Ray",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "React Query",
+      "synonyms": [
+        "react-query",
+        "tanstack query"
+      ],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "React Router",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Recommender Systems",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Red Hat",
+      "synonyms": [
+        "rhel"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Red Team",
+      "synonyms": [
+        "red teaming"
+      ],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Regex",
+      "synonyms": [
+        "regular expressions"
+      ],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Regression Testing",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Reinforcement Learning",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Release Management",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "REST API",
+      "synonyms": [
+        "rest",
+        "rest apis",
+        "restful",
+        "restful api"
+      ],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "REST Assured",
+      "synonyms": [
+        "restassured"
+      ],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Retrofit",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Risk Assessment",
+      "synonyms": [
+        "risk management"
+      ],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Riverpod",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "RLHF",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Robot Framework",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Rollup",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "ROS",
+      "synonyms": [
+        "ros2"
+      ],
+      "category_hint": "embedded",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Route 53",
+      "synonyms": [
+        "route53"
+      ],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "RSpec",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "RTOS",
+      "synonyms": [
+        "freertos"
+      ],
+      "category_hint": "embedded",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "RxSwift",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SAFe",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SageMaker",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SaltStack",
+      "synonyms": [
+        "salt stack"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SAML",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SAP",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SAS",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Sass/SCSS Modules",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SAST",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SCCM",
+      "synonyms": [
+        "mecm"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Scrapy",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Scrum",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Secrets Management",
+      "synonyms": [],
+      "category_hint": "security",
       "ad_count": 0,
       "academy_course_ids": []
     },
@@ -1974,6 +4849,48 @@
       ]
     },
     {
+      "canonical_name": "ServiceNow",
+      "synonyms": [
+        "snow"
+      ],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "shadcn/ui",
+      "synonyms": [
+        "shadcn"
+      ],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Shaders",
+      "synonyms": [
+        "glsl",
+        "hlsl"
+      ],
+      "category_hint": "gamedev",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SharePoint",
+      "synonyms": [],
+      "category_hint": "other",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Sidekiq",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "SIEM",
       "synonyms": [],
       "category_hint": "security",
@@ -1983,6 +4900,233 @@
         "cybersecurity-az",
         "comptia-security-az"
       ]
+    },
+    {
+      "canonical_name": "SignalR",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Simulink",
+      "synonyms": [],
+      "category_hint": "embedded",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Sinatra",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Sitecore",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Sketch",
+      "synonyms": [],
+      "category_hint": "design",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SLO/SLI",
+      "synonyms": [
+        "sli",
+        "slo"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Smart Contract Auditing",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Smart Contracts",
+      "synonyms": [
+        "smart contract"
+      ],
+      "category_hint": "web3",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Snyk",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SOAP",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SOAR",
+      "synonyms": [
+        "xdr"
+      ],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SOC 2",
+      "synonyms": [
+        "soc2"
+      ],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Socket.IO",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Solana",
+      "synonyms": [],
+      "category_hint": "web3",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SolidJS",
+      "synonyms": [
+        "solid.js"
+      ],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Solr",
+      "synonyms": [
+        "apache solr"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SonarQube",
+      "synonyms": [
+        "sonarcloud"
+      ],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "spaCy",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Speech Recognition",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Spinnaker",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Spring Boot Actuator",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SPSS",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SQLAlchemy",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SSIS",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SSO",
+      "synonyms": [
+        "single sign-on"
+      ],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Stable Diffusion",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Stakeholder Management",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Starlette",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Statistics",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "STM32",
+      "synonyms": [],
+      "category_hint": "embedded",
+      "ad_count": 0,
+      "academy_course_ids": []
     },
     {
       "canonical_name": "Storybook",
@@ -1995,9 +5139,174 @@
       ]
     },
     {
+      "canonical_name": "Strapi",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Struts",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Styled Components",
+      "synonyms": [
+        "styled-components"
+      ],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Supabase",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SwiftData",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Symfony",
       "synonyms": [],
       "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "System Design",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "systemd",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "SystemVerilog",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Tauri",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "TCP/IP",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "TDD",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "TeamCity",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "TeamViewer",
+      "synonyms": [
+        "anydesk"
+      ],
+      "category_hint": "other",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Technical Leadership",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Technical Support",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Technical Writing",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Tekton",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Teradata",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Terragrunt",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Test Automation",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Test Cases",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "TestFlight",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Testing Library",
+      "synonyms": [],
+      "category_hint": "qa",
       "ad_count": 0,
       "academy_course_ids": []
     },
@@ -2012,10 +5321,137 @@
       ]
     },
     {
+      "canonical_name": "TestRail",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Thanos",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Threat Hunting",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Threat Intelligence",
+      "synonyms": [
+        "cti"
+      ],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Threat Modeling",
+      "synonyms": [
+        "threat modelling"
+      ],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Three.js",
       "synonyms": [
         "threejs"
       ],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Time Series",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "TimescaleDB",
+      "synonyms": [
+        "timescale"
+      ],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "TLS/SSL",
+      "synonyms": [
+        "ssl",
+        "tls"
+      ],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Tokio",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Tomcat",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Tornado",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Travis CI",
+      "synonyms": [
+        "travisci"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Tricentis Tosca",
+      "synonyms": [
+        "tosca"
+      ],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Troubleshooting",
+      "synonyms": [
+        "troubleshoot"
+      ],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "tRPC",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Turborepo",
+      "synonyms": [],
       "category_hint": "frontend",
       "ad_count": 0,
       "academy_course_ids": []
@@ -2030,6 +5466,29 @@
       ]
     },
     {
+      "canonical_name": "UAT",
+      "synonyms": [],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "UIKit",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "UiPath",
+      "synonyms": [
+        "rpa"
+      ],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Unreal Engine",
       "synonyms": [
         "ue4",
@@ -2037,6 +5496,104 @@
         "unreal"
       ],
       "category_hint": "gamedev",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "User Research",
+      "synonyms": [],
+      "category_hint": "design",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "User Stories",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "UX Writing",
+      "synonyms": [],
+      "category_hint": "design",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Vagrant",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "VB.NET",
+      "synonyms": [
+        "visual basic"
+      ],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "VBA",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Vector Database",
+      "synonyms": [
+        "vector db",
+        "vector store"
+      ],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Verilog",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Vert.x",
+      "synonyms": [
+        "vertx"
+      ],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Vertex AI",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Vertica",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "VHDL",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Visual Design",
+      "synonyms": [],
+      "category_hint": "concept",
       "ad_count": 0,
       "academy_course_ids": []
     },
@@ -2051,6 +5608,37 @@
       ]
     },
     {
+      "canonical_name": "vLLM",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "VMware",
+      "synonyms": [
+        "esxi",
+        "vsphere"
+      ],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "VPC",
+      "synonyms": [],
+      "category_hint": "cloud",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "VPN",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "Vulnerability Management",
       "synonyms": [],
       "category_hint": "security",
@@ -2062,6 +5650,13 @@
       ]
     },
     {
+      "canonical_name": "Vyper",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
       "canonical_name": "WAF",
       "synonyms": [],
       "category_hint": "security",
@@ -2070,6 +5665,218 @@
         "cybersecurity-az",
         "comptia-security-az"
       ]
+    },
+    {
+      "canonical_name": "Waterfall",
+      "synonyms": [],
+      "category_hint": "methodology",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "WCAG",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Web Components",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Web3.js",
+      "synonyms": [
+        "ethers.js"
+      ],
+      "category_hint": "web3",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "WebAssembly",
+      "synonyms": [
+        "wasm"
+      ],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "WebdriverIO",
+      "synonyms": [
+        "webdriver.io"
+      ],
+      "category_hint": "qa",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Webflow",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "WebGL",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "WebSockets",
+      "synonyms": [
+        "websocket"
+      ],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Weights & Biases",
+      "synonyms": [
+        "w&b",
+        "wandb"
+      ],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Windows",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Windows Server",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Wireframing",
+      "synonyms": [
+        "wireframes"
+      ],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Wireshark",
+      "synonyms": [],
+      "category_hint": "security",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "WPF",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Xcode",
+      "synonyms": [],
+      "category_hint": "mobile",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "XGBoost",
+      "synonyms": [],
+      "category_hint": "ml",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "XML",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "YAML",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Yarn",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Yii",
+      "synonyms": [],
+      "category_hint": "backend",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Zabbix",
+      "synonyms": [],
+      "category_hint": "devops",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Zendesk",
+      "synonyms": [],
+      "category_hint": "other",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Zero Trust",
+      "synonyms": [],
+      "category_hint": "concept",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Zero-Knowledge Proofs",
+      "synonyms": [
+        "zk",
+        "zkp"
+      ],
+      "category_hint": "web3",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Zig",
+      "synonyms": [],
+      "category_hint": "language",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "ZooKeeper",
+      "synonyms": [],
+      "category_hint": "data",
+      "ad_count": 0,
+      "academy_course_ids": []
+    },
+    {
+      "canonical_name": "Zustand",
+      "synonyms": [],
+      "category_hint": "frontend",
+      "ad_count": 0,
+      "academy_course_ids": []
     }
   ],
   "notes": [

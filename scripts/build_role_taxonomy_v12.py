@@ -1208,7 +1208,15 @@ _EXTRA_SYNONYMS: dict[str, list[str]] = {
 }
 
 
+def _extra_roles() -> list[dict]:
+    from role_taxonomy_extra import ROLES_EXTRA
+
+    return [role(n, c, list(syn), [s(k, w) for k, w in sk]) for n, c, syn, sk in ROLES_EXTRA]
+
+
 def _merge_role_extras(item: dict) -> dict:
+    from role_taxonomy_extra import SYNONYMS_EXTRA
+
     name = item["canonical_name"]
     skills = list(item["signature_skills"])
     seen = {str(x.get("skill")) for x in skills}
@@ -1219,7 +1227,7 @@ def _merge_role_extras(item: dict) -> dict:
             seen.add(skill)
     synonyms = list(item["synonyms"])
     syn_seen = {s.lower() for s in synonyms}
-    for extra in _EXTRA_SYNONYMS.get(name) or []:
+    for extra in [*(_EXTRA_SYNONYMS.get(name) or []), *(SYNONYMS_EXTRA.get(name) or [])]:
         key = extra.lower()
         if extra and key not in syn_seen:
             synonyms.append(extra)
@@ -1230,7 +1238,7 @@ def _merge_role_extras(item: dict) -> dict:
 def main() -> None:
     cleaned = []
     names = set()
-    for raw in ROLES:
+    for raw in [*ROLES, *_extra_roles()]:
         r = _merge_role_extras(raw)
         skills = [x for x in r["signature_skills"] if float(x.get("weight") or 0) > 0]
         if not skills:
@@ -1240,9 +1248,22 @@ def main() -> None:
         names.add(r["canonical_name"])
         cleaned.append({**r, "signature_skills": skills})
 
+    # A phrase may identify only one role: it stays with the role whose canonical
+    # name it is, otherwise with the first role that lists it.
+    canon = {r["canonical_name"].lower() for r in cleaned}
+    owner: dict[str, str] = {}
+    for r in cleaned:
+        r["synonyms"] = [
+            x
+            for x in r["synonyms"]
+            if x.lower() not in canon
+            and x.lower() != r["canonical_name"].lower()
+            and owner.setdefault(x.lower(), r["canonical_name"]) == r["canonical_name"]
+        ]
+
     payload = {
-        "version": "1.3",
-        "generated_at": "2026-10-06T10:30:00Z",
+        "version": "1.4",
+        "generated_at": "2026-10-11T23:10:00Z",
         "source": {
             "plan": "docs/ingress-job-cv-ai-plan.pdf §6.1",
             "categories": "worker/worker/techstack.py CATEGORIES",
