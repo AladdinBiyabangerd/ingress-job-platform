@@ -4,13 +4,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CATEGORY_ORDER, categoryLabel, hrefFor, languageLabel, text } from "../lib/copy";
 import { jobsListParams } from "../lib/jobs-params";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
+import { fetchMe } from "../lib/me-client";
 import { useMediaQuery } from "../lib/use-media-query";
 import { BoardSideNav } from "./board-side-nav";
 import { JobBoardCard } from "./job-board-card";
+import { useInitialMe } from "./me-seed";
 import SlowDownBanner, { isSlowDownPayload, rateLimitMessageKey } from "./slow-down-banner";
 import { Shell } from "./shell";
 
 const PAGE_SIZE = 20;
+const MATCHES_FETCH_LIMIT = 50;
 const TEXT_DEBOUNCE_MS = 300;
 const EMPTY_FACETS = { languages: [], categories: [], stacks: [], countries: [], cities: [], remote_total: 0 };
 /** Matches `--dur-exit` in globals.css (~70% of `--dur-base`). */
@@ -283,6 +286,19 @@ function FilterPanelBody({
   );
 }
 
+function matchToBoardJob(row) {
+  const id = row?.job_id ?? row?.id;
+  return {
+    ...row,
+    id,
+    tech_stack: Array.isArray(row?.tech_stack)
+      ? row.tech_stack
+      : Array.isArray(row?.have)
+        ? row.have
+        : [],
+  };
+}
+
 export function Home({
   locale,
   jobs = [],
@@ -292,6 +308,12 @@ export function Home({
   error = false,
 }) {
   const t = text(locale);
+  const lang = locale === "en" || locale === "ru" ? locale : "az";
+  const initialMe = useInitialMe();
+  const [me, setMe] = useState(() => {
+    if (initialMe && typeof initialMe === "object") return initialMe;
+    return undefined;
+  });
   const [q, setQ] = useState(() => {
     if (typeof window === "undefined") return "";
     return new URLSearchParams(window.location.search).get("q") || "";
@@ -306,6 +328,9 @@ export function Home({
   const [remote, setRemote] = useState(false);
   const [relocation, setRelocation] = useState(false);
   const [onsite, setOnsite] = useState(false);
+  const [forYouMode, setForYouMode] = useState(false);
+  const [matchesPayload, setMatchesPayload] = useState(null);
+  const [matchJobs, setMatchJobs] = useState([]);
   const [stacks, setStacks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [techQuery, setTechQuery] = useState("");
@@ -380,14 +405,29 @@ export function Home({
     [q, company, city, languages, remote, relocation, onsite, stacks, categories, when, sort, salaryMin, salaryMax],
   );
 
+  const showForYouTab = Boolean(me?.authenticated && (me.candidate || me.staff));
+
   const boardTab = useMemo(() => {
+    if (forYouMode) return "foryou";
     if (onsite && !remote && !relocation) return "company";
     if (remote && !relocation && !onsite) return "remote";
     if (relocation && !remote && !onsite) return "relocation";
     return "all";
-  }, [remote, relocation, onsite]);
+  }, [forYouMode, remote, relocation, onsite]);
 
   function setBoardTab(next) {
+    if (next === "foryou") {
+      setForYouMode(true);
+      setRemote(false);
+      setRelocation(false);
+      setOnsite(false);
+      setPage(1);
+      setLoading(true);
+      setItems([]);
+      setResultTotal(0);
+      return;
+    }
+    setForYouMode(false);
     if (next === "remote") {
       setRemote(true);
       setRelocation(false);
@@ -410,6 +450,28 @@ export function Home({
     setRelocation(false);
     setOnsite(false);
   }
+
+  useEffect(() => {
+    if (initialMe && typeof initialMe === "object") {
+      setMe(initialMe);
+      return undefined;
+    }
+    let cancelled = false;
+    fetchMe()
+      .then((data) => {
+        if (!cancelled) setMe(data);
+      })
+      .catch(() => {
+        if (!cancelled) setMe({ authenticated: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialMe]);
+
+  useEffect(() => {
+    if (!showForYouTab && forYouMode) setForYouMode(false);
+  }, [showForYouTab, forYouMode]);
 
   const languageOptions = useMemo(
     () => (Array.isArray(facetData.languages) ? facetData.languages : []).map((item) => item.code).filter(Boolean),
@@ -451,6 +513,7 @@ export function Home({
   }
 
   useEffect(() => {
+    if (forYouMode) return undefined;
     if (skipFirstFetch.current) {
       skipFirstFetch.current = false;
       prevFilterKey.current = filterKey;
@@ -521,6 +584,7 @@ export function Home({
       controller.abort();
     };
   }, [
+    forYouMode,
     page,
     error,
     jobs.length,
@@ -542,6 +606,50 @@ export function Home({
   ]);
 
   useEffect(() => {
+    if (!forYouMode || !showForYouTab) return undefined;
+    const controller = new AbortController();
+    setLoading(true);
+    setLoadError(false);
+    setSlowDownKey(null);
+    fetch(`/api/auth/me/matches?lang=${lang}&limit=${MATCHES_FETCH_LIMIT}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (!ok) throw new Error("matches");
+        setMatchesPayload(data && typeof data === "object" ? data : null);
+        const list = Array.isArray(data?.matches) ? data.matches.map(matchToBoardJob) : [];
+        setMatchJobs(list);
+        setPage(1);
+        setLoadError(false);
+      })
+      .catch((err) => {
+        if (err?.name === "AbortError") return;
+        setMatchesPayload(null);
+        setMatchJobs([]);
+        setLoadError(true);
+      })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [forYouMode, showForYouTab, lang, reloadToken]);
+
+  useEffect(() => {
+    if (!forYouMode) return;
+    const totalMatches = matchJobs.length;
+    const pagesCount = Math.max(1, Math.ceil(totalMatches / PAGE_SIZE) || 1);
+    const pageIndex = Math.min(Math.max(1, page), pagesCount);
+    if (pageIndex !== page) {
+      setPage(pageIndex);
+      return;
+    }
+    const start = (pageIndex - 1) * PAGE_SIZE;
+    setItems(matchJobs.slice(start, start + PAGE_SIZE));
+    setResultTotal(totalMatches);
+    setResultPages(pagesCount);
+  }, [forYouMode, matchJobs, page]);
+
+  useEffect(() => {
     return () => {
       if (drawerExitRef.current) clearTimeout(drawerExitRef.current);
     };
@@ -557,6 +665,7 @@ export function Home({
     setRemote(false);
     setRelocation(false);
     setOnsite(false);
+    setForYouMode(false);
     setStacks([]);
     setCategories([]);
     setTechQuery("");
@@ -665,6 +774,7 @@ export function Home({
 
   function submitSearch(event) {
     event?.preventDefault?.();
+    setForYouMode(false);
     setQ(draftQ);
     const top = resultsRef.current?.getBoundingClientRect().top;
     if (typeof top === "number") {
@@ -692,33 +802,59 @@ export function Home({
     techQuery,
     setTechQuery,
     city,
-    setCity,
+    setCity: (value) => {
+      setForYouMode(false);
+      setCity(value);
+    },
     languages,
-    setLanguages,
+    setLanguages: (value) => {
+      setForYouMode(false);
+      setLanguages(value);
+    },
     remote,
     setRemote: (value) => {
       const next = typeof value === "boolean" ? value : Boolean(value);
+      setForYouMode(false);
       setRemote(next);
       if (next) setOnsite(false);
     },
     relocation,
     setRelocation: (value) => {
       const next = typeof value === "boolean" ? value : Boolean(value);
+      setForYouMode(false);
       setRelocation(next);
       if (next) setOnsite(false);
     },
     categories,
-    setCategories,
+    setCategories: (value) => {
+      setForYouMode(false);
+      setCategories(value);
+    },
     stacks,
-    setStacks,
+    setStacks: (value) => {
+      setForYouMode(false);
+      setStacks(value);
+    },
     salaryMin,
-    setSalaryMin,
+    setSalaryMin: (value) => {
+      setForYouMode(false);
+      setSalaryMin(value);
+    },
     salaryMax,
-    setSalaryMax,
+    setSalaryMax: (value) => {
+      setForYouMode(false);
+      setSalaryMax(value);
+    },
     company,
-    setCompany,
+    setCompany: (value) => {
+      setForYouMode(false);
+      setCompany(value);
+    },
     when,
-    setWhen,
+    setWhen: (value) => {
+      setForYouMode(false);
+      setWhen(value);
+    },
     toggle,
     clear,
   };
@@ -761,7 +897,10 @@ export function Home({
                   <span className="visually-hidden">{t.searchLocationPlaceholder}</span>
                   <select
                     value={city}
-                    onChange={(e) => setCity(e.target.value)}
+                    onChange={(e) => {
+                      setForYouMode(false);
+                      setCity(e.target.value);
+                    }}
                     aria-label={t.searchLocationPlaceholder}
                   >
                     <option value="">{t.searchLocationPlaceholder}</option>
@@ -777,7 +916,10 @@ export function Home({
                   <span className="visually-hidden">{t.searchLanguagePlaceholder}</span>
                   <select
                     value={languages[0] || ""}
-                    onChange={(e) => setLanguages(e.target.value ? [e.target.value] : [])}
+                    onChange={(e) => {
+                      setForYouMode(false);
+                      setLanguages(e.target.value ? [e.target.value] : []);
+                    }}
                     aria-label={t.searchLanguagePlaceholder}
                   >
                     <option value="">{t.searchLanguagePlaceholder}</option>
@@ -846,6 +988,7 @@ export function Home({
             <div className="home-board-tabs" role="tablist" aria-label={t.categoryTabsLabel}>
               {[
                 { id: "all", label: t.tabAll },
+                ...(showForYouTab ? [{ id: "foryou", label: t.tabForYou }] : []),
                 { id: "remote", label: t.tabRemote },
                 { id: "relocation", label: t.tabRelocation },
                 { id: "company", label: t.tabCompanyPosted },
@@ -871,19 +1014,23 @@ export function Home({
             >
               <div className="home-board-results-head">
                 <div className="home-board-results-titles">
-                  <p className="home-board-catalogue-kicker">{t.openRoles}</p>
+                  <p className="home-board-catalogue-kicker">
+                    {forYouMode ? t.tabForYou : t.openRoles}
+                  </p>
                   <h2 id="results-heading" className="home-board-results-count" key={resultTotal}>
                     {t.resultsCount(resultTotal)}
                   </h2>
                 </div>
-                <label className="home-board-sort">
-                  <span className="visually-hidden">{t.sort}</span>
-                  <select value={sort} onChange={(e) => setSort(e.target.value)}>
-                    <option value="newest">{t.newestFirst}</option>
-                    <option value="oldest">{t.oldest}</option>
-                    <option value="title">{t.byTitle}</option>
-                  </select>
-                </label>
+                {!forYouMode ? (
+                  <label className="home-board-sort">
+                    <span className="visually-hidden">{t.sort}</span>
+                    <select value={sort} onChange={(e) => setSort(e.target.value)}>
+                      <option value="newest">{t.newestFirst}</option>
+                      <option value="oldest">{t.oldest}</option>
+                      <option value="title">{t.byTitle}</option>
+                    </select>
+                  </label>
+                ) : null}
               </div>
 
               <p className="visually-hidden" aria-live="polite" aria-atomic="true">
@@ -892,12 +1039,34 @@ export function Home({
 
               {!loading && resultTotal === 0 && !loadError ? (
                 <div className="job-empty">
-                  <p className="job-empty-copy">{t.empty}</p>
-                  {activeFilters > 0 ? (
-                    <button type="button" className="btn job-empty-clear" onClick={clear}>
-                      {t.clear}
-                    </button>
-                  ) : null}
+                  {forYouMode ? (
+                    matchesPayload?.matching_consent === false ? (
+                      <>
+                        <p className="job-empty-copy">{t.forYouEmptyConsent}</p>
+                        <a className="btn job-empty-clear" href={hrefFor(locale, { mode: "profile" })}>
+                          {t.forYouEmptyConsentLink}
+                        </a>
+                      </>
+                    ) : !matchesPayload?.skill_count ? (
+                      <>
+                        <p className="job-empty-copy">{t.forYouEmptySkills}</p>
+                        <a className="btn job-empty-clear" href={hrefFor(locale, { mode: "profileReview" })}>
+                          {t.forYouEmptySkillsLink}
+                        </a>
+                      </>
+                    ) : (
+                      <p className="job-empty-copy">{t.forYouEmpty}</p>
+                    )
+                  ) : (
+                    <>
+                      <p className="job-empty-copy">{t.empty}</p>
+                      {activeFilters > 0 ? (
+                        <button type="button" className="btn job-empty-clear" onClick={clear}>
+                          {t.clear}
+                        </button>
+                      ) : null}
+                    </>
+                  )}
                 </div>
               ) : null}
 
@@ -919,7 +1088,13 @@ export function Home({
               ) : (
                 <div className="home-board-card-list">
                   {items.map((job) => (
-                    <JobBoardCard key={job.id} locale={locale} job={job} />
+                    <JobBoardCard
+                      key={job.id}
+                      locale={locale}
+                      job={job}
+                      matchScore={forYouMode ? (job.score_pct ?? job.score ?? null) : null}
+                      matchConfidence={forYouMode ? (job.confidence ?? null) : null}
+                    />
                   ))}
                 </div>
               )}

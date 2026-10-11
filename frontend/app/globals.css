@@ -12653,6 +12653,28 @@ a.saved-preview-company:hover {
   color: var(--muted);
 }
 
+.job-board-card-match {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+  font-size: 0.75rem;
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.job-board-card-match.is-uncertain {
+  background: transparent;
+  color: var(--muted);
+  font-weight: var(--fw-medium);
+  padding: 0;
+  min-width: 0;
+}
+
 .job-board-card-skeleton .job-board-skel-logo {
   width: 48px;
   height: 48px;

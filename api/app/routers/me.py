@@ -110,8 +110,7 @@ def get_matches(
     role: str | None = Query(default=None, max_length=120),
     user: VerifiedAccess = Depends(current_user),
 ) -> dict:
-    """Structured job matches (plan §6.2). Optional role= scopes to signature skills."""
-    _require_recommendations()
+    """Hunt match list for For-you. Independent of recommendations hub flag."""
     _require_candidate(user)
     return list_matches(user_id=user.subject, limit=limit, lang=lang, role=role)
 

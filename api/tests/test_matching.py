@@ -218,9 +218,9 @@ class MatchingTests(unittest.TestCase):
             self.assertEqual(down.json()["reason"], "location")
             listed = self.client.get("/api/v1/me/matches", headers=self.headers)
         self.assertEqual(listed.status_code, 200, listed.text)
-        fb = listed.json()["matches"][0]["feedback"]
-        self.assertEqual(fb["vote"], "down")
-        self.assertEqual(fb["reason"], "location")
+        # Down-vote ×0.4 often pushes below For-you MIN_SCORE — job leaves the list.
+        listed_ids = {item["job_id"] for item in listed.json()["matches"]}
+        self.assertNotIn(job_id, listed_ids)
 
     def test_feedback_requires_consent(self):
         subject = "match-fb-consent"
@@ -345,7 +345,15 @@ class MatchingTests(unittest.TestCase):
 
     def test_matches_role_scopes_to_signature_skills(self):
         subject = "match-role"
-        self._seed_profile(subject)
+        # Kafka years high enough that a Kafka-only ad clears the 0.33 floor.
+        self._seed_profile(
+            subject,
+            skills=[
+                {"name": "Java", "years": 5, "level": "advanced", "source": "cv"},
+                {"name": "Spring", "years": 4, "level": "advanced", "source": "cv"},
+                {"name": "Kafka", "years": 5, "level": "", "source": "cv"},
+            ],
+        )
         java_id = self._insert_job(title="Java Developer", skills=["Java", "Spring"])
         # Profile overlap (Kafka) but outside role signature — drop when role=.
         kafka_id = self._insert_job(title="Kafka Engineer", skills=["Kafka"])
@@ -388,6 +396,94 @@ class MatchingTests(unittest.TestCase):
         top = scoped_body["matches"][0]
         self.assertEqual(top["job_id"], java_id)
         self.assertGreaterEqual(int(top.get("role_skill_hits") or 0), 1)
+
+    def test_matches_independent_of_recommendations_hub(self):
+        subject = "match-ungate"
+        self._seed_profile(subject)
+        self._insert_job(title="Java Developer", skills=["Java", "Spring"])
+        self._grant_matching(subject)
+        with self._auth("job:candidate", subject):
+            with patch("app.product_features.recommendations_enabled", return_value=False):
+                res = self.client.get("/api/v1/me/matches?lang=en", headers=self.headers)
+        self.assertEqual(res.status_code, 200, res.text)
+        self.assertGreaterEqual(len(res.json()["matches"]), 1)
+
+    def test_hunt_unknown_salary_and_visa_do_not_inflate(self):
+        from app.hunt_scoring import compute_score, salary_fit, work_authorization_fit
+
+        self.assertIsNone(salary_fit({}, "45,000–55,000 GBP per annum"))
+        self.assertIsNone(salary_fit({"min": 50000, "currency": "GBP", "period": "year"}, ""))
+        self.assertIsNone(work_authorization_fit({"needs_visa_sponsorship": None}, relocation=True))
+        self.assertIsNone(work_authorization_fit({"needs_visa_sponsorship": False}, relocation=True))
+        hunt = compute_score(
+            {
+                "tech_skill_fit": 1.0,
+                "role_seniority_fit": None,
+                "preference_fit": None,
+                "salary_fit": None,
+                "work_authorization_fit": None,
+                "freshness": 1.0,
+                "data_completeness": 1.0,
+                "experience_fit": None,
+            }
+        )
+        # Only 20+7.5+7.5 known → confidence 0.35; salary/visa add nothing.
+        self.assertEqual(hunt["confidence"], 0.35)
+        self.assertLess(hunt["score"], 0.4)
+        by_name = {d["name"]: d for d in hunt["dimensions"]}
+        self.assertEqual(by_name["salary_fit"]["status"], "unknown")
+        self.assertEqual(by_name["work_authorization_fit"]["status"], "unknown")
+
+    def test_hunt_arithmetic_parity(self):
+        from app.hunt_scoring import SCORING_VERSION, compute_score
+
+        hunt = compute_score(
+            {
+                "tech_skill_fit": 1.0,
+                "role_seniority_fit": 0.6,
+                "preference_fit": 1.0,
+                "salary_fit": None,
+                "work_authorization_fit": None,
+                "freshness": 0.7,
+                "data_completeness": 0.875,
+                "experience_fit": None,
+            }
+        )
+        # (20 + 9 + 10 + 5.25 + 6.5625) / 100
+        self.assertAlmostEqual(hunt["score"], 0.5081, places=4)
+        self.assertEqual(hunt["confidence"], 0.6)
+        self.assertEqual(hunt["scoring_version"], SCORING_VERSION)
+
+    def test_list_floor_and_confidence_guard(self):
+        from app.hunt_scoring import MIN_CONFIDENCE, MIN_SCORE, passes_list_gates
+
+        self.assertTrue(passes_list_gates(MIN_SCORE, MIN_CONFIDENCE))
+        self.assertFalse(passes_list_gates(MIN_SCORE - 0.01, 0.9))
+        self.assertFalse(passes_list_gates(0.9, MIN_CONFIDENCE - 0.01))
+
+    def test_matches_expose_hunt_fields_and_respect_floor(self):
+        subject = "match-hunt"
+        self._seed_profile(subject)
+        good_id = self._insert_job(title="Senior Java Developer", skills=["Java", "Spring", "Kafka"])
+        # Partial skill overlap + junior title → lower Hunt score; still may pass.
+        self._insert_job(title="Intern Kafka Helper", skills=["Kafka"], remote=0, relocation=0)
+        self._grant_matching(subject)
+        with self._auth("job:candidate", subject):
+            res = self.client.get("/api/v1/me/matches?lang=en&limit=20", headers=self.headers)
+        self.assertEqual(res.status_code, 200, res.text)
+        body = res.json()
+        self.assertEqual(body.get("scoring_version"), "hunt-ingress-v2")
+        self.assertEqual(body.get("min_score"), 0.33)
+        self.assertEqual(body.get("min_confidence"), 0.35)
+        self.assertTrue(body["matches"])
+        for item in body["matches"]:
+            self.assertGreaterEqual(item["score"], 0.33)
+            self.assertGreaterEqual(item["confidence"], 0.35)
+            self.assertIn("dimensions", item)
+            salary_dim = next(d for d in item["dimensions"] if d["name"] == "salary_fit")
+            self.assertEqual(salary_dim["status"], "unknown")
+        ids = [item["job_id"] for item in body["matches"]]
+        self.assertIn(good_id, ids)
 
 
 if __name__ == "__main__":

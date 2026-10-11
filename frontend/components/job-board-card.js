@@ -25,18 +25,48 @@ function langCodes(job) {
   return [raw];
 }
 
+/** Honest match % for board cards — omit or soften when confidence is too low. */
+function resolveMatchDisplay(t, matchScore, matchConfidence) {
+  const pct =
+    typeof matchScore === "number" && Number.isFinite(matchScore)
+      ? matchScore <= 1
+        ? Math.round(matchScore * 100)
+        : Math.round(matchScore)
+      : null;
+  if (pct === null) return null;
+  const conf =
+    typeof matchConfidence === "number" && Number.isFinite(matchConfidence)
+      ? matchConfidence
+      : null;
+  if (conf !== null && conf < 0.35) {
+    return { kind: "uncertain", label: t.forYouMatchUncertain || "—" };
+  }
+  return { kind: "pct", label: t.forYouMatch ? t.forYouMatch(pct) : `${pct}%`, pct };
+}
+
 /**
  * Board mockup job card — compact row with bookmark save and View details CTA.
  */
-export function JobBoardCard({ locale, job, featured = false, showCompany = true }) {
+export function JobBoardCard({
+  locale,
+  job,
+  featured = false,
+  showCompany = true,
+  matchScore = null,
+  matchConfidence = null,
+}) {
   const t = text(locale);
+  const jobId = job.id ?? job.job_id;
   const company = job.company || t.noCompany;
   const salary = String(job.salary || "").trim();
   const place = placeLine(t, job);
-  const stack = Array.isArray(job.tech_stack) ? job.tech_stack.slice(0, 5) : [];
+  const stackFromJob = Array.isArray(job.tech_stack) ? job.tech_stack : [];
+  const stackFromHave = Array.isArray(job.have) ? job.have : [];
+  const stack = (stackFromJob.length ? stackFromJob : stackFromHave).slice(0, 5);
   const langs = langCodes(job);
   const when = relativePosted(job.created_at, locale);
-  const jobHref = hrefFor(locale, { jobId: job.id });
+  const jobHref = hrefFor(locale, { jobId });
+  const match = resolveMatchDisplay(t, matchScore, matchConfidence);
 
   return (
     <article className={`job-board-card${featured ? " is-featured" : ""}`}>
@@ -90,7 +120,7 @@ export function JobBoardCard({ locale, job, featured = false, showCompany = true
           <div className="job-board-card-actions">
             <SaveJobButton
               locale={locale}
-              jobId={job.id}
+              jobId={jobId}
               returnTo={jobHref}
               icon="bookmark"
               className="save-job-btn-board"
@@ -99,6 +129,14 @@ export function JobBoardCard({ locale, job, featured = false, showCompany = true
               {t.viewDetails}
             </a>
           </div>
+          {match ? (
+            <span
+              className={`job-board-card-match${match.kind === "uncertain" ? " is-uncertain" : ""}`}
+              title={match.label}
+            >
+              {match.kind === "pct" ? `${match.pct}%` : match.label}
+            </span>
+          ) : null}
           {when ? (
             <time className="job-board-card-when" dateTime={job.created_at}>
               {when}

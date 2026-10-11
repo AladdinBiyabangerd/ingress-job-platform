@@ -1,9 +1,10 @@
 """Job ↔ candidate matching (plan §6.2 / §6.3).
 
-Structured score is always computed. On Postgres + pgvector + embeddings,
-AI #2 blends cosine: 0.7·struct + 0.3·cosine. Optional LLM re-rank on top-10:
+Hunt struct score + confidence (unknown dims do not invent fit). Optional
+AI #2 cosine blend: 0.7·hunt + 0.3·cosine. Optional LLM re-rank on top-10:
 0.55·blended + 0.45·(relevance/5). Down-voted jobs are demoted (×0.4).
-SQLite / missing vectors → structured only (ai_rerank false); LLM may still run.
+For-you / matches list drops score < 0.33 or confidence < 0.35.
+SQLite / missing vectors → Hunt only (ai_rerank false); LLM may still run.
 """
 
 from __future__ import annotations
@@ -16,6 +17,21 @@ from threading import Lock
 from typing import Any
 
 from app.cv_profile import _profile_payload, ensure_profile_tables
+from app.hunt_scoring import (
+    MIN_CONFIDENCE,
+    MIN_SCORE,
+    SCORING_VERSION,
+    compute_score,
+    data_completeness_fit,
+    experience_fit,
+    freshness_fit,
+    passes_list_gates,
+    preference_fit,
+    role_seniority_fit,
+    salary_fit,
+    tech_skill_fit,
+    work_authorization_fit,
+)
 from app.role_suggestions import (
     _build_skill_lookup,
     _candidate_skills,
@@ -48,6 +64,7 @@ DEFAULT_LIMIT = 20
 MAX_LIMIT = 50
 RERANK_POOL = 50
 
+# Legacy component weights (kept for tests / callers of location_score helpers).
 W_SKILLS = 0.45
 W_SENIORITY = 0.20
 W_LOCATION = 0.20
@@ -472,28 +489,47 @@ def score_job(
     candidate_langs: list[str],
     prefs: dict,
     lang: str,
+    salary_expectation: dict | None = None,
+    total_years: float | None = None,
+    work_history: list | None = None,
 ) -> dict[str, Any] | None:
     skill_s, have, missing = skill_overlap_score(candidate, job_skills)
-    # Skip jobs with zero skill overlap when the ad has skills — keeps noise down.
+    # Soft skip: skill-bearing ads with zero overlap are noise / false fit.
     if job_skills and skill_s <= 0:
         return None
 
     job_level = detect_job_seniority(job["title"])
-    sen_s = seniority_score(candidate_seniority, job_level)
-    loc_s = location_score(prefs, remote=job["remote"], relocation=job["relocation"])
-    lang_s = language_score(candidate_langs, job["language"])
-    fresh_s = freshness_score(job["created_at"])
-
-    total = round(
-        W_SKILLS * skill_s
-        + W_SENIORITY * sen_s
-        + W_LOCATION * loc_s
-        + W_LANGUAGE * lang_s
-        + W_FRESHNESS * fresh_s,
-        4,
-    )
+    dims = {
+        "tech_skill_fit": tech_skill_fit(skill_s, job_has_skills=bool(job_skills)),
+        "role_seniority_fit": role_seniority_fit(candidate_seniority, job_level),
+        "preference_fit": preference_fit(
+            prefs, remote=job["remote"], relocation=job["relocation"]
+        ),
+        "salary_fit": salary_fit(salary_expectation, job.get("salary")),
+        "work_authorization_fit": work_authorization_fit(
+            prefs, relocation=job["relocation"]
+        ),
+        "freshness": freshness_fit(job.get("created_at")),
+        "data_completeness": data_completeness_fit(job, job_skills),
+        "experience_fit": experience_fit(
+            total_years, job, work_history=work_history
+        ),
+    }
+    hunt = compute_score(dims)
+    total = float(hunt["score"])
     if total <= 0:
         return None
+
+    # Legacy component keys for match-why / digests; honest unknowns stay out.
+    components = {
+        "skills": dims["tech_skill_fit"] if dims["tech_skill_fit"] is not None else 0.0,
+        "seniority": dims["role_seniority_fit"],
+        "location": dims["preference_fit"],
+        "language": language_score(candidate_langs, job["language"]),
+        "freshness": dims["freshness"],
+        "hunt_score": total,
+        "confidence": hunt["confidence"],
+    }
 
     return {
         "job_id": job["id"],
@@ -507,13 +543,13 @@ def score_job(
         "language": job["language"],
         "created_at": job["created_at"],
         "score": total,
-        "components": {
-            "skills": skill_s,
-            "seniority": sen_s,
-            "location": loc_s,
-            "language": lang_s,
-            "freshness": fresh_s,
-        },
+        "confidence": hunt["confidence"],
+        "score_pct": hunt["score_pct"],
+        "confidence_pct": hunt["confidence_pct"],
+        "dimensions": hunt["dimensions"],
+        "scoring_version": SCORING_VERSION,
+        "hunt_score": total,
+        "components": components,
         "have": have,
         "missing": missing,
         "job_seniority": job_level or "",
@@ -576,7 +612,9 @@ def _apply_role_scope(
         score = float(item.get("score") or 0.0)
     except (TypeError, ValueError):
         score = 0.0
-    item["score"] = round(min(1.0, score + boost), 4)
+    new_score = round(min(1.0, score + boost), 4)
+    item["score"] = new_score
+    item["score_pct"] = int(round(new_score * 100))
     comps = item.get("components") if isinstance(item.get("components"), dict) else {}
     comps = dict(comps)
     comps["role_hits"] = hits
@@ -629,6 +667,18 @@ def matches_payload(
         return base
 
     prefs = profile.get("preferences") if isinstance(profile.get("preferences"), dict) else {}
+    salary_expectation = (
+        profile.get("salary_expectation")
+        if isinstance(profile.get("salary_expectation"), dict)
+        else None
+    )
+    work_history = (
+        profile.get("work_history") if isinstance(profile.get("work_history"), list) else None
+    )
+    try:
+        total_years = float(profile["total_years"]) if profile.get("total_years") is not None else None
+    except (TypeError, ValueError):
+        total_years = None
     candidate_seniority = str(profile.get("seniority") or "").strip().lower() or None
     candidate_langs = _candidate_languages(profile)
     feedback = _load_feedback(conn, user_id)
@@ -646,6 +696,9 @@ def matches_payload(
             candidate_langs=candidate_langs,
             prefs=prefs,
             lang=locale,
+            salary_expectation=salary_expectation,
+            total_years=total_years,
+            work_history=work_history,
         )
         if item is None:
             continue
@@ -688,8 +741,19 @@ def matches_payload(
         base["ai_llm_rerank"] = True
 
     _apply_feedback_demotion(pool)
+    pool = [
+        item
+        for item in pool
+        if passes_list_gates(
+            float(item.get("score") or 0.0),
+            float(item.get("confidence") or 0.0),
+        )
+    ]
     pool.sort(key=lambda row: (-row["score"], -row["job_id"]))
     matches = pool[:chosen_limit]
+    base["scoring_version"] = SCORING_VERSION
+    base["min_score"] = MIN_SCORE
+    base["min_confidence"] = MIN_CONFIDENCE
     why_deferred = False
     if used_rerank or used_llm or llm_deferred:
         try:
@@ -745,7 +809,9 @@ def _apply_feedback_demotion(pool: list[dict]) -> None:
             score = float(item.get("score") or 0.0)
         except (TypeError, ValueError):
             continue
-        item["score"] = round(score * FEEDBACK_DOWN_FACTOR, 4)
+        new_score = round(score * FEEDBACK_DOWN_FACTOR, 4)
+        item["score"] = new_score
+        item["score_pct"] = int(round(new_score * 100))
         comps = item.get("components") if isinstance(item.get("components"), dict) else {}
         comps = dict(comps)
         comps["feedback_demotion"] = FEEDBACK_DOWN_FACTOR
@@ -808,14 +874,17 @@ def _apply_semantic_rerank(
             item["ai_rerank"] = False
             continue
         semantic = cosine_similarity(profile_vec, job_vec)
-        struct = float(item.get("score") or 0.0)
+        # Blend against Hunt struct; do not erase hunt_score / confidence.
+        struct = float(item.get("hunt_score") or item.get("score") or 0.0)
         blended = round(W_STRUCT * struct + W_SEMANTIC * semantic, 4)
         comps = item.get("components") if isinstance(item.get("components"), dict) else {}
         comps = dict(comps)
         comps["semantic"] = round(semantic, 4)
         comps["struct"] = round(struct, 4)
+        comps["hunt_score"] = round(struct, 4)
         item["components"] = comps
         item["score"] = blended
+        item["score_pct"] = int(round(blended * 100))
         item["ai_rerank"] = True
         applied = True
     return applied

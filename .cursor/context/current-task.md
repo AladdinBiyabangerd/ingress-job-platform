@@ -1,23 +1,27 @@
 # Current task
 
 ## Completed
-- Tailored CV AZ/RU/EN language quality parity (`job-tailored-cv-v5`)
-- Split shared ATS system prompt from locale-specific AZ/RU/EN blocks via `_system_for`
-- RU + EN banned/prefer + voice rules; `_build_user` reinforcement for all three locales
-- Tests updated for v5 + locale isolation
+- For-you Chat 1: Hunt score+confidence engine + matches ungate + tests
+- For-you Chat 2: home For-you pill (All-dan sonra) + JobBoardCard match % + honest empty/copy (az/en/ru)
 
 ## Current state
-- AZ rules no longer injected into RU/EN system prompts
-- Cache bust via `PROMPT_VERSION = job-tailored-cv-v5`
+- Home For-you tab: signed-in candidate/staff only; `GET /api/auth/me/matches?limit=50`
+- Card shows `%` when confidence ≥ 0.35; otherwise “uyğunluq dəqiq deyil” / equiv.
+- Empty: consent CTA → profile; no skills → profile review; else honest ≥33% empty
+- Sort hidden on For-you; client paginate PAGE_SIZE from match list
 
 ## Decisions
-- Same depth for AZ/RU/EN language appendices (not minimal EN)
-- No few-shot / model change / post-edit — prompt structure only
+- Flag A: matches/For-you only; hub stays hide
+- UI never invents %; backend floor already applied; card still softens low confidence
+- Other filters / search exit For-you mode
 
 ## Remaining work
-- Deploy/refresh so live RU/EN tailored CVs regenerate under v5
-- Spot-check same job with `lang=ru` and `lang=en`
+- Manual QA: guest (no tab), consent off, no skills, good matches with %
+- Plan todos: mark chat2 complete in `~/.cursor/plans/for-you_match_tab_947649d6.plan.md` if desired
 
 ## Relevant files
-- `api/app/job_tailored_cv.py`
-- `api/tests/test_job_tailored_cv.py`
+- `frontend/components/home.js`
+- `frontend/components/job-board-card.js`
+- `frontend/lib/copy.js`
+- `frontend/app/globals.css` (`.job-board-card-match`)
+- `api/app/hunt_scoring.py` / `matching.py` / `me.py` (Chat 1, untouched in Chat 2)
