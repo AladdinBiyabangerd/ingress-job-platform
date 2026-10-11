@@ -1,24 +1,26 @@
 # Current task
 
 ## Completed
-- Country location facets + expanded `place_data.py` (~1200 cities / ~100 countries)
-- Jooble SOSi DevOps stub: connector drops all API rows; purge hides every `source_name=Jooble` job
+- Language filter uses JD body (not only EN title / stored `en`)
+- Score-based detection for all facet langs: az, en, ru, uk, de, fr, es, pt, tr
+- AZ no longer misreads German `ü/ö` as Azerbaijani
 
 ## Current state
-- Jooble catalog already `enabled=False` / `go=no-go` (API = snippet only; `/desc/` robots-blocked)
-- Existing Jooble rows (incl. rewritten `cleaned_text`) hidden by `market_purge` as `thin_description`
-- SOSi listing cannot be “fixed” to full JD from Jooble — need employer ATS if re-ingested
+- `listing_language` scores stopwords + distinctive letters; min score 3 → else `en`
+- Script shortcuts: AZ (`ə`), UK letters, Cyrillic → `ru`
+- List/filter/facets use `language_sample` (~2000 chars of cleaned_text/text)
+- Tests: `tests/test_listing_language.py`, German case in `test_jobs_list_query.py`
 
 ## Decisions
-- Never publish Jooble API snippets; prefer Greenhouse/ATS for full descriptions
-- Purge by Jooble source, not only snippet heuristic (tidy can rewrite stubs)
+- Body inference beats stored `en`
+- Stored cabinet `az`/`ru` stay trusted
+- Diacritics optional — ASCII-heavy DE/FR/ES bodies still classify via stopwords
 
 ## Remaining work
-- **Deploy API + frontend** — country facets are local/unpushed; prod still shows city chips
-- Deploy worker + run `purge-market` for Jooble stubs
+- Deploy API so prod language filter picks up the fix
+- Optional: backfill `jobs.language` on worker ingest
 
 ## Relevant files
-- `worker/worker/connectors/jooble.py`, `worker/worker/market_purge.py`
-- `worker/worker/parsing.py` (`is_aggregator_snippet`), `worker/worker/catalog.py`
-- `api/app/place.py`, `api/app/place_data.py`
-- Tests: `test_jooble.py`, `test_market_purge.py`, `test_parsing.py`, `test_place.py`
+- `api/app/sqlite_jobs.py`
+- `api/tests/test_listing_language.py`
+- `api/tests/test_jobs_list_query.py`

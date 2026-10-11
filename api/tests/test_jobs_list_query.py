@@ -103,6 +103,50 @@ class JobsListQueryTests(unittest.TestCase):
         self.assertEqual(body["total"], 8)
         self.assertEqual(len(body["items"]), 8)
 
+    def test_language_filter_uses_body_not_english_title(self):
+        """German JD with EN title + stored en must not match language=en."""
+        self._seed(2)
+        german_body = (
+            "Die Naturida GmbH ist ein wachsendes Unternehmen. "
+            "Wir suchen eine erfahrene Product Managerin für unsere Beauty-Marke. "
+            "Die Roadmap verantworten und mit Laboren steuern. "
+            "Fließende Deutsch- und Englischkenntnisse."
+        )
+        conn = sqlite3.connect(self.db)
+        conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key,
+                language, remote, tech_stack, category
+            )
+            VALUES (?, 'Naturida', 'Berlin', ?, 'published', ?, ?, 'en', 1, '[]', 'Product')
+            """,
+            (
+                "Freelance Product Manager (m/w/d)",
+                german_body,
+                "2026-10-11T09:00:00+04:00",
+                "de-body-en-title",
+            ),
+        )
+        conn.commit()
+        conn.close()
+
+        en = self.client.get("/api/v1/jobs", params={"language": "en"}).json()
+        self.assertEqual(en["total"], 2)
+        self.assertTrue(all(item["language"] == "en" for item in en["items"]))
+
+        de = self.client.get("/api/v1/jobs", params={"language": "de"}).json()
+        self.assertEqual(de["total"], 1)
+        self.assertEqual(de["items"][0]["language"], "de")
+        self.assertIn("Product Manager", de["items"][0]["title"])
+
+        langs = {
+            item["code"]: item["total"]
+            for item in self.client.get("/api/v1/jobs").json()["facets"]["languages"]
+        }
+        self.assertEqual(langs.get("en"), 2)
+        self.assertEqual(langs.get("de"), 1)
+
     def test_facets_infer_language_only_when_column_empty(self):
         self._seed(3)
         conn = sqlite3.connect(self.db)
