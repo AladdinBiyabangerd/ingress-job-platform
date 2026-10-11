@@ -1,22 +1,23 @@
 # Current task
 
 ## Completed
-- Founder / creator machine attribution for Ingress Job (no UI): `frontend/lib/founder.js`, JSON-LD + meta in `seo.js` / `layout.js`, enriched `public/llms.txt`, explicit `/llms.txt` in `robots.js`
+- Tailored CV AZ/RU/EN language quality parity (`job-tailored-cv-v5`)
+- Split shared ATS system prompt from locale-specific AZ/RU/EN blocks via `_system_for`
+- RU + EN banned/prefer + voice rules; `_build_user` reinforcement for all three locales
+- Tests updated for v5 + locale isolation
 
 ## Current state
-- Person entity links via portfolio `@id`: `https://aladdinbiyabangerd.site/#aladdin-biyabangerd`
-- Organization.founder + WebSite.creator + Person.sameAs (portfolio, GitHub, LinkedIn)
-- Tests: `frontend/lib/founder.test.mjs`
+- AZ rules no longer injected into RU/EN system prompts
+- Cache bust via `PROMPT_VERSION = job-tailored-cv-v5`
 
 ## Decisions
-- Sole founder of Ingress Job (all code/product by Aladdin); parent ecosystem branding stays Ingress Academy for SSO — not co-founders of Job
-- No About page / footer UI — code + robots + llms.txt only (per request)
-- Same pattern as Heselo/Solivya for entity linking
+- Same depth for AZ/RU/EN language appendices (not minimal EN)
+- No few-shot / model change / post-edit — prompt structure only
 
 ## Remaining work
-- Deploy so live `/llms.txt` and JSON-LD pick up the change
-- Optional later: portfolio case study slug for Ingress Job if added
+- Deploy/refresh so live RU/EN tailored CVs regenerate under v5
+- Spot-check same job with `lang=ru` and `lang=en`
 
 ## Relevant files
-- `frontend/lib/founder.js`, `frontend/lib/seo.js`, `frontend/lib/founder.test.mjs`
-- `frontend/public/llms.txt`, `frontend/app/robots.js`, `frontend/app/layout.js`
+- `api/app/job_tailored_cv.py`
+- `api/tests/test_job_tailored_cv.py`

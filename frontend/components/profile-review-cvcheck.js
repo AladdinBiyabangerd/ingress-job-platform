@@ -1,17 +1,16 @@
 "use client";
 
 import { cvChecks, cvFeedback, issueTarget } from "../lib/cv-quality";
-import { CV_STYLES, CV_TEMPLATES, detectedTemplate, pick, templatesByStyle } from "../lib/cv-styles";
+import { detectedTemplate } from "../lib/cv-styles";
 
 const pct = (n) => `${Math.round(n * 100)}%`;
 
 /** "CV check" tab: how the uploaded CV was actually read (score, source, issues). */
-export function ProfileReviewCvCheck({ t, locale = "az", values, confidence, parseMeta, onJump }) {
+export function ProfileReviewCvCheck({ t, values, confidence, parseMeta, onJump }) {
   const checks = cvChecks(values);
   const failed = checks.filter((item) => !item.ok);
   const fb = cvFeedback(parseMeta);
   const tpl = detectedTemplate(parseMeta);
-  const activeStyle = tpl?.style?.id || null;
 
   return (
     <div
@@ -102,46 +101,6 @@ export function ProfileReviewCvCheck({ t, locale = "az", values, confidence, par
           {tpl?.id ? (
             <p className="hint">{tpl.applied ? t.profileReviewCvTemplateApplied : t.profileReviewCvTemplateNotApplied}</p>
           ) : null}
-        </section>
-        <section className="review-panel cvcheck-styles-panel">
-          <header className="review-panel-head">
-            <h2>{t.profileReviewCvStylesTitle}</h2>
-          </header>
-          <p className="hint">{t.profileReviewCvStylesHint}</p>
-          <ul className="cvcheck-styles">
-            {CV_STYLES.map((style) => (
-              <li key={style.id} className={`cvcheck-style-card${activeStyle === style.id ? " active" : ""}`}>
-                <div className="cvcheck-style-head">
-                  <strong>{pick(style.name, locale)}</strong>
-                  <span className={`cvcheck-badge ${style.reading === "good" ? "ok" : "partial"}`}>
-                    {t.profileReviewCvReading[style.reading]}
-                  </span>
-                  {activeStyle === style.id ? <span className="cvcheck-badge">{t.profileReviewCvStyleYours}</span> : null}
-                </div>
-                <p className="hint">{pick(style.desc, locale)}</p>
-                <ul className="cvcheck-tips">
-                  {style.tips.map((tip, i) => (
-                    <li key={i}>{pick(tip, locale)}</li>
-                  ))}
-                </ul>
-                <ul className="cvcheck-template-list">
-                  {templatesByStyle(style.id).map((item) => (
-                    <li key={item.id} className={tpl?.id === item.id ? "active" : ""}>
-                      <span className="cvcheck-template-name">{item.name}</span>{" "}
-                      <span className="cvcheck-fmt">{item.format.toUpperCase()}</span>{" "}
-                      <span className={`cvcheck-badge ${item.reading === "good" ? "ok" : "partial"}`}>
-                        {t.profileReviewCvReading[item.reading]}
-                      </span>
-                      <p className="hint">{pick(item.desc, locale)}</p>
-                      <p className="hint">{pick(item.tip, locale)}</p>
-                      <p className="hint cvcheck-source">{t.profileReviewCvTemplateSource(item.source, item.license)}</p>
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
-          <p className="hint">{t.profileReviewCvTemplatesToggle(CV_TEMPLATES.length)}</p>
         </section>
       </div>
     </div>

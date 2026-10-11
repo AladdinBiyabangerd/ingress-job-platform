@@ -1279,7 +1279,6 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
                 {reviewTab === "cvcheck" ? (
                   <ProfileReviewCvCheck
                     t={t}
-                    locale={locale}
                     confidence={payload?.confidence}
                     parseMeta={payload?.profile?.parse_meta}
                     values={{ fullName, email, phone, city, headline, work, education, skills, languages }}

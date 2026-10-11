@@ -330,32 +330,72 @@ class JobTailoredCvTests(unittest.TestCase):
         self.assertFalse(body["ai_pending"])
 
     def test_prompt_version(self):
-        from app.job_tailored_cv import PROMPT_VERSION, _SYSTEM, _build_user, _normalize_cv
+        from app.job_tailored_cv import (
+            PROMPT_VERSION,
+            _SYSTEM_SHARED,
+            _build_user,
+            _normalize_cv,
+            _system_for,
+        )
 
-        self.assertEqual(PROMPT_VERSION, "job-tailored-cv-v4")
-        self.assertIn("Do not invent", _SYSTEM)
-        self.assertIn("süni intellekt", _SYSTEM)
-        self.assertIn("arxa uç→backend", _SYSTEM)
-        self.assertIn("no hollow", _SYSTEM)
-        self.assertIn("empty experience", _SYSTEM)
+        self.assertEqual(PROMPT_VERSION, "job-tailored-cv-v5")
+        self.assertIn("Do not invent", _SYSTEM_SHARED)
+        self.assertIn("no hollow", _SYSTEM_SHARED)
+        self.assertIn("empty experience", _SYSTEM_SHARED)
+        self.assertNotIn("arxa uç→backend", _SYSTEM_SHARED)
+
+        az_sys = _system_for("az")
+        ru_sys = _system_for("ru")
+        en_sys = _system_for("en")
+        self.assertIn("süni intellekt", az_sys)
+        self.assertIn("arxa uç→backend", az_sys)
+        self.assertNotIn("arxa uç→backend", ru_sys)
+        self.assertNotIn("arxa uç→backend", en_sys)
+        self.assertIn("разработал", ru_sys)
+        self.assertIn("занимался разработкой", ru_sys)
+        self.assertIn("Responsible for", en_sys)
+        self.assertIn("Built, Shipped, Owned", en_sys)
+
+        job = {
+            "id": 1,
+            "title": "Java Dev",
+            "company": "Acme",
+            "city": "",
+            "remote": True,
+            "relocation": False,
+            "text": "Java",
+        }
+        profile = {"preferences": {}}
         az = _build_user(
             lang="az",
             profile_version="v1",
-            job={
-                "id": 1,
-                "title": "Java Dev",
-                "company": "Acme",
-                "city": "",
-                "remote": True,
-                "relocation": False,
-                "text": "Java",
-            },
-            profile={"preferences": {}},
+            job=job,
+            profile=profile,
+            have=["Java"],
+            missing=[],
+        )
+        ru = _build_user(
+            lang="ru",
+            profile_version="v1",
+            job=job,
+            profile=profile,
+            have=["Java"],
+            missing=[],
+        )
+        en = _build_user(
+            lang="en",
+            profile_version="v1",
+            job=job,
+            profile=profile,
             have=["Java"],
             missing=[],
         )
         self.assertIn("kunstiq intellekt", az)
         self.assertIn("mentorluq", az)
+        self.assertIn("Russian CV rules", ru)
+        self.assertIn("разработал", ru)
+        self.assertIn("English CV rules", en)
+        self.assertIn("Responsible for", en)
         dup = _normalize_cv(
             {
                 "headline": "Backend",
