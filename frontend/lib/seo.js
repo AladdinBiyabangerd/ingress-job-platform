@@ -1,7 +1,7 @@
-import { hrefFor, text } from "./copy";
-import { FOUNDER, founderPersonNode } from "./founder";
-import { INGRESS, ingressUrl } from "./ingress";
-import { salaryJsonLd } from "./salary";
+import { hrefFor, text } from "./copy.js";
+import { FOUNDER, founderPersonNode } from "./founder.js";
+import { INGRESS, ingressUrl } from "./ingress.js";
+import { salaryJsonLd } from "./salary.js";
 
 export const LOCALES = ["az", "en", "ru"];
 export const HTML_LANG = { az: "az", en: "en", ru: "ru" };
@@ -31,6 +31,10 @@ const HOME = {
       "iş axtarışı",
       "Azərbaycan iş",
       "Bakı vakansiya",
+      "Bakı iş elanları",
+      "IT vakansiya Azərbaycan",
+      "remote iş",
+      "iş elanları onlayn",
       "Ingress Job",
       "Ingress",
       "Ingress Academy",
@@ -50,6 +54,10 @@ const HOME = {
       "job listings",
       "vacancies Baku",
       "open roles",
+      "IT jobs Azerbaijan",
+      "remote jobs Azerbaijan",
+      "Baku tech jobs",
+      "job board Azerbaijan",
       "Ingress Job",
       "Ingress",
       "Ingress Academy",
@@ -69,6 +77,9 @@ const HOME = {
       "работа Баку",
       "открытые вакансии",
       "поиск работы",
+      "IT вакансии Баку",
+      "удалённая работа Азербайджан",
+      "доска вакансий",
       "Ingress Job",
       "Ingress",
       "Ingress Academy",
@@ -121,9 +132,12 @@ export function absoluteUrl(path = "/") {
   return `${origin}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-export function localePath(locale, { jobId, mode, companySlug } = {}) {
+export function localePath(locale, { jobId, mode, companySlug, skillId } = {}) {
   if (jobId) return hrefFor(locale, { jobId });
   if (companySlug) return hrefFor(locale, { companySlug });
+  if (skillId != null && String(skillId).trim() !== "") {
+    return hrefFor(locale, { mode: mode || "trend", skillId });
+  }
   return hrefFor(locale, mode ? { mode } : {});
 }
 
@@ -239,18 +253,27 @@ export function jobMetadata(locale, job) {
 const COMPANIES_COPY = {
   az: {
     title: "Şirkətlər — açıq vakansiyalar və müraciətlər",
-    description: "Ingress Job-da açıq elanı olan şirkətlər: elan sayı, texnologiyalar, uzaqdan iş və müraciət statistikası.",
+    description:
+      "Ingress Job-da açıq elanı olan şirkətlər: elan sayı, texnologiyalar, uzaqdan iş və müraciət statistikası. Aladdin Biyabangerd tərəfindən qurulub.",
+    breadcrumb: "Şirkətlər",
     company: (name, jobs) => `${name} — ${jobs} açıq elan`,
+    keywords: ["şirkətlər", "işəgötürənlər", "vakansiya şirkətləri", "Ingress Job", "Aladdin Biyabangerd"],
   },
   en: {
     title: "Companies — open jobs and applications",
-    description: "Companies hiring on Ingress Job: open roles, tech stack, remote work and application stats.",
+    description:
+      "Companies hiring on Ingress Job: open roles, tech stack, remote work and application stats. Built by Aladdin Biyabangerd.",
+    breadcrumb: "Companies",
     company: (name, jobs) => `${name} — ${jobs} open ${jobs === 1 ? "job" : "jobs"}`,
+    keywords: ["companies hiring", "employers Azerbaijan", "job board companies", "Ingress Job", "Aladdin Biyabangerd"],
   },
   ru: {
     title: "Компании — открытые вакансии и отклики",
-    description: "Компании с вакансиями на Ingress Job: количество вакансий, технологии, удалёнка и статистика откликов.",
+    description:
+      "Компании с вакансиями на Ingress Job: количество вакансий, технологии, удалёнка и статистика откликов. Создано Aladdin Biyabangerd.",
+    breadcrumb: "Компании",
     company: (name, jobs) => `${name} — открытые вакансии: ${jobs}`,
+    keywords: ["компании", "работодатели", "вакансии компаний", "Ingress Job", "Aladdin Biyabangerd"],
   },
 };
 
@@ -262,6 +285,7 @@ export function companiesMetadata(locale = "az") {
     description: copy.description,
     path: localePath(locale, { mode: "companies" }),
     route: { mode: "companies" },
+    keywords: copy.keywords,
   });
 }
 
@@ -270,16 +294,40 @@ const TRENDS_COPY = {
     title: "Bacarıq trendləri",
     description:
       "Ingress Job-un izlədiyi elanlarda bacarıq tələbinin payı və həftəlik dəyişimi. Bütün bazarı əks etdirmir.",
+    breadcrumb: "Trendlər",
+    skillTitle: (name) => `${name} — bacarıq trendi`,
+    skillDescription: (name) =>
+      `${name} bacarığının Ingress Job elanlarındakı tələb payı və həftəlik dəyişimi. Bütün bazarı əks etdirmir.`,
+    skillJobsTitle: (name) => `${name} — tələb edən iş elanları`,
+    skillJobsDescription: (name) =>
+      `${name} bacarığı tələb olunan açıq elanlar Ingress Job-da. Trend səhifəsi tələb payını göstərir.`,
+    keywords: ["bacarıq trendləri", "IT skills", "vakansiya tələbi", "Ingress Job", "Aladdin Biyabangerd"],
   },
   en: {
     title: "Skill trends",
     description:
       "Skill demand share and week-over-week change in listings Ingress Job tracks — not the whole market.",
+    breadcrumb: "Trends",
+    skillTitle: (name) => `${name} — skill trend`,
+    skillDescription: (name) =>
+      `Demand share and week-over-week change for ${name} in listings Ingress Job tracks — not the whole market.`,
+    skillJobsTitle: (name) => `${name} — jobs requiring this skill`,
+    skillJobsDescription: (name) =>
+      `Open roles on Ingress Job that ask for ${name}. The trend page shows demand share over time.`,
+    keywords: ["skill trends", "IT skills demand", "job market skills", "Ingress Job", "Aladdin Biyabangerd"],
   },
   ru: {
     title: "Тренды навыков",
     description:
       "Доля спроса на навыки и недельное изменение в вакансиях, которые отслеживает Ingress Job — не весь рынок.",
+    breadcrumb: "Тренды",
+    skillTitle: (name) => `${name} — тренд навыка`,
+    skillDescription: (name) =>
+      `Доля спроса и недельное изменение для ${name} в вакансиях Ingress Job — не весь рынок.`,
+    skillJobsTitle: (name) => `${name} — вакансии с этим навыком`,
+    skillJobsDescription: (name) =>
+      `Открытые вакансии на Ingress Job, где требуется ${name}. Страница тренда показывает долю спроса.`,
+    keywords: ["тренды навыков", "спрос на навыки", "IT навыки", "Ingress Job", "Aladdin Biyabangerd"],
   },
 };
 
@@ -291,6 +339,24 @@ export function trendsMetadata(locale = "az") {
     description: copy.description,
     path: localePath(locale, { mode: "trends" }),
     route: { mode: "trends" },
+    keywords: copy.keywords,
+  });
+}
+
+export function trendSkillMetadata(locale, skill, { jobs = false } = {}) {
+  if (!skill?.name || skill.skill_id == null) {
+    return { title: SITE.name, robots: { index: false, follow: false, googleBot: { index: false, follow: false } } };
+  }
+  const copy = TRENDS_COPY[locale] || TRENDS_COPY.az;
+  const name = String(skill.name).trim();
+  const mode = jobs ? "trendJobs" : "trend";
+  return sharedMeta({
+    locale,
+    title: `${(jobs ? copy.skillJobsTitle : copy.skillTitle)(name)} | ${SITE.name}`,
+    description: truncateText((jobs ? copy.skillJobsDescription : copy.skillDescription)(name)),
+    path: localePath(locale, { mode, skillId: skill.skill_id }),
+    route: { mode, skillId: skill.skill_id },
+    keywords: [name, SITE.name, FOUNDER.name, ...(copy.keywords || [])].filter(Boolean),
   });
 }
 
@@ -299,10 +365,11 @@ export function companyMetadata(locale, company) {
     return { title: SITE.name, robots: { index: false, follow: false, googleBot: { index: false, follow: false } } };
   }
   const copy = COMPANIES_COPY[locale] || COMPANIES_COPY.az;
+  const tech = (company.top_tech || []).slice(0, 5).map((item) => item.name).filter(Boolean);
   const bits = [
     copy.company(company.name, company.open_jobs),
     (company.locations || []).slice(0, 3).join(", "),
-    (company.top_tech || []).slice(0, 5).map((item) => item.name).join(", "),
+    tech.join(", "),
   ].filter(Boolean);
   return sharedMeta({
     locale,
@@ -310,7 +377,7 @@ export function companyMetadata(locale, company) {
     description: truncateText(bits.join(". ")),
     path: localePath(locale, { companySlug: company.slug }),
     route: { companySlug: company.slug },
-    keywords: [company.name, SITE.name],
+    keywords: [company.name, ...tech, SITE.name, FOUNDER.name].filter(Boolean),
   });
 }
 
@@ -384,12 +451,20 @@ function organizationNode(locale) {
       "@type": "ImageObject",
       url: absoluteUrl(SITE.logoPath),
     },
+    email: FOUNDER.email,
     description: copy.description,
     founder: { "@id": FOUNDER.personId },
     knowsAbout: copy.knowsAbout,
     areaServed: {
       "@type": "Country",
       name: copy.countryName,
+    },
+    sameAs: [INGRESS.url, FOUNDER.portfolioOrigin],
+    contactPoint: {
+      "@type": "ContactPoint",
+      email: FOUNDER.email,
+      contactType: "founder",
+      availableLanguage: LOCALES.map((code) => HTML_LANG[code]),
     },
     parentOrganization: {
       "@type": "Organization",
@@ -400,6 +475,53 @@ function organizationNode(locale) {
   };
 }
 
+function websiteNode(locale) {
+  const copy = homeCopy(locale);
+  const origin = siteOrigin();
+  const orgId = `${origin}/#organization`;
+  const homeUrl = absoluteUrl(localePath(locale));
+  return {
+    "@type": "WebSite",
+    "@id": `${origin}/#website`,
+    name: SITE.name,
+    url: origin,
+    description: copy.description,
+    publisher: { "@id": orgId },
+    creator: { "@id": FOUNDER.personId },
+    inLanguage: HTML_LANG[locale],
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${homeUrl}${homeUrl.includes("?") ? "&" : "?"}q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
+}
+
+function coreEntityGraph(locale) {
+  const origin = siteOrigin();
+  const orgId = `${origin}/#organization`;
+  return [
+    organizationNode(locale),
+    founderPersonNode(locale, { organizationId: orgId }),
+    websiteNode(locale),
+  ];
+}
+
+function breadcrumbList(items) {
+  return {
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  };
+}
+
 export function homeJsonLd(locale = "az") {
   const copy = homeCopy(locale);
   const faq = text(locale).faq;
@@ -407,18 +529,7 @@ export function homeJsonLd(locale = "az") {
   const pageUrl = absoluteUrl(localePath(locale));
   const orgId = `${origin}/#organization`;
   const graph = [
-    organizationNode(locale),
-    founderPersonNode(locale, { organizationId: orgId }),
-    {
-      "@type": "WebSite",
-      "@id": `${origin}/#website`,
-      name: SITE.name,
-      url: origin,
-      description: copy.description,
-      publisher: { "@id": orgId },
-      creator: { "@id": FOUNDER.personId },
-      inLanguage: HTML_LANG[locale],
-    },
+    ...coreEntityGraph(locale),
     {
       "@type": "CollectionPage",
       "@id": `${pageUrl}#webpage`,
@@ -428,6 +539,7 @@ export function homeJsonLd(locale = "az") {
       isPartOf: { "@id": `${origin}/#website` },
       about: { "@id": orgId },
       inLanguage: HTML_LANG[locale],
+      author: { "@id": FOUNDER.personId },
     },
   ];
   if (faq?.items?.length) {
@@ -447,6 +559,148 @@ export function homeJsonLd(locale = "az") {
   return {
     "@context": "https://schema.org",
     "@graph": graph,
+  };
+}
+
+export function companiesJsonLd(locale = "az") {
+  const home = homeCopy(locale);
+  const copy = COMPANIES_COPY[locale] || COMPANIES_COPY.az;
+  const origin = siteOrigin();
+  const pageUrl = absoluteUrl(localePath(locale, { mode: "companies" }));
+  const homeUrl = absoluteUrl(localePath(locale));
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      ...coreEntityGraph(locale),
+      {
+        "@type": "CollectionPage",
+        "@id": `${pageUrl}#webpage`,
+        url: pageUrl,
+        name: `${copy.title} | ${SITE.name}`,
+        description: copy.description,
+        isPartOf: { "@id": `${origin}/#website` },
+        about: { "@id": `${origin}/#organization` },
+        inLanguage: HTML_LANG[locale],
+        author: { "@id": FOUNDER.personId },
+      },
+      breadcrumbList([
+        { name: home.breadcrumbHome, url: homeUrl },
+        { name: copy.breadcrumb, url: pageUrl },
+      ]),
+    ],
+  };
+}
+
+export function companyJsonLd(locale, company) {
+  if (!company) return null;
+  const home = homeCopy(locale);
+  const copy = COMPANIES_COPY[locale] || COMPANIES_COPY.az;
+  const origin = siteOrigin();
+  const pageUrl = absoluteUrl(localePath(locale, { companySlug: company.slug }));
+  const homeUrl = absoluteUrl(localePath(locale));
+  const companiesUrl = absoluteUrl(localePath(locale, { mode: "companies" }));
+  const tech = (company.top_tech || []).slice(0, 8).map((item) => item.name).filter(Boolean);
+  const hiringOrg = {
+    "@type": "Organization",
+    "@id": `${pageUrl}#employer`,
+    name: company.name,
+    url: pageUrl,
+  };
+  if (tech.length) hiringOrg.knowsAbout = tech;
+  if ((company.locations || []).length) {
+    hiringOrg.areaServed = company.locations.slice(0, 5).map((place) => ({
+      "@type": "Place",
+      name: place,
+    }));
+  }
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      ...coreEntityGraph(locale),
+      {
+        "@type": "ProfilePage",
+        "@id": `${pageUrl}#webpage`,
+        url: pageUrl,
+        name: `${copy.company(company.name, company.open_jobs)} | ${SITE.name}`,
+        description: truncateText(
+          [copy.company(company.name, company.open_jobs), tech.join(", ")].filter(Boolean).join(". "),
+        ),
+        isPartOf: { "@id": `${origin}/#website` },
+        mainEntity: { "@id": hiringOrg["@id"] },
+        inLanguage: HTML_LANG[locale],
+      },
+      hiringOrg,
+      breadcrumbList([
+        { name: home.breadcrumbHome, url: homeUrl },
+        { name: copy.breadcrumb, url: companiesUrl },
+        { name: company.name, url: pageUrl },
+      ]),
+    ],
+  };
+}
+
+export function trendsJsonLd(locale = "az") {
+  const home = homeCopy(locale);
+  const copy = TRENDS_COPY[locale] || TRENDS_COPY.az;
+  const origin = siteOrigin();
+  const pageUrl = absoluteUrl(localePath(locale, { mode: "trends" }));
+  const homeUrl = absoluteUrl(localePath(locale));
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      ...coreEntityGraph(locale),
+      {
+        "@type": "CollectionPage",
+        "@id": `${pageUrl}#webpage`,
+        url: pageUrl,
+        name: `${copy.title} | ${SITE.name}`,
+        description: copy.description,
+        isPartOf: { "@id": `${origin}/#website` },
+        about: { "@id": `${origin}/#organization` },
+        inLanguage: HTML_LANG[locale],
+        author: { "@id": FOUNDER.personId },
+      },
+      breadcrumbList([
+        { name: home.breadcrumbHome, url: homeUrl },
+        { name: copy.breadcrumb, url: pageUrl },
+      ]),
+    ],
+  };
+}
+
+export function trendSkillJsonLd(locale, skill) {
+  if (!skill?.name || skill.skill_id == null) return null;
+  const home = homeCopy(locale);
+  const copy = TRENDS_COPY[locale] || TRENDS_COPY.az;
+  const origin = siteOrigin();
+  const name = String(skill.name).trim();
+  const pageUrl = absoluteUrl(localePath(locale, { mode: "trend", skillId: skill.skill_id }));
+  const homeUrl = absoluteUrl(localePath(locale));
+  const trendsUrl = absoluteUrl(localePath(locale, { mode: "trends" }));
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      ...coreEntityGraph(locale),
+      {
+        "@type": "WebPage",
+        "@id": `${pageUrl}#webpage`,
+        url: pageUrl,
+        name: `${copy.skillTitle(name)} | ${SITE.name}`,
+        description: truncateText(copy.skillDescription(name)),
+        isPartOf: { "@id": `${origin}/#website` },
+        about: {
+          "@type": "Thing",
+          name,
+        },
+        inLanguage: HTML_LANG[locale],
+        author: { "@id": FOUNDER.personId },
+      },
+      breadcrumbList([
+        { name: home.breadcrumbHome, url: homeUrl },
+        { name: copy.breadcrumb, url: trendsUrl },
+        { name, url: pageUrl },
+      ]),
+    ],
   };
 }
 
@@ -482,21 +736,10 @@ export function jobPostingJsonLd(job, locale = "az") {
   if (validThrough) posting.validThrough = validThrough;
   applyJobLocation(posting, job);
 
-  const orgId = `${origin}/#organization`;
   return {
     "@context": "https://schema.org",
     "@graph": [
-      organizationNode(locale),
-      founderPersonNode(locale, { organizationId: orgId }),
-      {
-        "@type": "WebSite",
-        "@id": `${origin}/#website`,
-        name: SITE.name,
-        url: origin,
-        publisher: { "@id": orgId },
-        creator: { "@id": FOUNDER.personId },
-        inLanguage: HTML_LANG[locale],
-      },
+      ...coreEntityGraph(locale),
       {
         "@type": "WebPage",
         "@id": `${url}#webpage`,
@@ -506,24 +749,12 @@ export function jobPostingJsonLd(job, locale = "az") {
         isPartOf: { "@id": `${origin}/#website` },
         mainEntity: { "@id": `${url}#job` },
         inLanguage: HTML_LANG[locale],
+        author: { "@id": FOUNDER.personId },
       },
-      {
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          {
-            "@type": "ListItem",
-            position: 1,
-            name: ui.breadcrumbHome || copy.breadcrumbHome,
-            item: homeUrl,
-          },
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: job.title,
-            item: url,
-          },
-        ],
-      },
+      breadcrumbList([
+        { name: ui.breadcrumbHome || copy.breadcrumbHome, url: homeUrl },
+        { name: job.title, url },
+      ]),
       posting,
     ],
   };

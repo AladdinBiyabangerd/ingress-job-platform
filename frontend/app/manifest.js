@@ -4,7 +4,7 @@ export default function manifest() {
   return {
     name: SITE.name,
     short_name: SITE.name,
-    description: "Open job listings in Azerbaijan.",
+    description: "Open job listings in Azerbaijan — Ingress Job by Aladdin Biyabangerd.",
     start_url: "/",
     display: "standalone",
     background_color: SITE.backgroundColor,

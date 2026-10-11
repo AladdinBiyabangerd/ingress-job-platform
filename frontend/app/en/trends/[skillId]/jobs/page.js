@@ -2,14 +2,25 @@ import { notFound } from "next/navigation";
 import { TrendJobsPage } from "../../../../../components/trend-jobs";
 import { clampTrendsWindow } from "../../../../../components/trends";
 import { getTrendDetail } from "../../../../../lib/server/trends";
-import { trendsMetadata } from "../../../../../lib/seo";
+import { trendSkillMetadata } from "../../../../../lib/seo";
 
 export const revalidate = 60;
 
 const JOBS_PER_PAGE = 20;
 
-export function generateMetadata() {
-  return trendsMetadata("en");
+export async function generateMetadata({ params }) {
+  const route = (await params) || {};
+  const skillId = Number.parseInt(String(route.skillId || ""), 10);
+  if (!Number.isFinite(skillId) || skillId <= 0) {
+    return { robots: { index: false, follow: false } };
+  }
+  try {
+    const data = await getTrendDetail(skillId, { lang: "en", windowDays: 7 });
+    if (!data) return { robots: { index: false, follow: false } };
+    return trendSkillMetadata("en", data, { jobs: true });
+  } catch {
+    return { robots: { index: false, follow: false } };
+  }
 }
 
 function one(value) {

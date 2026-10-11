@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { CompanyPage } from "../../../../components/company-page";
+import { JsonLd } from "../../../../components/json-ld";
 import { getCompany } from "../../../../lib/server/jobs";
-import { companyMetadata } from "../../../../lib/seo";
+import { companyJsonLd, companyMetadata } from "../../../../lib/seo";
 
 export const revalidate = 60;
 
@@ -37,5 +38,10 @@ export default async function Page({ params, searchParams }) {
     throw new Error("company api unavailable");
   }
   if (!data) notFound();
-  return <CompanyPage locale="en" data={data} />;
+  return (
+    <>
+      <JsonLd data={companyJsonLd("en", data.company)} />
+      <CompanyPage locale="en" data={data} />
+    </>
+  );
 }

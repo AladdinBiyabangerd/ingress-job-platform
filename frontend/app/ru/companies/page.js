@@ -1,6 +1,7 @@
 import { COMPANY_SORTS, CompaniesPage } from "../../../components/companies";
+import { JsonLd } from "../../../components/json-ld";
 import { getCompanies } from "../../../lib/server/jobs";
-import { companiesMetadata } from "../../../lib/seo";
+import { companiesJsonLd, companiesMetadata } from "../../../lib/seo";
 
 export const revalidate = 60;
 
@@ -25,5 +26,10 @@ export default async function Page({ searchParams }) {
   } catch {
     error = true;
   }
-  return <CompaniesPage locale="ru" data={data} error={error} q={q} sort={sort} />;
+  return (
+    <>
+      <JsonLd data={companiesJsonLd("ru")} />
+      <CompaniesPage locale="ru" data={data} error={error} q={q} sort={sort} />
+    </>
+  );
 }

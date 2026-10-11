@@ -1,6 +1,7 @@
+import { JsonLd } from "../../../components/json-ld";
 import { TrendsPage, clampTrendsWindow } from "../../../components/trends";
 import { fetchTrends } from "../../../lib/api";
-import { trendsMetadata } from "../../../lib/seo";
+import { trendsJsonLd, trendsMetadata } from "../../../lib/seo";
 
 export const revalidate = 60;
 
@@ -23,5 +24,10 @@ export default async function Page({ searchParams }) {
   } catch {
     error = true;
   }
-  return <TrendsPage locale="en" data={data} error={error} page={page} windowDays={windowDays} />;
+  return (
+    <>
+      <JsonLd data={trendsJsonLd("en")} />
+      <TrendsPage locale="en" data={data} error={error} page={page} windowDays={windowDays} />
+    </>
+  );
 }

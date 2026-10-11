@@ -1,13 +1,25 @@
 import { notFound } from "next/navigation";
+import { JsonLd } from "../../../components/json-ld";
 import { TrendDetailPage } from "../../../components/trend-detail";
 import { clampTrendsWindow } from "../../../components/trends";
 import { getTrendDetail } from "../../../lib/server/trends";
-import { trendsMetadata } from "../../../lib/seo";
+import { trendSkillJsonLd, trendSkillMetadata } from "../../../lib/seo";
 
 export const revalidate = 60;
 
-export function generateMetadata() {
-  return trendsMetadata("az");
+export async function generateMetadata({ params }) {
+  const route = (await params) || {};
+  const skillId = Number.parseInt(String(route.skillId || ""), 10);
+  if (!Number.isFinite(skillId) || skillId <= 0) {
+    return { robots: { index: false, follow: false } };
+  }
+  try {
+    const data = await getTrendDetail(skillId, { lang: "az", windowDays: 7 });
+    if (!data) return { robots: { index: false, follow: false } };
+    return trendSkillMetadata("az", data);
+  } catch {
+    return { robots: { index: false, follow: false } };
+  }
 }
 
 function one(value) {
@@ -28,5 +40,10 @@ export default async function Page({ params, searchParams }) {
   } catch {
     error = true;
   }
-  return <TrendDetailPage locale="az" data={data} error={error} />;
+  return (
+    <>
+      {data ? <JsonLd data={trendSkillJsonLd("az", data)} /> : null}
+      <TrendDetailPage locale="az" data={data} error={error} />
+    </>
+  );
 }

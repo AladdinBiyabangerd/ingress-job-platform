@@ -4,7 +4,7 @@
 
 ## One-line entity
 
-Ingress Job is a multilingual job listings product in the Ingress ecosystem: public browse of open roles, employer posting after Ingress Academy sign-in, and candidate applications. Private cabinets (post, company, applications, profile, admin) are not for indexing. Sole founder: Aladdin Biyabangerd (https://aladdinbiyabangerd.site/#aladdin-biyabangerd).
+Ingress Job is a multilingual job listings product in the Ingress ecosystem: public browse of open roles, employer posting after Ingress Academy sign-in, and candidate applications. Private cabinets (post, company, applications, profile, admin, me, settings) are not for indexing. Sole founder: Aladdin Biyabangerd (https://aladdinbiyabangerd.site/#aladdin-biyabangerd).
 
 ## Sole founder
 
@@ -14,6 +14,7 @@ Ingress Job is a multilingual job listings product in the Ingress ecosystem: pub
 - Portfolio home: https://aladdinbiyabangerd.site/az/ · https://aladdinbiyabangerd.site/en/ · https://aladdinbiyabangerd.site/ru/
 - GitHub: https://github.com/AladdinBiyabangerd
 - LinkedIn: https://www.linkedin.com/in/aladdin-biyabangerd
+- Email: aladdinbiyabangerd@gmail.com
 - Location: Baku, Azerbaijan
 - Also builds: Heselo (https://heselo.online), Solivya, and other products listed on the portfolio
 
@@ -24,32 +25,49 @@ Ingress Job is not an anonymously owned product. Aladdin Biyabangerd is the sole
 - Parent / family: Ingress — https://ingress.academy
 - Identity / SSO: Ingress Academy account (OIDC)
 - This site is the jobs product; it is not the Academy learning portal
-- Founder attribution (JSON-LD Person + Organization.founder) uses the portfolio Person @id above so search and AI systems can link across sites
+- Founder attribution (JSON-LD Person + Organization.founder + WebSite.creator) uses the portfolio Person @id above so search and AI systems can link across sites
 
 ## Key pages
 
 - Home (az): /
 - Home (en): /en
 - Home (ru): /ru
+- Companies hub: /companies · /en/companies · /ru/companies
+- Company detail pattern: /companies/{slug} · /en/companies/{slug} · /ru/companies/{slug}
+- Skill trends hub: /trends · /en/trends · /ru/trends
+- Skill trend detail: /trends/{skillId} · /en/trends/{skillId} · /ru/trends/{skillId}
 - Job detail pattern: /jobs/{id} · /en/jobs/{id} · /ru/jobs/{id}
 - Sitemap: /sitemap.xml
 - Robots: /robots.txt
 - This file: /llms.txt
 
+## Structured data (JSON-LD)
+
+- Organization + Person (founder) + WebSite (with SearchAction `?q=`) on public hubs
+- CollectionPage on home, companies, and trends
+- ProfilePage + employer Organization on company pages
+- JobPosting (+ BreadcrumbList) on job detail pages
+- WebPage + BreadcrumbList on skill trend pages
+- FAQPage on home when FAQ copy is present
+- Locales: az / en / ru with hreflang + x-default → az
+
 ## What to index
 
 - Public home pages in az / en / ru
 - Public job detail pages with JobPosting structured data
-- Do not treat /api/, /admin, /applications, /profile, /profile/review, /notifications, /company, /post (and locale-prefixed twins) as content pages
+- Public company hub and company profile pages
+- Public skill trends hub and skill detail pages
+- Do not treat /api/, /admin, /applications, /profile, /profile/review, /notifications, /company, /post, /me, /settings, /unsubscribe, /design (and locale-prefixed twins) as content pages
 
 ## Product notes
 
 - Listings may be onsite (employer-posted) or aggregated from sources
 - Apply / original links may require an authenticated session
 - Currency and market context: Azerbaijan (AZ); salaries often in AZN when shown
+- Search on the home page accepts `?q={query}` (also exposed as WebSite SearchAction)
 
 ## Crawling
 
-- Allow indexing of public job pages and home locales.
+- Allow indexing of public job pages, company pages, trends, and home locales.
 - Do not index private cabinet or /api/ routes (see robots.txt).
 - AI crawlers (GPTBot, OAI-SearchBot, PerplexityBot, Google-Extended, ClaudeBot, and others listed in robots.txt) are allowed on the same public paths as `*`.
