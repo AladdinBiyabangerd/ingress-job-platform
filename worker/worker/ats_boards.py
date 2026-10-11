@@ -114,7 +114,7 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
         "testlio", "twindo", "rootstocklabsltd", "offshorelaunch")),
     ("Greenhouse boards (Remote & relocation 7)", "greenhouse", "Remote siqnallı lövhələr (dry-run, 3-cü dalğa)", (
         "kayzen", "openzeppelin", "recall", "miris",
-        "strike")),
+        "strike", "flex", "archer56")),
     # ---- Lever (api.lever.co)
     ("Lever boards (Europe)", "lever", "Avropa", (
         "spotify", "qonto", "swile", "aircall", "zopa", "farfetch", "malt", "blablacar",
