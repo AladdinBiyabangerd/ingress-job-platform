@@ -199,6 +199,7 @@ def apply_llm_rerank(
             comps["llm_note"] = scored["note"]
         item["components"] = comps
         item["score"] = final
+        item["score_pct"] = int(round(final * 100))
         item["ai_llm_rerank"] = True
         applied = True
     return applied, False

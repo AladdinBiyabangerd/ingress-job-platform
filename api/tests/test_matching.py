@@ -427,9 +427,9 @@ class MatchingTests(unittest.TestCase):
                 "experience_fit": None,
             }
         )
-        # Only 20+7.5+7.5 known → confidence 0.35; salary/visa add nothing.
-        self.assertEqual(hunt["confidence"], 0.35)
-        self.assertLess(hunt["score"], 0.4)
+        # Only 35+5+5 known → confidence 0.45; salary/visa add nothing.
+        self.assertEqual(hunt["confidence"], 0.45)
+        self.assertAlmostEqual(hunt["score"], 0.45, places=4)
         by_name = {d["name"]: d for d in hunt["dimensions"]}
         self.assertEqual(by_name["salary_fit"]["status"], "unknown")
         self.assertEqual(by_name["work_authorization_fit"]["status"], "unknown")
@@ -449,10 +449,11 @@ class MatchingTests(unittest.TestCase):
                 "experience_fit": None,
             }
         )
-        # (20 + 9 + 10 + 5.25 + 6.5625) / 100
-        self.assertAlmostEqual(hunt["score"], 0.5081, places=4)
-        self.assertEqual(hunt["confidence"], 0.6)
+        # (35 + 9 + 10 + 3.5 + 4.375) / 100
+        self.assertAlmostEqual(hunt["score"], 0.6188, places=4)
+        self.assertEqual(hunt["confidence"], 0.7)
         self.assertEqual(hunt["scoring_version"], SCORING_VERSION)
+        self.assertEqual(SCORING_VERSION, "hunt-ingress-v3")
 
     def test_list_floor_and_confidence_guard(self):
         from app.hunt_scoring import MIN_CONFIDENCE, MIN_SCORE, passes_list_gates
@@ -472,18 +473,72 @@ class MatchingTests(unittest.TestCase):
             res = self.client.get("/api/v1/me/matches?lang=en&limit=20", headers=self.headers)
         self.assertEqual(res.status_code, 200, res.text)
         body = res.json()
-        self.assertEqual(body.get("scoring_version"), "hunt-ingress-v2")
+        self.assertEqual(body.get("scoring_version"), "hunt-ingress-v3")
         self.assertEqual(body.get("min_score"), 0.33)
         self.assertEqual(body.get("min_confidence"), 0.35)
         self.assertTrue(body["matches"])
         for item in body["matches"]:
             self.assertGreaterEqual(item["score"], 0.33)
             self.assertGreaterEqual(item["confidence"], 0.35)
+            self.assertEqual(item["score_pct"], int(round(float(item["score"]) * 100)))
             self.assertIn("dimensions", item)
             salary_dim = next(d for d in item["dimensions"] if d["name"] == "salary_fit")
             self.assertEqual(salary_dim["status"], "unknown")
         ids = [item["job_id"] for item in body["matches"]]
         self.assertIn(good_id, ids)
+
+    def test_soft_skip_below_half_skill_overlap(self):
+        subject = "match-soft-half"
+        self._seed_profile(subject)
+        # Candidate has Java/Spring/Kafka — 1/3 overlap (< 0.5) must not list.
+        weak_id = self._insert_job(title="React Kafka Mix", skills=["React", "TypeScript", "Kafka"])
+        strong_id = self._insert_job(title="Java Spring Dev", skills=["Java", "Spring"])
+        self._grant_matching(subject)
+        with self._auth("job:candidate", subject):
+            res = self.client.get("/api/v1/me/matches?lang=en&limit=20", headers=self.headers)
+        self.assertEqual(res.status_code, 200, res.text)
+        ids = [item["job_id"] for item in res.json()["matches"]]
+        self.assertNotIn(weak_id, ids)
+        self.assertIn(strong_id, ids)
+
+    def test_single_skill_match_fails_floor_without_other_dims(self):
+        """1 matched skill is half-weighted; skills+fresh+complete alone < 0.33."""
+        from app.hunt_scoring import MIN_SCORE, compute_score, passes_list_gates
+
+        # effective tech = 1.0 * 0.5 = 0.5 after dampen
+        hunt = compute_score(
+            {
+                "tech_skill_fit": 0.5,
+                "role_seniority_fit": None,
+                "preference_fit": None,
+                "salary_fit": None,
+                "work_authorization_fit": None,
+                "freshness": 1.0,
+                "data_completeness": 1.0,
+                "experience_fit": None,
+            }
+        )
+        self.assertAlmostEqual(hunt["score"], 0.275, places=4)
+        self.assertLess(hunt["score"], MIN_SCORE)
+        self.assertFalse(passes_list_gates(hunt["score"], hunt["confidence"]))
+
+    def test_two_skill_full_overlap_clears_higher_pct(self):
+        subject = "match-two-skill"
+        self._seed_profile(subject)
+        job_id = self._insert_job(
+            title="Java Spring Developer",
+            skills=["Java", "Spring"],
+            created_at="2026-10-10T12:00:00+00:00",
+        )
+        self._grant_matching(subject)
+        with self._auth("job:candidate", subject):
+            res = self.client.get("/api/v1/me/matches?lang=en&limit=20", headers=self.headers)
+        self.assertEqual(res.status_code, 200, res.text)
+        matches = res.json()["matches"]
+        hit = next(m for m in matches if m["job_id"] == job_id)
+        # v3: strong skill overlap should land well above the old ~33% floor.
+        self.assertGreaterEqual(hit["score_pct"], 45)
+        self.assertEqual(hit["score_pct"], int(round(float(hit["score"]) * 100)))
 
 
 if __name__ == "__main__":

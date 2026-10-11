@@ -282,11 +282,15 @@ class LlmRerankTests(unittest.TestCase):
         self.assertTrue(ok)
         self.assertFalse(deferred)
         # 0.55*0.8 + 0.45*(5/5) = 0.44 + 0.45 = 0.89
-        self.assertEqual(pool[0]["score"], round(W_BLENDED * 0.8 + W_RELEVANCE * 1.0, 4))
+        expected0 = round(W_BLENDED * 0.8 + W_RELEVANCE * 1.0, 4)
+        self.assertEqual(pool[0]["score"], expected0)
+        self.assertEqual(pool[0]["score_pct"], int(round(expected0 * 100)))
         self.assertEqual(pool[0]["components"]["llm_relevance"], 5)
         self.assertTrue(pool[0]["ai_llm_rerank"])
         # 0.55*0.6 + 0.45*(1/5) = 0.33 + 0.09 = 0.42
-        self.assertEqual(pool[1]["score"], round(W_BLENDED * 0.6 + W_RELEVANCE * 0.2, 4))
+        expected1 = round(W_BLENDED * 0.6 + W_RELEVANCE * 0.2, 4)
+        self.assertEqual(pool[1]["score"], expected1)
+        self.assertEqual(pool[1]["score_pct"], int(round(expected1 * 100)))
 
     def test_soft_fail_keeps_scores(self):
         from app.ai_gateway.gateway import GatewayResult

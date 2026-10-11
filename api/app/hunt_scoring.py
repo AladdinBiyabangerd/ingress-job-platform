@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCORING_VERSION = "hunt-ingress-v2"
+SCORING_VERSION = "hunt-ingress-v3"
 
 # For-you list gates (plan).
 MIN_SCORE = 0.33
@@ -20,14 +20,14 @@ MIN_CONFIDENCE = 0.35
 
 # Dimension weights (sum = 100).
 DIM_WEIGHTS: dict[str, float] = {
-    "tech_skill_fit": 20.0,
+    "tech_skill_fit": 35.0,
     "role_seniority_fit": 15.0,
     "preference_fit": 10.0,
     "salary_fit": 10.0,
     "work_authorization_fit": 10.0,
-    "freshness": 7.5,
-    "data_completeness": 7.5,
-    "experience_fit": 20.0,
+    "freshness": 5.0,
+    "data_completeness": 5.0,
+    "experience_fit": 10.0,
 }
 
 TOTAL_WEIGHT = sum(DIM_WEIGHTS.values())

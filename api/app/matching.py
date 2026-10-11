@@ -3,6 +3,7 @@
 Hunt struct score + confidence (unknown dims do not invent fit). Optional
 AI #2 cosine blend: 0.7·hunt + 0.3·cosine. Optional LLM re-rank on top-10:
 0.55·blended + 0.45·(relevance/5). Down-voted jobs are demoted (×0.4).
+Soft-skip skill overlap < 0.5; single matched skill is half-weighted.
 For-you / matches list drops score < 0.33 or confidence < 0.35.
 SQLite / missing vectors → Hunt only (ai_rerank false); LLM may still run.
 """
@@ -495,13 +496,18 @@ def score_job(
     work_history: list | None = None,
 ) -> dict[str, Any] | None:
     skill_s, have, missing = skill_overlap_score(candidate, job_skills)
-    # Soft skip: skill-bearing ads with zero overlap are noise / false fit.
-    if job_skills and skill_s <= 0:
+    # Soft skip: need ≥ half of job skills; thin/partial overlap is noise.
+    if job_skills and skill_s < 0.5:
         return None
+    n_matched = len(have)
+    # 1 matched skill → half credit; 2+ → full (cuts single-chip floor padding).
+    skill_effective = round(skill_s * min(1.0, n_matched / 2.0), 4)
 
     job_level = detect_job_seniority(job["title"])
     dims = {
-        "tech_skill_fit": tech_skill_fit(skill_s, job_has_skills=bool(job_skills)),
+        "tech_skill_fit": tech_skill_fit(
+            skill_effective, job_has_skills=bool(job_skills)
+        ),
         "role_seniority_fit": role_seniority_fit(candidate_seniority, job_level),
         "preference_fit": preference_fit(
             prefs, remote=job["remote"], relocation=job["relocation"]
