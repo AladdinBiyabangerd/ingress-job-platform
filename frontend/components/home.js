@@ -1093,7 +1093,7 @@ export function Home({
                       key={job.id}
                       locale={locale}
                       job={job}
-                      matchScore={forYouMode ? (job.score_pct ?? job.score ?? null) : null}
+                      matchScore={forYouMode ? (job.score ?? job.score_pct ?? null) : null}
                       matchConfidence={forYouMode ? (job.confidence ?? null) : null}
                     />
                   ))}
