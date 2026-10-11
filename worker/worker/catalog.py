@@ -300,6 +300,54 @@ SOURCES: list[dict] = [
         credit_note="The Muse public jobs API. The link opens the listing on themuse.com.",
     ),
     _row(
+        "Workable jobs",
+        "https://jobs.workable.com/",
+        "official_api",
+        "https://jobs.workable.com/api/v1/jobs",
+        enabled=True,
+        go="go",
+        note=(
+            "Workable-in açıq iş axtarışı API-si (robots yalnız /search* bağlayır, /api/v1/jobs açıqdır): "
+            "bütün Workable işəgötürənləri bir yerdə. Sorğular: remote texniki rollar, location=Azerbaijan, "
+            "relocation və viza. Remote elan hər ölkə üçün təkrarlanır, ona görə şirkət+başlıq üzrə birləşdirilir. "
+            "6 saatdan bir, sorğu başına ən çox 3 səhifə."
+        ),
+        credit_note="Workable's public job search API. The link opens the posting on jobs.workable.com.",
+    ),
+    _row(
+        "CryptocurrencyJobs",
+        "https://cryptocurrencyjobs.co/",
+        "rss",
+        "https://cryptocurrencyjobs.co/index.xml",
+        enabled=True,
+        go="go",
+        note="Web3 vakansiyaları: açıq RSS (robots yalnız ?-li ünvanları bağlayır) + elan səhifəsindəki JSON-LD. 6 saatdan bir.",
+        credit_note="CryptocurrencyJobs.co public RSS feed and job pages.",
+    ),
+    _row(
+        "JsJobbs",
+        "https://jsjobbs.com/",
+        "rss",
+        "https://jsjobbs.com/rss",
+        enabled=True,
+        go="go",
+        note="JavaScript/TypeScript vakansiyaları: açıq RSS (tam mətn, şirkət, yer). robots hər şeyə icazə verir. 6 saatdan bir.",
+        credit_note="JsJobbs public RSS feed. The link opens the listing on jsjobbs.com.",
+    ),
+    _row(
+        "AI Dev Board",
+        "https://aidevboard.com/",
+        "rss",
+        "https://aidevboard.com/feed.xml",
+        enabled=True,
+        go="go",
+        note=(
+            "AI/ML vakansiyaları: açıq RSS (robots Allow: /). Yalnız Remote işarəli sətirlər; saytın özü "
+            "işəgötürən ATS-lərindən yığdığı üçün bazada artıq olan başlıq+şirkət atılır (təkrar). 6 saatdan bir."
+        ),
+        credit_note="AI Dev Board public RSS feed and job pages.",
+    ),
+    _row(
         'Workable boards (Europe)',
         'https://www.workable.com/',
         'official_api',
@@ -458,6 +506,17 @@ _ATS_INFO = {
         "Teamtailor karyera saytlarının açıq jobs.rss lenti (department, role, remotestatus).",
         "Employer's public Teamtailor career-site RSS feed. The link opens the employer's posting.",
     ),
+    "breezy": (
+        "https://breezy.hr/", "official_api", "https://abba.breezy.hr/json",
+        "Breezy HR karyera portallarının açıq /json lenti (başlıq, remote bayrağı, yer); mətn yalnız yeni "
+        "texniki elan üçün elan səhifəsinin JSON-LD-sindən oxunur.",
+        "Employer's public Breezy HR career portal. The link opens the employer's posting.",
+    ),
+    "pinpoint": (
+        "https://www.pinpointhq.com/", "official_api", "https://davies.pinpointhq.com/postings.json",
+        "Pinpoint karyera saytlarının açıq postings.json lenti (tam mətn, workplace_type, yer).",
+        "Employer's public Pinpoint career site. The link opens the employer's posting.",
+    ),
 }
 
 
@@ -467,6 +526,10 @@ def _ats_rows() -> list[dict]:
         home, kind, entry, about, credit = _ATS_INFO[ats]
         if ats == "teamtailor":
             entry = f"https://{boards[0]}.teamtailor.com/jobs.rss"
+        elif ats == "breezy":
+            entry = f"https://{boards[0]}.breezy.hr/json"
+        elif ats == "pinpoint":
+            entry = f"https://{boards[0]}.pinpointhq.com/postings.json"
         rotate = (
             f" Hər keçiddə ən çox {ATS_MAX_BOARDS} lövhə oxunur, qalanları növbəti keçidlərdə növbə ilə."
             if len(boards) > ATS_MAX_BOARDS else ""

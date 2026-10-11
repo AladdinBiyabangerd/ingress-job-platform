@@ -279,6 +279,128 @@ class WorkableConnector(AtsConnector):
         return rows
 
 
+# -------------------------------------------------------------------- Breezy
+
+
+# Breezy localizes country names ("Україна"); the ISO code is stable, so the English name goes to
+# the place text where the shared region rules can read it.
+ISO_COUNTRIES = {
+    "US": "United States", "CA": "Canada", "MX": "Mexico", "BR": "Brazil", "AR": "Argentina",
+    "CO": "Colombia", "CL": "Chile", "PE": "Peru", "UY": "Uruguay", "CR": "Costa Rica",
+    "GB": "United Kingdom", "IE": "Ireland", "DE": "Germany", "FR": "France", "ES": "Spain",
+    "PT": "Portugal", "IT": "Italy", "NL": "Netherlands", "BE": "Belgium", "LU": "Luxembourg",
+    "CH": "Switzerland", "AT": "Austria", "SE": "Sweden", "NO": "Norway", "DK": "Denmark",
+    "FI": "Finland", "IS": "Iceland", "PL": "Poland", "CZ": "Czech Republic", "SK": "Slovakia",
+    "HU": "Hungary", "RO": "Romania", "BG": "Bulgaria", "GR": "Greece", "CY": "Cyprus",
+    "MT": "Malta", "HR": "Croatia", "SI": "Slovenia", "RS": "Serbia", "BA": "Bosnia",
+    "ME": "Montenegro", "MK": "North Macedonia", "AL": "Albania", "EE": "Estonia", "LV": "Latvia",
+    "LT": "Lithuania", "UA": "Ukraine", "BY": "Belarus", "MD": "Moldova", "TR": "Turkey",
+    "IL": "Israel", "AE": "United Arab Emirates", "SA": "Saudi Arabia", "QA": "Qatar", "EG": "Egypt",
+    "ZA": "South Africa", "NG": "Nigeria", "KE": "Kenya", "MA": "Morocco", "IN": "India",
+    "PK": "Pakistan", "BD": "Bangladesh", "LK": "Sri Lanka", "PH": "Philippines", "VN": "Vietnam",
+    "TH": "Thailand", "MY": "Malaysia", "SG": "Singapore", "ID": "Indonesia", "JP": "Japan",
+    "KR": "South Korea", "CN": "China", "HK": "Hong Kong", "TW": "Taiwan", "AU": "Australia",
+    "NZ": "New Zealand", "GE": "Georgia", "AM": "Armenia", "KZ": "Kazakhstan", "UZ": "Uzbekistan",
+    "AZ": "Azerbaijan",
+}
+
+
+class BreezyConnector(AtsConnector):
+    """Breezy HR career portals publish https://{company}.breezy.hr/json (title, remote flag,
+    location, no text). The posting page's schema.org JobPosting gives the text, read only
+    for new tech candidates."""
+
+    detail = True
+    entry_url = "https://abba.breezy.hr/json"
+    credit_note = "Employer's public Breezy HR career portal. The link opens the employer's posting."
+
+    def board_items(self, slug: str) -> list[dict]:
+        url = f"https://{slug}.breezy.hr/json"
+        if not self.client.allowed(url):
+            return []
+        payload = self.client.get_json(url)
+        if not isinstance(payload, list):
+            raise SourceFailed(f"breezy board {slug} was not a list")
+        rows: list[dict] = []
+        for job in payload:
+            if not isinstance(job, dict) or not job.get("id"):
+                continue
+            title = clean(job.get("name"))
+            dept = [clean(job.get("department"))] if clean(job.get("department")) else []
+            if not title or not is_tech_job(title, dept, dept):
+                continue
+            loc = job.get("location") or {}
+            place = clean(loc.get("name")) if isinstance(loc, dict) else ""
+            code = clean(((loc.get("country") or {}) if isinstance(loc, dict) else {}).get("id")).upper()
+            country = ISO_COUNTRIES.get(code, "")
+            if isinstance(loc, dict) and loc.get("is_remote"):
+                place = f"Remote ({country})" if country else "Remote"
+            company = clean((job.get("company") or {}).get("name")) or slug
+            rows.append({
+                "title": title,
+                "company": company,
+                "city": place,
+                "text": "",
+                "source_url": job.get("url"),
+                "external_id": f"breezy-{slug}-{job.get('id')}",
+                "category": dept,
+                "tags": dept,
+                "remote": True if isinstance(loc, dict) and loc.get("is_remote") else _remote_hint(place),
+                "_stamp": job.get("published_date"),
+            })
+        return rows
+
+
+# ------------------------------------------------------------------ Pinpoint
+
+
+class PinpointConnector(AtsConnector):
+    """Pinpoint career sites publish https://{company}.pinpointhq.com/postings.json (full text,
+    workplace type, location) — one request per board."""
+
+    entry_url = "https://davies.pinpointhq.com/postings.json"
+    credit_note = "Employer's public Pinpoint career site. The link opens the employer's posting."
+
+    def board_items(self, slug: str) -> list[dict]:
+        url = f"https://{slug}.pinpointhq.com/postings.json"
+        if not self.client.allowed(url):
+            return []
+        payload = self.client.get_json(url)
+        data = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(data, list):
+            raise SourceFailed(f"pinpoint board {slug} had no data list")
+        rows: list[dict] = []
+        for job in data:
+            if not isinstance(job, dict) or not job.get("url"):
+                continue
+            title = clean(job.get("title"))
+            meta = job.get("job") if isinstance(job.get("job"), dict) else {}
+            dept = clean((meta.get("department") or {}).get("name")) if isinstance(meta.get("department"), dict) else ""
+            dept_l = [dept] if dept else []
+            if not title or not is_tech_job(title, dept_l, dept_l):
+                continue
+            loc = job.get("location") if isinstance(job.get("location"), dict) else {}
+            place = ", ".join(x for x in (clean(loc.get("city")), clean(loc.get("province"))) if x) or clean(loc.get("name"))
+            workplace = str(job.get("workplace_type") or "").lower()
+            body = "\n\n".join(
+                text_from_html(job.get(k))
+                for k in ("description", "key_responsibilities", "skills_knowledge_expertise", "benefits") if job.get(k)
+            )
+            rows.append({
+                "title": title,
+                "company": clean(meta.get("company_name")) or slug.replace("-", " ").title(),
+                "city": f"Remote ({place})" if workplace == "remote" and place else ("Remote" if workplace == "remote" else place),
+                "text": body,
+                "source_url": job.get("url"),
+                "external_id": f"pinpoint-{slug}-{job.get('id')}",
+                "category": dept_l,
+                "tags": dept_l,
+                "remote": True if workplace == "remote" else _remote_hint(place),
+                "_stamp": job.get("deadline_at"),
+            })
+        return rows
+
+
 # ---------------------------------------------------------------- Teamtailor
 
 
@@ -440,7 +562,13 @@ class PersonioConnector(AtsConnector):
 
 # ------------------------------------------------------------ regional groups
 
-_BASES = {"greenhouse": GreenhouseConnector, "lever": LeverConnector, "teamtailor": TeamtailorConnector}
+_BASES = {
+    "greenhouse": GreenhouseConnector,
+    "lever": LeverConnector,
+    "teamtailor": TeamtailorConnector,
+    "breezy": BreezyConnector,
+    "pinpoint": PinpointConnector,
+}
 
 
 def _group_class(name: str, ats: str, boards: tuple[str, ...]) -> type:
@@ -448,6 +576,10 @@ def _group_class(name: str, ats: str, boards: tuple[str, ...]) -> type:
     attrs = {"name": name, "boards": boards, "__doc__": f"{name}: {', '.join(boards)}."}
     if ats == "teamtailor":
         attrs["entry_url"] = f"https://{boards[0]}.teamtailor.com/jobs.rss"
+    elif ats == "breezy":
+        attrs["entry_url"] = f"https://{boards[0]}.breezy.hr/json"
+    elif ats == "pinpoint":
+        attrs["entry_url"] = f"https://{boards[0]}.pinpointhq.com/postings.json"
     cls_name = re.sub(r"[^A-Za-z]", "", name.title()) + "Connector"
     return type(cls_name, (base,), attrs)
 

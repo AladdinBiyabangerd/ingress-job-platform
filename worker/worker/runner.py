@@ -18,6 +18,7 @@ from worker.connectors.apis import (
     JobgetherConnector,
     JobicyConnector,
     TheMuseConnector,
+    WorkableAggregatorConnector,
     WorkingNomadsConnector,
 )
 from worker.connectors.ats import (
@@ -36,6 +37,11 @@ from worker.connectors.regional import (
     JobTechSwedenConnector,
     RemotePythonConnector,
     WordPressJobsConnector,
+)
+from worker.connectors.nicheboards import (
+    AiDevBoardConnector,
+    CryptocurrencyJobsConnector,
+    JsJobbsConnector,
 )
 from worker.connectors.remoteok import RemoteOkConnector
 from worker.connectors.rssboards import (
@@ -100,6 +106,10 @@ BUILDERS = {
     "Remote First Jobs": RemoteFirstJobsRssConnector,
     "DevITjobs UK": DevITjobsUkConnector,
     "The Muse": TheMuseConnector,
+    "Workable jobs": WorkableAggregatorConnector,
+    "CryptocurrencyJobs": CryptocurrencyJobsConnector,
+    "JsJobbs": JsJobbsConnector,
+    "AI Dev Board": AiDevBoardConnector,
     **ATS_GROUP_CONNECTORS,
     "Jooble": JoobleConnector,
     # Official keyed API; narrow robots.txt exception, see http.ROBOTS_EXCEPTIONS.

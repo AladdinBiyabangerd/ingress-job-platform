@@ -525,3 +525,92 @@ class TheMuseConnector(FeedConnector):
                     break
         out.sort(key=lambda it: str(it.get("_stamp") or ""), reverse=True)
         return out
+
+
+class WorkableAggregatorConnector(FeedConnector):
+    """https://jobs.workable.com — Workable's public job-search API (robots.txt only blocks
+    /search*; /api/v1/jobs is open). Every Workable employer in one feed. A remote role is
+    repeated once per country, so rows are merged on company + title and the listing is shown
+    as plain "Remote" (the posting text, not the per-country row, decides region locks)."""
+
+    name = "Workable jobs"
+    entry_url = "https://jobs.workable.com/api/v1/jobs"
+    require_remote_or_relocation = True
+    min_interval_hours = 6
+    pages_per_query = 3
+    candidates = 40
+    # (query, extra params): remote tech roles, Azerbaijan-based openings, relocation / visa offers.
+    queries: tuple[tuple[str, str], ...] = (
+        ("software engineer", "&workplace=remote"),
+        ("developer", "&workplace=remote"),
+        ("devops engineer", "&workplace=remote"),
+        ("data engineer", "&workplace=remote"),
+        ("qa engineer", "&workplace=remote"),
+        ("software engineer", "&location=Azerbaijan"),
+        ("developer relocation", ""),
+        ("engineer visa sponsorship", ""),
+    )
+    credit_note = "Workable's public job search API. The link opens the posting on jobs.workable.com."
+
+    @staticmethod
+    def dedup_key(company: object, title: object) -> str:
+        norm = lambda v: re.sub(r"[^a-z0-9]+", " ", str(v or "").lower()).strip()  # noqa: E731
+        return f"{norm(company)}|{norm(title)}"
+
+    def feed_items(self) -> list[dict]:
+        out: dict[str, dict] = {}
+        for query, extra in self.queries:
+            token = ""
+            for _page in range(self.pages_per_query):
+                url = f"{self.entry_url}?query={quote(query)}{extra}"
+                if token:
+                    url += f"&pageToken={quote(token)}"
+                payload = self.client.get_json(url)
+                rows = payload.get("jobs") if isinstance(payload, dict) else None
+                if not isinstance(rows, list):
+                    raise SourceFailed("workable payload had no jobs list")
+                for job in rows:
+                    if not isinstance(job, dict) or job.get("state") not in (None, "published"):
+                        continue
+                    if str(job.get("language") or "en").lower() not in {"en", ""}:
+                        continue
+                    company = clean((job.get("company") or {}).get("title"))
+                    title = clean(job.get("title"))
+                    link = clean(job.get("url"))
+                    if not (company and title and link):
+                        continue
+                    key = self.dedup_key(company, title)
+                    remote = str(job.get("workplace") or "").lower() == "remote" or "TELECOMMUTE" in (
+                        job.get("locations") or [])
+                    loc = job.get("location") or {}
+                    place = ", ".join(x for x in (clean(loc.get("city")), clean(loc.get("countryName"))) if x)
+                    prev = out.get(key)
+                    if prev is not None:
+                        # Same job, another country row: keep the first, remember the country.
+                        if place and place not in prev["_places"]:
+                            prev["_places"].append(place)
+                        continue
+                    body = "\n\n".join(
+                        text_from_html(job.get(k))
+                        for k in ("description", "requirementsSection", "benefitsSection") if job.get(k)
+                    )
+                    out[key] = {
+                        "title": title,
+                        "company": company,
+                        "city": "Remote" if remote else place,
+                        "text": body,
+                        "source_url": link,
+                        "external_id": f"workable-agg-{job.get('id')}",
+                        "tags": [],
+                        "category": [],
+                        "remote": True if remote else None,
+                        "_places": [place] if place else [],
+                        "_stamp": job.get("created"),
+                    }
+                token = str(payload.get("nextPageToken") or "") if isinstance(payload, dict) else ""
+                if not token:
+                    break
+        rows = sorted(out.values(), key=lambda r: str(r.pop("_stamp", "")), reverse=True)
+        for row in rows:
+            row.pop("_places", None)
+        return rows
