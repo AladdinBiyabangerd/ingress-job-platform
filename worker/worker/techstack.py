@@ -856,10 +856,6 @@ _BODY_GEO_LOCK = re.compile(
     rf"(?:connection|overlap|available)\s+during\s+latam\b|"
     rf"top\s*talent\s+from\s+latam\b|"
     rf"t[ií]tulo\s+profesional[^\n.]{{0,60}}\bchile\b|"
-    # Hard timezone band that excludes AZ (UTC+4), e.g. "REMOTE (CET ±2h)".
-    rf"(?:remote|fully\s+remote|hybrid)\s+[^\n.]{{0,40}}"
-    rf"\b(?:CET|CEST|GMT|UTC)\s*[±+\-]\s*\d|"
-    rf"\b(?:within|inside)\s+(?:the\s+)?(?:CET|CEST)\s*[±+\-]\s*\d|"
     # India-local stipend (Rs / INR) on remote ads.
     rf"(?:stipend|salary|compensation|pay)\s*:?\s*Rs\.?\s*[\d,]+|"
     rf"\bRs\.?\s*[\d,]+\s*per\s+month\b"
@@ -995,7 +991,7 @@ def _place_fully_open(place: str) -> bool:
 
 
 # ---- Region restriction (Azerbaijan must be inside the allowed region) ------
-# "Remote, but EU only / US time zones / authorized to work in the UK" is not
+# "Remote, but EU only / authorized to work in the UK" is not
 # reachable from Azerbaijan (UTC+4, Caucasus). Europe-only is treated as
 # restricted: such ads almost always mean EU/EEA/UK work authorization.
 _REG = (
@@ -1003,10 +999,6 @@ _REG = (
     r"European\s+Union|European\s+Economic\s+Area|Europe|European|United\s+Kingdom|"
     r"United\s+States|Canada|Canadian|North\s+America|North\s+American|"
     r"Latin\s+America|South\s+America|Americas|Africa|Asia[\s-]Pacific|Oceania)"
-)
-_TZ = (
-    r"(?:(?-i:CEST|CET|EST|EDT|PST|PDT|CST|MST|BST|ET|PT)|"
-    r"US|U\.S\.|North\s+American|European|Eastern|Pacific|Central\s+European)"
 )
 _REGION_PHRASES = (
     ("region_only", re.compile(
@@ -1031,16 +1023,6 @@ _REGION_PHRASES = (
         rf"(?:the\s+)?(?:{_REG}|{_FOREIGN_GEO})\b")),
     ("work_authorization", re.compile(
         rf"(?i)(?:valid\s+|legal\s+)?right\s+to\s+work\s+in\s+(?:the\s+)?(?:{_REG}|{_FOREIGN_GEO})\b")),
-    ("timezone_overlap", re.compile(
-        rf"(?i)\bmust\s+(?:\w+\s+){{0,3}}overlap\s+with\s+(?:the\s+)?{_TZ}\b")),
-    ("timezone_overlap", re.compile(
-        rf"(?i)\boverlap\s+(?:with\s+)?(?:the\s+)?{_TZ}\b[^.\n]{{0,40}}"
-        rf"(?:at\s+least|minimum|\d+\s*\+?\s*hours?)")),
-    ("timezone_overlap", re.compile(
-        rf"(?i)(?:at\s+least|minimum\s+of)\s+\d+\s*hours?[^.\n]{{0,50}}overlap[^.\n]{{0,30}}{_TZ}\b")),
-    ("timezone_overlap", re.compile(
-        rf"(?i)\b(?:must|only|required|need\s+to)\b[^.\n]{{0,40}}\b(?:in|within)\s+(?:the\s+)?"
-        rf"(?:US|U\.S\.|North\s+American|European|Americas)\s+time\s*zones?")),
 )
 # Source boards that only list one region. Applies unless the ad says worldwide.
 _REGIONAL_SOURCES = {
@@ -1083,15 +1065,50 @@ def region_restriction_reason(title: str, place: str, text: str, source: str = "
     return ""
 
 
-def foreign_locked_remote(title: str, place: str, text: str, source: str = "") -> bool:
-    """Remote role restricted to a foreign country/region (not AZ-reachable)."""
+# Neighbouring regions: eligible for Azerbaijan only when the ad text says so.
+_NEIGHBOUR_GEO = re.compile(
+    r"(?i)\b(?:central\s+asia|asia|caucasus|turkey|t[uü]rkiye|georgia|armenia|"
+    r"kazakhstan|uzbekistan|kyrgyzstan|tajikistan|turkmenistan|istanbul|ankara|"
+    r"tbilisi|yerevan|almaty|tashkent)\b"
+)
+_ASIA_WIDE = re.compile(
+    r"(?i)(?:anywhere\s+in|across|throughout|all\s+of|all\s+countries\s+in)\s+asia\b|"
+    r"\basia[\s-]?wide\b|\bany\s+(?:country|location)\s+in\s+asia\b"
+)
+
+
+def neighbour_region_eligible(title: str, place: str, text: str) -> bool:
+    """Remote pinned to Asia/Turkey/Georgia/Central Asia/Caucasus that the ad text
+    genuinely opens to Azerbaijan (Azerbaijan/Baku/CIS/Caucasus named, worldwide,
+    or Asia-wide). Any other foreign geo in title/place keeps the lock."""
+    head = f"{title}\n{place}"
+    if not _NEIGHBOUR_GEO.search(place or ""):
+        return False
+    rest = _NEIGHBOUR_GEO.sub(" ", head)
+    if _FOREIGN_GEO_RE.search(rest) or _REMOTE_FOREIGN_PAIR.search(rest):
+        return False
+    body = (text or "")[:12000]
+    sample = f"{head}\n{body}"
+    return bool(_AZ_EXPLICIT.search(sample) or _OPEN_MARKET.search(body)
+                or _ASIA_WIDE.search(sample))
+
+
+def foreign_locked_remote(
+    title: str, place: str, text: str, source: str = "", *, region_offer_exempt: bool = True
+) -> bool:
+    """Remote role restricted to a foreign country/region (not AZ-reachable).
+
+    Timezone overlap is not a lock. With ``region_offer_exempt`` a visa/relocation
+    offer lifts the region-restriction branch (callers then treat the ad as
+    remote=0, relocation=1, see ``relocation_overrides_lock``)."""
     head = f"{title} | {place}"
     if _garbage_place(place):
         return True
-    # Region restriction (EU only, US time zones, work auth, regional boards);
-    # a visa/relocation offer keeps the ad (as relocation, not as remote).
-    if region_restriction_reason(title, place, text, source) and not _positive(
-        _INTL_RELOC, f"{title}\n{place}\n{(text or '')[:15000]}"
+    if neighbour_region_eligible(title, place, text):
+        return False
+    if region_restriction_reason(title, place, text, source) and not (
+        region_offer_exempt
+        and _positive(_INTL_RELOC, f"{title}\n{place}\n{(text or '')[:15000]}")
     ):
         return True
     # Pure Remote EMEA / worldwide opens; EMEA + Malta city does not.
@@ -1171,6 +1188,31 @@ def international_reloc_offer(title: str, place: str, text: str) -> bool:
     return True
 
 
+def relocation_overrides_lock(
+    title: str, place: str, text: str, source: str = "", *, structured_relocation: bool = False
+) -> bool:
+    """Remote is region/country-locked but the ad offers relocation or a visa
+    (text or structured flag): accept as remote=0, relocation=1."""
+    if _garbage_place(place):
+        return False
+    if not foreign_locked_remote(title, place, text, source, region_offer_exempt=False):
+        return False
+    return structured_relocation or international_reloc_offer(title, place, text)
+
+
+def apply_relocation_override(
+    item: dict, source: str = "", *, structured_relocation: bool = False
+) -> dict:
+    """Demote a region-locked remote ad with a relocation/visa offer to relocation-only."""
+    if item.get("remote") and relocation_overrides_lock(
+        str(item.get("title") or ""), str(item.get("city") or ""),
+        str(item.get("text") or ""), source, structured_relocation=structured_relocation,
+    ):
+        item["remote"] = False
+        item["relocation"] = True
+    return item
+
+
 def foreign_office_without_offer(title: str, place: str, text: str) -> bool:
     """Onsite/hybrid abroad with no remote or relocation/visa keywords.
 
@@ -1201,6 +1243,7 @@ def az_market_relevant(
     remote: bool,
     relocation: bool,
     source: str = "",
+    structured_relocation: bool = False,
 ) -> bool:
     """Keep ads useful for Azerbaijan candidates.
 
@@ -1209,7 +1252,10 @@ def az_market_relevant(
     Foreign office/hybrid keeps only with clear international visa/reloc offer.
     """
     if remote and foreign_locked_remote(title, place, text, source):
-        return False
+        # Region lock + relocation/visa offer is accepted (as relocation, not remote).
+        return relocation_overrides_lock(
+            title, place, text, source, structured_relocation=structured_relocation
+        )
 
     named_office = _named_foreign_place(place) and not re.search(
         r"(?i)\bremote\b", place or ""

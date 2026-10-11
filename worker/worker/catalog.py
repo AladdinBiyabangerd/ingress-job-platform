@@ -260,11 +260,44 @@ SOURCES: list[dict] = [
     _row(
         "Remote First Jobs",
         "https://remotefirstjobs.com/",
-        "open_list",
-        "https://remotefirstjobs.com/jobs/software-development",
+        "rss",
+        "https://remotefirstjobs.com/rss/jobs.rss",
         enabled=True,
         go="go",
-        note="Açıq kateqoriya siyahısı, sonra elan səhifəsi (JobPosting). /api/ çağırılmır.",
+        note=(
+            "Açıq RSS (100 ən yeni remote elan, tam mətnlə). robots.txt feed və elan səhifələrini "
+            "ümumi botlar üçün açıq saxlayır. Elan səhifəsi (JobPosting) yalnız yeni texniki namizəd "
+            "üçün ölkə məhdudiyyətini oxumaq üçün çəkilir. /api/ çağırılmır."
+        ),
+        credit_note="Remote First Jobs public RSS feed and job pages.",
+    ),
+    _row(
+        "DevITjobs UK",
+        "https://devitjobs.uk/",
+        "official_api",
+        "https://devitjobs.uk/api/jobsLight",
+        enabled=True,
+        go="go",
+        note=(
+            "Açıq JSON (/api/jobsLight, robots.txt Meta-ExternalAgent xaric hamıya icazə verir). "
+            "Yalnız workplace=remote və ya hasVisaSponsorship=Yes elanlar (viza bayrağı relokasiya "
+            "siqnalıdır). Mətn saytın açıq /rss lentindən. 6 saatdan bir."
+        ),
+        credit_note="DevITjobs UK public jobs API. The link opens the listing on devitjobs.uk.",
+    ),
+    _row(
+        "The Muse",
+        "https://www.themuse.com/",
+        "official_api",
+        "https://www.themuse.com/api/public/jobs",
+        enabled=True,
+        go="go",
+        note=(
+            "Rəsmi açıq API (açarsız): Software Engineering və Data and Analytics, yalnız "
+            "'Flexible / Remote' yerləşməsi. Rolu yalnız başlıqdan qiymətləndirir. Çoxu ABŞ-dır, "
+            "region qapısı süzür. 6 saatdan bir, ən çox 4 səhifə."
+        ),
+        credit_note="The Muse public jobs API. The link opens the listing on themuse.com.",
     ),
     _row(
         'Workable boards (Europe)',

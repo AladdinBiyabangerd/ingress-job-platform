@@ -11,6 +11,7 @@ from worker.market_fit import (
 )
 from worker.parsing import is_aggregator_snippet
 from worker.techstack import (
+    apply_relocation_override,
     az_market_relevant,
     enrich,
     foreign_office_without_offer,
@@ -84,13 +85,20 @@ def finish_item(connector, item: dict | None) -> dict | None:
         if not (item.get("remote") or item.get("relocation")):
             return None
 
+    # Region/country-locked remote + relocation/visa offer (text or structured
+    # flag) is accepted as remote=0, relocation=1.
+    source_name = str(getattr(connector, "name", "") or "")
+    structured_reloc = pre_relocation is True or relocation_default
+    apply_relocation_override(item, source_name, structured_relocation=structured_reloc)
+
     if not az_market_relevant(
         title,
         place,
         text,
         remote=bool(item.get("remote")),
         relocation=bool(item.get("relocation")),
-        source=str(getattr(connector, "name", "") or ""),
+        source=source_name,
+        structured_relocation=structured_reloc,
     ):
         if url:
             mark_rejected(conn, url, "foreign_locked_remote", via_ai=False)

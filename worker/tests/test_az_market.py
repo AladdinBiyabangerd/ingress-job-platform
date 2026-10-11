@@ -78,12 +78,22 @@ class AzMarketRemoteTest(unittest.TestCase):
                 relocation=True,
             )
         )
-        # Country-scoped remote is never saved by a relocation keyword (H-1B noise).
-        self.assertFalse(
+        # Country-scoped remote + real relocation offer is accepted, as relocation
+        # (apply_relocation_override demotes remote); H-1B-only noise still fails.
+        self.assertTrue(
             az_market_relevant(
                 "Backend Engineer",
                 "Remote, Canada",
                 "Relocation support available.",
+                remote=True,
+                relocation=True,
+            )
+        )
+        self.assertFalse(
+            az_market_relevant(
+                "Backend Engineer",
+                "Remote, Canada",
+                "H-1B sponsorship for US work authorization.",
                 remote=True,
                 relocation=True,
             )
@@ -358,22 +368,14 @@ class AzMarketRemoteTest(unittest.TestCase):
             )
         )
 
-    def test_cet_timezone_band_locked(self):
+    def test_cet_timezone_band_is_not_a_lock(self):
         text = (
             "HYBRID (Berlin) or REMOTE (CET ±2h). "
             "We're not able to offer relocation or visa sponsorship. "
             "Fully remote within CET ±2h."
         )
-        self.assertTrue(foreign_locked_remote("Lead Platform Engineer", "", text))
-        self.assertFalse(
-            az_market_relevant(
-                "Lead Platform Engineer",
-                "",
-                text,
-                remote=True,
-                relocation=False,
-            )
-        )
+        # Timezone is no longer a rejection reason.
+        self.assertFalse(foreign_locked_remote("Lead Platform Engineer", "", text))
 
     def test_india_rupee_stipend_locked(self):
         text = (

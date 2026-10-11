@@ -15,6 +15,7 @@ from worker.techstack import (
     az_market_relevant,
     foreign_office_without_offer,
     relocation_flag,
+    relocation_overrides_lock,
     remote_flag,
 )
 
@@ -41,7 +42,9 @@ def off_market_reason(title: str, place: str, text: str, *, remote: bool, reloca
     kw_reloc = relocation or relocation_flag(title, place, text)
     # Use stored remote for geo-lock: connectors often set remote=1 with a
     # country-scoped city even when keywords are thin.
-    if (remote or kw_remote) and foreign_locked_remote(title, place, text):
+    if (remote or kw_remote) and foreign_locked_remote(title, place, text) and not (
+        relocation_overrides_lock(title, place, text)
+    ):
         return "foreign_locked_remote"
     if foreign_office_without_offer(title, place, text):
         return "foreign_office"

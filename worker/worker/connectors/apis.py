@@ -7,7 +7,7 @@ URL, and honours the polling advice the source publishes.
 from __future__ import annotations
 
 import re
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 from worker.connectors.feed import FeedConnector, text_from_html
 from worker.http import SourceFailed
@@ -362,3 +362,166 @@ def parse_hn_comment(html: str) -> dict | None:
         "remote": True if remote else None,
         "relocation": True if visa else None,
     }
+
+
+class DevITjobsUkConnector(FeedConnector):
+    """https://devitjobs.uk — public ``/api/jobsLight`` JSON (robots.txt allows it for every
+    bot except Meta-ExternalAgent). Most of the ~2300 rows are office jobs, so only
+    ``workplace == remote`` and rows with ``hasVisaSponsorship == Yes`` are kept
+    (the visa flag becomes the relocation signal). The long text comes from the
+    site's public ``/rss`` (one request, only when a new candidate exists)."""
+
+    name = "DevITjobs UK"
+    entry_url = "https://devitjobs.uk/api/jobsLight"
+    rss_url = "https://devitjobs.uk/rss"
+    job_base = "https://devitjobs.uk/jobs/"
+    require_remote_or_relocation = True
+    min_interval_hours = 6
+    candidates = 120
+    credit_note = "DevITjobs UK public jobs API. The link opens the listing on devitjobs.uk."
+
+    @staticmethod
+    def _slug(url: str) -> str:
+        return urlparse(url).path.rstrip("/").rsplit("/", 1)[-1]
+
+    def _rss_text(self) -> dict[str, str]:
+        from worker.connectors.feed import first, read_rss
+
+        out: dict[str, str] = {}
+        try:
+            for it in read_rss(self.client, self.rss_url):
+                slug = self._slug(first(it.get("link")))
+                if slug:
+                    out[slug] = text_from_html(first(it.get("description")))
+        except SourceFailed:
+            return {}
+        return out
+
+    def feed_items(self) -> list[dict]:
+        payload = self.client.get_json(self.entry_url)
+        if not isinstance(payload, list):
+            raise SourceFailed("devitjobs payload was not a list")
+        rows: list[dict] = []
+        for job in payload:
+            if not isinstance(job, dict) or job.get("isPaused") or not job.get("jobUrl") or not job.get("name"):
+                continue
+            remote = str(job.get("workplace") or "").lower() == "remote"
+            visa = str(job.get("hasVisaSponsorship") or "").lower() == "yes"
+            if not (remote or visa):
+                continue
+            rows.append((job, remote, visa))
+        rows.sort(key=lambda r: str(r[0].get("activeFrom") or ""), reverse=True)
+        from worker.market_fit import is_rejected
+
+        conn = getattr(self.store, "conn", None)
+        # Already stored or already rejected (e.g. UK-only remote) rows need no 10 MB RSS read.
+        fresh = [
+            r for r in rows
+            if not self.store.has_source_url(self.job_base + str(r[0]["jobUrl"]))
+            and not is_rejected(conn, self.job_base + str(r[0]["jobUrl"]))
+        ]
+        texts = self._rss_text() if fresh else {}
+        out: list[dict] = []
+        for job, remote, visa in rows:
+            slug = str(job["jobUrl"])
+            place = clean(job.get("actualCity") or job.get("cityCategory")).title()
+            tech = [clean(t) for t in (job.get("technologies") or []) if clean(t)]
+            body = texts.get(slug) or (
+                f"{job.get('name')} at {job.get('company')}. Workplace: {job.get('workplace')}. "
+                f"Level: {job.get('expLevel') or '-'}. Technologies: {', '.join(tech) or '-'}."
+            )
+            if visa:
+                # The structured flag is the sponsorship statement; say it in the text so the
+                # shared visa/relocation rules (which read text) see it.
+                body += "\n\nVisa sponsorship: yes (DevITjobs UK hasVisaSponsorship flag)."
+            city = "Remote (UK)" if remote else (place or "UK")
+            if remote and place:
+                city = f"Remote ({place}, UK)"
+            out.append({
+                "title": clean(job.get("name")),
+                "company": clean(job.get("company")),
+                "city": city,
+                "text": body,
+                "source_url": self.job_base + slug,
+                "external_id": str(job.get("_id") or slug),
+                "tags": tech,
+                "category": [x for x in (job.get("techCategory"), job.get("metaCategory")) if x] + tech[:2],
+                "remote": True if remote else None,
+                "relocation": True if visa else None,
+            })
+        return out
+
+
+class TheMuseConnector(FeedConnector):
+    """https://www.themuse.com/developers/api/v2 — public jobs API (no key), engineering
+    and data categories, only rows listing "Flexible / Remote". Mostly US employers, so
+    the shared region gate does most of the filtering."""
+
+    name = "The Muse"
+    entry_url = "https://www.themuse.com/api/public/jobs"
+    require_remote_or_relocation = True
+    min_interval_hours = 6
+    max_pages = 4
+    categories = ("Software Engineering", "Data and Analytics")
+    credit_note = "The Muse public jobs API. The link opens the listing on themuse.com."
+
+    _US_STATE = re.compile(r",\s*[A-Z]{2}$")
+    _OPEN = re.compile(r"(?i)\b(?:worldwide|anywhere|work from anywhere|global(?:ly)? remote|any country|EMEA)\b")
+    _US_PAY = re.compile(r"(?i)401\(?k\)?|\$\s?\d{2,3},\d{3}|\bUSD\b|\bU\.?S\.?[- ]based\b|United States")
+
+    @classmethod
+    def not_us_only(cls, others: list[str], body: str) -> bool:
+        """The Muse says only "Flexible / Remote" for US-resident remote roles too. Keep a row
+        when it names a non-US place or the text is explicitly open; drop it when the text
+        carries US pay/benefit signals (401k, $120,000 ranges, "United States")."""
+        if cls._OPEN.search(body[:4000]):
+            return True
+        if cls._US_PAY.search(body):
+            return False
+        return any(not cls._US_STATE.search(p) and not p.endswith("United States") for p in others)
+
+    def feed_items(self) -> list[dict]:
+        out: list[dict] = []
+        seen: set[str] = set()
+        for cat in self.categories:
+            for page in range(1, self.max_pages + 1):
+                url = (
+                    f"{self.entry_url}?category={quote(cat)}&location={quote('Flexible / Remote')}"
+                    f"&page={page}"
+                )
+                payload = self.client.get_json(url)
+                rows = payload.get("results") if isinstance(payload, dict) else None
+                if not isinstance(rows, list):
+                    raise SourceFailed("the muse payload had no results list")
+                for job in rows:
+                    if not isinstance(job, dict):
+                        continue
+                    link = clean((job.get("refs") or {}).get("landing_page"))
+                    if not link or link in seen:
+                        continue
+                    places = [clean(l.get("name")) for l in job.get("locations") or [] if isinstance(l, dict)]
+                    if not any(re.search(r"(?i)remote|flexible", p) for p in places):
+                        continue
+                    others = [p for p in places if p and not re.search(r"(?i)remote|flexible", p)]
+                    body = text_from_html(job.get("contents"))
+                    if not self.not_us_only(others, body):
+                        continue
+                    seen.add(link)
+                    out.append({
+                        "title": clean(job.get("name")),
+                        "company": clean((job.get("company") or {}).get("name")),
+                        "city": "Remote" + (f" ({'; '.join(others[:3])})" if others else ""),
+                        "text": body,
+                        "source_url": link,
+                        "external_id": str(job.get("id") or ""),
+                        # The Muse's own categories are loose (a "Software Engineering" row can be
+                        # legal counsel), so the role is judged from the title only.
+                        "category": [],
+                        "tags": [],
+                        "remote": True,
+                        "_stamp": job.get("publication_date"),
+                    })
+                if page >= int(payload.get("page_count") or 0):
+                    break
+        out.sort(key=lambda it: str(it.get("_stamp") or ""), reverse=True)
+        return out

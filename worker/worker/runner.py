@@ -11,11 +11,13 @@ from pathlib import Path
 from worker.observability import capture_exception, flush, init_observability, span
 from worker.connectors.apis import (
     ArbeitnowConnector,
+    DevITjobsUkConnector,
     FourDayWeekConnector,
     HimalayasConnector,
     HnWhoIsHiringConnector,
     JobgetherConnector,
     JobicyConnector,
+    TheMuseConnector,
     WorkingNomadsConnector,
 )
 from worker.connectors.ats import (
@@ -24,7 +26,7 @@ from worker.connectors.ats import (
     RecruiteeConnector,
     WorkableConnector,
 )
-from worker.connectors.boards import JapanDevConnector, RelocateMeConnector, RemoteFirstJobsConnector
+from worker.connectors.boards import JapanDevConnector, RelocateMeConnector
 from worker.connectors.djinni import DjinniConnector
 from worker.connectors.jooble import JoobleConnector
 from worker.connectors.reed import ReedConnector
@@ -44,6 +46,7 @@ from worker.connectors.rssboards import (
     JobspressoConnector,
     PythonOrgJobsConnector,
     RealWorkFromAnywhereConnector,
+    RemoteFirstJobsRssConnector,
     RemoteYeahConnector,
 )
 from worker.connectors.wellfound import WellfoundConnector
@@ -94,7 +97,9 @@ BUILDERS = {
     "Jobspresso": JobspressoConnector,
     "Relocate.me": RelocateMeConnector,
     "Japan Dev": JapanDevConnector,
-    "Remote First Jobs": RemoteFirstJobsConnector,
+    "Remote First Jobs": RemoteFirstJobsRssConnector,
+    "DevITjobs UK": DevITjobsUkConnector,
+    "The Muse": TheMuseConnector,
     **ATS_GROUP_CONNECTORS,
     "Jooble": JoobleConnector,
     # Official keyed API; narrow robots.txt exception, see http.ROBOTS_EXCEPTIONS.

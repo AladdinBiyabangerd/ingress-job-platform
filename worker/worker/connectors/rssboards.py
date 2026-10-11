@@ -253,3 +253,55 @@ class RemoteYeahConnector(FeedConnector):
                 "remote": True,
             })
         return out
+
+
+class RemoteFirstJobsRssConnector(FeedConnector):
+    """https://remotefirstjobs.com/rss/jobs.rss — public RSS (100 newest remote jobs with full
+    text). robots.txt allows the feed and the job pages for generic bots. The job page
+    (JobPosting JSON-LD) is read once, only for a new tech candidate, to learn the
+    country restriction (applicantLocationRequirements); /api/ is never called."""
+
+    name = "Remote First Jobs"
+    entry_url = "https://remotefirstjobs.com/rss/jobs.rss"
+    remote_default = True
+    min_interval_hours = 3
+    candidates = 30
+    credit_note = "Remote First Jobs public RSS feed and job pages."
+
+    def feed_items(self) -> list[dict]:
+        out: list[dict] = []
+        for it in read_rss(self.client, self.entry_url):
+            full = clean(first(it.get("title")))
+            link = first(it.get("link"))
+            if not full or not link:
+                continue
+            head, sep, tail = full.rpartition(" at ")
+            title, company = (head.strip(), tail.strip()) if sep and head.strip() else (full, "")
+            out.append({
+                "title": title,
+                "company": company,
+                "city": "Remote",
+                "text": text_from_html(first(it.get("description"))),
+                "source_url": link,
+                "external_id": link.rstrip("/").rsplit("-", 1)[-1],
+                "remote": True,
+            })
+        return out
+
+    def fetch(self, url: str) -> str:
+        from worker.connectors.boards import _requirements
+        from worker.http import Disallowed, NotFound
+        from worker.parsing import job_postings
+
+        item = self._items.get(url)
+        if item is not None and not item.get("_page"):
+            item["_page"] = True
+            try:
+                html = self.client.get_text(url)
+                jobs = job_postings(html)
+                reqs = _requirements(jobs[0]) if jobs else []
+                if reqs:
+                    item["city"] = f"Remote ({', '.join(reqs[:3])})"
+            except (NotFound, Disallowed):
+                pass
+        return super().fetch(url)

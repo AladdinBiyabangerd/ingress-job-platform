@@ -2,7 +2,7 @@
 
 Plain data, no imports: catalog.py builds the source rows from it and
 connectors/ats.py builds one connector per group. Every slug was checked on
-2026-10-05 (base set) or 2026-10-10 (expansions): the board answered, robots.txt
+2026-10-05 (base set) or 2026-10-10 / 2026-10-11 (expansions): the board answered, robots.txt
 allowed it and it listed tech roles. Companies that hire remotely or sponsor
 visas/relocation were preferred. Each group reads at most ATS_MAX_BOARDS
 boards per pass; larger groups rotate.
@@ -57,6 +57,11 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
     ("Greenhouse boards (Middle East & Africa)", "greenhouse", "Yaxın Şərq və Afrika", (
         "careem", "tamara", "bybit", "ozow", "wizinc", "jfrog", "axonius", "payoneer", "riskified",
         "melio", "similarweb", "taboola", "catonetworks", "transmitsecurity", "yotpo")),
+    # Dry-run 2026-10-11 of ~60 more boards (Greenhouse/Lever/Workable): only these four gave
+    # accepted ads; sysdig, pigment, scaleway, honeycomb, cribl, bitgo, etc. were all office or
+    # country-locked and were not added.
+    ("Greenhouse boards (Remote-first & global)", "greenhouse", "Remote-first və qlobal işə götürən şirkətlər", (
+        "mozilla", "wikimedia", "consensys", "tomorrow")),
     # ---- Lever (api.lever.co)
     ("Lever boards (Europe)", "lever", "Avropa", (
         "spotify", "qonto", "swile", "aircall", "zopa", "farfetch", "malt", "blablacar",

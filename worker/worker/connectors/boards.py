@@ -111,32 +111,3 @@ class JapanDevConnector(OpenListConnector):
         if not item.get("city"):
             item["city"] = "Japan"
         return item
-
-
-class RemoteFirstJobsConnector(OpenListConnector):
-    """remotefirstjobs.com — remote roles at remote-first companies."""
-
-    name = "Remote First Jobs"
-    entry_url = "https://remotefirstjobs.com/jobs/software-development"
-    remote_default = True
-    credit_note = "Remote First Jobs public job pages."
-
-    def list_pages(self) -> list[str]:
-        return [self.entry_url, "https://remotefirstjobs.com/jobs/cybersecurity"]
-
-    def links(self, html: str, page_url: str) -> list[str]:
-        return [
-            u for u, _t in page_links(html, page_url)
-            if path_is(u, r"/companies/[a-z0-9-]+/jobs/[a-z0-9-]+-\d+")
-        ]
-
-    def parse_page(self, html: str, url: str) -> dict | None:
-        item = posting_item(html)
-        if not item:
-            return None
-        job = job_postings(html)[0]
-        reqs = _requirements(job)
-        item["city"] = "Remote" + (f" ({', '.join(reqs[:3])})" if reqs else "")
-        item["remote"] = True
-        item["credit_note"] = self.credit_note
-        return item
