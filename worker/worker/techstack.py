@@ -281,12 +281,30 @@ _TECH: list[tuple[str, re.Pattern[str], tuple[str, ...], str]] = [
     ("Endpoint Security", _ci(r"endpoint\s+security"), (), "security"),
 ]
 
+# Pure-letter aliases that are also ordinary words or other things: tag-only.
+_TAG_ONLY_ALIASES = frozenset({
+    "drizzle", "testify", "comprehend", "composer", "glacier", "amplify", "anaconda",
+    "lightship", "viper", "chisel", "rack", "snow", "cockroach", "illustrator",
+    "framer", "sketch", "notion", "blender", "iceberg", "druid", "confluence",
+    "cisco", "excel", "scrum", "workspaces", "aurora", "athena", "bedrock", "synapse", "lambda",
+})
+
+
+def _text_alias(alias: str) -> bool:
+    """May this alias match free text? Short or ambiguous aliases are tag-only."""
+    if alias in _TAG_ONLY_ALIASES:
+        return False
+    if re.search(r"[^a-z]", alias):
+        return len(alias) >= 4
+    return len(alias) >= 7
+
+
 def _extra_pattern(
     name: str, aliases: tuple[str, ...], rx: str | None, case_sensitive: bool
 ) -> re.Pattern[str]:
     if rx is None:
         parts: list[str] = []
-        for word in (name, *aliases):
+        for word in (name, *(a for a in aliases if _text_alias(a))):
             esc = re.escape(word).replace(r"\ ", r"[\s-]?")
             if esc not in parts:
                 parts.append(esc)
@@ -296,9 +314,15 @@ def _extra_pattern(
 
 def _load_extra() -> None:
     from worker.techstack_extra import SPECS
+    from worker.techstack_extra2 import SPECS2
 
     have = {name for name, _p, _e, _c in _TECH}
-    for name, cat, aliases, rx, case_sensitive in SPECS:
+    taken = {a for _n, _p, extra, _c in _TECH for a in extra} | {n.lower() for n in have}
+    for name, cat, aliases, rx, case_sensitive in [*SPECS, *SPECS2]:
+        # one alias, one skill: later rows never steal an alias already taken
+        aliases = tuple(a for a in aliases if a not in taken)
+        taken.update(aliases)
+        taken.add(name.lower())
         if name in have:
             continue
         have.add(name)
@@ -317,6 +341,69 @@ for _name, _pattern, _extra, _cat in _TECH:
     _ALIASES[_name.lower()] = _name
     for _alias in _extra:
         _ALIASES[_alias] = _name
+
+# ---- fast pre-filter ---------------------------------------------------------
+# With ~2300 patterns, running every regex on every ad is slow. For each pattern
+# we derive literal substrings of which at least one MUST appear (lower-cased)
+# for the pattern to match; a plain ``in`` test then skips almost all regexes.
+# ``None`` means "no safe literal found": the regex always runs.
+
+from re import _constants as _sre_c  # noqa: E402
+from re import _parser as _sre_p  # noqa: E402
+
+
+def _needles_of(seq) -> list[str] | None:
+    best: list[str] | None = None
+    run: list[str] = []
+
+    def consider(cand: list[str] | None) -> None:
+        nonlocal best
+        if cand is None:
+            return
+        if best is None or min(map(len, cand)) > min(map(len, best)):
+            best = cand
+
+    def flush() -> None:
+        if len(run) >= 3:
+            consider(["".join(run)])
+        run.clear()
+
+    for op, arg in seq:
+        if op == _sre_c.LITERAL:
+            run.append(chr(arg).lower())
+            continue
+        flush()
+        if op == _sre_c.SUBPATTERN:
+            consider(_needles_of(arg[-1]))
+        elif op == _sre_c.BRANCH:
+            alts = [_needles_of(a) for a in arg[1]]
+            if all(a is not None for a in alts):
+                consider([n for a in alts for n in a])
+        elif op in (_sre_c.MAX_REPEAT, _sre_c.MIN_REPEAT) and arg[0] >= 1:
+            consider(_needles_of(arg[2]))
+    flush()
+    return best
+
+
+def _needles(pattern: re.Pattern[str]) -> tuple[str, ...] | None:
+    try:
+        found = _needles_of(_sre_p.parse(pattern.pattern, pattern.flags))
+    except Exception:  # pragma: no cover - unknown construct: never skip
+        return None
+    return tuple(found) if found else None
+
+
+_NEEDLES: list[tuple[str, ...] | None] = [_needles(p) for _n, p, _e, _c in _TECH]
+
+
+def _candidates(text: str):
+    """(index, name, pattern, category) for patterns that might match ``text``."""
+    low = text.lower()
+    for i, (name, pattern, _extra, cat) in enumerate(_TECH):
+        need = _NEEDLES[i]
+        if need is None or any(n in low for n in need):
+            yield name, pattern, cat
+
 
 TECH_NAMES = [name for name, _p, _e, _c in _TECH]
 TECH_CATEGORY = {name: cat for name, _p, _e, cat in _TECH}
@@ -343,14 +430,24 @@ def _split_tags(tags: object) -> list[str]:
     return []
 
 
+_CI_CACHE: dict[str, re.Pattern[str]] = {}
+
+
+def _ci_fullmatch(pattern: re.Pattern[str], tag: str):
+    cached = _CI_CACHE.get(pattern.pattern)
+    if cached is None:
+        cached = _CI_CACHE[pattern.pattern] = re.compile(pattern.pattern, re.IGNORECASE)
+    return cached.fullmatch(tag)
+
+
 def _tag_name(tag: str) -> str | None:
     key = re.sub(r"\s+", " ", tag.strip().lower())
     if not key or len(key) > 40:
         return None
     if key in _ALIASES:
         return _ALIASES[key]
-    for name, pattern, _extra, _cat in _TECH:
-        found = re.compile(pattern.pattern, re.IGNORECASE).fullmatch(tag.strip())
+    for name, pattern, _cat in _candidates(tag):
+        found = _ci_fullmatch(pattern, tag.strip())
         if found and name not in {"Go", "C", "SQL"}:
             return name
     return None
@@ -378,7 +475,7 @@ def find_stack(text: str, *, limit: int | None = None) -> list[str]:
     """
     sample = (text or "")[:50000]
     scored: list[tuple[int, str]] = []
-    for name, pattern, _extra, _cat in _TECH:
+    for name, pattern, _cat in _candidates(sample):
         hit = pattern.search(sample)
         if hit:
             scored.append((hit.start(), name))
@@ -398,7 +495,7 @@ def extract_stack(text: str, tags: object = None, title: str = "") -> list[str]:
         return found[:MAX_STACK]
     sample = f"{title}\n{text or ''}"[:30000]
     scored: list[tuple[int, int, str]] = []
-    for name, pattern, _extra, _cat in _TECH:
+    for name, pattern, _cat in _candidates(sample):
         if name in found or _cat in _NON_CHIP:
             continue
         hits = list(pattern.finditer(sample))

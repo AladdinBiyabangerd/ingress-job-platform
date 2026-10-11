@@ -97,7 +97,7 @@ class SkillCoverageTest(unittest.TestCase):
             sorted(s["canonical_name"] for s in packaged),
         )
         self.assertEqual(sorted(TECH_NAMES), sorted(s["canonical_name"] for s in packaged))
-        self.assertGreaterEqual(len(packaged), 700)
+        self.assertGreaterEqual(len(packaged), 2000)
 
     def test_non_it_titles_still_rejected(self):
         for title in (
@@ -106,6 +106,60 @@ class SkillCoverageTest(unittest.TestCase):
             "Head of Crypto", "Content Writer", "Nurse",
         ):
             self.assertFalse(is_tech_job(title), title)
+
+
+class BatchTwoGuardTest(unittest.TestCase):
+    def test_new_batch_extracts(self):
+        text = (
+            "Stack: Spring WebFlux, Hibernate ORM, Flyway migrations are not needed; Zod, Pinia, Vuetify, "
+            "Recharts, Alamofire, Jetpack Navigation Component, Riverpod, Axum, Tokio, Diesel ORM, "
+            "Terraform, Amazon EKS, AWS GuardDuty, CloudTrail, Azure Key Vault, Azure Data Explorer, "
+            "BigQuery, Dataproc, Cloud Composer, AlloyDB, Camunda, MuleSoft, Dagster, DuckDB, "
+            "Hasura, Playwright, Testcontainers, WireMock, Qdrant, XGBoost, spaCy, LlamaIndex."
+        )
+        found = set(find_stack(text))
+        for name in ("Pinia", "Vuetify", "Recharts", "Alamofire", "Riverpod", "AWS GuardDuty",
+                     "AWS CloudTrail", "Azure Key Vault", "Google Dataproc", "Google Composer",
+                     "Google AlloyDB", "Camunda", "MuleSoft", "Dagster", "DuckDB", "Hasura",
+                     "Testcontainers", "WireMock", "Pinecone", "XGBoost", "spaCy", "LlamaIndex"):
+            self.assertIn(name, found, name)
+
+    def test_common_words_and_short_names_do_not_match(self):
+        noise = (
+            "Document processing of customer requests and responses. The h3 tag. Analog circuits. "
+            "Nerves of steel. Rack layouts and cooling. Member of the ACM and the ACR. "
+            "Go-to-market (GTM) with KPI dashboards under CCPA. Tier 1 teams and L1 support. "
+            "Mentoring juniors. Concurrency constructs. Amplify impact. Click here. Black and white. "
+            "Shared workspaces. Solution design workshop. Platform roadmap. Core Data Services. "
+            "Cuts of kernel development; kernel drivers; the analog dash panel; a rich temporal view."
+        )
+        self.assertEqual(find_stack(noise), [])
+
+    def test_aliases_work_as_tags_but_not_free_text(self):
+        self.assertEqual(stack_from_tags(["cloudtrail", "gce", "adf"]),
+                         ["AWS CloudTrail", "Google Compute Engine", "Azure Data Factory"])
+        self.assertNotIn("Google Compute Engine", find_stack("the gce team"))
+        self.assertNotIn("Apache Druid", find_stack("a druid in a game"))
+
+    def test_prefilter_matches_brute_force(self):
+        from worker import techstack as t
+
+        sample = (
+            "Senior engineer: C++17, Go, .NET Core, AWS, Next.js, k6, I2C, Kubernetes (EKS), "
+            "Azure DevOps, CI/CD, Terraform, Amazon S3, Spring Boot, PostgreSQL, SAP S/4HANA."
+        )
+
+        def brute(text):
+            hits = sorted((p.search(text).start(), n) for n, p, _a, _c in t._TECH if p.search(text))
+            return [n for _pos, n in hits]
+
+        self.assertEqual(brute(sample), find_stack(sample))
+        self.assertGreater(len(find_stack(sample)), 10)
+
+    def test_dictionary_size_and_alias_total(self):
+        skills = load_skills()
+        self.assertGreaterEqual(len(skills), 2300)
+        self.assertGreaterEqual(sum(len(s["synonyms"]) for s in skills), 800)
 
 
 class RoleTaxonomyTest(unittest.TestCase):

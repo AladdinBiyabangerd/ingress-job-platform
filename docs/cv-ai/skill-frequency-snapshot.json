@@ -1,12 +1,12 @@
 {
   "version": "1.0",
-  "generated_at": "2026-10-11T19:05:37Z",
-  "total_jobs": 449,
-  "jobs_with_tech_stack": 374,
+  "generated_at": "2026-10-11T19:24:13Z",
+  "total_jobs": 450,
+  "jobs_with_tech_stack": 375,
   "skills": [
     {
       "name": "Python",
-      "ad_count": 167
+      "ad_count": 168
     },
     {
       "name": "AWS",
@@ -22,7 +22,7 @@
     },
     {
       "name": "SQL",
-      "ad_count": 78
+      "ad_count": 79
     },
     {
       "name": "Go",
@@ -38,7 +38,7 @@
     },
     {
       "name": "PostgreSQL",
-      "ad_count": 55
+      "ad_count": 56
     },
     {
       "name": "Terraform",
@@ -58,11 +58,11 @@
     },
     {
       "name": "Docker",
-      "ad_count": 42
+      "ad_count": 43
     },
     {
       "name": "Linux",
-      "ad_count": 40
+      "ad_count": 41
     },
     {
       "name": "JavaScript",
@@ -70,7 +70,7 @@
     },
     {
       "name": "Git",
-      "ad_count": 38
+      "ad_count": 39
     },
     {
       "name": "Java",
@@ -90,7 +90,7 @@
     },
     {
       "name": "Redis",
-      "ad_count": 24
+      "ad_count": 25
     },
     {
       "name": "iOS",
@@ -173,6 +173,10 @@
       "ad_count": 14
     },
     {
+      "name": "Django",
+      "ad_count": 14
+    },
+    {
       "name": "Angular",
       "ad_count": 13
     },
@@ -182,10 +186,6 @@
     },
     {
       "name": "Spark",
-      "ad_count": 13
-    },
-    {
-      "name": "Django",
       "ad_count": 13
     },
     {
@@ -217,15 +217,15 @@
       "ad_count": 12
     },
     {
+      "name": "RabbitMQ",
+      "ad_count": 12
+    },
+    {
       "name": "ClickHouse",
       "ad_count": 11
     },
     {
       "name": "Databricks",
-      "ad_count": 11
-    },
-    {
-      "name": "RabbitMQ",
       "ad_count": 11
     },
     {
@@ -365,6 +365,10 @@
       "ad_count": 5
     },
     {
+      "name": "FastAPI",
+      "ad_count": 5
+    },
+    {
       "name": "PHP",
       "ad_count": 5
     },
@@ -393,7 +397,11 @@
       "ad_count": 4
     },
     {
-      "name": "FastAPI",
+      "name": "Flask",
+      "ad_count": 4
+    },
+    {
+      "name": "Celery",
       "ad_count": 4
     },
     {
@@ -449,15 +457,7 @@
       "ad_count": 3
     },
     {
-      "name": "Flask",
-      "ad_count": 3
-    },
-    {
       "name": "Istio",
-      "ad_count": 3
-    },
-    {
-      "name": "Celery",
       "ad_count": 3
     },
     {
