@@ -10,6 +10,7 @@ import "@fontsource/plus-jakarta-sans/latin-ext-600.css";
 import "@fontsource/plus-jakarta-sans/latin-ext-700.css";
 import { MeSeed } from "../components/me-seed";
 import { getMe } from "../lib/server/me";
+import { FOUNDER } from "../lib/founder";
 import { SITE, homeMetadata, siteOrigin } from "../lib/seo";
 
 const defaults = homeMetadata("az");
@@ -22,8 +23,11 @@ export const metadata = {
   },
   description: defaults.description,
   applicationName: SITE.name,
-  authors: [{ name: SITE.name }],
-  creator: SITE.name,
+  authors: [
+    { name: FOUNDER.name, url: FOUNDER.portfolioOrigin },
+    { name: SITE.name },
+  ],
+  creator: FOUNDER.name,
   publisher: SITE.name,
   keywords: defaults.keywords,
   category: "jobs",

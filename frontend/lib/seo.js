@@ -1,4 +1,5 @@
 import { hrefFor, text } from "./copy";
+import { FOUNDER, founderPersonNode } from "./founder";
 import { INGRESS, ingressUrl } from "./ingress";
 import { salaryJsonLd } from "./salary";
 
@@ -33,6 +34,7 @@ const HOME = {
       "Ingress Job",
       "Ingress",
       "Ingress Academy",
+      "Aladdin Biyabangerd",
     ],
     breadcrumbHome: "Elanlar",
     ogImageAlt: "Ingress Job — açıq iş elanları",
@@ -51,6 +53,7 @@ const HOME = {
       "Ingress Job",
       "Ingress",
       "Ingress Academy",
+      "Aladdin Biyabangerd",
     ],
     breadcrumbHome: "Jobs",
     ogImageAlt: "Ingress Job — open job listings",
@@ -69,6 +72,7 @@ const HOME = {
       "Ingress Job",
       "Ingress",
       "Ingress Academy",
+      "Aladdin Biyabangerd",
     ],
     breadcrumbHome: "Вакансии",
     ogImageAlt: "Ingress Job — открытые вакансии",
@@ -161,8 +165,11 @@ function sharedMeta({ locale, title, description, path, jobId, route, type = "we
     title,
     description,
     keywords: keywords?.length ? keywords : undefined,
-    authors: [{ name: SITE.name }],
-    creator: SITE.name,
+    authors: [
+      { name: FOUNDER.name, url: FOUNDER.portfolioOrigin },
+      { name: SITE.name },
+    ],
+    creator: FOUNDER.name,
     publisher: SITE.name,
     applicationName: SITE.name,
     alternates: {
@@ -378,6 +385,7 @@ function organizationNode(locale) {
       url: absoluteUrl(SITE.logoPath),
     },
     description: copy.description,
+    founder: { "@id": FOUNDER.personId },
     knowsAbout: copy.knowsAbout,
     areaServed: {
       "@type": "Country",
@@ -397,15 +405,18 @@ export function homeJsonLd(locale = "az") {
   const faq = text(locale).faq;
   const origin = siteOrigin();
   const pageUrl = absoluteUrl(localePath(locale));
+  const orgId = `${origin}/#organization`;
   const graph = [
     organizationNode(locale),
+    founderPersonNode(locale, { organizationId: orgId }),
     {
       "@type": "WebSite",
       "@id": `${origin}/#website`,
       name: SITE.name,
       url: origin,
       description: copy.description,
-      publisher: { "@id": `${origin}/#organization` },
+      publisher: { "@id": orgId },
+      creator: { "@id": FOUNDER.personId },
       inLanguage: HTML_LANG[locale],
     },
     {
@@ -415,7 +426,7 @@ export function homeJsonLd(locale = "az") {
       name: copy.title,
       description: copy.description,
       isPartOf: { "@id": `${origin}/#website` },
-      about: { "@id": `${origin}/#organization` },
+      about: { "@id": orgId },
       inLanguage: HTML_LANG[locale],
     },
   ];
@@ -471,16 +482,19 @@ export function jobPostingJsonLd(job, locale = "az") {
   if (validThrough) posting.validThrough = validThrough;
   applyJobLocation(posting, job);
 
+  const orgId = `${origin}/#organization`;
   return {
     "@context": "https://schema.org",
     "@graph": [
       organizationNode(locale),
+      founderPersonNode(locale, { organizationId: orgId }),
       {
         "@type": "WebSite",
         "@id": `${origin}/#website`,
         name: SITE.name,
         url: origin,
-        publisher: { "@id": `${origin}/#organization` },
+        publisher: { "@id": orgId },
+        creator: { "@id": FOUNDER.personId },
         inLanguage: HTML_LANG[locale],
       },
       {

@@ -29,16 +29,17 @@ function privatePaths() {
 
 export default function robots() {
   const disallow = privatePaths();
+  // Public marketing / job pages + /llms.txt (static). Same allow/disallow for AI bots.
   return {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        allow: ["/", "/llms.txt"],
         disallow,
       },
       ...AI_BOTS.map((userAgent) => ({
         userAgent,
-        allow: "/",
+        allow: ["/", "/llms.txt"],
         disallow,
       })),
     ],

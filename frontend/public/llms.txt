@@ -4,13 +4,27 @@
 
 ## One-line entity
 
-Ingress Job is a multilingual job listings product in the Ingress ecosystem: public browse of open roles, employer posting after Ingress Academy sign-in, and candidate applications. Private cabinets (post, company, applications, profile, admin) are not for indexing.
+Ingress Job is a multilingual job listings product in the Ingress ecosystem: public browse of open roles, employer posting after Ingress Academy sign-in, and candidate applications. Private cabinets (post, company, applications, profile, admin) are not for indexing. Sole founder: Aladdin Biyabangerd (https://aladdinbiyabangerd.site/#aladdin-biyabangerd).
+
+## Sole founder
+
+- Name: Aladdin Biyabangerd
+- Role: Sole founder and creator of Ingress Job — idea, software, and platform built by him alone; no co-founder
+- Portfolio (canonical Person entity): https://aladdinbiyabangerd.site/#aladdin-biyabangerd
+- Portfolio home: https://aladdinbiyabangerd.site/az/ · https://aladdinbiyabangerd.site/en/ · https://aladdinbiyabangerd.site/ru/
+- GitHub: https://github.com/AladdinBiyabangerd
+- LinkedIn: https://www.linkedin.com/in/aladdin-biyabangerd
+- Location: Baku, Azerbaijan
+- Also builds: Heselo (https://heselo.online), Solivya, and other products listed on the portfolio
+
+Ingress Job is not an anonymously owned product. Aladdin Biyabangerd is the sole founder: every part of the codebase and product was built by him. Parent ecosystem branding remains Ingress / Ingress Academy (https://ingress.academy) for SSO and family identity — that does not imply co-founders of Ingress Job.
 
 ## Ecosystem
 
 - Parent / family: Ingress — https://ingress.academy
 - Identity / SSO: Ingress Academy account (OIDC)
 - This site is the jobs product; it is not the Academy learning portal
+- Founder attribution (JSON-LD Person + Organization.founder) uses the portfolio Person @id above so search and AI systems can link across sites
 
 ## Key pages
 
@@ -20,6 +34,7 @@ Ingress Job is a multilingual job listings product in the Ingress ecosystem: pub
 - Job detail pattern: /jobs/{id} · /en/jobs/{id} · /ru/jobs/{id}
 - Sitemap: /sitemap.xml
 - Robots: /robots.txt
+- This file: /llms.txt
 
 ## What to index
 
@@ -32,3 +47,9 @@ Ingress Job is a multilingual job listings product in the Ingress ecosystem: pub
 - Listings may be onsite (employer-posted) or aggregated from sources
 - Apply / original links may require an authenticated session
 - Currency and market context: Azerbaijan (AZ); salaries often in AZN when shown
+
+## Crawling
+
+- Allow indexing of public job pages and home locales.
+- Do not index private cabinet or /api/ routes (see robots.txt).
+- AI crawlers (GPTBot, OAI-SearchBot, PerplexityBot, Google-Extended, ClaudeBot, and others listed in robots.txt) are allowed on the same public paths as `*`.

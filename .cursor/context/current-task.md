@@ -1,30 +1,22 @@
 # Current task
 
 ## Completed
-- Phase A: Cloudflare edge checklist in `docs/railway.md`; `.tmp/` gitignored
-- Phase B1: API Redis/memory rate limits + human `slow_down` JSON (`api/app/rate_limit.py`)
-- Phase B2: Web BFF rate limits + `copy.js` rateLimit.* + home SlowDownBanner
-- Phase B3: TrustedHost, docs-off, body size, `FORWARDED_ALLOW_IPS`, internal token compare_digest
-- Phase C: Turnstile login gate + cabinet create Turnstile/quota; logout revoke if `JOB_OIDC_REVOKE_URL`
-- Phase D: skill installed; triage report in `.tmp/security-audit/` (not full fleet hunt)
+- Founder / creator machine attribution for Ingress Job (no UI): `frontend/lib/founder.js`, JSON-LD + meta in `seo.js` / `layout.js`, enriched `public/llms.txt`, explicit `/llms.txt` in `robots.js`
 
 ## Current state
-- Local: limits off unless `RATE_LIMIT_ENABLED=1`; Railway auto-on when `RAILWAY_ENVIRONMENT` set
-- Need ops: CF Proxied, Redis on api+web, Turnstile keys, optional revoke URL
+- Person entity links via portfolio `@id`: `https://aladdinbiyabangerd.site/#aladdin-biyabangerd`
+- Organization.founder + WebSite.creator + Person.sameAs (portfolio, GitHub, LinkedIn)
+- Tests: `frontend/lib/founder.test.mjs`
 
 ## Decisions
-- IP-first limits; benefit-framed UX (`slow_down` / never ban language)
-- Fail-open public GET when Redis down; fail-closed auth writes by bucket
-- Turnstile only when `TURNSTILE_SECRET_KEY` set (HTML gate on login)
+- Sole founder of Ingress Job (all code/product by Aladdin); parent ecosystem branding stays Ingress Academy for SSO — not co-founders of Job
+- No About page / footer UI — code + robots + llms.txt only (per request)
+- Same pattern as Heselo/Solivya for entity linking
 
 ## Remaining work
-- Ops: Cloudflare dashboard + Railway Redis/env
-- Optional: full `security-audit` skill 6-phase run in a **new chat**
-- Optional: wire Turnstile token into employer post UI when posting re-enabled
+- Deploy so live `/llms.txt` and JSON-LD pick up the change
+- Optional later: portfolio case study slug for Ingress Job if added
 
 ## Relevant files
-- `api/app/rate_limit.py`, `api/app/turnstile.py`, `api/app/main.py`, `api/start.py`
-- `api/app/account.py`, `routers/jobs.py`, `cabinet.py`, `email_prefs.py`
-- `frontend/lib/server/rate-limit.js`, `turnstile.js`, `app/api/auth/login/route.js`
-- `frontend/lib/copy.js`, `components/slow-down-banner.js`, `components/home.js`
-- `docs/railway.md`, `.tmp/security-audit/REPORT.md`
+- `frontend/lib/founder.js`, `frontend/lib/seo.js`, `frontend/lib/founder.test.mjs`
+- `frontend/public/llms.txt`, `frontend/app/robots.js`, `frontend/app/layout.js`
