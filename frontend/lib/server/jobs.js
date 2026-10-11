@@ -23,9 +23,34 @@ export function emptyJobsPayload() {
   };
 }
 
-export async function loadHomeJobs() {
+export async function loadHomeJobs(board = {}) {
+  const forYouMode = Boolean(board.forYouMode);
+  const fetchParams = {
+    page: forYouMode ? 1 : Math.max(1, Number(board.page) || 1),
+    perPage: 20,
+    q: board.q || "",
+    company: board.company || "",
+    city: board.city || "",
+    remote: Boolean(board.remote),
+    relocation: Boolean(board.relocation),
+    onsite: Boolean(board.onsite),
+    when: board.when || "any",
+    sort: board.sort || "newest",
+    languages: Array.isArray(board.languages) ? board.languages : [],
+    categories: Array.isArray(board.categories) ? board.categories : [],
+    stacks: Array.isArray(board.stacks) ? board.stacks : [],
+    salaryMin: board.salaryMin || "",
+    salaryMax: board.salaryMax || "",
+  };
   try {
-    const data = await getJobs("{}");
+    const data = await getJobs(JSON.stringify(fetchParams));
+    if (forYouMode) {
+      // Matches load client-side; keep facets from catalogue fetch.
+      return {
+        data: { ...data, items: [], total: 0, pages: 1, page: 1 },
+        error: false,
+      };
+    }
     return { data, error: false };
   } catch (err) {
     console.error("[home] getJobs failed", {

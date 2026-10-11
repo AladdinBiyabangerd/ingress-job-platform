@@ -1,5 +1,6 @@
 import { Home } from "../../components/home";
 import { JsonLd } from "../../components/json-ld";
+import { boardFiltersFromSearchParams } from "../../lib/jobs-params";
 import { loadHomeJobs } from "../../lib/server/jobs";
 import { homeJsonLd, homeMetadata } from "../../lib/seo";
 
@@ -9,9 +10,11 @@ export function generateMetadata() {
   return homeMetadata("ru");
 }
 
-export default async function Page() {
+export default async function Page({ searchParams }) {
+  const query = (await searchParams) || {};
+  const board = boardFiltersFromSearchParams(query);
   const jsonLd = homeJsonLd("ru");
-  const { data, error } = await loadHomeJobs();
+  const { data, error } = await loadHomeJobs(board);
   return (
     <>
       <JsonLd data={jsonLd} />
@@ -22,6 +25,7 @@ export default async function Page() {
         pages={data.pages}
         facets={data.facets}
         error={error}
+        initialBoard={board}
       />
     </>
   );

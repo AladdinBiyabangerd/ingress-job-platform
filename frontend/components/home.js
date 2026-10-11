@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CATEGORY_ORDER, categoryLabel, hrefFor, languageLabel, text } from "../lib/copy";
-import { jobsListParams } from "../lib/jobs-params";
+import { boardUrlSearchParams, DEFAULT_BOARD_FILTERS, jobsListParams } from "../lib/jobs-params";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
 import { fetchMe } from "../lib/me-client";
 import { useMediaQuery } from "../lib/use-media-query";
@@ -307,39 +307,40 @@ export function Home({
   pages = 1,
   facets = EMPTY_FACETS,
   error = false,
+  initialBoard = null,
 }) {
   const t = text(locale);
   const lang = locale === "en" || locale === "ru" ? locale : "az";
+  const board0 = initialBoard && typeof initialBoard === "object" ? initialBoard : DEFAULT_BOARD_FILTERS;
+  const landedOnForYou = Boolean(board0.forYouMode);
   const initialMe = useInitialMe();
   const [me, setMe] = useState(() => {
     if (initialMe && typeof initialMe === "object") return initialMe;
     return undefined;
   });
-  const [q, setQ] = useState(() => {
-    if (typeof window === "undefined") return "";
-    return new URLSearchParams(window.location.search).get("q") || "";
-  });
-  const [draftQ, setDraftQ] = useState(() => {
-    if (typeof window === "undefined") return "";
-    return new URLSearchParams(window.location.search).get("q") || "";
-  });
-  const [company, setCompany] = useState("");
-  const [city, setCity] = useState("");
-  const [languages, setLanguages] = useState([]);
-  const [remote, setRemote] = useState(false);
-  const [relocation, setRelocation] = useState(false);
-  const [onsite, setOnsite] = useState(false);
-  const [forYouMode, setForYouMode] = useState(false);
+  const [q, setQ] = useState(() => String(board0.q || ""));
+  const [draftQ, setDraftQ] = useState(() => String(board0.q || ""));
+  const [company, setCompany] = useState(() => String(board0.company || ""));
+  const [city, setCity] = useState(() => String(board0.city || ""));
+  const [languages, setLanguages] = useState(() =>
+    Array.isArray(board0.languages) ? board0.languages : [],
+  );
+  const [remote, setRemote] = useState(() => Boolean(board0.remote));
+  const [relocation, setRelocation] = useState(() => Boolean(board0.relocation));
+  const [onsite, setOnsite] = useState(() => Boolean(board0.onsite));
+  const [forYouMode, setForYouMode] = useState(() => Boolean(board0.forYouMode));
   const [matchesPayload, setMatchesPayload] = useState(null);
   const [matchJobs, setMatchJobs] = useState([]);
-  const [stacks, setStacks] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [stacks, setStacks] = useState(() => (Array.isArray(board0.stacks) ? board0.stacks : []));
+  const [categories, setCategories] = useState(() =>
+    Array.isArray(board0.categories) ? board0.categories : [],
+  );
   const [techQuery, setTechQuery] = useState("");
-  const [when, setWhen] = useState("any");
-  const [sort, setSort] = useState("newest");
-  const [salaryMin, setSalaryMin] = useState("");
-  const [salaryMax, setSalaryMax] = useState("");
-  const [page, setPage] = useState(1);
+  const [when, setWhen] = useState(() => board0.when || "any");
+  const [sort, setSort] = useState(() => board0.sort || "newest");
+  const [salaryMin, setSalaryMin] = useState(() => String(board0.salaryMin || ""));
+  const [salaryMax, setSalaryMax] = useState(() => String(board0.salaryMax || ""));
+  const [page, setPage] = useState(() => Math.max(1, Number(board0.page) || 1));
   const [items, setItems] = useState(jobs);
   const [resultTotal, setResultTotal] = useState(total);
   const [resultPages, setResultPages] = useState(Math.max(1, pages));
@@ -514,12 +515,57 @@ export function Home({
   }
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const next = boardUrlSearchParams({
+        q,
+        company,
+        city,
+        languages,
+        remote,
+        relocation,
+        onsite,
+        stacks,
+        categories,
+        when,
+        sort,
+        salaryMin,
+        salaryMax,
+        page,
+        forYouMode,
+      }).toString();
+      const url = new URL(window.location.href);
+      const desired = url.pathname + (next ? `?${next}` : "");
+      const current = url.pathname + url.search;
+      if (desired !== current) {
+        window.history.replaceState(window.history.state, "", desired);
+      }
+    }
+  }, [
+    q,
+    company,
+    city,
+    languages,
+    remote,
+    relocation,
+    onsite,
+    stacks,
+    categories,
+    when,
+    sort,
+    salaryMin,
+    salaryMax,
+    page,
+    forYouMode,
+  ]);
+
+  useEffect(() => {
     if (forYouMode) return undefined;
     if (skipFirstFetch.current) {
       skipFirstFetch.current = false;
       prevFilterKey.current = filterKey;
       prevTextKey.current = `${q}|${company}|${city}|${salaryMin}|${salaryMax}`;
-      if (!error && jobs.length > 0 && !q && !city && reloadToken === 0) return undefined;
+      // Trust SSR catalogue paint; if we landed on For-you, refetch when leaving it.
+      if (!error && reloadToken === 0 && !landedOnForYou) return undefined;
     }
     if (prevFilterKey.current !== filterKey) {
       prevFilterKey.current = filterKey;
@@ -675,10 +721,8 @@ export function Home({
     setSalaryMin("");
     setSalaryMax("");
     setPage(1);
-    if (typeof window !== "undefined" && window.location.search.includes("q=")) {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("q");
-      window.history.replaceState({}, "", url.pathname + url.search);
+    if (typeof window !== "undefined" && window.location.search) {
+      window.history.replaceState(window.history.state, "", window.location.pathname);
     }
   }
 
@@ -1093,8 +1137,6 @@ export function Home({
                       key={job.id}
                       locale={locale}
                       job={job}
-                      matchScore={forYouMode ? (job.score ?? job.score_pct ?? null) : null}
-                      matchConfidence={forYouMode ? (job.confidence ?? null) : null}
                     />
                   ))}
                 </div>
