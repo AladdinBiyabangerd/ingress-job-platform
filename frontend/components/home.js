@@ -13,7 +13,8 @@ import SlowDownBanner, { isSlowDownPayload, rateLimitMessageKey } from "./slow-d
 import { Shell } from "./shell";
 
 const PAGE_SIZE = 20;
-const MATCHES_FETCH_LIMIT = 50;
+/** Backend MATCH_MAX_LIMIT — fetch full For-you set; board paginates PAGE_SIZE. */
+const MATCHES_FETCH_LIMIT = 500;
 const TEXT_DEBOUNCE_MS = 300;
 const EMPTY_FACETS = { languages: [], categories: [], stacks: [], countries: [], cities: [], remote_total: 0 };
 /** Matches `--dur-exit` in globals.css (~70% of `--dur-base`). */

@@ -211,6 +211,11 @@ def _is_postgres() -> bool:
         return False
 
 
+def _mark_pgvector_unavailable() -> None:
+    global _pgvector_ready
+    _pgvector_ready = False
+
+
 def ensure_embedding_tables(conn) -> bool:
     """Create pgvector extension + embeddings table. False on SQLite / failure."""
     global _pgvector_ready
@@ -235,6 +240,9 @@ def ensure_embedding_tables(conn) -> bool:
             )
             """
         )
+        # Commit before optional HNSW index. PostgresConnection rolls back the
+        # whole txn on any execute() error — index failure must not undo DDL.
+        conn.commit()
         try:
             conn.execute(
                 """
@@ -242,10 +250,14 @@ def ensure_embedding_tables(conn) -> bool:
                 ON embeddings USING hnsw (embedding vector_cosine_ops)
                 """
             )
+            conn.commit()
         except Exception as idx_exc:
             # Index is optional for MVP (top-N cosine is computed in Python).
             log.info("embeddings HNSW index skipped: %s", idx_exc)
-        conn.commit()
+            try:
+                conn.rollback()
+            except Exception:
+                pass
         _pgvector_ready = True
         return True
     except Exception as exc:
@@ -276,14 +288,42 @@ def get_embedding(
     if not pgvector_available(conn):
         return None
     chosen = model or embedding_model()
-    row = conn.execute(
-        """
-        SELECT embedding::text, content_hash
-        FROM embeddings
-        WHERE entity_type = ? AND entity_id = ? AND model = ?
-        """,
-        (entity_type, str(entity_id), chosen),
-    ).fetchone()
+    try:
+        row = conn.execute(
+            """
+            SELECT embedding::text, content_hash
+            FROM embeddings
+            WHERE entity_type = ? AND entity_id = ? AND model = ?
+            """,
+            (entity_type, str(entity_id), chosen),
+        ).fetchone()
+    except Exception as exc:
+        log.warning("get_embedding failed: %s", exc)
+        _mark_pgvector_unavailable()
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        # One retry after ensure — covers stale ready cache / missing table.
+        if not ensure_embedding_tables(conn):
+            return None
+        try:
+            row = conn.execute(
+                """
+                SELECT embedding::text, content_hash
+                FROM embeddings
+                WHERE entity_type = ? AND entity_id = ? AND model = ?
+                """,
+                (entity_type, str(entity_id), chosen),
+            ).fetchone()
+        except Exception as retry_exc:
+            log.warning("get_embedding retry failed: %s", retry_exc)
+            _mark_pgvector_unavailable()
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return None
     if row is None:
         return None
     vec = parse_vector(row[0] if not hasattr(row, "keys") else row["embedding"])
@@ -309,14 +349,41 @@ def load_embeddings(
     for i in range(0, len(entity_ids), chunk):
         part = [str(x) for x in entity_ids[i : i + chunk]]
         placeholders = ",".join("?" for _ in part)
-        rows = conn.execute(
-            f"""
-            SELECT entity_id, embedding::text
-            FROM embeddings
-            WHERE entity_type = ? AND model = ? AND entity_id IN ({placeholders})
-            """,
-            (entity_type, chosen, *part),
-        ).fetchall()
+        try:
+            rows = conn.execute(
+                f"""
+                SELECT entity_id, embedding::text
+                FROM embeddings
+                WHERE entity_type = ? AND model = ? AND entity_id IN ({placeholders})
+                """,
+                (entity_type, chosen, *part),
+            ).fetchall()
+        except Exception as exc:
+            log.warning("load_embeddings failed: %s", exc)
+            _mark_pgvector_unavailable()
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            if not ensure_embedding_tables(conn):
+                return out
+            try:
+                rows = conn.execute(
+                    f"""
+                    SELECT entity_id, embedding::text
+                    FROM embeddings
+                    WHERE entity_type = ? AND model = ? AND entity_id IN ({placeholders})
+                    """,
+                    (entity_type, chosen, *part),
+                ).fetchall()
+            except Exception as retry_exc:
+                log.warning("load_embeddings retry failed: %s", retry_exc)
+                _mark_pgvector_unavailable()
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                return out
         for row in rows:
             eid = str(row[0] if not hasattr(row, "keys") else row["entity_id"])
             vec = parse_vector(row[1] if not hasattr(row, "keys") else row["embedding"])

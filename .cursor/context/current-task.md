@@ -5,10 +5,10 @@
 - For-you Chat 2: home For-you pill (All-dan sonra) + JobBoardCard match % + honest empty/copy (az/en/ru)
 
 ## Current state
-- Home For-you tab: signed-in candidate/staff only; `GET /api/auth/me/matches?limit=50`
+- Home For-you tab: signed-in candidate/staff only; `GET /api/auth/me/matches?limit=500`
 - Card shows `%` when confidence ≥ 0.35; otherwise “uyğunluq dəqiq deyil” / equiv.
 - Empty: consent CTA → profile; no skills → profile review; else honest ≥33% empty
-- Sort hidden on For-you; client paginate PAGE_SIZE from match list
+- Sort hidden on For-you; API returns all gated matches (cap 500); board paginates PAGE_SIZE
 
 ## Decisions
 - Flag A: matches/For-you only; hub stays hide

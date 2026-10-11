@@ -61,7 +61,8 @@ ROLE_HIT_BOOST_CAP = 0.2
 ROLE_SIGNATURE_TOP = 40
 
 DEFAULT_LIMIT = 20
-MAX_LIMIT = 50
+# For-you may return every gated match; home paginates client-side.
+MAX_LIMIT = 500
 RERANK_POOL = 50
 
 # Legacy component weights (kept for tests / callers of location_score helpers).
@@ -710,15 +711,17 @@ def matches_payload(
         scored.append(item)
 
     scored.sort(key=lambda row: (-row["score"], -row["job_id"]))
-    pool = scored[: max(chosen_limit, RERANK_POOL)]
+    # AI rerank only the head; Hunt list below keeps honest scores.
+    rerank_head = scored[:RERANK_POOL]
     used_rerank = _apply_semantic_rerank(
         conn,
         user_id=user_id,
-        pool=pool,
+        pool=rerank_head,
     )
     if used_rerank:
-        pool.sort(key=lambda row: (-row["score"], -row["job_id"]))
+        scored.sort(key=lambda row: (-row["score"], -row["job_id"]))
         base["ai_rerank"] = True
+        rerank_head = scored[:RERANK_POOL]
 
     profile_version = str(profile_payload.get("updated_at") or "")[:80] or "v0"
     used_llm = False
@@ -728,7 +731,7 @@ def matches_payload(
 
         used_llm, llm_deferred = apply_llm_rerank(
             conn,
-            matches=pool,
+            matches=rerank_head,
             profile=profile,
             profile_version=profile_version,
             allow_provider=allow_ai_provider,
@@ -737,20 +740,20 @@ def matches_payload(
         used_llm = False
         llm_deferred = False
     if used_llm:
-        pool.sort(key=lambda row: (-row["score"], -row["job_id"]))
+        scored.sort(key=lambda row: (-row["score"], -row["job_id"]))
         base["ai_llm_rerank"] = True
 
-    _apply_feedback_demotion(pool)
-    pool = [
+    _apply_feedback_demotion(scored)
+    gated = [
         item
-        for item in pool
+        for item in scored
         if passes_list_gates(
             float(item.get("score") or 0.0),
             float(item.get("confidence") or 0.0),
         )
     ]
-    pool.sort(key=lambda row: (-row["score"], -row["job_id"]))
-    matches = pool[:chosen_limit]
+    gated.sort(key=lambda row: (-row["score"], -row["job_id"]))
+    matches = gated[:chosen_limit]
     base["scoring_version"] = SCORING_VERSION
     base["min_score"] = MIN_SCORE
     base["min_confidence"] = MIN_CONFIDENCE
@@ -827,6 +830,7 @@ def _apply_semantic_rerank(
     """Blend cosine similarity into scores for pool items with job embeddings.
 
     Returns True when at least one item was re-ranked.
+    Missing pgvector / embeddings table never fails the matches request.
     """
     if not pool or not rerank_enabled(conn):
         return False
@@ -836,6 +840,7 @@ def _apply_semantic_rerank(
             ENTITY_PROFILE,
             cosine_similarity,
             embedding_model,
+            ensure_embedding_tables,
             get_embedding,
             load_embeddings,
             pgvector_available,
@@ -843,51 +848,61 @@ def _apply_semantic_rerank(
         from app.jobs_db import postgres_enabled
     except Exception:
         return False
-    if not postgres_enabled() or not pgvector_available(conn):
-        return False
+    try:
+        if not postgres_enabled() or not pgvector_available(conn):
+            return False
+        # Ensure table exists even if a prior ready-cache was stale.
+        if not ensure_embedding_tables(conn):
+            return False
 
-    model = embedding_model()
-    profile_row = get_embedding(
-        conn,
-        entity_type=ENTITY_PROFILE,
-        entity_id=user_id,
-        model=model,
-    )
-    if profile_row is None:
-        return False
-    profile_vec = profile_row[0]
-    job_ids = [str(item["job_id"]) for item in pool]
-    job_vecs = load_embeddings(
-        conn,
-        entity_type=ENTITY_JOB,
-        entity_ids=job_ids,
-        model=model,
-    )
-    if not job_vecs:
-        return False
+        model = embedding_model()
+        profile_row = get_embedding(
+            conn,
+            entity_type=ENTITY_PROFILE,
+            entity_id=user_id,
+            model=model,
+        )
+        if profile_row is None:
+            return False
+        profile_vec = profile_row[0]
+        job_ids = [str(item["job_id"]) for item in pool]
+        job_vecs = load_embeddings(
+            conn,
+            entity_type=ENTITY_JOB,
+            entity_ids=job_ids,
+            model=model,
+        )
+        if not job_vecs:
+            return False
 
-    applied = False
-    for item in pool:
-        jid = str(item["job_id"])
-        job_vec = job_vecs.get(jid)
-        if not job_vec:
-            item["ai_rerank"] = False
-            continue
-        semantic = cosine_similarity(profile_vec, job_vec)
-        # Blend against Hunt struct; do not erase hunt_score / confidence.
-        struct = float(item.get("hunt_score") or item.get("score") or 0.0)
-        blended = round(W_STRUCT * struct + W_SEMANTIC * semantic, 4)
-        comps = item.get("components") if isinstance(item.get("components"), dict) else {}
-        comps = dict(comps)
-        comps["semantic"] = round(semantic, 4)
-        comps["struct"] = round(struct, 4)
-        comps["hunt_score"] = round(struct, 4)
-        item["components"] = comps
-        item["score"] = blended
-        item["score_pct"] = int(round(blended * 100))
-        item["ai_rerank"] = True
-        applied = True
-    return applied
+        applied = False
+        for item in pool:
+            jid = str(item["job_id"])
+            job_vec = job_vecs.get(jid)
+            if not job_vec:
+                item["ai_rerank"] = False
+                continue
+            semantic = cosine_similarity(profile_vec, job_vec)
+            # Blend against Hunt struct; do not erase hunt_score / confidence.
+            struct = float(item.get("hunt_score") or item.get("score") or 0.0)
+            blended = round(W_STRUCT * struct + W_SEMANTIC * semantic, 4)
+            comps = item.get("components") if isinstance(item.get("components"), dict) else {}
+            comps = dict(comps)
+            comps["semantic"] = round(semantic, 4)
+            comps["struct"] = round(struct, 4)
+            comps["hunt_score"] = round(struct, 4)
+            item["components"] = comps
+            item["score"] = blended
+            item["score_pct"] = int(round(blended * 100))
+            item["ai_rerank"] = True
+            applied = True
+        return applied
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
 
 
 def list_matches(
