@@ -281,22 +281,7 @@ _TECH: list[tuple[str, re.Pattern[str], tuple[str, ...], str]] = [
     ("Endpoint Security", _ci(r"endpoint\s+security"), (), "security"),
 ]
 
-# Pure-letter aliases that are also ordinary words or other things: tag-only.
-_TAG_ONLY_ALIASES = frozenset({
-    "drizzle", "testify", "comprehend", "composer", "glacier", "amplify", "anaconda",
-    "lightship", "viper", "chisel", "rack", "snow", "cockroach", "illustrator",
-    "framer", "sketch", "notion", "blender", "iceberg", "druid", "confluence",
-    "cisco", "excel", "scrum", "workspaces", "aurora", "athena", "bedrock", "synapse", "lambda",
-})
-
-
-def _text_alias(alias: str) -> bool:
-    """May this alias match free text? Short or ambiguous aliases are tag-only."""
-    if alias in _TAG_ONLY_ALIASES:
-        return False
-    if re.search(r"[^a-z]", alias):
-        return len(alias) >= 4
-    return len(alias) >= 7
+from worker.techstack_extra import text_alias as _text_alias  # noqa: E402
 
 
 def _extra_pattern(
@@ -315,10 +300,11 @@ def _extra_pattern(
 def _load_extra() -> None:
     from worker.techstack_extra import SPECS
     from worker.techstack_extra2 import SPECS2
+    from worker.techstack_extra3 import SPECS3
 
     have = {name for name, _p, _e, _c in _TECH}
     taken = {a for _n, _p, extra, _c in _TECH for a in extra} | {n.lower() for n in have}
-    for name, cat, aliases, rx, case_sensitive in [*SPECS, *SPECS2]:
+    for name, cat, aliases, rx, case_sensitive in [*SPECS, *SPECS2, *SPECS3]:
         # one alias, one skill: later rows never steal an alias already taken
         aliases = tuple(a for a in aliases if a not in taken)
         taken.update(aliases)

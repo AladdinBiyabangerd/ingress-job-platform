@@ -16,7 +16,29 @@ Each row is ``(canonical, category, aliases, regex | None, case_sensitive)``.
 
 from __future__ import annotations
 
+import re
+
 Spec = tuple[str, str, tuple[str, ...], str | None, bool]
+
+# Pure-letter aliases that are also ordinary words or other things: tag-only.
+TAG_ONLY_ALIASES = frozenset({
+    "drizzle", "testify", "comprehend", "composer", "glacier", "amplify", "anaconda",
+    "lightship", "viper", "chisel", "rack", "snow", "cockroach", "illustrator",
+    "framer", "sketch", "notion", "blender", "iceberg", "druid", "confluence",
+    "cisco", "excel", "scrum", "workspaces", "concourse", "eclipse", "gatekeeper",
+    "boundary", "droplets", "aurora", "athena", "bedrock", "synapse", "lambda",
+})
+
+
+def text_alias(alias: str) -> bool:
+    """May this alias match free text? Short or ambiguous aliases are tag-only."""
+    if alias in TAG_ONLY_ALIASES:
+        return False
+    if re.search(r"[^a-z]", alias):
+        return len(alias) >= 4
+    return len(alias) >= 7
+
+
 
 NON_CHIP_CATEGORIES = frozenset({"methodology", "concept"})
 

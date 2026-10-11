@@ -10,12 +10,103 @@ from __future__ import annotations
 
 import re
 
-from worker.techstack_extra import Spec, cs, ci
+from worker.techstack_extra import Spec, cs, ci, text_alias as _text_alias
 
 
 # Frozen copy of the one-token names below that are ordinary English words, so the
 # result never depends on the build machine's /usr/share/dict.
 _COMMON_WORDS = frozenset({
+    "aix",
+    "altair",
+    "ambassador",
+    "atlantis",
+    "autopsy",
+    "backstage",
+    "bacula",
+    "barracuda",
+    "bas",
+    "clip",
+    "clustering",
+    "cobbler",
+    "coda",
+    "cohere",
+    "contour",
+    "crucible",
+    "cutter",
+    "distillation",
+    "drake",
+    "earthly",
+    "emp",
+    "empire",
+    "encase",
+    "exfiltration",
+    "falco",
+    "flagger",
+    "folium",
+    "foreman",
+    "gan",
+    "gemma",
+    "gentoo",
+    "glove",
+    "graphite",
+    "gremlin",
+    "guidance",
+    "gymnasium",
+    "harbor",
+    "harness",
+    "haystack",
+    "heron",
+    "hex",
+    "honeycomb",
+    "hydra",
+    "ignition",
+    "instructor",
+    "juju",
+    "kind",
+    "kudu",
+    "lime",
+    "longhorn",
+    "materialize",
+    "mercurial",
+    "molecule",
+    "moloch",
+    "notary",
+    "nuclei",
+    "objection",
+    "observable",
+    "pam",
+    "panorama",
+    "pim",
+    "port",
+    "preset",
+    "prophet",
+    "pruning",
+    "pulp",
+    "quantization",
+    "quay",
+    "rasa",
+    "renovate",
+    "replicate",
+    "retool",
+    "rider",
+    "rita",
+    "rivery",
+    "rook",
+    "rudder",
+    "screen",
+    "shap",
+    "shapely",
+    "soda",
+    "stan",
+    "stanza",
+    "subversion",
+    "tee",
+    "tilt",
+    "unleash",
+    "uptrace",
+    "vim",
+    "volatility",
+    "wiz",
     "anvil",
     "bandit",
     "blackfire",
@@ -222,7 +313,7 @@ _COMMON_WORDS = frozenset({
 
 _STOP = frozenset({"processing", "requests", "responses", "constructs", "intrinsics",
                    "templates", "architect", "panel", "rich", "black", "click", "dash",
-                   "analog", "nerves", "waterline", "temporal"})
+                   "analog", "nerves", "waterline", "temporal", "beats"})
 
 
 def _english() -> frozenset[str]:
@@ -244,8 +335,6 @@ def _guarded(name: str, aliases: tuple[str, ...], cat: str) -> Spec:
     no alias match case-sensitively exactly as written. Aliases stay valid
     source-tag names either way.
     """
-    from worker.techstack import _text_alias
-
     text = [a for a in aliases if _text_alias(a)]
     if text:
         return (name, cat, aliases, "|".join(_flex(a) for a in text), False)

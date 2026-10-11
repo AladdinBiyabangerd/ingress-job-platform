@@ -158,8 +158,38 @@ class BatchTwoGuardTest(unittest.TestCase):
 
     def test_dictionary_size_and_alias_total(self):
         skills = load_skills()
-        self.assertGreaterEqual(len(skills), 2300)
-        self.assertGreaterEqual(sum(len(s["synonyms"]) for s in skills), 800)
+        self.assertGreaterEqual(len(skills), 3000)
+        self.assertGreaterEqual(sum(len(s["synonyms"]) for s in skills), 1100)
+
+
+class BatchThreeTest(unittest.TestCase):
+    def test_new_tools_extracted(self):
+        text = (
+            "Experience with DeepSpeed, Triton Inference Server, Langfuse, LangSmith, Pydantic AI, "
+            "OpenTofu, Kyverno, Argo Rollouts, Sigstore, Wazuh, Velociraptor, Suricata, Zeek, "
+            "SailPoint, KEDA, Karpenter, Materialize, Fivetran, Dagster, Lightdash, VictoriaMetrics, "
+            "SigNoz, Pyroscope and Hugging Face Transformers."
+        )
+        found = set(find_stack(text))
+        for name in ("DeepSpeed", "LangSmith", "Langfuse", "OpenTofu", "Kyverno", "Argo Rollouts",
+                     "Sigstore", "Wazuh", "Velociraptor", "SailPoint", "KEDA", "Karpenter",
+                     "Lightdash", "SigNoz", "Pyroscope", "Hugging Face Transformers"):
+            self.assertIn(name, found, name)
+
+    def test_everyday_words_are_not_tools(self):
+        noise = (
+            "Follow the guidance of your lead and harness your energy. Use the screen, an observable "
+            "outcome, rider feedback, the volatility of markets, an empire of beats, an unleash "
+            "of talent, the boundary of scope, instructor-led classes, the Eclipse of the sun, "
+            "a gatekeeper role, concourse signage, atlantis, pruning of roses and distillation of ideas."
+        )
+        self.assertEqual(find_stack(noise), [])
+
+    def test_practices_are_vocabulary_not_chips(self):
+        text = "We value feature engineering, anomaly detection, fraud detection, data contracts and canary deployments."
+        self.assertEqual(extract_stack(text, None, "Engineer"), [])
+        self.assertIn("Fraud Detection", find_stack(text))
+        self.assertIn("Canary Deployments", find_stack(text))
 
 
 class RoleTaxonomyTest(unittest.TestCase):
