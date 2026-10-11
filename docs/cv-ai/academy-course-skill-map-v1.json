@@ -222,6 +222,18 @@
     "Vitest": ["qa-automation-az", "frontend-react-development-az"],
     "Cucumber": ["qa-automation-az", "qa-dan-sdet-bootcamp"],
     "OWASP": ["cybersecurity-az", "pentest", "comptia-security-az"],
+    "SIEM": ["blue-team-analyst-az", "cybersecurity-az", "comptia-security-az"],
+    "EDR": ["blue-team-analyst-az", "cybersecurity-az"],
+    "WAF": ["cybersecurity-az", "comptia-security-az"],
+    "ISO 27001": ["cybersecurity-az", "comptia-security-az"],
+    "Incident Response": ["blue-team-analyst-az", "cybersecurity-az"],
+    "Vulnerability Management": ["cybersecurity-az", "pentest", "comptia-security-az"],
+    "Penetration Testing": ["pentest", "cybersecurity-az", "comptia-security-az"],
+    "IAM": ["cybersecurity-az", "comptia-security-az"],
+    "Cloud Security": ["cybersecurity-az", "comptia-security-az"],
+    "Network Security": ["cybersecurity-az", "comptia-security-az"],
+    "Application Security": ["cybersecurity-az", "pentest", "comptia-security-az"],
+    "Endpoint Security": ["blue-team-analyst-az", "cybersecurity-az"],
     "Jira": ["agile-in-practice-az", "it-business-analyst-tech-writer-az"]
   }
 }

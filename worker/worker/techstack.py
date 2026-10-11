@@ -242,6 +242,43 @@ _TECH: list[tuple[str, re.Pattern[str], tuple[str, ...], str]] = [
     ("Unreal Engine", _ci(r"unreal(?:\s+engine)?"), ("unreal", "ue5", "ue4"), "gamedev"),
     ("Ethereum", _ci(r"ethereum|evm"), ("evm",), "web3"),
     ("OWASP", _cs(r"OWASP"), ("owasp",), "security"),
+    ("SIEM", _ci(r"siem"), (), "security"),
+    ("EDR", _ci(r"edr"), (), "security"),
+    ("WAF", _ci(r"waf"), (), "security"),
+    ("ISO 27001", _ci(r"iso\s*27001"), ("iso27001",), "security"),
+    (
+        "Incident Response",
+        _ci(r"incident\s+response|incident\s+handling"),
+        ("incident handling",),
+        "security",
+    ),
+    (
+        "Vulnerability Management",
+        _ci(r"vulnerability\s+management"),
+        (),
+        "security",
+    ),
+    (
+        "Penetration Testing",
+        _ci(r"penetration\s+testing|pen\s+testing|\bpentest(?:ing)?\b"),
+        ("pentest", "pen testing"),
+        "security",
+    ),
+    (
+        "IAM",
+        _ci(r"\biam\b|identity\s+and\s+access\s+management"),
+        ("identity and access management",),
+        "security",
+    ),
+    ("Cloud Security", _ci(r"cloud\s+security"), (), "security"),
+    ("Network Security", _ci(r"network\s+security"), (), "security"),
+    (
+        "Application Security",
+        _ci(r"application\s+security|\bappsec\b"),
+        ("appsec",),
+        "security",
+    ),
+    ("Endpoint Security", _ci(r"endpoint\s+security"), (), "security"),
 ]
 
 _ALIASES: dict[str, str] = {}

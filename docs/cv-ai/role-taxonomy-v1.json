@@ -2512,6 +2512,38 @@
         {
           "skill": "OWASP",
           "weight": 0.55
+        },
+        {
+          "skill": "SIEM",
+          "weight": 0.7
+        },
+        {
+          "skill": "EDR",
+          "weight": 0.65
+        },
+        {
+          "skill": "Incident Response",
+          "weight": 0.7
+        },
+        {
+          "skill": "Vulnerability Management",
+          "weight": 0.65
+        },
+        {
+          "skill": "Penetration Testing",
+          "weight": 0.55
+        },
+        {
+          "skill": "IAM",
+          "weight": 0.6
+        },
+        {
+          "skill": "ISO 27001",
+          "weight": 0.55
+        },
+        {
+          "skill": "Cloud Security",
+          "weight": 0.65
         }
       ]
     },
@@ -2561,6 +2593,38 @@
         {
           "skill": "OWASP",
           "weight": 0.3
+        },
+        {
+          "skill": "SIEM",
+          "weight": 0.85
+        },
+        {
+          "skill": "EDR",
+          "weight": 0.75
+        },
+        {
+          "skill": "Incident Response",
+          "weight": 0.8
+        },
+        {
+          "skill": "Vulnerability Management",
+          "weight": 0.5
+        },
+        {
+          "skill": "Penetration Testing",
+          "weight": 0.35
+        },
+        {
+          "skill": "IAM",
+          "weight": 0.45
+        },
+        {
+          "skill": "ISO 27001",
+          "weight": 0.4
+        },
+        {
+          "skill": "Cloud Security",
+          "weight": 0.45
         }
       ]
     },

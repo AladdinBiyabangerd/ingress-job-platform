@@ -80,7 +80,15 @@ class JobAnalyzeTests(unittest.TestCase):
     def _seed_skills(self):
         with sqlite3.connect(self.db) as conn:
             conn.row_factory = sqlite3.Row
-            for name in ("Java", "Spring", "Kafka", "React", "TypeScript"):
+            for name in (
+                "Java",
+                "Spring",
+                "Kafka",
+                "React",
+                "TypeScript",
+                "AWS",
+                "Docker",
+            ):
                 conn.execute(
                     """
                     INSERT INTO skill_dictionary (
@@ -256,6 +264,56 @@ class JobAnalyzeTests(unittest.TestCase):
         self.assertEqual(body["ai_error"], "job_analyze_disabled")
         self.assertFalse(body["ai_report"])
 
+    def test_sparse_job_skills_dampen_score_and_confidence(self):
+        """1 catalog skill + full overlap must not inflate to ~80% with high confidence."""
+        subject = "analyze-sparse"
+        self._seed_profile(
+            subject,
+            skills=[{"name": "AWS", "years": 2, "level": "intermediate", "source": "cv"}],
+        )
+        job_id = self._insert_job(title="Cybersecurity Engineer", skills=["AWS"])
+        self._grant_matching(subject)
+        with self._auth("job:candidate", subject):
+            with patch("app.job_analyze.analyze_enabled", return_value=False):
+                res = self.client.get(
+                    f"/api/v1/me/jobs/{job_id}/analyze?lang=en",
+                    headers=self.headers,
+                )
+        self.assertEqual(res.status_code, 200, res.text)
+        fit = res.json()["fit"]
+        self.assertEqual(fit["have"], ["AWS"])
+        self.assertLess(fit["score"], 0.8)
+        self.assertLess(fit["confidence"], 0.35)
+        self.assertLessEqual(fit["components"]["skills"], 0.25)
+
+    def test_rich_job_skills_keep_high_skill_component(self):
+        subject = "analyze-rich"
+        self._seed_profile(
+            subject,
+            skills=[
+                {"name": "Java", "years": 5, "level": "advanced", "source": "cv"},
+                {"name": "Spring", "years": 5, "level": "advanced", "source": "cv"},
+                {"name": "Kafka", "years": 5, "level": "", "source": "cv"},
+                {"name": "AWS", "years": 5, "level": "", "source": "cv"},
+            ],
+        )
+        job_id = self._insert_job(
+            title="Java Backend Engineer",
+            skills=["Java", "Spring", "Kafka", "AWS"],
+        )
+        self._grant_matching(subject)
+        with self._auth("job:candidate", subject):
+            with patch("app.job_analyze.analyze_enabled", return_value=False):
+                res = self.client.get(
+                    f"/api/v1/me/jobs/{job_id}/analyze?lang=en",
+                    headers=self.headers,
+                )
+        self.assertEqual(res.status_code, 200, res.text)
+        fit = res.json()["fit"]
+        self.assertGreaterEqual(fit["components"]["skills"], 0.99)
+        self.assertGreaterEqual(fit["confidence"], 0.55)
+        self.assertGreater(fit["score"], 0.6)
+
     def test_weak_fit_still_ok(self):
         subject = "analyze-weak"
         self._seed_profile(subject)
@@ -397,6 +455,16 @@ class JobAnalyzeTests(unittest.TestCase):
                     )
         self.assertEqual(res.status_code, 200, res.text)
         self.assertTrue(res.json()["ok"])
+
+    def test_skill_evidence_and_confidence_helpers(self):
+        from app.job_analyze import _confidence, _skill_evidence
+
+        self.assertEqual(_skill_evidence(0), 0.0)
+        self.assertEqual(_skill_evidence(1), 0.25)
+        self.assertEqual(_skill_evidence(4), 1.0)
+        self.assertEqual(_confidence(job_skill_count=0), 0.35)
+        self.assertLess(_confidence(job_skill_count=1), 0.35)
+        self.assertGreaterEqual(_confidence(job_skill_count=3), 0.55)
 
     def test_az_user_prompt_requires_orthography(self):
         from app.job_analyze import PROMPT_VERSION, _SYSTEM, _build_ai_user

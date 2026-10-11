@@ -91,7 +91,7 @@ RETIRED_LOCAL_SOURCES = (
 )
 HIDE_RETIRED_STEP = "hide-retired-local-sources-2026-10-05"
 # One-shot: re-run extract_stack on scraped ads after the curated dictionary grows.
-REEXTRACT_STACK_STEP = "reextract-tech-stack-dict-v2-2026-10-06"
+REEXTRACT_STACK_STEP = "reextract-tech-stack-dict-v3-2026-10-11"
 
 _MAINTENANCE = """
 CREATE TABLE IF NOT EXISTS maintenance_steps (

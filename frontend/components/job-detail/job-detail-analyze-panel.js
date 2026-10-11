@@ -13,15 +13,21 @@ function pct(score) {
   return Math.max(0, Math.min(100, Math.round(score * 100)));
 }
 
-function ScoreRing({ percent }) {
+function ScoreRing({ percent, uncertain = false }) {
   const size = 88;
   const stroke = 7;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const clamped = Math.max(0, Math.min(100, percent ?? 0));
-  const offset = c * (1 - clamped / 100);
+  const offset = uncertain ? c : c * (1 - clamped / 100);
   return (
-    <svg className="jd-analyze-ring" width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+    <svg
+      className={`jd-analyze-ring${uncertain ? " is-uncertain" : ""}`}
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      aria-hidden="true"
+    >
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border)" strokeWidth={stroke} />
       <circle
         className="jd-analyze-ring-progress"
@@ -37,7 +43,7 @@ function ScoreRing({ percent }) {
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
       />
       <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" className="jd-analyze-ring-value">
-        {percent == null ? "—" : `${clamped}%`}
+        {uncertain || percent == null ? "—" : `${clamped}%`}
       </text>
     </svg>
   );
@@ -144,6 +150,8 @@ export function JobDetailAnalyzePanel({ locale, jobId, returnTo, open, preview =
   const report = payload?.report;
   const scorePct = pct(fit?.score);
   const confPct = pct(fit?.confidence);
+  const scoreUncertain =
+    typeof fit?.confidence === "number" && Number.isFinite(fit.confidence) && fit.confidence < 0.35;
   const components = fit?.components && typeof fit.components === "object" ? fit.components : {};
   const aiMsg = aiErrorMessage(t, payload?.ai_error);
   const pending = Boolean(payload?.ai_pending) || (loading && !payload);
@@ -197,9 +205,13 @@ export function JobDetailAnalyzePanel({ locale, jobId, returnTo, open, preview =
       {!preview && fit ? (
         <>
           <div className="jd-analyze-score-row">
-            <ScoreRing percent={scorePct} />
+            <ScoreRing percent={scorePct} uncertain={scoreUncertain} />
             <div className="jd-analyze-score-meta">
-              <p className="jd-analyze-score-label">{t.jdAnalyzeScore}</p>
+              <p className="jd-analyze-score-label">
+                {scoreUncertain
+                  ? t.jdAnalyzeScoreUncertain || t.forYouMatchUncertain || t.jdAnalyzeScore
+                  : t.jdAnalyzeScore}
+              </p>
               {confPct != null ? (
                 <p className="jd-analyze-confidence">
                   {t.jdAnalyzeConfidence}: {confPct}%

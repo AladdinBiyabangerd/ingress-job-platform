@@ -169,11 +169,19 @@ def _filter_skill_names(raw: object, canon: dict[str, str], *, limit: int = 12) 
     return out
 
 
+def _skill_evidence(job_skill_count: int) -> float:
+    """Scale skill overlap when the job catalog is sparse (1 → 0.25, 4+ → 1)."""
+    if job_skill_count <= 0:
+        return 0.0
+    return min(1.0, job_skill_count / 4.0)
+
+
 def _confidence(*, job_skill_count: int) -> float:
     if job_skill_count <= 0:
         return 0.35
     catalog = min(1.0, job_skill_count / 8.0)
-    return round(0.45 + 0.4 * catalog, 2)
+    evidence = min(1.0, job_skill_count / 3.0)
+    return round((0.45 + 0.4 * catalog) * evidence, 2)
 
 
 def _load_job_row(conn, job_id: int) -> dict[str, Any] | None:
@@ -245,13 +253,15 @@ def _score_fit(
 ) -> dict[str, Any]:
     """Always return a fit object — zero skill overlap is still analysis."""
     skill_s, have, missing = skill_overlap_score(candidate, job_skills)
+    n_job_skills = len(job_skills)
+    skill_for_score = round(skill_s * _skill_evidence(n_job_skills), 4)
     job_level = detect_job_seniority(job["title"])
     sen_s = seniority_score(candidate_seniority, job_level)
     loc_s = location_score(prefs, remote=job["remote"], relocation=job["relocation"])
     lang_s = language_score(candidate_langs, job["language"])
     fresh_s = freshness_score(job["created_at"])
     total = round(
-        W_SKILLS * skill_s
+        W_SKILLS * skill_for_score
         + W_SENIORITY * sen_s
         + W_LOCATION * loc_s
         + W_LANGUAGE * lang_s
@@ -260,9 +270,9 @@ def _score_fit(
     )
     return {
         "score": total,
-        "confidence": _confidence(job_skill_count=len(job_skills)),
+        "confidence": _confidence(job_skill_count=n_job_skills),
         "components": {
-            "skills": skill_s,
+            "skills": skill_for_score,
             "seniority": sen_s,
             "location": loc_s,
             "language": lang_s,
