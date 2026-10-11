@@ -517,6 +517,9 @@ def analyze_payload(
     if not profile_payload.get("exists") or skill_count == 0:
         base["gate"] = "skills_required"
         return base
+    if status != "confirmed":
+        base["gate"] = "profile_required"
+        return base
 
     job = _load_job_row(conn, int(job_id))
     if job is None:

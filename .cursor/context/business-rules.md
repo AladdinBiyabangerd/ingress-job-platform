@@ -3,6 +3,18 @@
 ## Market focus
 - Primary market: **Azerbaijan** (candidates in AZ / open to AZ-reachable roles).
 
+## Job-detail AI actions (Analiz / Müraciət mətni / Elana uyğun CV)
+- Require **candidate login** (`job:candidate`); guests → OIDC.
+- Require matching consent + CV profile with skills + **`status=confirmed`** (draft → confirm gate).
+- Save job: login only (no confirmed-profile gate).
+
+## Location filter (board facets)
+- Facets are **by country**, not by city (Germany / Japan / …).
+- Resolve country from curated unambiguous city map first; never invent (Tokyo ≠ India).
+- Conflicting scraped suffixes on known hubs are ignored; unknown cities may use `, Country` / US-CA region suffix.
+- Ambiguous bare names (Cambridge, Birmingham, …) stay unresolved — omit over wrong country.
+- Maps live in `api/app/place_data.py` (~1200 cities / ~100 countries); extend there when new hubs appear.
+
 ## Crawl source go/no-go (2026-10-10)
 - Prefer ATS slug expansion over fragile HTML boards.
 - **No crawl** without PoliteClient robots allow (Reed `/api/1.0/` is the only owner-approved exception).

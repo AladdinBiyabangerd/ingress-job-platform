@@ -98,6 +98,17 @@ class AggregatorSnippetTest(unittest.TestCase):
         )
         self.assertTrue(is_aggregator_snippet(text))
 
+    def test_jooble_sosi_devops_stub(self):
+        text = (
+            "...is contingent upon award of contract\n\n"
+            "SOSi is seeking a DevOps Engineer to support mission requirements "
+            "for a structured approach to... ...Additional Information\n\n"
+            "Working Conditions\n\n~ Offsite/Remote.\n\n"
+            "Working at SOSi\nAll interested individuals will receive...\n\n"
+            "Part-time)"
+        )
+        self.assertTrue(is_aggregator_snippet(text))
+
     def test_full_jd_not_snippet(self):
         text = (
             "Who we are:\n\nAt Twilio, we’re shaping the future of communications.\n\n"

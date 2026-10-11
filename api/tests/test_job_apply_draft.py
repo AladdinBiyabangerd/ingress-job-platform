@@ -211,6 +211,20 @@ class JobApplyDraftTests(unittest.TestCase):
         self.assertEqual(res.status_code, 200, res.text)
         self.assertEqual(res.json()["status"], "needs_profile")
 
+    def test_draft_profile_gate(self):
+        subject = "draft-unconfirmed"
+        self._seed_profile(subject, status="draft")
+        job_id = self._insert_job(title="Java Dev", skills=["Java"])
+        self._grant_matching(subject)
+        with self._auth("job:candidate", subject):
+            res = self.client.post(
+                f"/api/v1/me/jobs/{job_id}/apply-draft?lang=en",
+                headers=self.headers,
+                json={},
+            )
+        self.assertEqual(res.status_code, 200, res.text)
+        self.assertEqual(res.json()["status"], "needs_confirm")
+
     def test_job_not_found(self):
         subject = "draft-404"
         self._seed_profile(subject)

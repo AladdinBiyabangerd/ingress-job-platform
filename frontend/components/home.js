@@ -11,7 +11,7 @@ import { Shell } from "./shell";
 
 const PAGE_SIZE = 20;
 const TEXT_DEBOUNCE_MS = 300;
-const EMPTY_FACETS = { languages: [], categories: [], stacks: [], cities: [], remote_total: 0 };
+const EMPTY_FACETS = { languages: [], categories: [], stacks: [], countries: [], cities: [], remote_total: 0 };
 /** Matches `--dur-exit` in globals.css (~70% of `--dur-base`). */
 const DRAWER_EXIT_MS = 154;
 const DRAWER_EXIT_REDUCED_MS = 90;
@@ -422,8 +422,20 @@ export function Home({
     return [...list].sort((a, b) => rank(a.name) - rank(b.name));
   }, [facetData]);
   const cityOptions = useMemo(() => {
-    const list = Array.isArray(facetData.cities) ? facetData.cities : [];
-    return list.slice(0, 12);
+    // Country-only filter. API may still mirror the list under `cities`.
+    const countries = Array.isArray(facetData.countries) ? facetData.countries : [];
+    const mirrored = Array.isArray(facetData.cities) ? facetData.cities : [];
+    const list = countries.length ? countries : mirrored;
+    // Drop leftover city-shaped labels if an old API build is still live.
+    return list
+      .filter((item) => {
+        const name = String(item?.name || "").trim();
+        if (!name) return false;
+        if (/,\s*/.test(name)) return false; // "Tokyo, Japan" / "Herndon, VA"
+        if (/\b(office|hq|headquarters)\b/i.test(name)) return false;
+        return true;
+      })
+      .slice(0, 16);
   }, [facetData]);
   const remoteTotal = Number(facetData.remote_total) || 0;
   const techOptions = useMemo(() => {

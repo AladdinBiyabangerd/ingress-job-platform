@@ -90,6 +90,7 @@ def finish_item(connector, item: dict | None) -> dict | None:
         text,
         remote=bool(item.get("remote")),
         relocation=bool(item.get("relocation")),
+        source=str(getattr(connector, "name", "") or ""),
     ):
         if url:
             mark_rejected(conn, url, "foreign_locked_remote", via_ai=False)

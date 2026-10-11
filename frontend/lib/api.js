@@ -56,7 +56,7 @@ export async function fetchJobs(options = {}) {
     catalog_total: Number(data.catalog_total) || 0,
     facets: data.facets && typeof data.facets === "object"
       ? data.facets
-      : { languages: [], categories: [], stacks: [], cities: [], remote_total: 0 },
+      : { languages: [], categories: [], stacks: [], countries: [], cities: [], remote_total: 0 },
   };
 }
 

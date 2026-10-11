@@ -58,6 +58,29 @@ def off_market_reason(title: str, place: str, text: str, *, remote: bool, reloca
     return ""
 
 
+def _jooble_job_ids(conn) -> set[int]:
+    """All published job ids that still have a Jooble source row."""
+    rows = conn.execute(
+        """
+        SELECT DISTINCT js.job_id AS job_id
+        FROM job_sources js
+        JOIN jobs j ON j.id = js.job_id
+        WHERE LOWER(TRIM(COALESCE(js.source_name, ''))) = 'jooble'
+          AND COALESCE(j.hidden, 0) = 0
+          AND LOWER(COALESCE(j.status, '')) = 'published'
+          AND COALESCE(j.owner_subject, '') = ''
+          AND COALESCE(j.merged_into, 0) = 0
+        """
+    ).fetchall()
+    out: set[int] = set()
+    for row in rows:
+        try:
+            out.add(int(_row_get(row, "job_id", 0)))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
 def purge_off_market(conn) -> dict[str, int]:
     """Scan published scraped jobs; hide offenders; mark their source URLs."""
     ensure_rejects_table(conn)
@@ -79,6 +102,7 @@ def purge_off_market(conn) -> dict[str, int]:
     hide_ids: list[int] = []
     reasons: dict[str, int] = {}
     rejected_urls = 0
+    jooble_ids = _jooble_job_ids(conn)
 
     for row in rows:
         job_id = int(_row_get(row, "id", 0))
@@ -87,9 +111,14 @@ def purge_off_market(conn) -> dict[str, int]:
         text = str(_row_get(row, "body", 3) or "")
         remote = bool(int(_row_get(row, "remote", 4) or 0))
         relocation = bool(int(_row_get(row, "relocation", 5) or 0))
-        reason = off_market_reason(
-            title, place, text, remote=remote, relocation=relocation
-        )
+        # Jooble never ships a full JD (API snippet only; /desc/ blocked).
+        # Hide the whole source even when tidy rewrote cleaned_text.
+        if job_id in jooble_ids:
+            reason = "thin_description"
+        else:
+            reason = off_market_reason(
+                title, place, text, remote=remote, relocation=relocation
+            )
         if not reason:
             continue
         hide_ids.append(job_id)

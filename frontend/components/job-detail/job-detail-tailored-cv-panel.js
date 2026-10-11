@@ -226,6 +226,15 @@ export function JobDetailTailoredCvPanel({ locale, jobId, returnTo, open, previe
         </div>
       ) : null}
 
+      {!preview && status === "needs_confirm" ? (
+        <div className="jd-tailored-cv-gate">
+          <p>{t.jdTailoredCvProfile}</p>
+          <a className="jd-btn jd-btn-outline" href={hrefFor(locale, { mode: "profileReview" })}>
+            {t.jdTailoredCvProfileCta}
+          </a>
+        </div>
+      ) : null}
+
       {!preview && !payload && !loading ? (
         <div className="jd-tailored-cv-gate">
           <p>{t.jdTailoredCvGuest}</p>

@@ -15,7 +15,7 @@ class MarketPurgeTest(unittest.TestCase):
         self.store.close()
         self.tmp.cleanup()
 
-    def _insert(self, *, title, city, text, remote=0, relocation=0, url=""):
+    def _insert(self, *, title, city, text, remote=0, relocation=0, url="", source="Test"):
         cur = self.store.conn.execute(
             """
             INSERT INTO jobs (
@@ -30,9 +30,9 @@ class MarketPurgeTest(unittest.TestCase):
             self.store.conn.execute(
                 """
                 INSERT INTO job_sources (job_id, source_name, source_url, external_id, last_seen)
-                VALUES (?, 'Test', ?, '', datetime('now'))
+                VALUES (?, ?, ?, '', datetime('now'))
                 """,
-                (job_id, url),
+                (job_id, source, url),
             )
         self.store.conn.commit()
         return job_id
@@ -98,6 +98,28 @@ class MarketPurgeTest(unittest.TestCase):
         self.assertIn("https://example.com/jobs/tlv", urls)
         self.assertIn("https://jooble.org/jdp/twilio-stub", urls)
         self.assertNotIn("https://example.com/jobs/worldwide", urls)
+
+    def test_purge_hides_all_jooble_source_rows(self):
+        # Even a rewritten cleaned_text that no longer looks like a snippet.
+        job_id = self._insert(
+            title="DevOps Engineer",
+            city="Remote",
+            text=(
+                "SOSi is seeking a DevOps Engineer to support mission requirements "
+                "for a DoD customer. Offsite/Remote. Part-time."
+            ),
+            remote=1,
+            url="https://jooble.org/desc/-8751021750461457045",
+            source="Jooble",
+        )
+        stats = purge_off_market(self.store.conn)
+        self.assertGreaterEqual(stats.get("reason_thin_description", 0), 1)
+        hidden = int(
+            self.store.conn.execute(
+                "SELECT hidden FROM jobs WHERE id = ?", (job_id,)
+            ).fetchone()["hidden"]
+        )
+        self.assertEqual(hidden, 1)
 
 
 if __name__ == "__main__":

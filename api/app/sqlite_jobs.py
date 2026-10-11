@@ -26,7 +26,7 @@ from bs4 import BeautifulSoup
 
 from app.apply_form import parse_stored
 from app.companies import application_count, application_counts, company_slug
-from app.place import aggregate_cities, is_remote_place, matching_stored_cities
+from app.place import aggregate_countries, is_remote_place, matching_stored_cities
 
 def _db_path() -> Path:
     configured = os.environ.get("JOBS_DB_PATH", "").strip()
@@ -703,8 +703,8 @@ def _build_facets(conn) -> dict:
         name = (row["city"] or "").strip()
         if name:
             city_rows.append((name, int(row["total"] or 0)))
-    # Remote/worldwide labels are covered by remote_total; merge Tokyo ≈ Tokyo, Japan.
-    cities = aggregate_cities(city_rows, limit=24)
+    # Remote/worldwide labels are covered by remote_total; group cities by country.
+    countries = aggregate_countries(city_rows, limit=24)
 
     remote_row = conn.execute(
         f"""
@@ -719,7 +719,10 @@ def _build_facets(conn) -> dict:
         "languages": languages,
         "categories": categories,
         "stacks": stacks,
-        "cities": cities,
+        "countries": countries,
+        # Same country list under the legacy key so undeployed frontends
+        # also show countries (not Tokyo / Berlin Office city chips).
+        "cities": countries,
         "remote_total": remote_total,
     }
 

@@ -767,7 +767,20 @@ _FOREIGN_GEO = (
     r"london|toronto|vancouver|montreal|berlin|munich|münchen|hamburg|"
     r"amsterdam|dublin|paris|stockholm|oslo|copenhagen|sydney|melbourne|"
     r"tokyo|bangalore|bengaluru|são\s+paulo|sao\s+paulo|mexico\s+city|"
-    r"deutschland|cambridge|karlsruhe|nantes|barcelona"
+    r"deutschland|cambridge|karlsruhe|nantes|barcelona|"
+    # Every other country: "Remote - Greece" is as country-locked as "Remote - Spain".
+    r"greece|hellas|athens|thessaloniki|cyprus|bulgaria|romania|hungary|croatia|"
+    r"slovenia|slovakia|czech\s+republic|czechia|estonia|latvia|lithuania|"
+    r"luxembourg|iceland|serbia|bosnia|montenegro|albania|north\s+macedonia|"
+    r"moldova|ukraine|belarus|russia|turkey|t[uü]rkiye|georgia\s+\(country\)|"
+    r"armenia|kazakhstan|uzbekistan|pakistan|bangladesh|sri\s+lanka|nepal|"
+    r"philippines|vietnam|thailand|indonesia|malaysia|china|hong\s+kong|taiwan|"
+    r"egypt|morocco|tunisia|nigeria|kenya|ghana|south\s+africa|"
+    r"qatar|kuwait|bahrain|oman|jordan|lebanon|"
+    r"costa\s+rica|panama|venezuela|guatemala|dominican\s+republic|puerto\s+rico|"
+    r"warsaw|krak[oó]w|prague|budapest|bucharest|sofia|vienna|zurich|z[uü]rich|"
+    r"lisbon|madrid|rome|milan|brussels|helsinki|kyiv|kiev|istanbul|tbilisi|"
+    r"cape\s+town|lagos|nairobi|cairo"
 )
 
 # Bare "worldwide" in company blurbs ("orgs worldwide") must NOT open the gate.
@@ -780,7 +793,8 @@ _OPEN_MARKET = re.compile(
     r"(?:worldwide|world[\s-]?wide|global)\s+"
     r"(?:remote|candidates?|applicants?|hiring)\b|"
     r"azerbaijan|azərbaycan|azerbaycan|\bbaku\b|\bbakı\b|"
-    r"\beméa\b|\bemea\b|\bcis\b|caucasus|central\s+asia",
+    r"\beméa\b|\bemea\b|\bcis\b(?!\s+(?:benchmarks?|controls?|level|hardening))|"
+    r"caucasus|central\s+asia",
     re.IGNORECASE,
 )
 
@@ -816,6 +830,13 @@ _RESIDENCY_LOCK = re.compile(
     rf"\bnacionalidad\s+(?:chilena|argentina|colombiana|mexicana|brasile[nñ]a|"
     rf"peruana|uruguaya)\b|"
     rf"(?:right|authorization|authorisation|eligibility|eligible)\s+to\s+work\s+in\b|"
+    # "we are not looking to engage contractors outside of these locations: …"
+    rf"(?:not|unable\s+to|cannot|can't)\s+(?:looking\s+to\s+)?(?:engage|hire|consider|accept)\s+"
+    rf"[^\n.]{{0,60}}outside\s+(?:of\s+)?(?:these|the\s+following|the\s+listed)\s+"
+    rf"(?:locations?|countries|regions?)\b|"
+    rf"(?:only|exclusively)\s+(?:hiring|accepting|considering|engaging)\s+"
+    rf"[^\n.]{{0,40}}\b(?:from|in|within)\b|"
+    rf"\bmust\s+(?:be\s+)?(?:located|based|reside|live)\s+in\s+(?:one\s+of|any\s+of)\b|"
     rf"remote\s+(?:within|across|from|in)\s+(?:the\s+)?(?:{_FOREIGN_GEO})\b|"
     # Avoid benefits like "401k match (US only)".
     rf"(?:remote|candidates?|applicants?|hiring|roles?|positions?|openings?)"
@@ -973,10 +994,105 @@ def _place_fully_open(place: str) -> bool:
     return not _named_foreign_place(raw)
 
 
-def foreign_locked_remote(title: str, place: str, text: str) -> bool:
+# ---- Region restriction (Azerbaijan must be inside the allowed region) ------
+# "Remote, but EU only / US time zones / authorized to work in the UK" is not
+# reachable from Azerbaijan (UTC+4, Caucasus). Europe-only is treated as
+# restricted: such ads almost always mean EU/EEA/UK work authorization.
+_REG = (
+    r"(?:(?-i:EU|E\.U\.|EEA|UK|U\.K\.|US|U\.S\.|USA|APAC|LATAM|ANZ)|"
+    r"European\s+Union|European\s+Economic\s+Area|Europe|European|United\s+Kingdom|"
+    r"United\s+States|Canada|Canadian|North\s+America|North\s+American|"
+    r"Latin\s+America|South\s+America|Americas|Africa|Asia[\s-]Pacific|Oceania)"
+)
+_TZ = (
+    r"(?:(?-i:CEST|CET|EST|EDT|PST|PDT|CST|MST|BST|ET|PT)|"
+    r"US|U\.S\.|North\s+American|European|Eastern|Pacific|Central\s+European)"
+)
+_REGION_PHRASES = (
+    ("region_only", re.compile(
+        rf"(?i)\b{_REG}[\s-]+(?:only|residents?\s+only|based\s+only)\b(?!\s*\))")),
+    ("region_only", re.compile(
+        rf"(?i)\b(?:only|exclusively|solely|restricted\s+to|limited\s+to)\s+"
+        rf"(?:(?:in|from|within|to)\s+)?(?:the\s+)?{_REG}\b")),
+    ("region_only", re.compile(
+        rf"(?i)\b(?:must|need\s+to|required\s+to|have\s+to|should)\s+(?:currently\s+)?"
+        rf"(?:be\s+)?(?:located|based|resident|residing|reside|live|living|work(?:ing)?)"
+        rf"\s+(?:from\s+|in\s+|within\s+)(?:the\s+)?{_REG}\b")),
+    ("region_only", re.compile(
+        rf"(?i)\bhiring\s+(?:only\s+)?(?:in|from|within)\s+(?:the\s+)?{_REG}\b")),
+    ("region_only", re.compile(
+        rf"(?i)\bremote\s*(?:[-–:,(/]|\bin\b|\bwithin\b|\bacross\b)\s*(?:the\s+)?{_REG}\b")),
+    ("region_only", re.compile(
+        rf"(?i)(?:following|these)\s+(?:\d+\s+)?(?:countries|locations)\s*[:\-]\s*"
+        rf"[^\n]{{0,200}}?(?:{_FOREIGN_GEO})")),
+    ("work_authorization", re.compile(
+        rf"(?i)(?:must|need\s+to|required\s+to|should)\s+(?:be\s+)?(?:legally\s+)?"
+        rf"(?:authori[sz]ed|eligible|permitted|entitled)\s+to\s+work\s+(?:in|within)\s+"
+        rf"(?:the\s+)?(?:{_REG}|{_FOREIGN_GEO})\b")),
+    ("work_authorization", re.compile(
+        rf"(?i)(?:valid\s+|legal\s+)?right\s+to\s+work\s+in\s+(?:the\s+)?(?:{_REG}|{_FOREIGN_GEO})\b")),
+    ("timezone_overlap", re.compile(
+        rf"(?i)\bmust\s+(?:\w+\s+){{0,3}}overlap\s+with\s+(?:the\s+)?{_TZ}\b")),
+    ("timezone_overlap", re.compile(
+        rf"(?i)\boverlap\s+(?:with\s+)?(?:the\s+)?{_TZ}\b[^.\n]{{0,40}}"
+        rf"(?:at\s+least|minimum|\d+\s*\+?\s*hours?)")),
+    ("timezone_overlap", re.compile(
+        rf"(?i)(?:at\s+least|minimum\s+of)\s+\d+\s*hours?[^.\n]{{0,50}}overlap[^.\n]{{0,30}}{_TZ}\b")),
+    ("timezone_overlap", re.compile(
+        rf"(?i)\b(?:must|only|required|need\s+to)\b[^.\n]{{0,40}}\b(?:in|within)\s+(?:the\s+)?"
+        rf"(?:US|U\.S\.|North\s+American|European|Americas)\s+time\s*zones?")),
+)
+# Source boards that only list one region. Applies unless the ad says worldwide.
+_REGIONAL_SOURCES = {
+    "get on board (latin america)": "source_region_latam",
+    "reed.co.uk": "source_region_uk",
+    "personio boards (germany)": "source_region_germany",
+}
+_REGIONAL_SOURCE_NAME = re.compile(
+    r"(?i)\((?:latin\s+america|latam|europe|africa|apac|north\s+america)\)")
+_TITLE_REGION_SUFFIX = re.compile(
+    rf"(?i)[-–|(\[]\s*{_REG}\s*[)\]]?\s*$")
+_AZ_EXPLICIT = re.compile(
+    r"(?i)azerbaijan|azərbaycan|azerbaycan|\bbaku\b|\bbakı\b|\bcis\b(?!\s+(?:benchmarks?|controls?|level|hardening))|caucasus|central\s+asia")
+
+
+def region_restriction_reason(title: str, place: str, text: str, source: str = "") -> str:
+    """Empty string when remote may be reachable from Azerbaijan, else a reason code."""
+    title, place = title or "", place or ""
+    body = (text or "")[:12000]
+    sample = f"{title}\n{place}\n{body}"
+    if _AZ_EXPLICIT.search(sample):
+        return ""
+    if re.search(r"(?i)\bemea\b|\beméa\b|worldwide|world[\s-]?wide|anywhere", place) and not \
+            _named_foreign_place(place):
+        return ""
+    # Title / place pins first (strongest signal).
+    if re.search(rf"(?i)\bremote\b.{{0,24}}\b{_REG}\b", f"{title} | {place}") and not re.search(
+            r"(?i)\bemea\b|worldwide|anywhere", f"{title} {place}"):
+        return "region_only"
+    if _TITLE_REGION_SUFFIX.search(title):
+        return "region_only"
+    for reason, rx in _REGION_PHRASES:
+        if rx.search(sample):
+            return reason
+    src = (source or "").strip().lower()
+    reason = _REGIONAL_SOURCES.get(src) or (
+        "source_region" if _REGIONAL_SOURCE_NAME.search(source or "") else "")
+    if reason and not _OPEN_MARKET.search(f"{place}\n{body}"):
+        return reason
+    return ""
+
+
+def foreign_locked_remote(title: str, place: str, text: str, source: str = "") -> bool:
     """Remote role restricted to a foreign country/region (not AZ-reachable)."""
     head = f"{title} | {place}"
     if _garbage_place(place):
+        return True
+    # Region restriction (EU only, US time zones, work auth, regional boards);
+    # a visa/relocation offer keeps the ad (as relocation, not as remote).
+    if region_restriction_reason(title, place, text, source) and not _positive(
+        _INTL_RELOC, f"{title}\n{place}\n{(text or '')[:15000]}"
+    ):
         return True
     # Pure Remote EMEA / worldwide opens; EMEA + Malta city does not.
     if _place_fully_open(place):
@@ -1084,6 +1200,7 @@ def az_market_relevant(
     *,
     remote: bool,
     relocation: bool,
+    source: str = "",
 ) -> bool:
     """Keep ads useful for Azerbaijan candidates.
 
@@ -1091,7 +1208,7 @@ def az_market_relevant(
     noisy relocation/visa keyword exists (e.g. H-1B on a US-remote ad).
     Foreign office/hybrid keeps only with clear international visa/reloc offer.
     """
-    if remote and foreign_locked_remote(title, place, text):
+    if remote and foreign_locked_remote(title, place, text, source):
         return False
 
     named_office = _named_foreign_place(place) and not re.search(

@@ -185,6 +185,15 @@ export function JobDetailAnalyzePanel({ locale, jobId, returnTo, open, preview =
         </div>
       ) : null}
 
+      {!preview && gate === "profile_required" ? (
+        <div className="jd-analyze-gate">
+          <p>{t.jdAnalyzeProfile}</p>
+          <a className="jd-btn jd-btn-outline" href={hrefFor(locale, { mode: "profileReview" })}>
+            {t.jdAnalyzeProfileCta}
+          </a>
+        </div>
+      ) : null}
+
       {!preview && fit ? (
         <>
           <div className="jd-analyze-score-row">

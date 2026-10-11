@@ -207,6 +207,21 @@ class JobAnalyzeTests(unittest.TestCase):
         self.assertFalse(body["ok"])
         self.assertEqual(body["gate"], "skills_required")
 
+    def test_draft_profile_gate(self):
+        subject = "analyze-draft"
+        self._seed_profile(subject, status="draft")
+        job_id = self._insert_job(title="Java Dev", skills=["Java"])
+        self._grant_matching(subject)
+        with self._auth("job:candidate", subject):
+            res = self.client.get(
+                f"/api/v1/me/jobs/{job_id}/analyze?lang=en",
+                headers=self.headers,
+            )
+        self.assertEqual(res.status_code, 200, res.text)
+        body = res.json()
+        self.assertFalse(body["ok"])
+        self.assertEqual(body["gate"], "profile_required")
+
     def test_job_not_found(self):
         subject = "analyze-404"
         self._seed_profile(subject)

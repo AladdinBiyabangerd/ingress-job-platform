@@ -163,6 +163,15 @@ export function JobDetailApplyDraftPanel({
         </div>
       ) : null}
 
+      {!preview && status === "needs_confirm" ? (
+        <div className="jd-apply-draft-gate">
+          <p>{t.jdApplyDraftProfile}</p>
+          <a className="jd-btn jd-btn-outline" href={hrefFor(locale, { mode: "profileReview" })}>
+            {t.jdApplyDraftProfileCta}
+          </a>
+        </div>
+      ) : null}
+
       {!preview && !payload && !loading ? (
         <div className="jd-apply-draft-gate">
           <p>{t.jdApplyDraftGuest}</p>
