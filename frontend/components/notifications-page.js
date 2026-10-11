@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
-import { recommendationsEnabled, roadmapEnabled } from "../lib/product-features";
+import {
+  employerPostingEnabled,
+  recommendationsEnabled,
+  roadmapEnabled,
+} from "../lib/product-features";
 import { markAllNotificationsRead, markNotificationRead, refreshNotifications } from "../lib/server/refresh";
 import { publishUnreadNotifications } from "../lib/unread-document-title";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
@@ -91,7 +95,9 @@ function destination(locale, item) {
     return hrefFor(locale, { mode: "applications" });
   }
   if (item.kind === "application_new" || item.kind === "ad_approved" || item.kind === "ad_rejected" || item.kind === "ad_review") {
-    return hrefFor(locale, { mode: "post" });
+    return employerPostingEnabled()
+      ? hrefFor(locale, { mode: "post" })
+      : hrefFor(locale);
   }
   return hrefFor(locale);
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { clearMeCache, fetchMe } from "../lib/me-client";
+import { employerPostingEnabled } from "../lib/product-features";
 import { exportMyData, saveConsents } from "../lib/server/refresh";
 import { BoardSideNav } from "./board-side-nav";
 import { ConsentFields, grantsFromPayload } from "./consent-fields";
@@ -56,6 +57,7 @@ function ProfileHero({ locale, showApplicant, guest }) {
 
 function ProfileGateEmployer({ locale }) {
   const t = text(locale);
+  if (!employerPostingEnabled()) return null;
   return (
     <LoginLink
       className="profile-board-gate-employer"
@@ -63,6 +65,19 @@ function ProfileGateEmployer({ locale }) {
       returnTo={hrefFor(locale, { mode: "company" })}
     >
       {t.profileGateEmployer}
+    </LoginLink>
+  );
+}
+
+function ProfileGateCandidate({ locale }) {
+  const t = text(locale);
+  return (
+    <LoginLink
+      className="profile-board-gate-employer"
+      intent="job_candidate"
+      returnTo={hrefFor(locale, { mode: "profile" })}
+    >
+      {t.signIn}
     </LoginLink>
   );
 }
@@ -109,7 +124,9 @@ export function ProfileForm({ locale }) {
     };
   }, [initialMe]);
 
-  const showCompany = Boolean(me?.authenticated && (me.employer || me.staff));
+  const showCompany = Boolean(
+    employerPostingEnabled() && me?.authenticated && (me.employer || me.staff),
+  );
   const showApplicant = Boolean(me?.authenticated && (me.candidate || me.staff));
 
   useEffect(() => {
@@ -424,7 +441,11 @@ export function ProfileForm({ locale }) {
             ) : (
               <>
                 <ProfileHero locale={locale} showApplicant={false} guest />
-                <ProfileGateEmployer locale={locale} />
+                {employerPostingEnabled() ? (
+                  <ProfileGateEmployer locale={locale} />
+                ) : (
+                  <ProfileGateCandidate locale={locale} />
+                )}
               </>
             )}
           </div>

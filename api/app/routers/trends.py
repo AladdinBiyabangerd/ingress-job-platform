@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Header, HTTPException, Query
 
+from app.rate_limit import dep_ip
 from app.trends import (
     MAX_DETAIL_JOBS,
     MAX_LIMIT,
@@ -38,6 +39,7 @@ def read_trends(
     category: str | None = Query(default=None, max_length=80),
     region: str | None = Query(default=None, max_length=80),
     limit: int | None = Query(default=None, ge=1, le=MAX_LIMIT),
+    _rl=dep_ip("public_read"),
     window_days: int | None = Query(default=None, ge=1, le=MAX_WINDOW_DAYS),
     lang: str | None = Query(default=None, max_length=8),
 ) -> dict:

@@ -2,12 +2,23 @@
 
 import { useState } from "react";
 import { hrefFor, text } from "../lib/copy";
+import { employerPostingEnabled } from "../lib/product-features";
 import { LoginLink } from "./login-link";
 
 export function RegisterChoice({ locale, returnTo }) {
   const t = text(locale);
   const [open, setOpen] = useState(false);
   const back = returnTo || hrefFor(locale);
+  const postingOn = employerPostingEnabled();
+  if (!postingOn) {
+    return (
+      <div className="register-choice">
+        <LoginLink className="account-link" intent="job_candidate" returnTo={back}>
+          {t.register}
+        </LoginLink>
+      </div>
+    );
+  }
   return (
     <div className="register-choice">
       <button type="button" className="account-link" onClick={() => setOpen((value) => !value)}>

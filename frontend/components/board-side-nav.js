@@ -1,5 +1,6 @@
 import { hrefFor, text } from "../lib/copy";
 import { ingressUrl } from "../lib/ingress";
+import { employerPostingEnabled } from "../lib/product-features";
 
 function SideNavIconBrowse() {
   return (
@@ -96,16 +97,18 @@ export function BoardSideNav({ locale, active = null }) {
           <span>{t.navMe}</span>
         </a>
       </nav>
-      <div className="home-board-nav-employer">
-        <a
-          href={hrefFor(locale, { mode: "post" })}
-          className={navItemClass(active, "post")}
-          aria-current={active === "post" ? "page" : undefined}
-        >
-          <SideNavIconPost />
-          <span>{t.navPostRole}</span>
-        </a>
-      </div>
+      {employerPostingEnabled() ? (
+        <div className="home-board-nav-employer">
+          <a
+            href={hrefFor(locale, { mode: "post" })}
+            className={navItemClass(active, "post")}
+            aria-current={active === "post" ? "page" : undefined}
+          >
+            <SideNavIconPost />
+            <span>{t.navPostRole}</span>
+          </a>
+        </div>
+      ) : null}
       <a
         className="home-board-nav-academy"
         href={ingressUrl(locale)}

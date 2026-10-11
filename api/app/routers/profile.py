@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.account import current_user
 from app.auth_oidc import VerifiedAccess
 from app.cabinet_store import CabinetError
+from app.rate_limit import dep_user
 from app.cv_profile import (
     SENIORITY_VALUES,
     cancel_open_parse,
@@ -101,7 +102,11 @@ def post_profile_cv_cancel(user: VerifiedAccess = Depends(current_user)) -> dict
 
 
 @router.post("/profile/cv")
-async def post_profile_cv(request: Request, user: VerifiedAccess = Depends(current_user)) -> dict:
+async def post_profile_cv(
+    request: Request,
+    user: VerifiedAccess = Depends(current_user),
+    _rl=dep_user("apply_cv"),
+) -> dict:
     _require_candidate(user)
     ctype = (request.headers.get("content-type") or "").lower()
     if "multipart/form-data" not in ctype:

@@ -1,7 +1,7 @@
-"""Temporary product-surface gates (recommendations + roadmap).
+"""Temporary product-surface gates (recommendations + roadmap + employer posting).
 
 Unset / empty → off. Set to 1/true/on to re-enable.
-API tests force both on via api/tests/__init__.py.
+API tests force these on via api/tests/__init__.py.
 """
 
 from __future__ import annotations
@@ -29,3 +29,8 @@ def recommendations_enabled() -> bool:
 def roadmap_enabled() -> bool:
     """Learning roadmap / insights hub + coach_weekly growth fanout."""
     return _env_on("PRODUCT_ROADMAP_ENABLED")
+
+
+def employer_posting_enabled() -> bool:
+    """Employer cabinet / company profile write / talent search."""
+    return _env_on("PRODUCT_EMPLOYER_POSTING_ENABLED")

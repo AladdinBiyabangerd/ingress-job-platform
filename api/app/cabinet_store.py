@@ -530,6 +530,23 @@ def _insert(subject: str, fields: dict, status: str) -> dict:
     return _owner(row)
 
 
+def count_ads_created_since(subject: str, since_iso: str) -> int:
+    """Count owner-created ads with created_at >= since_iso (ISO-ish string compare)."""
+    conn = _connect()
+    try:
+        row = conn.execute(
+            """
+            SELECT COUNT(*) AS n FROM jobs
+            WHERE owner_subject = ? AND owner_subject != ''
+              AND created_at >= ?
+            """,
+            (subject, since_iso),
+        ).fetchone()
+    finally:
+        conn.close()
+    return int(row["n"] if row and row["n"] is not None else 0)
+
+
 def create_ad(subject: str, fields: dict, *, staff: bool) -> dict:
     with _LOCK:
         return _insert(subject, fields, PUBLISHED if staff else PENDING)

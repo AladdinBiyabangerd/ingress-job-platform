@@ -4,7 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { ingressUrl } from "../lib/ingress";
 import { clearMeCache, fetchMe } from "../lib/me-client";
-import { recommendationsEnabled, roadmapEnabled } from "../lib/product-features";
+import {
+  employerPostingEnabled,
+  recommendationsEnabled,
+  roadmapEnabled,
+} from "../lib/product-features";
 import { useMediaQuery } from "../lib/use-media-query";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
 import { AccountBar } from "./account-bar";
@@ -228,14 +232,14 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef, jobId }) {
               {t.savedJobs}
             </a>
           </li>
-          {me.employer || me.staff ? (
+          {employerPostingEnabled() && (me.employer || me.staff) ? (
             <li>
               <a href={hrefFor(locale, { mode: "talent" })} aria-current={mode === "talent" ? "page" : undefined}>
                 {t.talentTitle}
               </a>
             </li>
           ) : null}
-          {me.employer || me.staff ? (
+          {employerPostingEnabled() && (me.employer || me.staff) ? (
             <li>
               <a href={hrefFor(locale, { mode: "company" })} aria-current={mode === "company" ? "page" : undefined}>
                 {t.companyTitle}
@@ -254,7 +258,7 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef, jobId }) {
               </a>
             </li>
           ) : null}
-          {me.candidate && !me.employer && !me.staff ? (
+          {employerPostingEnabled() && me.candidate && !me.employer && !me.staff ? (
             <li>
               <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "company" })}>
                 {t.registerPoster}
@@ -273,17 +277,27 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef, jobId }) {
         </ul>
       ) : me ? (
         <div className="mobile-nav-account">
-          <p className="mobile-nav-note">{t.register} · {t.registerAsk}</p>
-          <ul className="mobile-nav-links">
-            <li>
-              <LoginLink intent="job_candidate" returnTo={back}>{t.registerCreator}</LoginLink>
-            </li>
-            <li>
-              <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "company" })}>
-                {t.registerPoster}
-              </LoginLink>
-            </li>
-          </ul>
+          {employerPostingEnabled() ? (
+            <>
+              <p className="mobile-nav-note">{t.register} · {t.registerAsk}</p>
+              <ul className="mobile-nav-links">
+                <li>
+                  <LoginLink intent="job_candidate" returnTo={back}>{t.registerCreator}</LoginLink>
+                </li>
+                <li>
+                  <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "company" })}>
+                    {t.registerPoster}
+                  </LoginLink>
+                </li>
+              </ul>
+            </>
+          ) : (
+            <ul className="mobile-nav-links">
+              <li>
+                <LoginLink intent="job_candidate" returnTo={back}>{t.register}</LoginLink>
+              </li>
+            </ul>
+          )}
         </div>
       ) : null}
     </nav>

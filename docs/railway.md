@@ -180,3 +180,30 @@ only (`ROBOTS_EXCEPTIONS` in `worker/worker/http.py`).
 
 CV upload uses the bucket only when `BUCKET_NAME`, `BUCKET_ACCESS_KEY`, and
 `BUCKET_SECRET_KEY` are all set. Otherwise files stay in `api/data/cvs/`.
+
+## Cloudflare edge (production)
+
+Put the **web** public domain behind Cloudflare **Proxied** (orange cloud). The
+browser must not hit a raw `*.up.railway.app` URL for production traffic.
+Keep the API on Railway private DNS only (`JOB_API_BASE_URL` as above).
+
+### Checklist
+
+1. DNS: web hostname → Railway web service, Proxy status = Proxied.
+2. SSL/TLS: Full (strict) when Railway presents a valid cert.
+3. Origin bypass: prefer Cloudflare Tunnel to `web.railway.internal:$PORT`, or
+   leave the Railway public URL unpublished / passworded so attackers cannot
+   skip the edge.
+4. Security → Bot Fight Mode (or Super Bot Fight). Rate limiting rules (IP):
+   - `^/api/auth/` ≈ 20 req/min → Block briefly
+   - `^/api/(jobs|trends)` ≈ 60 req/min → Block briefly
+   - zone catch-all ≈ 120 req/min (tune from Analytics)
+5. Custom error / challenge page: gentle Ingress copy (“pause so the site stays
+   fast for you”) — never “banned / blocked / abuse” wording.
+6. App expects `CF-Connecting-IP` on requests that reach Next.js / FastAPI for
+   Redis rate limits. Set `REDIS_URL` and `RATE_LIMIT_ENABLED=1` on **api** and
+   **web**. Set `FORWARDED_ALLOW_IPS` on the API to trusted proxy CIDRs only
+   (never `*`).
+
+Optional: Turnstile keys (`TURNSTILE_SECRET_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`)
+for login and employer job create when posting is enabled.

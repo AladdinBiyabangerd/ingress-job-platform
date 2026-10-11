@@ -311,6 +311,12 @@ def _run_pass(store: Store) -> int:
     except Exception:
         capture_exception()
     try:
+        langs = store.backfill_language()
+        if langs:
+            print(f"language backfill: {langs}", flush=True)
+    except Exception:
+        capture_exception()
+    try:
         places = store.normalize_cities()
         if places:
             print(f"city normalize: {places}", flush=True)

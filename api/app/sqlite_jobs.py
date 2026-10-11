@@ -17,6 +17,7 @@ import json
 import os
 import re
 import sqlite3
+import sys
 import unicodedata
 from html import unescape
 from pathlib import Path
@@ -27,6 +28,27 @@ from bs4 import BeautifulSoup
 from app.apply_form import parse_stored
 from app.companies import application_count, application_counts, company_slug
 from app.place import aggregate_countries, is_remote_place, matching_stored_cities
+
+
+def _ensure_worker_path() -> None:
+    try:
+        import worker.listing_language  # noqa: F401
+        return
+    except ImportError:
+        pass
+    repo_worker = Path(__file__).resolve().parents[2] / "worker"
+    if repo_worker.is_dir() and str(repo_worker) not in sys.path:
+        sys.path.insert(0, str(repo_worker))
+
+
+_ensure_worker_path()
+from worker.listing_language import (  # noqa: E402
+    LANG_FACET_ORDER as _LANG_FACET_ORDER,
+    LANGUAGE_SAMPLE_CHARS,
+    listing_language,
+    resolve_listing_language,
+)
+
 
 def _db_path() -> Path:
     configured = os.environ.get("JOBS_DB_PATH", "").strip()
@@ -47,21 +69,24 @@ _COMPANY_MEMO: tuple | None = None
 # No leading \b: a link glued to a word ("gärnahttps://…") must go too.
 _URL = re.compile(r"(?i)(?:https?://|www\.)\S+")
 
-# First ~1.2k chars of JD for language detection on list/filter paths
-# (full text is not returned to clients).
+# Body sample only when language column is empty/unknown (full text never
+# returned on list). After worker backfill most rows skip this read.
 _LANGUAGE_SAMPLE_SQL = (
-    "substr(COALESCE(NULLIF(j.cleaned_text, ''), j.text), 1, 1200) AS language_sample"
+    f"substr(COALESCE(NULLIF(j.cleaned_text, ''), j.text), 1, {LANGUAGE_SAMPLE_CHARS}) "
+    "AS language_sample"
 )
 
-_LIST_SELECT_CORE = f"""
+
+def _list_select_core(*, with_lang_sample: bool = False) -> str:
+    sample = f"    {_LANGUAGE_SAMPLE_SQL},\n" if with_lang_sample else ""
+    return f"""
     j.id,
     j.title,
     j.company,
     j.city,
     j.created_at,
     COALESCE(j.language, '') AS language,
-    {_LANGUAGE_SAMPLE_SQL},
-    COALESCE(j.remote, 0) AS remote,
+{sample}    COALESCE(j.remote, 0) AS remote,
     COALESCE(j.relocation, 0) AS relocation,
     COALESCE(j.tech_stack, '') AS tech_stack,
     COALESCE(j.category, '') AS category,
@@ -72,6 +97,10 @@ _LIST_SELECT_CORE = f"""
     COALESCE(js.source_name, '') AS source_name,
     COALESCE(cs.homepage, '') AS source_homepage
 """
+
+
+_LIST_SELECT_CORE = _list_select_core(with_lang_sample=False)
+_LIST_SELECT_WITH_LANG_SAMPLE = _list_select_core(with_lang_sample=True)
 
 # One row per job: earliest job_sources.id, plus whether any source has a URL.
 _SOURCE_JOINS = """
@@ -123,10 +152,6 @@ SORTS = ("newest", "oldest", "title")
 WHENS = ("any", "today", "week")
 DEFAULT_PER_PAGE = 20
 MAX_PER_PAGE = 60
-_LANG_FACET_ORDER = ("az", "en", "ru", "tr", "es", "uk", "de", "fr", "pt")
-# Cabinet/admin az|ru labels are trusted. Stored "en" is not — many ingested
-# ads keep en while the body is DE/FR/ES under an English job title.
-_TRUSTED_STORED_LANGS = ("az", "ru")
 
 _NOISE = re.compile(
     r"(?im)^(?:application url|apply url)\s*$"
@@ -205,114 +230,6 @@ def public_text(value: str) -> str:
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
     return cleaned.strip()
-
-
-# ə is the strong AZ signal. Do NOT treat ö/ü/ş/ç alone as AZ — those appear
-# in German/Turkish and mis-label DE bodies as az.
-_AZ_SCHWA = re.compile(r"[əƏ]")
-_AZ_HINT = re.compile(r"[ğıİıĞ]")
-_AZ_WORDS = re.compile(
-    r"\b(və|ilə|üçün|olan|olunan|tələb|mühəndis|əməkdaş|şirkət|elan|işçi|təcrübə)\b",
-    re.I,
-)
-_UK = re.compile(r"[іїєґІЇЄҐ]")
-_CYR = re.compile(r"[а-яёА-ЯЁ]")
-_TAG = re.compile(r"<[^>]+>")
-
-# Latin-script langs: score stopword hits + distinctive letters.
-# Diacritics help but are not required (ASCII-folded JDs still classify).
-# IGNORECASE avoids Turkish İ / i lowercasing pitfalls.
-_LATIN_LANG_MARKERS: tuple[tuple[str, re.Pattern[str], re.Pattern[str] | None], ...] = (
-    (
-        "de",
-        re.compile(
-            r"\b(und|der|die|das|dem|den|mit|für|oder|wir|suchen|sind|eine?n?|"
-            r"sowie|über|bei|nach|werden|haben|nicht|auch|aufgaben|profil|"
-            r"erfahrung|kenntnisse|bewerbung|gmbh)\b",
-            re.I,
-        ),
-        re.compile(r"[äöüßÄÖÜ]"),
-    ),
-    (
-        "fr",
-        re.compile(
-            r"\b(et|les|des|une|pour|avec|nous|dans|sont|cette|votre|nos|"
-            r"être|chez|vous|recherchons|expérience|poste|entreprise)\b",
-            re.I,
-        ),
-        re.compile(r"[àâçéèêëîïôùûœÀÂÇÉÈÊËÎÏÔÙÛŒ]"),
-    ),
-    (
-        "es",
-        re.compile(
-            r"\b(el|los|las|para|con|una|experiencia|del|por|como|más|trabajo|"
-            r"somos|nuestro|nuestra|empresa|puesto|requisitos|buscamos)\b",
-            re.I,
-        ),
-        re.compile(r"[áéíóúñ¿¡ÁÉÍÓÚÑ]"),
-    ),
-    (
-        "pt",
-        re.compile(
-            r"\b(não|você|vocês|pelo|pela|pelos|pelas|também|trabalho|"
-            r"experiência|anos|vaga|procuramos|nosso|nossa|com)\b",
-            re.I,
-        ),
-        re.compile(r"[áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ]"),
-    ),
-    (
-        "tr",
-        re.compile(
-            r"\b(ve|bir|için|ile|olan|olarak|arıyoruz|deneyim|şirket|"
-            r"pozisyon|çalışma|hakkında|başvuru|gereksinim|yıl)\b",
-            re.I,
-        ),
-        re.compile(r"[ğüşıöçĞÜŞİÖÇ]"),
-    ),
-)
-_LANG_SCORE_MIN = 3
-
-
-def listing_language(title: str, body: str) -> str:
-    """Detect listing language from title + body (body wins over EN titles)."""
-    raw = _TAG.sub(" ", unescape(repair_text(body or "")))
-    sample = f"{title or ''}\n{raw[:2000]}"
-    if _AZ_SCHWA.search(sample) or (_AZ_HINT.search(sample) and _AZ_WORDS.search(sample)):
-        return "az"
-    if _UK.search(sample):
-        return "uk"
-    if _CYR.search(sample):
-        return "ru"
-
-    scores: dict[str, int] = {}
-    for code, words_re, chars_re in _LATIN_LANG_MARKERS:
-        word_hits = len(words_re.findall(sample))
-        char_hits = len(chars_re.findall(sample)) if chars_re is not None else 0
-        score = word_hits + min(char_hits, 4)
-        if score:
-            scores[code] = score
-
-    if not scores:
-        return "en"
-
-    def _rank(item: tuple[str, int]) -> tuple[int, int]:
-        code, score = item
-        # Higher score wins; facet order breaks ties.
-        order = _LANG_FACET_ORDER.index(code) if code in _LANG_FACET_ORDER else 99
-        return (score, -order)
-
-    best_code, best_score = max(scores.items(), key=_rank)
-    if best_score < _LANG_SCORE_MIN:
-        return "en"
-    return best_code
-
-
-def resolve_listing_language(stored: str, title: str, body: str = "") -> str:
-    """Prefer body inference; trust only explicit cabinet az/ru labels."""
-    code = (stored or "").strip().lower()
-    if code in _TRUSTED_STORED_LANGS:
-        return code
-    return listing_language(title, body)
 
 
 def _ensure_columns() -> None:
@@ -733,27 +650,30 @@ def _build_facets(conn) -> dict:
     cat_counts: Counter[str] = Counter()
     stack_counts: Counter[str] = Counter()
 
-    # Trusted cabinet labels az/ru — GROUP BY, no body scan.
+    # Persisted facet codes — GROUP BY, no body scan (after worker backfill).
+    facet_codes = list(_LANG_FACET_ORDER)
+    placeholders = ",".join("?" * len(facet_codes))
     for row in conn.execute(
         f"""
         SELECT lower(trim(COALESCE(j.language, ''))) AS language, COUNT(*) AS total
         {_PUBLISHED_WHERE}
-          AND lower(trim(COALESCE(j.language, ''))) IN ('az', 'ru')
+          AND lower(trim(COALESCE(j.language, ''))) IN ({placeholders})
         GROUP BY 1
-        """
+        """,
+        facet_codes,
     ).fetchall():
         code = (row["language"] or "").strip().lower()
         if code:
             lang_counts[code] += int(row["total"] or 0)
 
-    # Infer from title+body when language is empty, en, or any other code.
-    # Stored "en" is often wrong for DE/FR bodies with English titles.
+    # Infer only when language is empty or outside the facet set.
     for row in conn.execute(
         f"""
         SELECT j.title, COALESCE(j.language, '') AS language, {_LANGUAGE_SAMPLE_SQL}
         {_PUBLISHED_WHERE}
-          AND lower(trim(COALESCE(j.language, ''))) NOT IN ('az', 'ru')
-        """
+          AND lower(trim(COALESCE(j.language, ''))) NOT IN ({placeholders})
+        """,
+        facet_codes,
     ).fetchall():
         lang_counts[_row_language(row)] += 1
 
@@ -984,11 +904,21 @@ def query_jobs(
             onsite=onsite,
             categories=cat_filter,
         )
+        # Narrow SQL to stored language matches + empty (infer in Python).
+        if lang_filter:
+            lang_placeholders = ",".join("?" * len(lang_filter))
+            where = (
+                where
+                + f" AND (lower(trim(COALESCE(j.language, ''))) IN ({lang_placeholders})"
+                + " OR trim(COALESCE(j.language, '')) = '')"
+            )
+            params.extend(lang_filter)
         facets, catalog_total = _catalog_facets(conn)
+        list_select = _LIST_SELECT_WITH_LANG_SAMPLE if lang_filter else _LIST_SELECT_CORE
 
         if needs_python:
             rows = conn.execute(
-                f"SELECT {_LIST_SELECT_CORE} {_with_source_joins(where)} {order}",
+                f"SELECT {list_select} {_with_source_joins(where)} {order}",
                 params,
             ).fetchall()
             matched = []
@@ -1017,7 +947,7 @@ def query_jobs(
             current = min(page, pages)
             offset = (current - 1) * per_page
             page_rows = conn.execute(
-                f"SELECT {_LIST_SELECT_CORE} {_with_source_joins(where)} {order} LIMIT ? OFFSET ?",
+                f"SELECT {list_select} {_with_source_joins(where)} {order} LIMIT ? OFFSET ?",
                 [*params, per_page, offset],
             ).fetchall()
 

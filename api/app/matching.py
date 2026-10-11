@@ -9,7 +9,9 @@ SQLite / missing vectors → structured only (ai_rerank false); LLM may still ru
 from __future__ import annotations
 
 import re
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from threading import Lock
 from typing import Any
 
@@ -21,6 +23,21 @@ from app.role_suggestions import (
     _pick_locale,
     resolve_taxonomy_role,
 )
+
+
+def _ensure_worker_path() -> None:
+    try:
+        import worker.listing_language  # noqa: F401
+        return
+    except ImportError:
+        pass
+    repo_worker = Path(__file__).resolve().parents[2] / "worker"
+    if repo_worker.is_dir() and str(repo_worker) not in sys.path:
+        sys.path.insert(0, str(repo_worker))
+
+
+_ensure_worker_path()
+from worker.listing_language import resolve_listing_language  # noqa: E402
 
 # Soft boost when a job hits role signature skills (role= filter).
 ROLE_HIT_BOOST = 0.025
@@ -350,7 +367,12 @@ def _scan_published_jobs(conn) -> list[dict[str, Any]]:
                 COALESCE(language, '') AS language,
                 COALESCE(category, '') AS category,
                 COALESCE(salary, '') AS salary,
-                COALESCE(created_at, '') AS created_at
+                COALESCE(created_at, '') AS created_at,
+                CASE
+                  WHEN trim(COALESCE(language, '')) = ''
+                  THEN substr(COALESCE(NULLIF(cleaned_text, ''), text), 1, 1200)
+                  ELSE ''
+                END AS language_sample
             FROM jobs
             WHERE status = 'published'
               AND COALESCE(hidden, 0) = 0
@@ -361,15 +383,18 @@ def _scan_published_jobs(conn) -> list[dict[str, Any]]:
         return []
     jobs: list[dict[str, Any]] = []
     for row in rows:
+        title = str(_row_get(row, "title", 1) or "")
+        stored = str(_row_get(row, "language", 6) or "")
+        sample = str(_row_get(row, "language_sample", 10) or "")
         jobs.append(
             {
                 "id": int(_row_get(row, "id", 0)),
-                "title": str(_row_get(row, "title", 1) or ""),
+                "title": title,
                 "company": str(_row_get(row, "company", 2) or ""),
                 "city": str(_row_get(row, "city", 3) or ""),
                 "remote": bool(int(_row_get(row, "remote", 4) or 0)),
                 "relocation": bool(int(_row_get(row, "relocation", 5) or 0)),
-                "language": str(_row_get(row, "language", 6) or ""),
+                "language": resolve_listing_language(stored, title, sample),
                 "category": str(_row_get(row, "category", 7) or ""),
                 "salary": str(_row_get(row, "salary", 8) or ""),
                 "created_at": str(_row_get(row, "created_at", 9) or ""),

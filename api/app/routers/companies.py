@@ -3,6 +3,7 @@
 from fastapi import APIRouter, HTTPException, Query
 
 from app.companies import SORTS
+from app.rate_limit import dep_ip
 from app.sqlite_jobs import query_companies, query_company
 
 router = APIRouter(prefix="/api/v1", tags=["companies"])
@@ -14,6 +15,7 @@ def read_companies(
     sort: str = Query("jobs"),
     page: int = Query(1, ge=1, le=10000),
     per_page: int = Query(24, ge=1, le=60),
+    _rl=dep_ip("public_read"),
 ) -> dict:
     return query_companies(
         q=q.strip(),

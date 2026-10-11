@@ -71,6 +71,19 @@ export const copy = {
     listLoading: "Elanlar yenilənir.",
     loadError: "Elanları yükləmək olmadı. API ünvanı yoxlanılmalıdır.",
     loadRetry: "Yenidən cəhd et",
+    rateLimit: {
+      gentle:
+        "Bir az yavaşlayaq ki, səhifə sizin üçün də sabit qalsın. Bir neçə saniyə sonra yenidən cəhd edin.",
+      signInPause:
+        "Girişi sizin üçün təhlükəsiz saxlamaq üçün qısa fasilə. Bir neçə saniyə sonra yenidən cəhd edin.",
+      savePause:
+        "Müraciətinizin düzgün getməsi üçün qısa fasilə. Bir neçə saniyə sonra yenidən cəhd edin.",
+      postPause:
+        "Elanın düzgün yoxlanması üçün qısa fasilə. Bir az sonra yenidən cəhd edin.",
+      verifyHuman:
+        "Hesabınızı qorumaq üçün qısa təhlükəsizlik yoxlamasını tamamlayın, sonra yenidən cəhd edin.",
+      tryAgain: "Yenidən cəhd et",
+    },
     noCompany: "Şirkət göstərilməyib",
     noCity: "Şəhər göstərilməyib",
     source: "Mənbə",
@@ -91,7 +104,7 @@ export const copy = {
         },
         {
           q: "Elanlara baxmaq pulsuzdur?",
-          a: "Bəli. Açıq elanları hesab olmadan da oxuya bilərsiniz. Müraciət və elan yerləşdirmə üçün Ingress Academy hesabı lazımdır.",
+          a: "Bəli. Açıq elanları hesab olmadan da oxuya bilərsiniz. Müraciət üçün Ingress Academy hesabı lazımdır.",
         },
         {
           q: "Necə axtarıb filtrləyə bilərəm?",
@@ -102,16 +115,12 @@ export const copy = {
           a: "Bəli. Namizəd kimi qeydiyyatdan keçəndən sonra elana müraciət edə və müraciətlərinizi izləyə bilərsiniz.",
         },
         {
-          q: "İş elanı necə yerləşdirilir?",
-          a: "İşəgötürən kimi qeydiyyatdan keçin, şirkət profilini doldurun və elanı yazın. Dərcdən əvvəl elan moderasiyadan keçir.",
-        },
-        {
           q: "Uzaqdan iş elanları varmı?",
           a: "Bəli. Uzaqdan və ya şəhəri göstərilməyən elanları filtrlə seçə bilərsiniz; hibrid və ofis elanları da siyahıdadır.",
         },
         {
           q: "Elanlar haradan gəlir?",
-          a: "Siyahıda həm platformada yazılmış elanlar, həm də toplanmış açıq mənbə elanları ola bilər. Hər elanda mənbə göstərilir.",
+          a: "Siyahıda açıq mənbələrdən toplanmış elanlar olur. Hər elanda mənbə göstərilir.",
         },
         {
           q: "Hansı dillərdə istifadə edə bilərəm?",
@@ -1036,6 +1045,19 @@ export const copy = {
     listLoading: "Updating roles.",
     loadError: "Jobs could not be loaded. Check that the API is running.",
     loadRetry: "Try again",
+    rateLimit: {
+      gentle:
+        "Let’s pause briefly so the site stays fast for you. Try again in a few seconds.",
+      signInPause:
+        "Let’s pause briefly so sign-in stays secure for you. Try again in a few seconds.",
+      savePause:
+        "Let’s pause briefly so your application can be saved cleanly. Try again in a few seconds.",
+      postPause:
+        "Let’s pause briefly so your listing can be reviewed properly. Try again in a little while.",
+      verifyHuman:
+        "Please complete the quick security check so we can keep your account safe. Then try again.",
+      tryAgain: "Try again",
+    },
     noCompany: "Company not listed",
     noCity: "City not listed",
     source: "Source",
@@ -1056,7 +1078,7 @@ export const copy = {
         },
         {
           q: "Is browsing free?",
-          a: "Yes. You can read open listings without an account. Applying and posting require an Ingress Academy account.",
+          a: "Yes. You can read open listings without an account. Applying requires an Ingress Academy account.",
         },
         {
           q: "How do I search and filter?",
@@ -1067,16 +1089,12 @@ export const copy = {
           a: "Yes. Register as a candidate to apply to a role and track your applications.",
         },
         {
-          q: "How do I post a job?",
-          a: "Register as an employer, save your company profile, then write the ad. Listings go through moderation before they go public.",
-        },
-        {
           q: "Are remote jobs included?",
           a: "Yes. You can filter for remote or city-less roles; hybrid and office listings are in the list too.",
         },
         {
           q: "Where do listings come from?",
-          a: "The board may include ads written on the platform and open listings gathered from other sources. Each job shows its source.",
+          a: "The board shows open listings gathered from public sources. Each job shows its source.",
         },
         {
           q: "Which languages can I use?",
@@ -2002,6 +2020,19 @@ export const copy = {
     listLoading: "Список обновляется.",
     loadError: "Не удалось загрузить вакансии. Проверьте, что API запущен.",
     loadRetry: "Повторить",
+    rateLimit: {
+      gentle:
+        "Сделаем короткую паузу, чтобы сайт оставался быстрым для вас. Попробуйте снова через несколько секунд.",
+      signInPause:
+        "Сделаем короткую паузу, чтобы вход оставался безопасным для вас. Попробуйте снова через несколько секунд.",
+      savePause:
+        "Сделаем короткую паузу, чтобы отклик сохранился корректно. Попробуйте снова через несколько секунд.",
+      postPause:
+        "Сделаем короткую паузу, чтобы объявление прошло проверку. Попробуйте снова чуть позже.",
+      verifyHuman:
+        "Пройдите короткую проверку безопасности, чтобы мы могли защитить ваш аккаунт. Затем попробуйте снова.",
+      tryAgain: "Повторить",
+    },
     noCompany: "Компания не указана",
     noCity: "Город не указан",
     source: "Источник",
@@ -2022,7 +2053,7 @@ export const copy = {
         },
         {
           q: "Просмотр бесплатный?",
-          a: "Да. Открытые вакансии можно читать без аккаунта. Для отклика и размещения нужен аккаунт Ingress Academy.",
+          a: "Да. Открытые вакансии можно читать без аккаунта. Для отклика нужен аккаунт Ingress Academy.",
         },
         {
           q: "Как искать и фильтровать?",
@@ -2033,16 +2064,12 @@ export const copy = {
           a: "Да. Зарегистрируйтесь как кандидат — тогда сможете откликаться и следить за откликами.",
         },
         {
-          q: "Как разместить вакансию?",
-          a: "Зарегистрируйтесь как работодатель, заполните профиль компании и напишите объявление. Перед публикацией оно проходит модерацию.",
-        },
-        {
           q: "Есть ли удалённые вакансии?",
           a: "Да. Можно отфильтровать удалённые или без города; гибрид и офис тоже есть в списке.",
         },
         {
           q: "Откуда берутся вакансии?",
-          a: "В списке могут быть объявления с платформы и открытые вакансии из других источников. У каждой вакансии указан источник.",
+          a: "В списке — открытые вакансии из публичных источников. У каждой вакансии указан источник.",
         },
         {
           q: "На каких языках можно пользоваться?",

@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
-import { clearAuthCookiesOn, noStore, oidcConfig, safeReturnTo } from "../../../../lib/server/oidc";
+import {
+  REFRESH_COOKIE,
+  clearAuthCookiesOn,
+  noStore,
+  oidcConfig,
+  readCookie,
+  safeReturnTo,
+} from "../../../../lib/server/oidc";
 
 export const runtime = "nodejs";
 
@@ -11,9 +18,40 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;");
 }
 
+/** Best-effort Academy refresh revoke when JOB_OIDC_REVOKE_URL is set. */
+async function revokeRefreshIfConfigured(request, config) {
+  const revokeUrl = (process.env.JOB_OIDC_REVOKE_URL || "").trim();
+  if (!revokeUrl) return;
+  const refresh = readCookie(request, REFRESH_COOKIE);
+  if (!refresh) return;
+  const body = new URLSearchParams({
+    token: refresh,
+    token_type_hint: "refresh_token",
+    client_id: config.clientId || "",
+  });
+  const secret = (process.env.OIDC_CLIENT_SECRET || process.env.JOB_OIDC_CLIENT_SECRET || "").trim();
+  const headers = { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" };
+  if (secret) {
+    const basic = Buffer.from(`${config.clientId}:${secret}`).toString("base64");
+    headers.Authorization = `Basic ${basic}`;
+  }
+  try {
+    await fetch(revokeUrl, {
+      method: "POST",
+      headers,
+      body,
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch {
+    // Local cookie clear still proceeds; Academy revoke is best-effort.
+  }
+}
+
 export async function POST(request) {
   const url = new URL(request.url);
   const config = oidcConfig(request);
+  await revokeRefreshIfConfigured(request, config);
   const returnTo = safeReturnTo(url.searchParams.get("returnTo") || "/");
   // Stay on the job site. Do not send the browser to Academy logout or authorize.
   const location = new URL(returnTo, config.origin).toString();

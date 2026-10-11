@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.account import VerifiedAccess, current_user
+from app.product_features import employer_posting_enabled
 from app.profiles import account_fields_for
 from app.talent import DEFAULT_PER_PAGE, MAX_PER_PAGE, search_talent
 
@@ -12,6 +13,8 @@ router = APIRouter(prefix="/api/v1", tags=["talent"])
 
 
 def _require_employer_search(user: VerifiedAccess) -> None:
+    if not employer_posting_enabled():
+        raise HTTPException(status_code=404, detail="Tapılmadı")
     scopes = user.scopes
     if "job:staff" in scopes:
         return

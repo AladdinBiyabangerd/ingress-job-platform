@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
-import { recommendationsEnabled, roadmapEnabled } from "../lib/product-features";
+import {
+  employerPostingEnabled,
+  recommendationsEnabled,
+  roadmapEnabled,
+} from "../lib/product-features";
 import { canPostJobs, isStaff } from "../lib/roles";
 
 function isModK(event) {
@@ -11,12 +15,13 @@ function isModK(event) {
 }
 
 function buildItems(locale, me, t) {
+  const postingOn = employerPostingEnabled();
   const items = [
     { id: "browse", label: t.browse, href: hrefFor(locale), group: "nav" },
     { id: "companies", label: t.navCompanies, href: hrefFor(locale, { mode: "companies" }), group: "nav" },
     { id: "trends", label: t.navTrends, href: hrefFor(locale, { mode: "trends" }), group: "nav" },
   ];
-  if (canPostJobs(me)) {
+  if (postingOn && canPostJobs(me)) {
     items.push({ id: "post", label: t.post, href: hrefFor(locale, { mode: "post" }), group: "nav" });
   }
   if (isStaff(me)) {
@@ -54,7 +59,7 @@ function buildItems(locale, me, t) {
   }
   items.push({ id: "saved", label: t.savedJobs, href: hrefFor(locale, { mode: "saved" }), group: "account" });
   items.push({ id: "notifications", label: t.notifications, href: hrefFor(locale, { mode: "notifications" }), group: "account" });
-  if (me.employer || me.staff) {
+  if (postingOn && (me.employer || me.staff)) {
     items.push({ id: "talent", label: t.talentTitle, href: hrefFor(locale, { mode: "talent" }), group: "account" });
     items.push({ id: "company", label: t.companyTitle, href: hrefFor(locale, { mode: "company" }), group: "account" });
   }

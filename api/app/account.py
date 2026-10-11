@@ -13,6 +13,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.auth_oidc import AuthError, VerifiedAccess, id_token_nonce_status, verify_access_token
 from app.config import settings
+from app.product_features import employer_posting_enabled
+from app.rate_limit import dep_ip
 from app.profiles import (
     academy_name_for,
     account_fields_for,
@@ -282,6 +284,8 @@ def read_me(
 
 @router.post("/company-profile")
 def write_company_profile(body: CompanyIn, user: VerifiedAccess = Depends(current_user)) -> dict:
+    if not employer_posting_enabled():
+        raise HTTPException(status_code=404, detail="Tapılmadı")
     if "job:employer" not in user.scopes and "job:staff" not in user.scopes:
         raise HTTPException(status_code=403, detail="Şirkət profili işəgötürən hesabı tələb edir")
     try:
@@ -328,7 +332,7 @@ def write_candidate_profile(body: CandidateIn, user: VerifiedAccess = Depends(cu
 
 
 @router.post("/auth/transactions", status_code=204)
-def create_transaction(body: TransactionIn) -> None:
+def create_transaction(body: TransactionIn, _rl=dep_ip("auth_tx")) -> None:
     if not _STATE.fullmatch(body.state) or not _VERIFIER.fullmatch(body.verifier):
         raise HTTPException(status_code=400, detail="Giriş sorğusu yanlışdır")
     if not _STATE.fullmatch(body.nonce):
@@ -348,7 +352,7 @@ def create_transaction(body: TransactionIn) -> None:
 
 
 @router.post("/auth/exchange")
-def exchange(body: ExchangeIn) -> dict:
+def exchange(body: ExchangeIn, _rl=dep_ip("auth_token")) -> dict:
     if not _STATE.fullmatch(body.state):
         raise HTTPException(status_code=400, detail="Giriş sorğusu yanlışdır")
     row = take_transaction(body.state)
@@ -370,7 +374,7 @@ def exchange(body: ExchangeIn) -> dict:
 
 
 @router.post("/auth/refresh")
-def refresh(body: RefreshIn) -> dict:
+def refresh(body: RefreshIn, _rl=dep_ip("auth_token")) -> dict:
     payload = _post_form(
         {
             "grant_type": "refresh_token",

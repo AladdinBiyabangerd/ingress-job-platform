@@ -7,6 +7,7 @@ import { lockBodyScroll, trapTab } from "../lib/focus-trap";
 import { useMediaQuery } from "../lib/use-media-query";
 import { BoardSideNav } from "./board-side-nav";
 import { JobBoardCard } from "./job-board-card";
+import SlowDownBanner, { isSlowDownPayload, rateLimitMessageKey } from "./slow-down-banner";
 import { Shell } from "./shell";
 
 const PAGE_SIZE = 20;
@@ -318,6 +319,7 @@ export function Home({
   const [resultPages, setResultPages] = useState(Math.max(1, pages));
   const [facetData, setFacetData] = useState(facets?.languages ? facets : EMPTY_FACETS);
   const [loadError, setLoadError] = useState(Boolean(error));
+  const [slowDownKey, setSlowDownKey] = useState(null);
   const [loading, setLoading] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -490,17 +492,26 @@ export function Home({
         cache: "no-store",
         signal: controller.signal,
       })
-        .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
-        .then(({ ok, data }) => {
-          if (!ok) throw new Error("jobs");
+        .then((res) => res.json().then((data) => ({ ok: res.ok, status: res.status, data })))
+        .then(({ ok, status, data }) => {
+          if (!ok) {
+            if (status === 429 || isSlowDownPayload(data)) {
+              setSlowDownKey(rateLimitMessageKey(data));
+              setLoadError(false);
+              return;
+            }
+            throw new Error("jobs");
+          }
           setItems(Array.isArray(data.items) ? data.items : []);
           setResultTotal(Number(data.total) || 0);
           setResultPages(Math.max(1, Number(data.pages) || 1));
           if (data.facets && typeof data.facets === "object") setFacetData(data.facets);
           setLoadError(false);
+          setSlowDownKey(null);
         })
         .catch((err) => {
           if (err?.name === "AbortError") return;
+          setSlowDownKey(null);
           setLoadError(true);
         })
         .finally(() => setLoading(false));
@@ -715,6 +726,9 @@ export function Home({
   return (
     <Shell locale={locale} mode="browse">
       <div className="home home-board">
+        {slowDownKey ? (
+          <SlowDownBanner t={t} messageKey={slowDownKey} onRetry={retryLoad} />
+        ) : null}
         {loadError ? (
           <div className="note home-board-load-error" role="alert">
             <p>{t.loadError}</p>

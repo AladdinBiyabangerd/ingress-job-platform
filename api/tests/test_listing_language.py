@@ -1,8 +1,14 @@
-"""listing_language: body beats English titles for all supported langs."""
+"""listing_language: body beats English titles; persist trusts stored codes."""
 
+import sys
 import unittest
+from pathlib import Path
 
-from app.sqlite_jobs import listing_language, resolve_listing_language
+_WORKER = Path(__file__).resolve().parents[2] / "worker"
+if _WORKER.is_dir() and str(_WORKER) not in sys.path:
+    sys.path.insert(0, str(_WORKER))
+
+from worker.listing_language import listing_language, resolve_listing_language
 
 
 class ListingLanguageTests(unittest.TestCase):
@@ -46,7 +52,11 @@ class ListingLanguageTests(unittest.TestCase):
             "Die Roadmap verantworten und mit Laboren steuern."
         )
         self.assertEqual(listing_language("Freelance Product Manager (m/w/d)", body), "de")
-        self.assertEqual(resolve_listing_language("en", "Freelance Product Manager", body), "de")
+        # Empty column → infer from body.
+        self.assertEqual(resolve_listing_language("", "Freelance Product Manager", body), "de")
+        # Persisted facet code is trusted (backfill owns corrections).
+        self.assertEqual(resolve_listing_language("en", "Freelance Product Manager", body), "en")
+        self.assertEqual(resolve_listing_language("de", "Freelance Product Manager", body), "de")
 
     def test_french_english_title(self):
         body = (
@@ -92,6 +102,15 @@ class ListingLanguageTests(unittest.TestCase):
             ),
             "en",
         )
+
+    def test_bilingual_weak_margin_falls_back_to_en(self):
+        # A few DE stopwords inside an otherwise English JD → not enough margin.
+        body = (
+            "We are hiring a backend engineer in Berlin. "
+            "The role includes und collaboration with die product team. "
+            "Strong Python and AWS experience required for this position."
+        )
+        self.assertEqual(listing_language("Backend Engineer", body), "en")
 
 
 if __name__ == "__main__":

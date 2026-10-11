@@ -25,3 +25,5 @@ cvs/
 tmp/
 *.log
 .design/
+.tmp/
+.tmp/security-audit/

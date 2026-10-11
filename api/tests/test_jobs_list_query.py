@@ -103,8 +103,8 @@ class JobsListQueryTests(unittest.TestCase):
         self.assertEqual(body["total"], 8)
         self.assertEqual(len(body["items"]), 8)
 
-    def test_language_filter_uses_body_not_english_title(self):
-        """German JD with EN title + stored en must not match language=en."""
+    def test_language_filter_infers_empty_column_from_body(self):
+        """German JD with EN title + empty language → de, not en."""
         self._seed(2)
         german_body = (
             "Die Naturida GmbH ist ein wachsendes Unternehmen. "
@@ -119,7 +119,7 @@ class JobsListQueryTests(unittest.TestCase):
                 title, company, city, text, status, created_at, norm_key,
                 language, remote, tech_stack, category
             )
-            VALUES (?, 'Naturida', 'Berlin', ?, 'published', ?, ?, 'en', 1, '[]', 'Product')
+            VALUES (?, 'Naturida', 'Berlin', ?, 'published', ?, ?, '', 1, '[]', 'Product')
             """,
             (
                 "Freelance Product Manager (m/w/d)",
@@ -146,6 +146,30 @@ class JobsListQueryTests(unittest.TestCase):
         }
         self.assertEqual(langs.get("en"), 2)
         self.assertEqual(langs.get("de"), 1)
+
+    def test_language_filter_trusts_persisted_de(self):
+        self._seed(1)
+        conn = sqlite3.connect(self.db)
+        conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key,
+                language, remote, tech_stack, category
+            )
+            VALUES (?, 'Acme', 'Berlin', ?, 'published', ?, ?, 'de', 1, '[]', 'Product')
+            """,
+            (
+                "Product Manager",
+                "Short English stub after backfill stored de.",
+                "2026-10-11T09:00:00+04:00",
+                "persisted-de",
+            ),
+        )
+        conn.commit()
+        conn.close()
+        de = self.client.get("/api/v1/jobs", params={"language": "de"}).json()
+        self.assertEqual(de["total"], 1)
+        self.assertEqual(de["items"][0]["language"], "de")
 
     def test_facets_infer_language_only_when_column_empty(self):
         self._seed(3)

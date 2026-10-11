@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hmac
 import os
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
@@ -21,6 +22,7 @@ from app.email_prefs import (
     save_prefs,
 )
 from app.engagement import run_engagement_jobs
+from app.rate_limit import dep_ip
 
 router = APIRouter(prefix="/api/v1", tags=["email"])
 
@@ -87,7 +89,7 @@ def put_email_prefs(
 
 
 @router.get("/unsubscribe/{token}")
-def unsubscribe_status(token: str) -> dict:
+def unsubscribe_status(token: str, _rl=dep_ip("click_unsub")) -> dict:
     user_id = parse_unsubscribe_token(token)
     if not user_id:
         raise HTTPException(status_code=404, detail="invalid_token")
@@ -108,7 +110,7 @@ def unsubscribe_status(token: str) -> dict:
 
 
 @router.post("/unsubscribe/{token}")
-def unsubscribe_apply(token: str) -> dict:
+def unsubscribe_apply(token: str, _rl=dep_ip("click_unsub")) -> dict:
     user_id = parse_unsubscribe_token(token)
     if not user_id:
         raise HTTPException(status_code=404, detail="invalid_token")
@@ -128,7 +130,7 @@ def unsubscribe_apply(token: str) -> dict:
 
 
 @router.get("/r/{token}")
-def email_click_redirect(token: str) -> RedirectResponse:
+def email_click_redirect(token: str, _rl=dep_ip("click_unsub")) -> RedirectResponse:
     """Log email job click and 302 to the on-site job page."""
     ensure_schema(create=True)
     resolved = None
@@ -151,7 +153,11 @@ def _require_internal_token(x_internal_token: str | None) -> None:
     if not expected:
         raise HTTPException(status_code=503, detail="internal_jobs_disabled")
     provided = (x_internal_token or "").strip()
-    if not provided or provided != expected:
+    if (
+        not provided
+        or len(provided) != len(expected)
+        or not hmac.compare_digest(provided, expected)
+    ):
         raise HTTPException(status_code=401, detail="unauthorized")
 
 

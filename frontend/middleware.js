@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { apiBase } from "./lib/api";
-import { recommendationsEnabled, roadmapEnabled } from "./lib/product-features";
+import {
+  employerPostingEnabled,
+  recommendationsEnabled,
+  roadmapEnabled,
+} from "./lib/product-features";
 import { appendCookies, ensureSession, publicOrigin } from "./lib/server/oidc";
 
 const COMPANY = new Set(["/company", "/en/company", "/ru/company"]);
@@ -29,7 +33,7 @@ function barePath(pathname) {
   return pathname.replace(/^\/(en|ru)(?=\/|$)/, "") || "/";
 }
 
-/** Parked surfaces: nobody should land on recommendations / roadmap while off. */
+/** Parked surfaces: nobody should land on recommendations / roadmap / employer posting while off. */
 function parkedProductRedirect(request, locale) {
   const path = barePath(request.nextUrl.pathname);
   const recommendationsParked =
@@ -41,7 +45,15 @@ function parkedProductRedirect(request, locale) {
   const roadmapParked =
     !roadmapEnabled()
     && (path === "/me/insights" || path.startsWith("/me/insights/"));
-  if (!recommendationsParked && !roadmapParked) return null;
+  const employerParked =
+    !employerPostingEnabled()
+    && (path === "/post"
+      || path.startsWith("/post/")
+      || path === "/company"
+      || path.startsWith("/company/")
+      || path === "/talent"
+      || path.startsWith("/talent/"));
+  if (!recommendationsParked && !roadmapParked && !employerParked) return null;
   const prefix = locale === "az" ? "" : `/${locale}`;
   return NextResponse.redirect(new URL(prefix || "/", publicOrigin(request)));
 }

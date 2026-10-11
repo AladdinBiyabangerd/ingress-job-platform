@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+import os
+from datetime import datetime, timedelta, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.account import VerifiedAccess, current_user
@@ -13,15 +16,24 @@ from app.cabinet_store import (
     LANGS,
     CabinetError,
     close_ad,
+    count_ads_created_since,
     create_ad,
     list_owned,
     update_ad,
 )
+from app.product_features import employer_posting_enabled
 from app.profiles import profile_for
+from app.rate_limit import check_rate, client_ip, dep_user, raise_slow_down
+from app.turnstile import require_turnstile_token
 
 router = APIRouter(prefix="/api/v1/cabinet", tags=["cabinet"])
 
 _REQUIRED = "Başlıq, şirkət, şəhər və ya uzaqdan, və mətn doldurulmalıdır"
+
+
+def _require_employer_posting() -> None:
+    if not employer_posting_enabled():
+        raise HTTPException(status_code=404, detail="Tapılmadı")
 
 
 class AdIn(BaseModel):
@@ -36,6 +48,7 @@ class AdIn(BaseModel):
     salary: str = Field(default="", max_length=120)
     job_type: str = Field(default="", max_length=16)
     form: FormIn | None = None
+    turnstile_token: str | None = Field(default=None, max_length=2048)
 
 
 def _clean(value: str, limit: int) -> str:
@@ -102,19 +115,41 @@ def _run(action):
 
 @router.get("/jobs")
 def read_mine(user: VerifiedAccess = Depends(current_user)) -> dict:
+    _require_employer_posting()
     _caller(user)
     return {"items": list_owned(user.subject)}
 
 
+def _cabinet_max_ads_per_day() -> int:
+    raw = (os.environ.get("CABINET_MAX_ADS_PER_DAY") or "30").strip()
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return 30
+
+
 @router.post("/jobs", status_code=201)
-def write_ad(body: AdIn, user: VerifiedAccess = Depends(current_user)) -> dict:
+def write_ad(
+    body: AdIn,
+    request: Request,
+    user: VerifiedAccess = Depends(current_user),
+    _rl=dep_user("cabinet_create"),
+) -> dict:
+    _require_employer_posting()
     staff, _employer = _caller(user)
+    require_turnstile_token(body.turnstile_token, remoteip=client_ip(request))
+    check_rate("cabinet_create_day", user.subject)
+    if not staff:
+        since = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+        if count_ads_created_since(user.subject, since) >= _cabinet_max_ads_per_day():
+            raise_slow_down("rateLimit.postPause", 3600)
     fields = _attach_form(_fields(body, user, staff=staff), body, missing="default")
     return _run(lambda: create_ad(user.subject, fields, staff=staff))
 
 
 @router.patch("/jobs/{job_id}")
 def edit_ad(job_id: int, body: AdIn, user: VerifiedAccess = Depends(current_user)) -> dict:
+    _require_employer_posting()
     staff, _employer = _caller(user)
     fields = _attach_form(_fields(body, user, staff=staff), body, missing="keep")
     return _run(lambda: update_ad(user.subject, job_id, fields, staff=staff))
@@ -122,12 +157,14 @@ def edit_ad(job_id: int, body: AdIn, user: VerifiedAccess = Depends(current_user
 
 @router.post("/jobs/{job_id}/close")
 def close_mine(job_id: int, user: VerifiedAccess = Depends(current_user)) -> dict:
+    _require_employer_posting()
     _caller(user)
     return _run(lambda: close_ad(user.subject, job_id))
 
 
 @router.get("/applications")
 def read_applications(user: VerifiedAccess = Depends(current_user)) -> dict:
+    _require_employer_posting()
     _caller(user)
     return {"items": list_for_owner(user.subject)}
 
@@ -138,6 +175,7 @@ def decide_application(
     body: DecisionIn,
     user: VerifiedAccess = Depends(current_user),
 ) -> dict:
+    _require_employer_posting()
     _caller(user)
     return _run(
         lambda: set_status(

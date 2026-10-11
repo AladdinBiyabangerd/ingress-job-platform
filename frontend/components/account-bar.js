@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { clearMeCache, fetchMe } from "../lib/me-client";
-import { recommendationsEnabled, roadmapEnabled } from "../lib/product-features";
+import {
+  employerPostingEnabled,
+  recommendationsEnabled,
+  roadmapEnabled,
+} from "../lib/product-features";
 import { LoginLink } from "./login-link";
 import { NotificationsBell } from "./notifications-bell";
 import { RegisterChoice } from "./register-choice";
@@ -73,8 +77,11 @@ export function AccountBar({ locale, returnTo, onMe }) {
   const displayName = profileName || academyName || email || role || t.accountSignedIn;
   const identityHint = email && email !== displayName ? email : role && role !== displayName ? role : "";
   const canOpenProfile = Boolean(me?.employer || me?.candidate || me?.staff);
+  const postingOn = employerPostingEnabled();
   // Already a candidate: only offer employer upgrade, not a second "login as applicant".
-  const showEmployerUpgrade = Boolean(me?.authenticated && me.candidate && !me.employer && !me.staff);
+  const showEmployerUpgrade = Boolean(
+    postingOn && me?.authenticated && me.candidate && !me.employer && !me.staff,
+  );
   const showRegister = Boolean(me?.authenticated && !me.candidate && !me.employer && !me.staff);
   const back = returnTo || hrefFor(locale);
 
@@ -116,7 +123,7 @@ export function AccountBar({ locale, returnTo, onMe }) {
                     {t.profileOpen}
                   </a>
                 ) : null}
-                {me.employer || me.staff ? (
+                {postingOn && (me.employer || me.staff) ? (
                   <a role="menuitem" href={hrefFor(locale, { mode: "company" })} onClick={() => setOpen(false)}>
                     {t.companyOpen}
                   </a>
@@ -151,7 +158,7 @@ export function AccountBar({ locale, returnTo, onMe }) {
                     {t.savedJobs}
                   </a>
                 ) : null}
-                {me.employer || me.staff ? (
+                {postingOn && (me.employer || me.staff) ? (
                   <a role="menuitem" href={hrefFor(locale, { mode: "talent" })} onClick={() => setOpen(false)}>
                     {t.talentTitle}
                   </a>
@@ -170,15 +177,21 @@ export function AccountBar({ locale, returnTo, onMe }) {
                   </div>
                 ) : null}
                 {showRegister ? (
-                  <div className="account-dropdown-group" role="group" aria-label={t.registerAsk}>
-                    <p>{t.registerAsk}</p>
-                    <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "company" })}>
-                      {t.registerPoster}
-                    </LoginLink>
+                  postingOn ? (
+                    <div className="account-dropdown-group" role="group" aria-label={t.registerAsk}>
+                      <p>{t.registerAsk}</p>
+                      <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "company" })}>
+                        {t.registerPoster}
+                      </LoginLink>
+                      <LoginLink intent="job_candidate" returnTo={back}>
+                        {t.registerCreator}
+                      </LoginLink>
+                    </div>
+                  ) : (
                     <LoginLink intent="job_candidate" returnTo={back}>
                       {t.registerCreator}
                     </LoginLink>
-                  </div>
+                  )
                 ) : null}
                 <form
                   className="account-signout"

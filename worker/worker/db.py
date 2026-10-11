@@ -212,6 +212,9 @@ class Store:
             # (cabinet_store). Sources with structured pay (Reed) fill it,
             # e.g. "45,000–55,000 GBP per annum".
             "salary": "TEXT NOT NULL DEFAULT ''",
+            # Listing language code (az/en/ru/de/…). Scraped rows are filled by
+            # listing_language(); cabinet ads keep the owner-chosen value.
+            "language": "TEXT NOT NULL DEFAULT ''",
         }
         for name, decl in alters.items():
             if name not in cols:
@@ -365,6 +368,9 @@ class Store:
         relocation = 1 if item.get("relocation") else 0
         category = str(item.get("job_category") or "")[:40]
         salary = str(item.get("salary") or "").strip()[:120]
+        from worker.listing_language import listing_language
+
+        language = listing_language(title, text)[:8]
         key = norm_key(title, company, city)
         seen = now_iso()
         with self.conn:
@@ -401,12 +407,14 @@ class Store:
                         UPDATE jobs
                         SET title = ?, company = ?, city = ?, text = ?, status = 'published',
                             cleaned_text = CASE WHEN text = ? THEN cleaned_text ELSE NULL END,
-                            tech_stack = ?, remote = ?, relocation = ?, category = ?
+                            tech_stack = ?, remote = ?, relocation = ?, category = ?,
+                            language = ?
                         WHERE id = ?
                         """,
                         (
                             title, company, city, text, text,
-                            stack_json, remote, relocation, category, existing["job_id"],
+                            stack_json, remote, relocation, category, language,
+                            existing["job_id"],
                         ),
                     )
                     if salary:
@@ -429,11 +437,14 @@ class Store:
                     """
                     INSERT INTO jobs (
                         title, company, city, text, status, created_at, norm_key,
-                        tech_stack, remote, relocation, category
+                        tech_stack, remote, relocation, category, language
                     )
-                    VALUES (?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (title, company, city, text, seen, key, stack_json, remote, relocation, category),
+                    (
+                        title, company, city, text, seen, key, stack_json,
+                        remote, relocation, category, language,
+                    ),
                 )
                 job_id = int(cur.lastrowid)
                 kind = "created"
@@ -451,6 +462,44 @@ class Store:
                 (job_id, source_name, url, external_id, seen, credit),
             )
             return kind
+
+    def backfill_language(self, limit: int = 2000) -> int:
+        """Recompute listing language from title+body for scraped rows.
+
+        Skips cabinet ads (non-empty owner_subject) so az/ru labels stay.
+        Rewrites wrong stored en (English title + foreign body) after deploy.
+        """
+        from worker.listing_language import listing_language
+
+        rows = self.conn.execute(
+            """
+            SELECT id, title, COALESCE(NULLIF(cleaned_text, ''), text) AS body,
+                   COALESCE(language, '') AS language
+            FROM jobs
+            WHERE COALESCE(owner_subject, '') = ''
+              AND status = 'published'
+              AND COALESCE(hidden, 0) = 0
+              AND (merged_into IS NULL OR merged_into = 0)
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        done = 0
+        with self.conn:
+            for row in rows:
+                title = str(row["title"] or "")
+                body = str(row["body"] or "")
+                detected = listing_language(title, body)[:8]
+                stored = str(row["language"] or "").strip().lower()
+                if stored == detected:
+                    continue
+                self.conn.execute(
+                    "UPDATE jobs SET language = ? WHERE id = ?",
+                    (detected, row["id"]),
+                )
+                done += 1
+        return done
 
     def backfill_derived(self, limit: int = 500) -> int:
         """Tech stack, category and relocation for collected rows saved before

@@ -30,6 +30,7 @@ from app.saved_jobs import (
     unsave_job,
 )
 from app.product_features import recommendations_enabled, roadmap_enabled
+from app.rate_limit import dep_user
 from app.skill_gap import MAX_TOP as SKILL_GAP_MAX_TOP, skill_gap
 
 router = APIRouter(prefix="/api/v1/me", tags=["me"])
@@ -339,7 +340,10 @@ def delete_push_subscription(
 
 
 @router.get("/export")
-def export_my_data(user: VerifiedAccess = Depends(current_user)) -> Response:
+def export_my_data(
+    user: VerifiedAccess = Depends(current_user),
+    _rl=dep_user("ai_burst"),
+) -> Response:
     """ZIP: export.json + original CV files.
 
     Plan path GET /api/me collides with account GET /api/v1/me → /export.

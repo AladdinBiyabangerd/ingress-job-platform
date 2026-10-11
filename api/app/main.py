@@ -1,10 +1,13 @@
 import os
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from starlette.responses import JSONResponse
 
 from app.observability import init_observability, otel_enabled
+from app.rate_limit import RateLimitMiddleware, SlowDown
 from app.runtime_env import load_local_env
 from app.routers import (
     admin,
@@ -26,6 +29,22 @@ from app.account import router as account_router
 
 load_local_env(Path(__file__).resolve().parents[1] / ".env")
 init_observability("ingress-job-api")
+
+
+def _debug() -> bool:
+    raw = (os.environ.get("DEBUG") or "").strip().lower()
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    return not bool((os.environ.get("RAILWAY_ENVIRONMENT") or "").strip())
+
+
+def _allowed_hosts() -> list[str] | None:
+    raw = (os.environ.get("ALLOWED_HOSTS") or "").strip()
+    if not raw:
+        return None
+    return [h.strip() for h in raw.split(",") if h.strip()]
 
 
 def _log_push_vapid_status() -> None:
@@ -93,8 +112,64 @@ class RequestTrace:
                 current.set_status(Status(StatusCode.ERROR))
 
 
-app = FastAPI(title="Ingress Job", version="0.0.1")
+_docs = "/docs" if _debug() else None
+app = FastAPI(
+    title="Ingress Job",
+    version="0.0.1",
+    docs_url=_docs,
+    redoc_url="/redoc" if _debug() else None,
+    openapi_url="/openapi.json" if _debug() else None,
+)
+
+
+@app.exception_handler(SlowDown)
+async def _slow_down_handler(_request: Request, exc: SlowDown) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status,
+        content=exc.payload,
+        headers={"Retry-After": str(exc.retry_after)},
+    )
+
+
+_MAX_BODY = int((os.environ.get("MAX_REQUEST_BODY_BYTES") or str(6 * 1024 * 1024)).strip() or 0) or (
+    6 * 1024 * 1024
+)
+
+
+class LimitBodySize:
+    """Reject oversized Content-Length before the app reads the body."""
+
+    def __init__(self, app, max_bytes: int = _MAX_BODY):
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") == "http":
+            for key, value in scope.get("headers") or []:
+                if key == b"content-length":
+                    try:
+                        length = int(value.decode("latin1"))
+                    except ValueError:
+                        length = 0
+                    if length > self.max_bytes:
+                        response = JSONResponse(
+                            status_code=413,
+                            content={
+                                "error": "slow_down",
+                                "message_key": "rateLimit.gentle",
+                                "retry_after_seconds": 60,
+                                "message": "Please send a smaller file so we can process it reliably.",
+                            },
+                        )
+                        await response(scope, receive, send)
+                        return
+                    break
+        await self.app(scope, receive, send)
+
+
+# Last added runs first: RateLimit → Body → TrustedHost → CORS → RequestTrace → app
 app.add_middleware(RequestTrace)
+app.add_middleware(LimitBodySize)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins(),
@@ -102,6 +177,10 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+_hosts = _allowed_hosts()
+if _hosts:
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=_hosts)
+app.add_middleware(RateLimitMiddleware)
 app.include_router(health.router)
 app.include_router(jobs.router)
 app.include_router(trends.router)

@@ -1,26 +1,30 @@
 # Current task
 
 ## Completed
-- Language filter uses JD body (not only EN title / stored `en`)
-- Score-based detection for all facet langs: az, en, ru, uk, de, fr, es, pt, tr
-- AZ no longer misreads German `ü/ö` as Azerbaijani
+- Phase A: Cloudflare edge checklist in `docs/railway.md`; `.tmp/` gitignored
+- Phase B1: API Redis/memory rate limits + human `slow_down` JSON (`api/app/rate_limit.py`)
+- Phase B2: Web BFF rate limits + `copy.js` rateLimit.* + home SlowDownBanner
+- Phase B3: TrustedHost, docs-off, body size, `FORWARDED_ALLOW_IPS`, internal token compare_digest
+- Phase C: Turnstile login gate + cabinet create Turnstile/quota; logout revoke if `JOB_OIDC_REVOKE_URL`
+- Phase D: skill installed; triage report in `.tmp/security-audit/` (not full fleet hunt)
 
 ## Current state
-- `listing_language` scores stopwords + distinctive letters; min score 3 → else `en`
-- Script shortcuts: AZ (`ə`), UK letters, Cyrillic → `ru`
-- List/filter/facets use `language_sample` (~2000 chars of cleaned_text/text)
-- Tests: `tests/test_listing_language.py`, German case in `test_jobs_list_query.py`
+- Local: limits off unless `RATE_LIMIT_ENABLED=1`; Railway auto-on when `RAILWAY_ENVIRONMENT` set
+- Need ops: CF Proxied, Redis on api+web, Turnstile keys, optional revoke URL
 
 ## Decisions
-- Body inference beats stored `en`
-- Stored cabinet `az`/`ru` stay trusted
-- Diacritics optional — ASCII-heavy DE/FR/ES bodies still classify via stopwords
+- IP-first limits; benefit-framed UX (`slow_down` / never ban language)
+- Fail-open public GET when Redis down; fail-closed auth writes by bucket
+- Turnstile only when `TURNSTILE_SECRET_KEY` set (HTML gate on login)
 
 ## Remaining work
-- Deploy API so prod language filter picks up the fix
-- Optional: backfill `jobs.language` on worker ingest
+- Ops: Cloudflare dashboard + Railway Redis/env
+- Optional: full `security-audit` skill 6-phase run in a **new chat**
+- Optional: wire Turnstile token into employer post UI when posting re-enabled
 
 ## Relevant files
-- `api/app/sqlite_jobs.py`
-- `api/tests/test_listing_language.py`
-- `api/tests/test_jobs_list_query.py`
+- `api/app/rate_limit.py`, `api/app/turnstile.py`, `api/app/main.py`, `api/start.py`
+- `api/app/account.py`, `routers/jobs.py`, `cabinet.py`, `email_prefs.py`
+- `frontend/lib/server/rate-limit.js`, `turnstile.js`, `app/api/auth/login/route.js`
+- `frontend/lib/copy.js`, `components/slow-down-banner.js`, `components/home.js`
+- `docs/railway.md`, `.tmp/security-audit/REPORT.md`

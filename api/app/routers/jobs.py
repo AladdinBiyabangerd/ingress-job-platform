@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from app.account import VerifiedAccess, current_user
 from app.applications import create_application
 from app.cabinet_store import CabinetError
+from app.rate_limit import dep_ip, dep_user
 from app.sqlite_jobs import (
     DEFAULT_PER_PAGE,
     MAX_PER_PAGE,
@@ -52,6 +53,7 @@ def read_jobs(
     stack: list[str] | None = Query(None),
     salary_min: int | None = Query(None, ge=0),
     salary_max: int | None = Query(None, ge=0),
+    _rl=dep_ip("public_read"),
 ) -> dict:
     return query_jobs(
         page=page,
@@ -154,7 +156,12 @@ async def _application_body(request: Request) -> tuple[dict, tuple[str, bytes] |
 
 
 @router.post("/jobs/{job_id}/apply")
-async def apply(job_id: int, request: Request, user: VerifiedAccess = Depends(current_user)) -> dict:
+async def apply(
+    job_id: int,
+    request: Request,
+    user: VerifiedAccess = Depends(current_user),
+    _rl=dep_user("apply_cv"),
+) -> dict:
     _candidate(user)
     target = apply_target(job_id)
     if target is None:
