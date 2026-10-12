@@ -11,12 +11,17 @@ BLOCKED = [
     "Mobile Growth & Operations Manager", "Head of Sales", "Marketing Manager",
     "Customer Success Manager", "Senior Recruiter", "Financial Analyst",
     "Head of Crypto",
+    "CPQ Analyst", "Principal Product Advisor", "Product Specialist (New Grad)",
+    "Shopify Technical Specialist", "Junior Online Specialist",
+    "External Data Specialist", "Designer, Creative Services",
 ]
 KEPT = [
     "Senior Backend Engineer", "Security Risk Analyst",
     "Senior GTM AI Engineer", "GRC Analyst",
     "Salesforce Developer", "Project Manager", "Game Designer", "Product Manager",
     "Crypto Engineer", "IT Specialist",
+    "Product Designer", "UX Designer", "UI/UX Designer", "Data Analyst",
+    "Data Engineer", "CPQ Developer", "Shopify Developer", "Senior Product Manager",
 ]
 # Broad source categories that used to let business titles through.
 CATS = ["", "Engineering", "Software Development", "Tech"]

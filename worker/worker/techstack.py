@@ -635,7 +635,10 @@ _BIZ_TITLE = re.compile(
     r"marketing|customer (?:success|support|service|care|experience)|"
     r"business development|partnerships?\b|field enablement|sales enablement|"
     r"solutions consultant|\bpre[\s-]?sales\b|trust\s*(?:&|and)\s*safety|"
-    r"growth\s*(?:&|and)\s*operations|revenue operations|\brevops\b",
+    r"growth\s*(?:&|and)\s*operations|revenue operations|\brevops\b|"
+    r"\bcpq (?:analyst|specialist|consultant)|\bproduct (?:advisor|specialist)|"
+    r"\b(?:technical|shopify|online|external data|data entry) specialist|"
+    r"\bcreative services|designer,\s*creative",
     re.IGNORECASE,
 )
 _BIZ_KEEP = re.compile(
