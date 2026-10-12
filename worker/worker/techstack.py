@@ -620,6 +620,32 @@ _PHYSICAL_TITLE = re.compile(
 )
 
 
+# Business titles that are never IT, whatever the source category or tags say.
+# Only an explicit engineering/tech word in the title keeps them
+# ("Sales Engineer" stays out via _PHYSICAL_TITLE; "Security Risk Analyst",
+# "Marketing Data Analyst", "Director, Finance Systems & ERP" stay in).
+_BIZ_TITLE = re.compile(
+    r"\bsales\b|account (?:manager|executive|director|program|lead|specialist)|channel (?:account|partner|manager|sales)|"
+    r"\bclient (?:strateg|partner|services|success|manager|director|relations)|"
+    r"\blegal\b|counsel\b|lawyer|attorney|paralegal|"
+    r"\brisk (?:associate|analyst|manager|officer|specialist|lead)|"
+    r"\bgtm\b|go[\s-]to[\s-]market|strategy\s*(?:&|and)\s*operations|\bstrategist\b|"
+    r"\bfinance\b|financial|accounting|accountant|bookkeep|payroll|"
+    r"\bhr\b|human resources|recruit|talent acquisition|people (?:partner|ops|operations)|"
+    r"marketing|customer (?:success|support|service|care|experience)|"
+    r"business development|partnerships?\b|field enablement|sales enablement|"
+    r"solutions consultant|\bpre[\s-]?sales\b|trust\s*(?:&|and)\s*safety|"
+    r"growth\s*(?:&|and)\s*operations|revenue operations|\brevops\b",
+    re.IGNORECASE,
+)
+_BIZ_KEEP = re.compile(
+    r"engineer|developer|programmer|software|devops|\bsre\b|architect|full[\s-]?stack|back[\s-]?end|"
+    r"front[\s-]?end|\bqa\b|\bsdet\b|data (?:scien|analy|engineer|platform)|machine learning|\bml\b|\bai\b|"
+    r"secur|cyber|\bgrc\b|\bit\b|\berp\b|systems\b|\bcrm (?:developer|admin)|salesforce (?:developer|admin)",
+    re.IGNORECASE,
+)
+
+
 def _value_verdict(value: str) -> bool | None:
     """One source category value: True tech, False non-tech, None unclear."""
     if not value:
@@ -671,6 +697,8 @@ def is_tech_job(title: str, category: object = "", tags: object = None) -> bool:
     """The source category wins when it is clear; otherwise the title decides."""
     title = title or ""
     if _PHYSICAL_TITLE.search(title):
+        return False
+    if _BIZ_TITLE.search(title) and not _BIZ_KEEP.search(title):
         return False
     if _CRYPTO_BIZ_TITLE.search(title) and not _STRONG_TITLE.search(title):
         return False
