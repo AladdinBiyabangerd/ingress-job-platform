@@ -8,13 +8,23 @@ from worker.db import Store
 from worker.http import PoliteClient, SourceBlocked, SourceFailed
 from worker.parsing import clean, html_to_text
 
-CAP = 30
+CAP = 200
+# Main feed carries only the newest ~90 ads; IT category feeds add more.
+CATEGORY_FEEDS = tuple(
+    f"https://weworkremotely.com/categories/{c}.rss"
+    for c in (
+        "remote-full-stack-programming-jobs", "remote-back-end-programming-jobs",
+        "remote-front-end-programming-jobs", "remote-devops-sysadmin-jobs",
+        "remote-programming-jobs",
+    )
+)
 
 
 class WeWorkRemotelyConnector:
     name = "We Work Remotely"
     entry_url = "https://weworkremotely.com/remote-jobs.rss"
     remote_default = True
+    create_cap = 100
 
     def __init__(self, client: PoliteClient, store: Store) -> None:
         self.client = client
@@ -24,17 +34,22 @@ class WeWorkRemotelyConnector:
     def discover(self) -> list[str]:
         if not self.client.allowed(self.entry_url):
             raise SourceBlocked(f"robots.txt disallows {self.entry_url}")
-        try:
-            text = self.client.get_text(self.entry_url, accept="application/rss+xml,application/xml,text/xml,*/*")
-            root = ET.fromstring(text.lstrip("\ufeff").encode("utf-8"))
-        except (SourceBlocked,):
-            raise
-        except Exception as exc:
-            raise SourceFailed(f"rss unreadable: {exc.__class__.__name__}") from exc
+        items: list[ET.Element] = []
+        for i, feed in enumerate((self.entry_url,) + CATEGORY_FEEDS):
+            try:
+                text = self.client.get_text(feed, accept="application/rss+xml,application/xml,text/xml,*/*")
+                root = ET.fromstring(text.lstrip("\ufeff").encode("utf-8"))
+            except (SourceBlocked,):
+                raise
+            except Exception as exc:
+                if i == 0:
+                    raise SourceFailed(f"rss unreadable: {exc.__class__.__name__}") from exc
+                continue
+            items.extend(root.iter("item"))
         urls: list[str] = []
-        for item in root.iter("item"):
+        for item in items:
             link = _child(item, "link")
-            if not link or self.store.has_source_url(link):
+            if not link or link in self._raw or self.store.has_source_url(link):
                 continue
             if not self.client.allowed(link):
                 continue
@@ -67,7 +82,7 @@ class WeWorkRemotelyConnector:
             return {
                 "title": title,
                 "company": company,
-                "city": clean(_child(item, "region")),
+                "city": _region(clean(_child(item, "region"))),
                 "text": html_to_text(_child(item, "description")),
                 "source_url": url,
                 "source_name": self.name,
@@ -86,3 +101,11 @@ class WeWorkRemotelyConnector:
 def _child(item: ET.Element, tag: str) -> str:
     el = item.find(tag)
     return (el.text or "").strip() if el is not None else ""
+
+
+def _region(region: str) -> str:
+    """WWR's worldwide label reads like a place name; spell it as remote.
+    Locked regions ("USA Only", "Europe Only") are kept verbatim for the rules."""
+    if region.lower() in {"anywhere in the world", "anywhere"}:
+        return "Remote (Worldwide)"
+    return region

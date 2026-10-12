@@ -81,6 +81,8 @@ class RealWorkFromAnywhereConnector(FeedConnector):
     name = "Real Work From Anywhere"
     entry_url = "https://www.realworkfromanywhere.com/rss.xml"
     remote_default = True
+    candidates = 150
+    create_cap = 120
     credit_note = "Real Work From Anywhere public RSS feed."
 
     def feed_items(self) -> list[dict]:
