@@ -451,7 +451,7 @@ def _run_source(store: Store, client: PoliteClient, connector, source_id: int) -
         urls = connector.discover()
         found = len(urls)
         for url in urls:
-            if created >= CAP:
+            if created >= getattr(connector, "create_cap", CAP):
                 break
             if is_rejected(store.conn, url):
                 continue
