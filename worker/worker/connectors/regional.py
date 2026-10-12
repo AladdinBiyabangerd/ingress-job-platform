@@ -104,23 +104,36 @@ class GetOnBoardConnector(FeedConnector):
     name = "Get on Board (Latin America)"
     entry_url = "https://www.getonbrd.com/api/v0/categories/programming/jobs"
     categories = ("programming", "sysadmin-devops-qa", "data-science-analytics", "mobile-developer",
-                  "cybersecurity")
+                  "cybersecurity", "machine-learning-ai", "technical-support", "design-ux")
+    per_page = 100
+    max_pages = 10
+    candidates = 400
+    create_cap = 100
     credit_note = "Get on Board public API. Link back to getonbrd.com and name Get on Board as the source."
 
     def feed_items(self) -> list[dict]:
         out: list[dict] = []
         read = 0
         expand = quote('["company"]')
+        pages = []
         for cat in self.categories:
-            url = f"https://www.getonbrd.com/api/v0/categories/{cat}/jobs?per_page=40&page=1&expand={expand}"
-            try:
-                payload = self.client.get_json(url)
-            except NotFound:
-                continue
-            rows = payload.get("data") if isinstance(payload, dict) else None
-            if not isinstance(rows, list):
-                continue
-            read += 1
+            page, total = 1, 1
+            while page <= min(total, self.max_pages):
+                url = (f"https://www.getonbrd.com/api/v0/categories/{cat}/jobs"
+                       f"?per_page={self.per_page}&page={page}&expand={expand}")
+                try:
+                    payload = self.client.get_json(url)
+                except NotFound:
+                    break
+                rows = payload.get("data") if isinstance(payload, dict) else None
+                if not isinstance(rows, list):
+                    break
+                read += 1
+                meta = payload.get("meta") or {}
+                total = int(meta.get("total_pages") or 1)
+                pages.append(rows)
+                page += 1
+        for rows in pages:
             for row in rows:
                 attrs = (row or {}).get("attributes") or {}
                 if not attrs.get("title"):

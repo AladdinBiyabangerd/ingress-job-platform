@@ -10,7 +10,7 @@ import re
 from urllib.parse import quote, urlparse
 
 from worker.connectors.feed import FeedConnector, text_from_html
-from worker.http import SourceFailed
+from worker.http import NotFound, SourceFailed
 from worker.parsing import clean
 
 
@@ -21,14 +21,32 @@ class ArbeitnowConnector(FeedConnector):
     entry_url = "https://www.arbeitnow.com/api/job-board-api"
     require_remote_or_relocation = True
     credit_note = "Arbeitnow free Job Board API. Link back to arbeitnow.com and name Arbeitnow as the source."
+    max_pages = 5
+    candidates = 300
+    create_cap = 100
+
+    def _pages(self, base: str):
+        """Documented ?page= pagination; stop when links.next is empty."""
+        sep = "&" if "?" in base else "?"
+        for page in range(1, self.max_pages + 1):
+            url = base if page == 1 else f"{base}{sep}page={page}"
+            try:
+                payload = self.client.get_json(url)
+            except NotFound:
+                return
+            rows = payload.get("data") if isinstance(payload, dict) else None
+            if not isinstance(rows, list):
+                if page == 1:
+                    raise SourceFailed("arbeitnow payload had no data list")
+                return
+            yield rows
+            if not rows or not ((payload.get("links") or {}).get("next")):
+                return
 
     def feed_items(self) -> list[dict]:
         out: list[dict] = []
-        for url, visa in ((self.entry_url + "?visa_sponsorship=true", True), (self.entry_url, False)):
-            payload = self.client.get_json(url)
-            rows = payload.get("data") if isinstance(payload, dict) else None
-            if not isinstance(rows, list):
-                raise SourceFailed("arbeitnow payload had no data list")
+        for base, visa in ((self.entry_url + "?visa_sponsorship=true", True), (self.entry_url, False)):
+          for rows in self._pages(base):
             for job in rows:
                 if not isinstance(job, dict):
                     continue
@@ -61,15 +79,26 @@ class HimalayasConnector(FeedConnector):
         "Himalayas Remote Jobs API. Show a visible link back to himalayas.app and say the "
         "data is sourced from Himalayas."
     )
-    queries = ("software", "developer", "devops", "data engineer")
+    queries = ("software", "developer", "devops", "data engineer", "qa engineer",
+               "security engineer", "machine learning", "mobile developer")
+    # Search returns 20 per page; read at most 5 pages per query, once a day.
+    max_pages = 5
+    candidates = 400
+    create_cap = 150
 
     def feed_items(self) -> list[dict]:
         out: list[dict] = []
         for q in self.queries:
-            payload = self.client.get_json(f"{self.entry_url}?q={quote(q)}&sort=recent")
+          for page in range(1, self.max_pages + 1):
+            url = f"{self.entry_url}?q={quote(q)}&sort=recent" + (f"&page={page}" if page > 1 else "")
+            payload = self.client.get_json(url)
             jobs = payload.get("jobs") if isinstance(payload, dict) else None
             if not isinstance(jobs, list):
-                raise SourceFailed("himalayas payload had no jobs list")
+                if page == 1:
+                    raise SourceFailed("himalayas payload had no jobs list")
+                break
+            if not jobs:
+                break
             for job in jobs:
                 if not isinstance(job, dict):
                     continue
