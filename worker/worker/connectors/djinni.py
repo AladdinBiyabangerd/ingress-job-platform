@@ -41,8 +41,12 @@ IT_KEYWORDS: tuple[str, ...] = (
     "delivery_manager", "scrum_master", "product_owner", "ui_ux",
     "product_design", "ux_research", "finops", "no_code", "web_analyst",
 )
-# Detail pages fetched per run (1 req/s politeness => ~10 min worst case).
-MAX_CANDIDATES = 600
+# Detail pages fetched per run. Measured ~1.15 s/page with politeness, so a
+# full first pass is ~38 min; later hourly runs only open new links.
+# The RSS carries no location/remote field (only title, link, description,
+# category) and Djinni's employment=office slice overlaps remote ads, so no
+# location prefilter is safe; remote-slice links are just opened first.
+MAX_CANDIDATES = 2000
 RETRIES = 3
 BACKOFF = (2.0, 6.0)
 
@@ -96,6 +100,7 @@ class DjinniConnector:
         seen: set[str] = set()
         st = {"feeds": 0, "feed_errors": 0, "items": 0, "known": 0, "non_it": 0}
         self.rss_meta: dict[str, dict] = {}
+        self._remote_links: set[str] = set()
         queue = self.feed_urls()
         i = 0
         while i < len(queue):
@@ -113,6 +118,8 @@ class DjinniConnector:
                 queue.append(feed + "&employment=remote")
             for item in items:
                 link = _link(item)
+                if link and "employment=remote" in feed:
+                    self._remote_links.add(link)
                 if not link or not _JOB.search(link) or link in seen:
                     continue
                 seen.add(link)
@@ -139,6 +146,9 @@ class DjinniConnector:
         if conn is not None:
             conn.commit()
         st["candidates"] = len(urls)
+        # Order only (never accept/reject): links seen in remote slices first.
+        remote_first = [u for u in urls if u in self._remote_links]
+        urls = remote_first + [u for u in urls if u not in self._remote_links]
         urls = urls[: self.max_candidates]
         self.stats = st
         return urls
