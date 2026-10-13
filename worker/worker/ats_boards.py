@@ -148,4 +148,14 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
     # ---- Pinpoint ({company}.pinpointhq.com/postings.json)
     ("Pinpoint boards (Remote)", "pinpoint", "Remote və ya relocation siqnallı Pinpoint lövhələri", (
         "rowdentech", "tabby", "trilongroup", "wealthwizards")),
+    # ---- Workable (apply.workable.com widget): slug sweep + dry-run 2026-10-13
+    ("Workable boards (Remote & relocation 1)", "workable", "Relocation və ya remote siqnallı Workable lövhələri", (
+        "deeplight", "arondite", "rebellion", "newcode", "hack-the-box-ltd",
+        "nology", "nu-quantum", "payabl", "smartnews", "aurora-3",
+        "comeon-group", "covergo", "rapyuta-robotics", "libertexgroup", "pinely",
+        "goreel", "3-oaks-gaming")),
+    # ---- Recruitee ({company}.recruitee.com/api/offers/): slug sweep + dry-run 2026-10-13
+    ("Recruitee boards (Remote & relocation 1)", "recruitee", "Relocation və ya remote siqnallı Recruitee lövhələri", (
+        "ascendingai", "topicsoftwaredevelopment", "kaizo", "riverflex", "shypple",
+        "erstedigital", "surfly", "taroko")),
 ]
