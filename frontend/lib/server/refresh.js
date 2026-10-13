@@ -90,7 +90,7 @@ export async function refreshAdminApplications() {
   }
 }
 
-/** Full moderation ad for edit (list rows only carry a text preview). */
+/** Full moderation ad for edit (queue list rows omit body text). */
 export async function fetchAdminJob(id) {
   const jobId = numericId(id);
   if (!jobId) throw new Error("load");

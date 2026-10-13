@@ -470,6 +470,8 @@ def _owner(row: sqlite3.Row) -> dict:
     }
     if "owner_subject" in keys:
         payload["owner_subject"] = row["owner_subject"] or ""
+    if "source_name" in keys:
+        payload["source_name"] = row["source_name"] or ""
     return payload
 
 
@@ -709,36 +711,45 @@ def _moderation_row(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None
     ).fetchone()
 
 
-_TEXT_PREVIEW = 400
+_MOD_SOURCE_JOIN = """
+LEFT JOIN (
+    SELECT job_id, source_name
+    FROM job_sources
+    WHERE id IN (SELECT MIN(id) FROM job_sources GROUP BY job_id)
+) js ON js.job_id = j.id
+"""
 
 
 def list_moderation() -> list[dict]:
     """Pending company and scraped ads first, then other company statuses.
 
-    Scraped rows appear only while pending. List rows carry a short body;
-    edit loads the full ad via get_moderation.
+    Scraped rows appear only while pending. List rows omit body text;
+    edit loads the full ad via get_moderation. source_name is the first
+    crawl source when present (empty for company-only ads).
     """
     conn = _connect()
     try:
         rows = conn.execute(
             f"""
-            SELECT id, title, company, city, remote,
-                   substr(text, 1, {_TEXT_PREVIEW}) AS text,
-                   language, salary,
-                   job_type, status, created_at, updated_at, reject_reason,
-                   '' AS apply_form, owner_subject
-            FROM jobs
-            WHERE owner_subject != ''
-               OR (COALESCE(owner_subject, '') = '' AND status = ?)
+            SELECT j.id, j.title, j.company, j.city, j.remote,
+                   '' AS text,
+                   j.language, j.salary,
+                   j.job_type, j.status, j.created_at, j.updated_at, j.reject_reason,
+                   '' AS apply_form, j.owner_subject,
+                   COALESCE(js.source_name, '') AS source_name
+            FROM jobs j
+            {_MOD_SOURCE_JOIN}
+            WHERE j.owner_subject != ''
+               OR (COALESCE(j.owner_subject, '') = '' AND j.status = ?)
             ORDER BY
-                CASE status
+                CASE j.status
                     WHEN 'pending' THEN 0
                     WHEN 'published' THEN 1
                     WHEN 'closed' THEN 2
                     WHEN 'rejected' THEN 3
                     ELSE 4
                 END,
-                id DESC
+                j.id DESC
             """,
             (PENDING,),
         ).fetchall()

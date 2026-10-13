@@ -1,27 +1,25 @@
 # Current task
 
 ## Completed
-- Scraped ads no longer auto-publish: worker upsert inserts `pending`
-- Pending scraped ads appear in admin moderation queue
-- Single + bulk approve (`approve-bulk`); reject without owner notification for scraped
-- Collected tab shows pending/rejected status badges
+- Admin moderation queue redesigned from bulky cards to a compact table list
+- Queue API now returns `source_name` (first crawl source) and omits body text
+- Columns: ingested date, title, source, approve/reject (original-date column removed — never stored)
 
 ## Current state
-- New scrapes wait for staff approve before public board
-- Existing published scraped rows stay published on re-scrape
+- `/admin` queue tab is a thin table; title click opens edit; approve/reject stay on the row
 
 ## Decisions
-- Queue includes company ads (all statuses) + scraped only while `pending`
-- Bulk approve skips non-pending / unknown ids (partial success)
+- `created_at` = when the ad was ingested into Ingress Job
+- No original-post-date column until the field exists in the DB
+- Company ads without `job_sources` show source label "Şirkət" / Company
+- Bulk select + bulk approve kept above the table
 
 ## Remaining work
-- Manual QA: crawl or insert pending scraped → `/admin` queue → approve one / select-all → appears on board
+- Manual QA on `/admin` with a full pending queue
 
 ## Relevant files
-- `worker/worker/db.py`
-- `api/app/cabinet_store.py`
-- `api/app/routers/admin.py`
 - `frontend/components/admin.js`
-- `frontend/components/collected-admin.js`
+- `frontend/app/globals.css`
 - `frontend/lib/copy.js`
-- `frontend/lib/server/refresh.js`
+- `api/app/cabinet_store.py`
+- `api/tests/test_admin.py`

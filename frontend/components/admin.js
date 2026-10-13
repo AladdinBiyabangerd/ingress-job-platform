@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { applyFormFromJob, applyFormPayload, applyFormReady } from "../lib/apply-form";
-import { hrefFor, languageLabel, text } from "../lib/copy";
+import { hrefFor, text } from "../lib/copy";
+import { calendarDate } from "../lib/dates";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
 import {
   adminActJob,
@@ -43,6 +44,19 @@ function statusClass(status) {
   if (status === "closed") return "source-pill closed";
   if (status === "rejected") return "source-pill rejected";
   return "source-pill";
+}
+
+function sourceLabel(t, job) {
+  const name = String(job.source_name || "").trim();
+  if (name) return name;
+  if (job.owner_subject) return t.adminCompanySource;
+  return t.adminCollectedBadge;
+}
+
+function dateCell(value, locale, fallback) {
+  const label = calendarDate(value, locale);
+  if (!label) return fallback;
+  return <time dateTime={String(value).slice(0, 10)}>{label}</time>;
 }
 
 function fromJob(locale, job) {
@@ -265,10 +279,8 @@ export function Admin({
       <PageChrome
         backHref={hrefFor(locale)}
         backLabel={t.breadcrumbHome}
-        title={t.adminTitle}
       />
-      <p className="hint h2-employer-hint" title={t.adminLede}>{t.adminLede}</p>
-      <div className="h2-tabs" role="tablist" aria-label={t.adminTitle}>
+      <div className="h2-tabs" role="tablist" aria-label={t.admin}>
         <button
           type="button"
           role="tab"
@@ -430,97 +442,118 @@ export function Admin({
                 {selectedCount ? <span className="hint">{t.adminSelectedCount(selectedCount)}</span> : null}
               </div>
             ) : null}
-            <div className="h2-ad-list">
-              {pageItems.map((job) => (
-                <article key={job.id} className={`h2-ad-row${job.status === "closed" || job.status === "rejected" ? " is-muted" : ""}`}>
-                  <div className="h2-ad-row-top">
-                    {job.status === "pending" ? (
-                      <label className="inline admin-select">
-                        <input
-                          type="checkbox"
-                          checked={selected.has(job.id)}
-                          onChange={() => toggleSelected(job.id)}
-                        />
-                      </label>
-                    ) : null}
-                    <span className={statusClass(job.status)}>{statusLabel(t, job.status)}</span>
-                    {!job.owner_subject ? (
-                      <span className="source-pill">{t.adminCollectedBadge}</span>
-                    ) : null}
-                    <h2 className="h2-ad-title">
-                      {job.status === "published" ? (
-                        <a href={hrefFor(locale, { jobId: job.id })}>{job.title}</a>
-                      ) : (
-                        job.title
-                      )}
-                    </h2>
-                  </div>
-                  <div className="meta">
-                    <span>{job.company || t.noCompany}</span>
-                    <span>{job.remote ? t.placeRemote : job.city || t.noCity}</span>
-                    <span>{languageLabel(locale, job.language)}</span>
-                    {job.job_type ? <span>{typeLabel(t, job.job_type)}</span> : null}
-                    {job.salary ? <span>{job.salary}</span> : null}
-                  </div>
-                  {job.text ? (
-                    <p className="admin-body">
-                      {job.text.length > 280 ? `${job.text.slice(0, 280)}…` : job.text}
-                    </p>
-                  ) : null}
-                  {job.reject_reason ? <p className="note">{t.rejectReason}: {job.reject_reason}</p> : null}
-                  <div className="ad-actions">
-                    {job.status !== "closed" ? (
-                      <button
-                        type="button"
-                        className="btn ink"
-                        onClick={() => {
-                          setError("");
-                          setNote("");
-                          setBusy(true);
-                          fetchAdminJob(job.id)
-                            .then((full) => {
-                              setEditing(job.id);
-                              setForm(fromJob(locale, full));
-                            })
-                            .catch(() => setError(t.loadError))
-                            .finally(() => setBusy(false));
-                        }}
-                        disabled={busy}
-                      >
-                        {t.adEdit}
-                      </button>
-                    ) : null}
-                    {job.status === "pending" ? (
-                      <>
-                        <button
-                          type="button"
-                          className="btn ink"
-                          onClick={() => act(job, "approve", null, t.adminApprovedNote)}
-                        >
-                          {t.adminApprove}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn red"
-                          onClick={() => rejectJob(job)}
-                        >
-                          {t.adminReject}
-                        </button>
-                      </>
-                    ) : null}
-                    {job.status !== "closed" && job.owner_subject ? (
-                      <button
-                        type="button"
-                        className="btn red"
-                        onClick={() => act(job, "close", t.adCloseAsk, t.adClosedNote)}
-                      >
-                        {t.adClose}
-                      </button>
-                    ) : null}
-                  </div>
-                </article>
-              ))}
+            {items.length ? (
+            <div className="admin-mod-table-wrap">
+              <table className="admin-mod-table">
+                <thead>
+                  <tr>
+                    <th className="admin-mod-check" scope="col">
+                      <span className="visually-hidden">{t.adminSelectAllPending}</span>
+                    </th>
+                    <th scope="col">{t.adminColIngested}</th>
+                    <th scope="col">{t.adminColTitle}</th>
+                    <th scope="col">{t.adminColSource}</th>
+                    <th className="admin-mod-actions" scope="col">{t.adminColActions}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageItems.map((job) => {
+                    const muted = job.status === "closed" || job.status === "rejected";
+                    const ingested = dateCell(job.created_at, locale, t.adminDateUnknown);
+                    return (
+                      <tr key={job.id} className={muted ? "is-muted" : undefined}>
+                        <td className="admin-mod-check">
+                          {job.status === "pending" ? (
+                            <label className="inline admin-select">
+                              <input
+                                type="checkbox"
+                                checked={selected.has(job.id)}
+                                onChange={() => toggleSelected(job.id)}
+                              />
+                            </label>
+                          ) : null}
+                        </td>
+                        <td className="admin-mod-date">{ingested}</td>
+                        <td className="admin-mod-title">
+                          <div className="admin-mod-title-row">
+                            {job.status === "published" ? (
+                              <a className="admin-mod-name" href={hrefFor(locale, { jobId: job.id })}>
+                                {job.title}
+                              </a>
+                            ) : job.status !== "closed" ? (
+                              <button
+                                type="button"
+                                className="admin-mod-name linkish"
+                                disabled={busy}
+                                onClick={() => {
+                                  setError("");
+                                  setNote("");
+                                  setBusy(true);
+                                  fetchAdminJob(job.id)
+                                    .then((full) => {
+                                      setEditing(job.id);
+                                      setForm(fromJob(locale, full));
+                                    })
+                                    .catch(() => setError(t.loadError))
+                                    .finally(() => setBusy(false));
+                                }}
+                              >
+                                {job.title}
+                              </button>
+                            ) : (
+                              <span className="admin-mod-name">{job.title}</span>
+                            )}
+                            <span className={statusClass(job.status)}>{statusLabel(t, job.status)}</span>
+                          </div>
+                          {job.company ? <span className="admin-mod-sub">{job.company}</span> : null}
+                          {job.reject_reason ? (
+                            <span className="admin-mod-sub admin-mod-reject">
+                              {t.rejectReason}: {job.reject_reason}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="admin-mod-source">{sourceLabel(t, job)}</td>
+                        <td className="admin-mod-actions">
+                          <div className="admin-mod-action-row">
+                            {job.status === "pending" ? (
+                              <>
+                                <button
+                                  type="button"
+                                  className="btn small ink"
+                                  disabled={busy}
+                                  onClick={() => act(job, "approve", null, t.adminApprovedNote)}
+                                >
+                                  {t.adminApprove}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn small red"
+                                  disabled={busy}
+                                  onClick={() => rejectJob(job)}
+                                >
+                                  {t.adminReject}
+                                </button>
+                              </>
+                            ) : null}
+                            {job.status !== "closed" && job.owner_subject ? (
+                              <button
+                                type="button"
+                                className="btn small red"
+                                disabled={busy}
+                                onClick={() => act(job, "close", t.adCloseAsk, t.adClosedNote)}
+                              >
+                                {t.adClose}
+                              </button>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
+            ) : null}
             <Pager
               locale={locale}
               currentPage={currentPage}

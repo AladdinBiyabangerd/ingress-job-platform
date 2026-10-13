@@ -323,7 +323,15 @@ class AdminTests(unittest.TestCase):
                 """,
                 (f"Scraped {index}", "2026-10-13T12:00:00+04:00", f"scraped-pending-{index}"),
             )
-            ids.append(int(cur.lastrowid))
+            job_id = int(cur.lastrowid)
+            conn.execute(
+                """
+                INSERT INTO job_sources (job_id, source_name, source_url, external_id, last_seen)
+                VALUES (?, 'busy.az', ?, '', '2026-10-13T12:00:00+04:00')
+                """,
+                (job_id, f"https://secret.example/scraped-{index}"),
+            )
+            ids.append(job_id)
         live = conn.execute(
             """
             INSERT INTO jobs (
@@ -342,12 +350,16 @@ class AdminTests(unittest.TestCase):
         with self._auth("job:staff", "admin-staff"):
             queue = self.client.get("/api/v1/admin/jobs", headers={"Authorization": "Bearer test"})
             self.assertEqual(queue.status_code, 200, queue.text)
+            self.assertNotIn("secret.example", queue.text)
             pending_ids = [item["id"] for item in queue.json()["items"] if item["status"] == "pending"]
             self.assertEqual(set(pending_ids), set(ids))
             self.assertNotIn(live_id, pending_ids)
             for item in queue.json()["items"]:
                 if item["id"] in ids:
                     self.assertEqual(item.get("owner_subject") or "", "")
+                    self.assertEqual(item.get("source_name"), "busy.az")
+                    self.assertEqual(item.get("text") or "", "")
+                    self.assertEqual(item.get("created_at"), "2026-10-13T12:00:00+04:00")
 
             one = self.client.post(
                 f"/api/v1/admin/jobs/{ids[0]}/approve",
