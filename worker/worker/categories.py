@@ -111,8 +111,57 @@ BASE_SEED = [
 
 # Added 2026-10-13. Lower priority numbers than the broad base rules, so at the
 # same match position the specific category wins ("Data Engineer" → Data
-# Engineering, not Data/ML).
-EXTRA_SEED: list[dict] = []
+# Engineering, not Data/ML). Their stack groups rank after the base groups, so
+# the stack fallback only picks them when they clearly outnumber the others.
+# Cloud Architecture, Network Engineering and Technical Writing were tried and
+# had no visible jobs in the local database (2026-10-13); staff can add them.
+EXTRA_SEED: list[dict] = [
+    _c("Engineering Management", "Mühəndislik rəhbərliyi", "Engineering management",
+       "Руководство разработкой", 105, 1, 100,
+       r"engineering manager|head of (?:engineering|development|software)|director of engineering|"
+       r"engineering director|vp,? (?:of )?engineering|\bcto\b|chief technology officer|"
+       r"development manager|software development manager"),
+    _c("Embedded/IoT", "Embedded / IoT", "Embedded / IoT", "Embedded / IoT", 45, 2, 20,
+       r"embedded|firmware|\biot\b|\bfpga\b|\brtos\b|microcontroller|hardware engineer|"
+       r"flight software|\badas\b|\becu\b|autosar|device driver|\bbsp\b|robotics software",
+       ["Arduino", "STM32", "RTOS", "Embedded Linux", "MQTT", "Verilog", "VHDL"]),
+    _c("Game Development", "Oyun hazırlanması", "Game development", "Разработка игр", 47, 3, 21,
+       r"\bgames?\b|gameplay|unity (?:developer|engineer)|unreal",
+       ["Unity", "Unreal Engine", "Godot"]),
+    _c("Blockchain/Web3", "Blokçeyn / Web3", "Blockchain / Web3", "Блокчейн / Web3", 48, 4, 22,
+       r"blockchain|web ?3|solidity|smart contract|crypto(?!graph)|\bdefi\b|\bnfts?\b|ethereum|solana",
+       ["Solidity", "Ethereum", "Web3.js", "Solana", "Hardhat"]),
+    _c("AI/LLM", "Süni intellekt / LLM", "AI / LLM engineering", "ИИ / LLM", 62, 5, 23,
+       r"\bllms?\b|generative ai|gen ?ai|\bai (?:engineer|developer|researcher|architect|"
+       r"specialist|lead|agents?|platform|product engineer)|applied ai|prompt engineer|"
+       r"ai/ml engineer|\bagentic\b|\brag\b",
+       ["LLM", "LangChain", "OpenAI", "LlamaIndex", "RAG", "Hugging Face"]),
+    _c("Data Engineering", "Data mühəndisliyi", "Data engineering", "Data-инжиниринг", 64, 6, 24,
+       r"data engineer|data platform|\betl\b|data pipeline|analytics engineer|big data|"
+       r"data warehouse|database (?:engineer|developer|administrator)|\bdba\b",
+       ["Airflow", "dbt", "Spark", "Snowflake", "Databricks", "Kafka"]),
+    _c("Data Analytics/BI", "Data analitika / BI", "Data analytics / BI", "Аналитика данных / BI",
+       66, 7, 25,
+       r"data analyst|\bbi\b|business intelligence|analytics(?! engineer)|power bi|tableau|"
+       r"looker|reporting analyst|insights analyst",
+       ["Tableau", "Power BI", "Looker", "Metabase", "Qlik"]),
+    _c("SRE/Platform", "SRE / Platforma", "SRE / Platform", "SRE / Платформа", 52, 8, 100,
+       r"\bsre\b|site reliability|reliability engineer|platform (?:engineer|developer|lead|"
+       r"architect|team)"),
+    _c("System Administration", "Sistem administrasiyası", "System administration",
+       "Системное администрирование", 58, 12, 100,
+       r"sys ?admin|system(?:s)? admin\w*|(?:linux|windows|unix) (?:admin\w*|engineer)|"
+       r"администратор|адміністратор"),
+    _c("ERP/CRM", "ERP / CRM", "ERP / CRM", "ERP / CRM", 85, 13, 26,
+       r"\bsap\b|salesforce|dynamics 365|\bd365\b|\bodoo\b|\berp\b|\bcrm\b|servicenow|\b1c\b|"
+       r"netsuite|oracle (?:ebs|fusion|apps)|workday",
+       ["SAP", "Salesforce", "Apex", "Odoo", "ServiceNow"]),
+    _c("Solutions Engineering", "Solutions / Pre-sales", "Solutions / Pre-sales",
+       "Solutions / Pre-sales", 107, 15, 100,
+       r"solutions? (?:engineer|architect|consultant)|pre-?sales|sales engineer|customer engineer|"
+       r"forward deployed|implementation engineer|integration engineer|technical account manager|"
+       r"customer success engineer"),
+]
 
 SEED = BASE_SEED + EXTRA_SEED
 
@@ -262,3 +311,70 @@ def validate_pattern(pattern: str) -> str:
     except re.error as exc:
         return str(exc)
     return ""
+
+
+RECATEGORISE_STEP = "recategorise-extra-categories-2026-10-13"
+
+
+def recategorise(conn, current: Rules | None = None, *, only: str | None = None) -> dict:
+    """Re-run classification on collected rows with `current` rules.
+
+    Only jobs.category is written (status, hidden, updated_at untouched).
+    The source board's category is not stored, so a row is changed only when
+    the current rules answer differently from the built-in 12 rules for the
+    same title/stack (the change comes from a category edit), or when its
+    stored category is inactive or not one of the built-in 12. The caller
+    commits.
+    """
+    from worker.techstack import classify_category
+
+    current = current or rules()
+    base = Rules(BASE_SEED)
+    base_slugs = set(base.slugs)
+    sql = """
+        SELECT id, title, COALESCE(tech_stack, '') AS tech_stack, COALESCE(category, '') AS category
+        FROM jobs WHERE COALESCE(owner_subject, '') = '' AND COALESCE(category, '') NOT IN ('', '-')
+    """
+    params: list = []
+    if only:
+        sql += " AND category = ?"
+        params.append(only)
+    scanned = changed = 0
+    moves: dict[str, int] = {}
+    for row in conn.execute(sql, params).fetchall():
+        scanned += 1
+        try:
+            stack = json.loads(row["tech_stack"] or "[]")
+        except (TypeError, ValueError):
+            stack = []
+        stack = [str(x) for x in stack] if isinstance(stack, list) else []
+        title = str(row["title"] or "")
+        stored = str(row["category"])
+        new = classify_category("", title, stack, rules=current)
+        if stored not in current.active or stored not in base_slugs:
+            target = new
+        else:
+            target = new if new != classify_category("", title, stack, rules=base) else stored
+        if target != stored:
+            conn.execute("UPDATE jobs SET category = ? WHERE id = ?", (target, row["id"]))
+            changed += 1
+            key = f"{stored} -> {target}"
+            moves[key] = moves.get(key, 0) + 1
+    return {"scanned": scanned, "changed": changed, "moves": moves}
+
+
+def recategorise_once(conn) -> int:
+    """One-shot recategorise after the extra categories were seeded."""
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS maintenance_steps (name TEXT PRIMARY KEY, done_at TEXT NOT NULL)"
+    )
+    if conn.execute(
+        "SELECT 1 FROM maintenance_steps WHERE name = ?", (RECATEGORISE_STEP,)
+    ).fetchone():
+        return 0
+    result = recategorise(conn)
+    conn.execute(
+        "INSERT INTO maintenance_steps (name, done_at) VALUES (?, ?) ON CONFLICT (name) DO NOTHING",
+        (RECATEGORISE_STEP, _now()),
+    )
+    return int(result["changed"])

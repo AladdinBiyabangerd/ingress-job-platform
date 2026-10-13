@@ -260,6 +260,9 @@ class Store:
 
             self.categories_seeded = ensure_categories(self.conn)
             reload_rules(self.conn)
+            from worker.categories import recategorise_once
+
+            self.recategorised = recategorise_once(self.conn)
             self.cv_queue_enqueued = ensure_cv_queue(self.conn)
             from worker.market_fit import ensure_rejects_table
 

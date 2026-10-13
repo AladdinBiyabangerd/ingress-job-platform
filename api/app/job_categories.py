@@ -240,56 +240,17 @@ def reorder(slugs: list[str]) -> list[dict]:
 
 
 def recategorise(only: str | None = None) -> dict:
-    """Re-run classification on collected rows with the current table rules.
-
-    Only jobs.category is written (status, hidden, updated_at untouched).
-    The source board's category is not stored, so a row is changed only when
-    the current rules give a different answer than the built-in 12 rules
-    would for the same title/stack (i.e. the change comes from a category
-    edit), or when its stored category is inactive/unknown.
-    """
-    from worker.techstack import classify_category
-
+    """Rewrite only jobs.category with the current table rules
+    (see worker.categories.recategorise)."""
     invalidate()
     current = wcat.set_rules(all_rows())
-    base = wcat.Rules(wcat.BASE_SEED)
-    base_slugs = set(base.slugs)
     conn = _rw_conn()
-    scanned = changed = 0
-    moves: dict[str, int] = {}
     try:
-        sql = """
-            SELECT id, title, COALESCE(tech_stack, '') AS tech_stack, COALESCE(category, '') AS category
-            FROM jobs WHERE COALESCE(owner_subject, '') = '' AND COALESCE(category, '') NOT IN ('', '-')
-        """
-        params: list = []
-        if only:
-            sql += " AND category = ?"
-            params.append(only)
-        for row in conn.execute(sql, params).fetchall():
-            scanned += 1
-            try:
-                stack = json.loads(row["tech_stack"] or "[]")
-            except (TypeError, ValueError):
-                stack = []
-            stack = [str(x) for x in stack] if isinstance(stack, list) else []
-            title = str(row["title"] or "")
-            stored = str(row["category"])
-            new = classify_category("", title, stack, rules=current)
-            if stored not in current.active or stored not in base_slugs:
-                target = new
-            else:
-                old = classify_category("", title, stack, rules=base)
-                target = new if new != old else stored
-            if target != stored:
-                conn.execute("UPDATE jobs SET category = ? WHERE id = ?", (target, row["id"]))
-                changed += 1
-                key = f"{stored} → {target}"
-                moves[key] = moves.get(key, 0) + 1
+        result = wcat.recategorise(conn, current, only=only)
         conn.commit()
     finally:
         conn.close()
     from app import sqlite_jobs
 
     sqlite_jobs._FACETS_MEMO = None
-    return {"scanned": scanned, "changed": changed, "moves": moves}
+    return result
