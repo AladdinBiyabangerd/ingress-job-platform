@@ -1,26 +1,27 @@
 # Current task
 
 ## Completed
-- Moderasiya: Academy `job-ops-status` dizaynı ilə Status tabı
-- Proxy: `GET /api/auth/admin/ops-status?days=`
-- KPI, LinkedIn extension, mənbələr / AI detalları (Academy layout)
+- Profile review: dinamik skill tövsiyələri (family + pair + role)
+- `GET /api/v1/skills/related` + BFF `/api/skills/related`
+- UI: fokus pill → suggest chips → kliklə əlavə
 
 ## Current state
-- Uncommitted: ops status tab + prior admin queue polish
+- Ready for browser QA on `/profile/review` Experience tab
 
 ## Decisions
-- Staff Moderasiya tabı; eyni `/api/v1/admin/ops-status` payload
-- Period: 1/7/30 + custom → rolling `days` (API 1–90)
-- Visual: Job tokenləri, Academy strukturu (KPI grid, chips, tables, pills)
+- Hybrid ranking: dictionary family → skill_pair_daily → role_skill_weight
+- Focus click selects; second click on focused pill edits (draft + remove)
+- “Spring Boot” is synonym of Spring — family shows Spring* siblings
 
 ## Remaining work
-- Browser QA on `/admin` → Status
+- Browser QA (Spring / CI/CD focus)
 - Commit when asked
 
 ## Relevant files
-- `frontend/components/admin-ops-status.js`
-- `frontend/components/admin.js`
-- `frontend/app/api/auth/admin/ops-status/route.js`
+- `api/app/skill_related.py`
+- `api/app/routers/trends.py`
+- `api/tests/test_skill_related.py`
+- `frontend/app/api/skills/related/route.js`
+- `frontend/components/profile-review.js`
 - `frontend/lib/copy.js`
 - `frontend/app/globals.css`
-- `api/app/ops_status.py`

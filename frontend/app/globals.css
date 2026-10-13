@@ -2903,6 +2903,61 @@ textarea { min-height: 120px; resize: vertical; }
   outline: none;
 }
 
+.skill-pill-focus {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.skill-pill-focus .skill-pill-main {
+  background: transparent;
+}
+
+.skill-pill-focus .skill-pill-remove {
+  border-left-color: color-mix(in srgb, var(--brand) 35%, var(--border));
+  background: transparent;
+}
+
+.skill-suggest {
+  display: grid;
+  gap: 4px;
+}
+
+.skill-suggest-label {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.skill-suggest-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.skill-suggest-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 3px 9px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: var(--fw-medium);
+  letter-spacing: -0.01em;
+  cursor: pointer;
+}
+
+.skill-suggest-chip:hover,
+.skill-suggest-chip:focus-visible {
+  border-color: var(--brand);
+  border-style: solid;
+  background: var(--brand-soft);
+  color: var(--brand);
+  outline: none;
+}
+
 .profile-review-page .work-block {
   border-color: var(--border);
   background: var(--canvas);

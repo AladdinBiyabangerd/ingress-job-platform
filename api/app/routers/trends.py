@@ -3,6 +3,11 @@
 from fastapi import APIRouter, Header, HTTPException, Query
 
 from app.rate_limit import dep_ip
+from app.skill_related import (
+    MAX_LIMIT as RELATED_MAX_LIMIT,
+    NAME_MAX as RELATED_NAME_MAX,
+    related_skills_from_query,
+)
 from app.trends import (
     MAX_DETAIL_JOBS,
     MAX_LIMIT,
@@ -32,6 +37,17 @@ def _optional_user_id(authorization: str | None) -> str | None:
     if "job:candidate" not in scopes and "job:staff" not in scopes:
         return None
     return str(user.subject or "").strip() or None
+
+
+@router.get("/skills/related")
+def read_related_skills(
+    name: str = Query(default="", max_length=RELATED_NAME_MAX),
+    exclude: str | None = Query(default=None, max_length=800),
+    limit: int | None = Query(default=None, ge=1, le=RELATED_MAX_LIMIT),
+    _rl=dep_ip("public_read"),
+) -> dict:
+    """Companion skill suggestions for profile review (family + pairs + roles)."""
+    return related_skills_from_query(name=name, exclude=exclude, limit=limit)
 
 
 @router.get("/trends")

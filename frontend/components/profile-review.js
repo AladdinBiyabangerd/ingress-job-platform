@@ -63,6 +63,14 @@ function emptyLang() {
   return { code: "", level: "" };
 }
 
+function skillNamesLower(list) {
+  return new Set(
+    (Array.isArray(list) ? list : [])
+      .map((item) => String(item?.name || "").trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
+
 function snapshotFromPayload(data) {
   const profile = data?.profile || {};
   const contact = profile.contact || {};
@@ -237,6 +245,12 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
   const [languages, setLanguages] = useState(() => seedSnap?.languages || []);
   const [skillDraft, setSkillDraft] = useState("");
   const [skillYearsDraft, setSkillYearsDraft] = useState("");
+  const [focusSkill, setFocusSkill] = useState(() => {
+    const initial = seedSnap?.skills || [];
+    const last = initial[initial.length - 1];
+    return last?.name ? String(last.name) : "";
+  });
+  const [skillSuggestions, setSkillSuggestions] = useState([]);
   const [lowFields, setLowFields] = useState(() => seedSnap?.lowFields || []);
   const [rolesPayload, setRolesPayload] = useState(() => (seededRoles ? initialRoles : null));
   const [error, setError] = useState("");
@@ -296,6 +310,61 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
       cancelled = true;
     };
   }, [initialMe]);
+
+  useEffect(() => {
+    if (!skills.length) {
+      if (focusSkill) setFocusSkill("");
+      return;
+    }
+    const names = skillNamesLower(skills);
+    if (focusSkill && names.has(focusSkill.toLowerCase())) return;
+    const last = skills[skills.length - 1];
+    const next = String(last?.name || "").trim();
+    if (next && next !== focusSkill) setFocusSkill(next);
+  }, [skills, focusSkill]);
+
+  useEffect(() => {
+    const name = String(focusSkill || "").trim();
+    if (!name) {
+      setSkillSuggestions([]);
+      return undefined;
+    }
+    const controller = new AbortController();
+    const exclude = skills
+      .map((item) => String(item?.name || "").trim())
+      .filter(Boolean)
+      .join(",");
+    const params = new URLSearchParams({ name, limit: "8" });
+    if (exclude) params.set("exclude", exclude);
+    const timer = window.setTimeout(() => {
+      fetch(`/api/skills/related?${params}`, {
+        cache: "no-store",
+        signal: controller.signal,
+      })
+        .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+        .then(({ ok, data }) => {
+          if (!ok) {
+            setSkillSuggestions([]);
+            return;
+          }
+          const owned = skillNamesLower(skills);
+          const items = Array.isArray(data?.items) ? data.items : [];
+          setSkillSuggestions(
+            items
+              .map((item) => String(item?.name || "").trim())
+              .filter((itemName) => itemName && !owned.has(itemName.toLowerCase())),
+          );
+        })
+        .catch((err) => {
+          if (err?.name === "AbortError") return;
+          setSkillSuggestions([]);
+        });
+    }, 180);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [focusSkill, skills]);
 
   const allowed = Boolean(me?.authenticated && (me.candidate || me.staff));
 
@@ -516,6 +585,8 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
     setGithub("");
     setPortfolio("");
     setSkills([]);
+    setFocusSkill("");
+    setSkillSuggestions([]);
     setWork([emptyWork()]);
     setEducation([]);
     setLanguages([]);
@@ -536,6 +607,8 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
     setGithub("");
     setPortfolio("");
     setSkills([]);
+    setFocusSkill("");
+    setSkillSuggestions([]);
     setWork([]);
     setEducation([]);
     setLanguages([]);
@@ -617,21 +690,36 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
     }
   }
 
+  function addSkillByName(name, years = "") {
+    const cleaned = String(name || "").trim();
+    if (!cleaned) return false;
+    if (skills.some((item) => item.name.toLowerCase() === cleaned.toLowerCase())) {
+      setFocusSkill(cleaned);
+      return false;
+    }
+    setSkills((current) => [
+      ...current,
+      { name: cleaned, years: formatYears(years), level: "", source: "user" },
+    ]);
+    setFocusSkill(cleaned);
+    return true;
+  }
+
   function addSkill(event) {
     event.preventDefault();
     const name = skillDraft.trim();
     if (!name) return;
-    if (skills.some((item) => item.name.toLowerCase() === name.toLowerCase())) {
+    if (!addSkillByName(name, skillYearsDraft)) {
       setSkillDraft("");
       setSkillYearsDraft("");
       return;
     }
-    setSkills((current) => [
-      ...current,
-      { name, years: formatYears(skillYearsDraft), level: "", source: "user" },
-    ]);
     setSkillDraft("");
     setSkillYearsDraft("");
+  }
+
+  function addSuggestedSkill(name) {
+    addSkillByName(name, "");
   }
 
   function updateSkill(index, patch) {
@@ -639,7 +727,32 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
   }
 
   function removeSkill(index) {
-    setSkills((current) => current.filter((_, i) => i !== index));
+    setSkills((current) => {
+      const removed = current[index];
+      const next = current.filter((_, i) => i !== index);
+      const removedName = String(removed?.name || "").trim();
+      if (
+        removedName &&
+        focusSkill &&
+        removedName.toLowerCase() === focusSkill.toLowerCase()
+      ) {
+        const fallback = next[next.length - 1];
+        setFocusSkill(fallback?.name ? String(fallback.name) : "");
+      }
+      return next;
+    });
+  }
+
+  function onSkillPillClick(skill, index) {
+    const name = String(skill?.name || "").trim();
+    if (!name) return;
+    if (focusSkill && name.toLowerCase() === focusSkill.toLowerCase()) {
+      setSkillDraft(name);
+      setSkillYearsDraft(skill.years || "");
+      removeSkill(index);
+      return;
+    }
+    setFocusSkill(name);
   }
 
   function updateWork(index, patch) {
@@ -983,39 +1096,66 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
                         <div className="skill-chip-box">
                           {skills.length ? (
                             <div className="skill-chip-cloud" role="list">
-                              {skills.map((skill, index) => (
-                                <div key={`${skill.name}-${index}`} className="skill-pill" role="listitem">
-                                  <button
-                                    type="button"
-                                    className="skill-pill-main"
-                                    title={t.profileReviewSkillEdit}
-                                    onClick={() => {
-                                      setSkillDraft(skill.name);
-                                      setSkillYearsDraft(skill.years || "");
-                                      removeSkill(index);
-                                    }}
+                              {skills.map((skill, index) => {
+                                const focused =
+                                  focusSkill &&
+                                  String(skill.name || "").toLowerCase() === focusSkill.toLowerCase();
+                                return (
+                                  <div
+                                    key={`${skill.name}-${index}`}
+                                    className={`skill-pill${focused ? " skill-pill-focus" : ""}`}
+                                    role="listitem"
                                   >
-                                    <span className="skill-pill-name">{skill.name}</span>
-                                    {skill.years ? (
-                                      <span className="skill-pill-years">
-                                        {skill.years} {t.profileReviewSkillYears}
-                                      </span>
-                                    ) : null}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="skill-pill-remove"
-                                    onClick={() => removeSkill(index)}
-                                    aria-label={t.profileReviewRemove}
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              ))}
+                                    <button
+                                      type="button"
+                                      className="skill-pill-main"
+                                      aria-pressed={focused}
+                                      title={
+                                        focused ? t.profileReviewSkillEdit : t.profileReviewSkillFocus
+                                      }
+                                      onClick={() => onSkillPillClick(skill, index)}
+                                    >
+                                      <span className="skill-pill-name">{skill.name}</span>
+                                      {skill.years ? (
+                                        <span className="skill-pill-years">
+                                          {skill.years} {t.profileReviewSkillYears}
+                                        </span>
+                                      ) : null}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="skill-pill-remove"
+                                      onClick={() => removeSkill(index)}
+                                      aria-label={t.profileReviewRemove}
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                );
+                              })}
                             </div>
                           ) : (
                             <p className="hint">{t.profileReviewSkillsEmpty}</p>
                           )}
+                          {skillSuggestions.length ? (
+                            <div className="skill-suggest">
+                              <p className="skill-suggest-label hint">{t.profileReviewSkillSuggest}</p>
+                              <div className="skill-suggest-cloud" role="list">
+                                {skillSuggestions.map((name) => (
+                                  <button
+                                    key={name}
+                                    type="button"
+                                    className="skill-suggest-chip"
+                                    role="listitem"
+                                    title={`${t.profileReviewSkillSuggestAdd}: ${name}`}
+                                    onClick={() => addSuggestedSkill(name)}
+                                  >
+                                    + {name}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
                           <div className="skill-add-row">
                             <input
                               value={skillDraft}
