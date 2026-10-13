@@ -153,7 +153,8 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
         "deeplight", "arondite", "rebellion", "newcode", "hack-the-box-ltd",
         "nology", "nu-quantum", "payabl", "smartnews", "aurora-3",
         "comeon-group", "covergo", "rapyuta-robotics", "libertexgroup", "pinely",
-        "goreel", "3-oaks-gaming", "fpmarkets", "suade", "umpisa-inc")),
+        "goreel", "3-oaks-gaming", "fpmarkets", "suade", "umpisa-inc",
+        "cvector", "eqltech", "twgai", "continuum-resource-network", "dyania-health")),
     # ---- Recruitee ({company}.recruitee.com/api/offers/): slug sweep + dry-run 2026-10-13
     ("Recruitee boards (Remote & relocation 1)", "recruitee", "Relocation və ya remote siqnallı Recruitee lövhələri", (
         "ascendingai", "topicsoftwaredevelopment", "kaizo", "riverflex", "shypple",
