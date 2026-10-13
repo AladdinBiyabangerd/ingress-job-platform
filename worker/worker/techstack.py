@@ -472,6 +472,27 @@ def find_stack(text: str, *, limit: int | None = None) -> list[str]:
     return names
 
 
+# Sentences that name customers, partners or investors ("supporting
+# organizations like Harness, EA and HubSpot", "trusted by Slack"). Brand names
+# there are not skills, so matches inside such a sentence are ignored.
+_MENTION_CUE = re.compile(
+    r"(?i)\b(?:(?:customers?|clients?|organi[sz]ations|companies|brands|partners|investors|backers)"
+    r"\s+(?:include|including|like|such\s+as|range\s+from)|"
+    r"(?:supporting|serving|powering|helping|backed\s+by|trusted\s+by|used\s+by|loved\s+by|"
+    r"relied\s+on\s+by|chosen\s+by)\b[^.!?\n]{0,80}?\b(?:like|such\s+as|including)\b|"
+    r"\b(?:trusted|backed|funded|loved|chosen)\s+by\b|\bour\s+(?:customers|clients|partners)\b)"
+)
+_SENTENCE = re.compile(r"[^.!?\n]+[.!?]?")
+
+
+def _mention_spans(text: str) -> list[tuple[int, int]]:
+    return [(m.start(), m.end()) for m in _SENTENCE.finditer(text) if _MENTION_CUE.search(m.group(0))]
+
+
+def _in_spans(pos: int, spans: list[tuple[int, int]]) -> bool:
+    return any(a <= pos < b for a, b in spans)
+
+
 def extract_stack(text: str, tags: object = None, title: str = "") -> list[str]:
     """Curated tech names. The source's tags/stack fields come first; keyword
     matching on the title and text only fills in when the source gave fewer
@@ -480,11 +501,12 @@ def extract_stack(text: str, tags: object = None, title: str = "") -> list[str]:
     if len(found) >= TAGS_ENOUGH:
         return _cap(found)
     sample = f"{title}\n{text or ''}"[:30000]
+    mention = _mention_spans(sample)
     scored: list[tuple[int, int, str]] = []
     for name, pattern, _cat in _candidates(sample):
         if name in found or _cat in _NON_CHIP:
             continue
-        hits = list(pattern.finditer(sample))
+        hits = [h for h in pattern.finditer(sample) if not _in_spans(h.start(), mention)]
         if hits:
             in_title = 1 if title and pattern.search(title) else 0
             scored.append((-(len(hits) + 5 * in_title), hits[0].start(), name))

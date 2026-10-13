@@ -373,7 +373,21 @@ class NoDeskConnector(FeedConnector):
     entry_url = "https://nodesk.co/remote-jobs/index.xml"
     remote_default = True
     detail = True
+    # The feed carries only the first paragraphs; the full ad (stack, region
+    # notes) is on the listing page, so it is always read (robots.txt: Allow /).
+    detail_min_text = 10**9
     credit_note = "NoDesk public RSS feed. The link opens the ad on nodesk.co."
+
+    def fetch(self, url: str) -> str:
+        import json
+
+        raw = super().fetch(url)
+        item = json.loads(raw)
+        head = clean(item.pop("_head", "") or "")
+        # Keep the feed title line: region limits like "(USA Only)" live there.
+        if head and not str(item.get("text") or "").startswith(head):
+            item["text"] = head + "\n" + str(item.get("text") or "")
+        return json.dumps(item, ensure_ascii=False)
 
     def feed_items(self) -> list[dict]:
         out: list[dict] = []
@@ -387,6 +401,7 @@ class NoDeskConnector(FeedConnector):
                 # Region limits sit in the title, e.g. "(USA Only, 100% Remote)" / "- India".
                 "city": "Remote",
                 "text": full + "\n" + text_from_html(first(it.get("description"))),
+                "_head": full,
                 "source_url": link,
                 "external_id": "nodesk-" + link.rstrip("/").rsplit("/", 1)[-1],
                 "remote": True,
