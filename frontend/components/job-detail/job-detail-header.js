@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { boardReturnHref, readBoardReturn } from "../../lib/board-return";
 import { hrefFor, text } from "../../lib/copy";
 import { JobDetailActions } from "./job-detail-actions";
 import { JobDetailMeta } from "./job-detail-meta";
@@ -18,7 +20,11 @@ export function JobDetailHeader({
 }) {
   const t = text(locale);
   const company = model.company || {};
-  const backHref = preview ? hrefFor(locale) : hrefFor(locale);
+  const boardHref = hrefFor(locale) || "/";
+  const [backHref, setBackHref] = useState(boardHref);
+  useEffect(() => {
+    setBackHref(boardReturnHref(readBoardReturn(), boardHref));
+  }, [boardHref]);
   const external = model.listingType === "external";
 
   return (

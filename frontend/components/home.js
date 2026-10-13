@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { readBoardReturn, saveBoardReturn } from "../lib/board-return";
 import { CATEGORY_ORDER, categoryLabel, hrefFor, languageLabel, text } from "../lib/copy";
 import { boardUrlSearchParams, DEFAULT_BOARD_FILTERS, jobsListParams } from "../lib/jobs-params";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
@@ -539,6 +540,7 @@ export function Home({
       if (desired !== current) {
         window.history.replaceState(window.history.state, "", desired);
       }
+      saveBoardReturn(desired, window.scrollY);
     }
   }, [
     q,
@@ -699,6 +701,40 @@ export function Home({
   useEffect(() => {
     return () => {
       if (drawerExitRef.current) clearTimeout(drawerExitRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    // Returning from a job page: restore scroll for the same board URL.
+    const saved = readBoardReturn();
+    const here = window.location.pathname + window.location.search;
+    const nav = window.performance?.getEntriesByType?.("navigation")?.[0];
+    if (
+      nav?.type === "back_forward"
+      && !window.location.search
+      && saved
+      && saved.url.startsWith(`${window.location.pathname}?`)
+    ) {
+      // History entry lost its query (e.g. stale entry): put the filters back.
+      window.location.replace(saved.url);
+      return undefined;
+    }
+    if (saved && saved.url === here && saved.scrollY > 0) {
+      requestAnimationFrame(() => window.scrollTo(0, saved.scrollY));
+    }
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        saveBoardReturn(window.location.pathname + window.location.search, window.scrollY);
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (raf) cancelAnimationFrame(raf);
     };
   }, []);
 
