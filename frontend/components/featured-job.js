@@ -24,8 +24,8 @@ function featuredTags(locale, t, job) {
     if (name && !tags.includes(name)) tags.push(name);
   }
   const type = jobTypeLabel(t, job.job_type);
-  if (type && tags.length < 4 && !tags.includes(type)) tags.push(type);
-  if (job.remote && tags.length < 4 && !tags.includes(t.placeRemote)) tags.push(t.placeRemote);
+  if (type && !(job.remote && job.job_type === "uzaqdan") && tags.length < 4 && !tags.includes(type)) tags.push(type);
+  // Remote is already the place line of the glance; no second "Uzaqdan" tag.
   return tags.slice(0, 4);
 }
 

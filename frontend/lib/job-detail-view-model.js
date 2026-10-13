@@ -29,12 +29,11 @@ export function jobToDetailViewModel({ locale, job, authState = "guest", company
   const sections = sectionsFromBlocks(blocks);
   const companyName = job.company || t.noCompany;
   const jobHref = hrefFor(locale, { jobId: job.id });
-  const place = job.remote
-    ? job.city
-      ? `${job.city}`
-      : t.placeRemote
-    : job.city || "";
-  const jobType = jobTypeLabel(t, job.job_type);
+  // A remote job without a city shows only the remote chip (meta.remote), so
+  // "Uzaqdan" is not listed twice as both location and remote.
+  const place = job.city ? `${job.city}` : "";
+  // Same for an owner ad typed "uzaqdan": the remote chip already says it.
+  const jobType = job.remote && job.job_type === "uzaqdan" ? "" : jobTypeLabel(t, job.job_type);
   const posted = relativePosted(job.created_at, locale, {
     daysAgo: typeof t.jdDaysAgo === "function" ? t.jdDaysAgo : undefined,
     today: t.jdToday,
