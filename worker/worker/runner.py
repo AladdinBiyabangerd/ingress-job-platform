@@ -375,6 +375,10 @@ def _run_pass(store: Store) -> int:
             print(f"tech stack reextract: {refreshed}", flush=True)
     except Exception:
         capture_exception()
+    try:
+        store.latin_titles()
+    except Exception:
+        capture_exception()
     saved, queued = tidy_pending(store.conn)
     if saved or queued:
         print(f"tidy: saved={saved} queued={queued}", flush=True)

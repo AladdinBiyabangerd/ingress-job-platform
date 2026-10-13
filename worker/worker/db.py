@@ -92,6 +92,8 @@ RETIRED_LOCAL_SOURCES = (
 HIDE_RETIRED_STEP = "hide-retired-local-sources-2026-10-05"
 # One-shot: re-run extract_stack on scraped ads after the curated dictionary grows.
 REEXTRACT_STACK_STEP = "reextract-tech-stack-variants-v5-2026-10-13"
+# One-shot: drop the CJK half of "English / 日本語" titles on stored ads.
+LATIN_TITLE_STEP = "latin-title-mixed-cjk-2026-10-13"
 
 _MAINTENANCE = """
 CREATE TABLE IF NOT EXISTS maintenance_steps (
@@ -245,6 +247,9 @@ class Store:
             # Listing language code (az/en/ru/de/…). Scraped rows are filled by
             # listing_language(); cabinet ads keep the owner-chosen value.
             "language": "TEXT NOT NULL DEFAULT ''",
+            # Date the source says the ad was posted (worker.posted.parse_posted).
+            # NULL = unknown; the API then falls back to created_at.
+            "posted_at": "TEXT",
         }
         for name, decl in alters.items():
             if name not in cols:
@@ -381,7 +386,10 @@ class Store:
             )
 
     def upsert(self, item: dict) -> str:
-        title = str(item["title"]).strip()
+        from worker.posted import latin_title, parse_posted
+
+        title = latin_title(str(item["title"]).strip())
+        posted = parse_posted(item.get("posted_at") or item.get("_stamp")) or None
         company = str(item.get("company") or "").strip()
         from worker.place import is_remote_place, normalize_city
 
@@ -455,7 +463,7 @@ class Store:
                         ),
                     )
                     if (held["status"] or "") == "published" and (
-                        _content_norm(held["title"]) != _content_norm(title)
+                        _content_norm(latin_title(held["title"])) != _content_norm(title)
                         or _content_norm(held["text"]) != _content_norm(text)
                     ):
                         # Staff approved different content; send it back to the
@@ -469,6 +477,11 @@ class Store:
                             "UPDATE jobs SET salary = ? WHERE id = ?", (salary, existing["job_id"])
                         )
                     self._set_norm_key(int(existing["job_id"]), key)
+                if posted:
+                    # Date only: no updated_at or status change.
+                    self.conn.execute(
+                        "UPDATE jobs SET posted_at = ? WHERE id = ?", (posted, existing["job_id"])
+                    )
                     from worker.skills import sync_job_skills
 
                     sync_job_skills(self.conn, int(existing["job_id"]), stack)
@@ -479,6 +492,11 @@ class Store:
             if job:
                 job_id = int(job["id"])
                 kind = "updated"
+                if posted:
+                    self.conn.execute(
+                        "UPDATE jobs SET posted_at = COALESCE(posted_at, ?) WHERE id = ?",
+                        (posted, job_id),
+                    )
             else:
                 cur = self.conn.execute(
                     """
@@ -497,6 +515,8 @@ class Store:
                 kind = "created"
                 if salary:
                     self.conn.execute("UPDATE jobs SET salary = ? WHERE id = ?", (salary, job_id))
+                if posted:
+                    self.conn.execute("UPDATE jobs SET posted_at = ? WHERE id = ?", (posted, job_id))
                 from worker.skills import sync_job_skills
 
                 sync_job_skills(self.conn, job_id, stack)
@@ -711,6 +731,36 @@ class Store:
             f"tech stack reextract {REEXTRACT_STACK_STEP}: scanned={len(rows)} updated={updated}",
             flush=True,
         )
+        return updated
+
+    def latin_titles(self) -> int:
+        """One-shot: apply latin_title() to stored scraped titles. Title only;
+        status, updated_at and norm_key are left alone (no re-review)."""
+        from worker.posted import latin_title
+
+        self.conn.execute(_MAINTENANCE)
+        if self.conn.execute(
+            "SELECT 1 FROM maintenance_steps WHERE name = ?", (LATIN_TITLE_STEP,)
+        ).fetchone():
+            return 0
+        rows = self.conn.execute(
+            "SELECT id, title FROM jobs WHERE COALESCE(owner_subject, '') = '' "
+            "AND COALESCE(content_locked, 0) = 0"
+        ).fetchall()
+        updated = 0
+        with self.conn:
+            for row in rows:
+                old = str(row["title"] or "")
+                new = latin_title(old)
+                if new and new != old:
+                    self.conn.execute("UPDATE jobs SET title = ? WHERE id = ?", (new, row["id"]))
+                    updated += 1
+            self.conn.execute(
+                "INSERT INTO maintenance_steps (name, done_at) VALUES (?, ?) "
+                "ON CONFLICT (name) DO NOTHING",
+                (LATIN_TITLE_STEP, now_iso()),
+            )
+        print(f"latin titles {LATIN_TITLE_STEP}: scanned={len(rows)} updated={updated}", flush=True)
         return updated
 
     def _legacy_remote_twin(self, title: str, company: str):
