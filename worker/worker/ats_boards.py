@@ -166,5 +166,6 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
         "n8n", "whippy", "ava-labs", "squads", "far.ai",
         "qed-ai", "hyperhug", "dualentry", "percona", "wetravel",
         "wundergraph", "poolside", "oplabs", "anagram", "neara",
-        "bjakcareer", "mento", "rwazi", "holywater", "flutterflow")),
+        "bjakcareer", "mento", "rwazi", "holywater", "flutterflow",
+        "polaranalytics", "firstprinciples", "rocketsciencegg", "preply", "pluralis-research")),
 ]
