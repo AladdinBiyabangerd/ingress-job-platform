@@ -77,6 +77,35 @@ from worker.tidy import tidy_pending
 from worker.http import Disallowed, NotFound, PoliteClient, SourceBlocked, SourceFailed
 
 CAP = 30
+# Per-source wall-clock budget (seconds) so one cycle stays around an hour.
+# When a budget runs out the source stops gracefully: every row already
+# written stays (upserts are per item) and the run is recorded as ok.
+DEFAULT_BUDGET = 600
+SOURCE_BUDGETS: dict[str, int] = {
+    "Djinni": 1500,
+    "JobTech Platsbanken (Sweden)": 300,
+    "Crypto Jobs List": 300,
+}
+PREFIX_BUDGETS: tuple[tuple[str, int], ...] = (
+    ("Teamtailor", 300),
+    ("Lever", 300),
+    ("Greenhouse", 300),
+)
+# A source whose pages keep failing in a row is stopped (not marked error).
+MAX_PAGE_FAILURES = 15
+
+
+def source_budget(connector) -> int:
+    own = getattr(connector, "time_budget", None)
+    if own:
+        return int(own)
+    name = str(getattr(connector, "name", ""))
+    if name in SOURCE_BUDGETS:
+        return SOURCE_BUDGETS[name]
+    for prefix, secs in PREFIX_BUDGETS:
+        if name.startswith(prefix):
+            return secs
+    return DEFAULT_BUDGET
 INTERVAL_SECONDS = 3600
 LOCK_PATH = Path(__file__).resolve().parents[1] / "data" / "schedule.lock"
 NOT_CONNECTORS = "LinkedIn, Indeed, Tap.az, gloria.az, job.az"
@@ -441,23 +470,39 @@ def _too_soon(store: Store, connector, source_id: int) -> bool:
     return False
 
 
-def _run_source(store: Store, client: PoliteClient, connector, source_id: int) -> None:
+def _run_source(store: Store, client: PoliteClient, connector, source_id: int,
+                *, clock=time.monotonic) -> None:
     del client
     run_id = store.start_run(source_id)
     found = created = updated = 0
     status = "ok"
     error = None
+    budget = source_budget(connector)
+    deadline = clock() + budget
+    # Connectors that read many boards/feeds in discover() honour this too.
+    try:
+        connector.deadline = deadline
+        connector.clock = clock
+    except Exception:
+        pass
+    skip_failed = bool(getattr(connector, "skip_failed_pages", False))
+    page_failures = 0
+    stopped = ""
     try:
         urls = connector.discover()
         found = len(urls)
         for url in urls:
             if created >= getattr(connector, "create_cap", CAP):
                 break
+            if clock() >= deadline:
+                stopped = f"time budget {budget}s reached"
+                break
             if is_rejected(store.conn, url):
                 continue
             try:
                 raw = connector.fetch(url)
                 item = finish_item(connector, connector.normalize(raw, url))
+                page_failures = 0
                 if not item:
                     continue
                 item["source_name"] = connector.name
@@ -468,13 +513,25 @@ def _run_source(store: Store, client: PoliteClient, connector, source_id: int) -
                     updated += 1
             except (Disallowed, NotFound):
                 continue
-            except (SourceBlocked, SourceFailed):
+            except SourceFailed:
+                # A flaky detail page (RemoteProtocolError, timeout ...) is
+                # skipped for sources that opt in; the run keeps going.
+                if not skip_failed:
+                    raise
+                page_failures += 1
+                if page_failures >= MAX_PAGE_FAILURES:
+                    stopped = f"{page_failures} pages failed in a row"
+                    break
+                continue
+            except SourceBlocked:
                 raise
             except Exception:
                 continue
     except (SourceBlocked, SourceFailed, Disallowed) as exc:
         status = "error"
         error = str(exc)[:500]
+    if stopped and not error:
+        error = f"stopped: {stopped}"
     store.finish_run(
         run_id,
         status=status,

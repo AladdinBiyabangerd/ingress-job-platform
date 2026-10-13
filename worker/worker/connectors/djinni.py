@@ -57,6 +57,8 @@ class DjinniConnector:
     # Djinni-specific limits (runner default is 30 new rows per source run).
     create_cap = 300
     max_candidates = MAX_CANDIDATES
+    # A detail page that still fails after retries is skipped (runner).
+    skip_failed_pages = True
 
     def __init__(self, client: PoliteClient, store: Store, keywords=None) -> None:
         self.client = client
