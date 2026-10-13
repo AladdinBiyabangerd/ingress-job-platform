@@ -84,7 +84,7 @@ def _list_select_core(*, with_lang_sample: bool = False) -> str:
     j.title,
     j.company,
     j.city,
-    j.created_at,
+    COALESCE(NULLIF(j.posted_at, ''), j.created_at) AS created_at,
     COALESCE(j.language, '') AS language,
 {sample}    COALESCE(j.remote, 0) AS remote,
     COALESCE(j.relocation, 0) AS relocation,
@@ -351,7 +351,7 @@ SELECT
     j.id,
     j.company,
     j.city,
-    j.created_at,
+    COALESCE(NULLIF(j.posted_at, ''), j.created_at) AS created_at,
     COALESCE(j.remote, 0) AS remote,
     COALESCE(j.relocation, 0) AS relocation,
     COALESCE(j.tech_stack, '') AS tech_stack,
@@ -617,10 +617,10 @@ def _when_matches(created_at: object, when: str) -> bool:
 
 def _order_sql(sort: str) -> str:
     if sort == "oldest":
-        return "ORDER BY j.created_at ASC, j.id ASC"
+        return "ORDER BY COALESCE(NULLIF(j.posted_at, ''), j.created_at) ASC, j.id ASC"
     if sort == "title":
         return "ORDER BY LOWER(j.title) ASC, j.id ASC"
-    return "ORDER BY j.created_at DESC, j.id DESC"
+    return "ORDER BY COALESCE(NULLIF(j.posted_at, ''), j.created_at) DESC, j.id DESC"
 
 
 def _page_counts(conn, job_ids: list[int]) -> dict[int, int]:

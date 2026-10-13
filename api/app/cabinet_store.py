@@ -70,6 +70,8 @@ CREATE TABLE IF NOT EXISTS job_sources (
 """
 
 _COLUMNS = {
+    # Source posting date (worker.posted); NULL = unknown, lists fall back to created_at.
+    "posted_at": "TEXT",
     "owner_subject": "TEXT NOT NULL DEFAULT ''",
     "language": "TEXT NOT NULL DEFAULT ''",
     "salary": "TEXT NOT NULL DEFAULT ''",
@@ -90,6 +92,8 @@ _COLUMNS = {
 }
 
 _APP_COLUMNS = {
+    # Source posting date (worker.posted); NULL = unknown, lists fall back to created_at.
+    "posted_at": "TEXT",
     "status": "TEXT NOT NULL DEFAULT 'submitted'",
     "decision_reason": "TEXT NOT NULL DEFAULT ''",
     "phone": "TEXT NOT NULL DEFAULT ''",
