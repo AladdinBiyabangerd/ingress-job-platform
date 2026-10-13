@@ -158,4 +158,7 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
     ("Recruitee boards (Remote & relocation 1)", "recruitee", "Relocation və ya remote siqnallı Recruitee lövhələri", (
         "ascendingai", "topicsoftwaredevelopment", "kaizo", "riverflex", "shypple",
         "erstedigital", "surfly", "taroko")),
+    # ---- Ashby (jobs.ashbyhq.com): slug sweep + dry-run 2026-10-13
+    ("Ashby boards (Remote & relocation 1)", "ashby", "Qlobal remote, EMEA və ya relocation siqnallı Ashby lövhələri", (
+        "supabase", "constructor", "trust-wallet", "fundamental", "railway")),
 ]
