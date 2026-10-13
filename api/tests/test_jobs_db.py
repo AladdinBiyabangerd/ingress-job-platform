@@ -96,6 +96,13 @@ class WantsReturningTest(unittest.TestCase):
                 "reason = excluded.reason"
             )
         )
+        self.assertFalse(
+            _wants_returning(
+                "INSERT INTO job_categories (slug, name_az, name_en, name_ru, sort_order, "
+                "priority, stack_rank, active, title_pattern, aliases, stack_names, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (slug) DO NOTHING"
+            )
+        )
 
 
 class CursorRowcountTests(unittest.TestCase):

@@ -184,6 +184,7 @@ _NO_ID_TABLES = {
     "crawl_rejects",
     "email_prefs",
     "embeddings",
+    "job_categories",
     "job_skill",
     "maintenance_steps",
     "match_feedback",

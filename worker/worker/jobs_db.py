@@ -141,6 +141,7 @@ _NO_ID_TABLES = {
     "api_usage",
     "crawl_rejects",
     "embeddings",
+    "job_categories",
     "job_skill",
     "maintenance_steps",
     "role_skill_weight",
