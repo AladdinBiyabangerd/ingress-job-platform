@@ -402,10 +402,12 @@ class Store:
                     or held["merged_into"]
                 )
                 if not locked:
+                    # Do not force status=published — pending scraped ads stay in
+                    # the moderator queue until staff approves.
                     self.conn.execute(
                         """
                         UPDATE jobs
-                        SET title = ?, company = ?, city = ?, text = ?, status = 'published',
+                        SET title = ?, company = ?, city = ?, text = ?,
                             cleaned_text = CASE WHEN text = ? THEN cleaned_text ELSE NULL END,
                             tech_stack = ?, remote = ?, relocation = ?, category = ?,
                             language = ?
@@ -439,7 +441,7 @@ class Store:
                         title, company, city, text, status, created_at, norm_key,
                         tech_stack, remote, relocation, category, language
                     )
-                    VALUES (?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         title, company, city, text, seen, key, stack_json,

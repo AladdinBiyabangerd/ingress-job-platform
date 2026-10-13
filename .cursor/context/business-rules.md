@@ -51,3 +51,11 @@
 - Unsuitable → do not upsert; store URL in `crawl_rejects` so the next pass skips without AI.
 - Flag: `market_fit` / `AI_MARKET_FIT_ENABLED=0` to hard-off.
 - Module: `worker/worker/market_fit.py`.
+
+## Scraped ad moderation (2026-10-13)
+- New scraped/crawled jobs are inserted as **`pending`**, not auto-published.
+- They appear in staff **moderation queue** (with company pending ads) until approve/reject.
+- Staff may approve one-by-one or bulk-select (`POST /api/v1/admin/jobs/approve-bulk`).
+- Re-scrape of an existing row does **not** force `published` (pending stays pending; already live stays live).
+- Already-published scraped ads are left alone (no mass unpublish).
+- Public board still only shows `status=published`.

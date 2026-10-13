@@ -17,9 +17,10 @@ Staff edits never change status. Staff-authored ads stay published.
 Changing the application form does not change status, including after
 publication. Answers already stored on an application are not rewritten.
 
-Scraped rows keep an empty owner_subject. Cabinet moderation does not return
-them. hidden=1 or merged_into takes a scraped row off the public list without
-deleting it. Ordinary cabinet creates do not write a source URL.
+Scraped rows keep an empty owner_subject. New scrapes are inserted as pending
+and appear in the staff moderation queue until approved. hidden=1 or
+merged_into takes a scraped row off the public list without deleting it.
+Ordinary cabinet creates do not write a source URL.
 """
 
 from __future__ import annotations
@@ -671,11 +672,16 @@ def close_ad(subject: str, job_id: int) -> dict:
     return _owner(row)
 
 
+_MOD_COLS = """
+    id, title, company, city, remote, text, language, salary,
+    job_type, status, created_at, updated_at, reject_reason, apply_form, owner_subject
+"""
+
+
 def _cabinet_row(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
     return conn.execute(
-        """
-        SELECT id, title, company, city, remote, text, language, salary,
-               job_type, status, created_at, updated_at, reject_reason, apply_form, owner_subject
+        f"""
+        SELECT {_MOD_COLS}
         FROM jobs
         WHERE id = ? AND owner_subject != ''
         """,
@@ -683,13 +689,30 @@ def _cabinet_row(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
     ).fetchone()
 
 
+def _moderation_row(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
+    """Company ads, or pending scraped ads waiting for staff approval."""
+    return conn.execute(
+        f"""
+        SELECT {_MOD_COLS}
+        FROM jobs
+        WHERE id = ?
+          AND (
+            owner_subject != ''
+            OR (COALESCE(owner_subject, '') = '' AND status = ?)
+          )
+        """,
+        (job_id, PENDING),
+    ).fetchone()
+
+
 _TEXT_PREVIEW = 400
 
 
 def list_moderation() -> list[dict]:
-    """Pending company ads first, then published, closed, and rejected.
+    """Pending company and scraped ads first, then other company statuses.
 
-    List rows carry a short body only; edit loads the full ad via get_moderation.
+    Scraped rows appear only while pending. List rows carry a short body;
+    edit loads the full ad via get_moderation.
     """
     conn = _connect()
     try:
@@ -702,6 +725,7 @@ def list_moderation() -> list[dict]:
                    '' AS apply_form, owner_subject
             FROM jobs
             WHERE owner_subject != ''
+               OR (COALESCE(owner_subject, '') = '' AND status = ?)
             ORDER BY
                 CASE status
                     WHEN 'pending' THEN 0
@@ -711,7 +735,8 @@ def list_moderation() -> list[dict]:
                     ELSE 4
                 END,
                 id DESC
-            """
+            """,
+            (PENDING,),
         ).fetchall()
     finally:
         conn.close()
@@ -721,7 +746,7 @@ def list_moderation() -> list[dict]:
 def get_moderation(job_id: int) -> dict:
     conn = _connect()
     try:
-        row = _cabinet_row(conn, job_id)
+        row = _moderation_row(conn, job_id)
     finally:
         conn.close()
     if row is None:
@@ -729,38 +754,49 @@ def get_moderation(job_id: int) -> dict:
     return _owner(row)
 
 
+def _approve_one(conn: sqlite3.Connection, job_id: int) -> tuple[sqlite3.Row, dict | None]:
+    row = _moderation_row(conn, job_id)
+    if row is None:
+        raise CabinetError(404, "Elan tapılmadı")
+    if (row["status"] or "") != PENDING:
+        raise CabinetError(409, "Yalnız gözləyən elan təsdiqlənə bilər")
+    conn.execute(
+        """
+        UPDATE jobs
+        SET status = ?, reject_reason = '', updated_at = ?
+        WHERE id = ?
+        """,
+        (PUBLISHED, _now(), job_id),
+    )
+    row = conn.execute(
+        f"SELECT {_MOD_COLS} FROM jobs WHERE id = ?",
+        (job_id,),
+    ).fetchone()
+    owner = (row["owner_subject"] or "").strip()
+    note = None
+    if owner:
+        from app.notifications import insert_notification
+
+        note = insert_notification(
+            conn,
+            recipient=owner,
+            kind="ad_approved",
+            job_id=job_id,
+            job_title=row["title"] or "",
+            application_id=None,
+            status=PUBLISHED,
+            reason="",
+            language=row["language"] or "",
+        )
+    return row, note
+
+
 def approve_ad(job_id: int) -> dict:
     note = None
     with _LOCK:
         conn = _connect()
         try:
-            row = _cabinet_row(conn, job_id)
-            if row is None:
-                raise CabinetError(404, "Elan tapılmadı")
-            if (row["status"] or "") != PENDING:
-                raise CabinetError(409, "Yalnız gözləyən elan təsdiqlənə bilər")
-            conn.execute(
-                """
-                UPDATE jobs
-                SET status = ?, reject_reason = '', updated_at = ?
-                WHERE id = ?
-                """,
-                (PUBLISHED, _now(), job_id),
-            )
-            row = _cabinet_row(conn, job_id)
-            from app.notifications import insert_notification
-
-            note = insert_notification(
-                conn,
-                recipient=row["owner_subject"] or "",
-                kind="ad_approved",
-                job_id=job_id,
-                job_title=row["title"] or "",
-                application_id=None,
-                status=PUBLISHED,
-                reason="",
-                language=row["language"] or "",
-            )
+            row, note = _approve_one(conn, job_id)
             conn.commit()
         finally:
             conn.close()
@@ -771,13 +807,52 @@ def approve_ad(job_id: int) -> dict:
     return _owner(row)
 
 
+def approve_ads(job_ids: list[int]) -> dict:
+    """Approve many pending ads. Skips unknown/non-pending ids without failing."""
+    seen: set[int] = set()
+    ordered: list[int] = []
+    for raw in job_ids:
+        try:
+            job_id = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if job_id <= 0 or job_id in seen:
+            continue
+        seen.add(job_id)
+        ordered.append(job_id)
+    if len(ordered) > 200:
+        raise CabinetError(422, "Birdən çox 200 elan seçilə bilər")
+    notes: list[dict] = []
+    approved: list[dict] = []
+    with _LOCK:
+        conn = _connect()
+        try:
+            for job_id in ordered:
+                row = _moderation_row(conn, job_id)
+                if row is None or (row["status"] or "") != PENDING:
+                    continue
+                row, note = _approve_one(conn, job_id)
+                approved.append(_owner(row))
+                if note:
+                    notes.append(note)
+            conn.commit()
+        finally:
+            conn.close()
+    if notes:
+        from app.notifications import deliver_email
+
+        for note in notes:
+            deliver_email(note)
+    return {"approved": len(approved), "items": approved}
+
+
 def reject_ad(job_id: int, reason: str) -> dict:
     cleaned = " ".join((reason or "").split())
     note = None
     with _LOCK:
         conn = _connect()
         try:
-            row = _cabinet_row(conn, job_id)
+            row = _moderation_row(conn, job_id)
             if row is None:
                 raise CabinetError(404, "Elan tapılmadı")
             if (row["status"] or "") != PENDING:
@@ -792,20 +867,25 @@ def reject_ad(job_id: int, reason: str) -> dict:
                 """,
                 (REJECTED, cleaned, _now(), job_id),
             )
-            row = _cabinet_row(conn, job_id)
-            from app.notifications import insert_notification
+            row = conn.execute(
+                f"SELECT {_MOD_COLS} FROM jobs WHERE id = ?",
+                (job_id,),
+            ).fetchone()
+            owner = (row["owner_subject"] or "").strip()
+            if owner:
+                from app.notifications import insert_notification
 
-            note = insert_notification(
-                conn,
-                recipient=row["owner_subject"] or "",
-                kind="ad_rejected",
-                job_id=job_id,
-                job_title=row["title"] or "",
-                application_id=None,
-                status=REJECTED,
-                reason=cleaned,
-                language=row["language"] or "",
-            )
+                note = insert_notification(
+                    conn,
+                    recipient=owner,
+                    kind="ad_rejected",
+                    job_id=job_id,
+                    job_title=row["title"] or "",
+                    application_id=None,
+                    status=REJECTED,
+                    reason=cleaned,
+                    language=row["language"] or "",
+                )
             conn.commit()
         finally:
             conn.close()
@@ -820,7 +900,7 @@ def staff_close_ad(job_id: int) -> dict:
     with _LOCK:
         conn = _connect()
         try:
-            row = _cabinet_row(conn, job_id)
+            row = _moderation_row(conn, job_id)
             if row is None:
                 raise CabinetError(404, "Elan tapılmadı")
             if (row["status"] or "") != CLOSED:
@@ -829,7 +909,10 @@ def staff_close_ad(job_id: int) -> dict:
                     (CLOSED, _now(), job_id),
                 )
                 conn.commit()
-                row = _cabinet_row(conn, job_id)
+                row = conn.execute(
+                    f"SELECT {_MOD_COLS} FROM jobs WHERE id = ?",
+                    (job_id,),
+                ).fetchone()
         finally:
             conn.close()
     return _owner(row)
@@ -839,36 +922,63 @@ def staff_update_ad(job_id: int, fields: dict) -> dict:
     with _LOCK:
         conn = _connect()
         try:
-            row = _cabinet_row(conn, job_id)
+            row = _moderation_row(conn, job_id)
             if row is None:
                 raise CabinetError(404, "Elan tapılmadı")
             if (row["status"] or "") == CLOSED:
                 raise CabinetError(409, "Bağlanmış elan dəyişdirilə bilməz")
             form = fields["form"] if "form" in fields else parse_stored(row["apply_form"])
-            conn.execute(
-                """
-                UPDATE jobs
-                SET title = ?, company = ?, city = ?, text = ?, cleaned_text = NULL,
-                    language = ?, salary = ?, job_type = ?, remote = ?, updated_at = ?,
-                    apply_form = ?
-                WHERE id = ?
-                """,
-                (
-                    fields["title"],
-                    fields["company"],
-                    fields["city"],
-                    fields["text"],
-                    fields["language"],
-                    fields["salary"],
-                    fields["job_type"],
-                    1 if fields["remote"] else 0,
-                    _now(),
-                    dump_form(form),
-                    job_id,
-                ),
-            )
+            scraped = not (row["owner_subject"] or "").strip()
+            if scraped:
+                conn.execute(
+                    """
+                    UPDATE jobs
+                    SET title = ?, company = ?, city = ?, text = ?, cleaned_text = NULL,
+                        language = ?, salary = ?, job_type = ?, remote = ?, updated_at = ?,
+                        content_locked = 1
+                    WHERE id = ?
+                    """,
+                    (
+                        fields["title"],
+                        fields["company"],
+                        fields["city"],
+                        fields["text"],
+                        fields["language"],
+                        fields["salary"],
+                        fields["job_type"],
+                        1 if fields["remote"] else 0,
+                        _now(),
+                        job_id,
+                    ),
+                )
+            else:
+                conn.execute(
+                    """
+                    UPDATE jobs
+                    SET title = ?, company = ?, city = ?, text = ?, cleaned_text = NULL,
+                        language = ?, salary = ?, job_type = ?, remote = ?, updated_at = ?,
+                        apply_form = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        fields["title"],
+                        fields["company"],
+                        fields["city"],
+                        fields["text"],
+                        fields["language"],
+                        fields["salary"],
+                        fields["job_type"],
+                        1 if fields["remote"] else 0,
+                        _now(),
+                        dump_form(form),
+                        job_id,
+                    ),
+                )
             conn.commit()
-            saved = _cabinet_row(conn, job_id)
+            saved = conn.execute(
+                f"SELECT {_MOD_COLS} FROM jobs WHERE id = ?",
+                (job_id,),
+            ).fetchone()
         finally:
             conn.close()
     return _owner(saved)

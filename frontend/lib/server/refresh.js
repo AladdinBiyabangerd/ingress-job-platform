@@ -208,6 +208,14 @@ export async function adminActJob(id, action) {
   return mutate(`/api/v1/admin/jobs/${jobId}/${action}`);
 }
 
+export async function adminApproveBulk(ids) {
+  const list = Array.isArray(ids)
+    ? ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
+    : [];
+  if (!list.length) return { ok: false, status: 422, data: {} };
+  return mutate("/api/v1/admin/jobs/approve-bulk", { body: { ids: list } });
+}
+
 export async function crawledPatchJob(id, payload) {
   const jobId = numericId(id);
   if (!jobId) return { ok: false, status: 404, data: {} };

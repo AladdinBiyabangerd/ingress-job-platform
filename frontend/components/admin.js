@@ -6,8 +6,10 @@ import { hrefFor, languageLabel, text } from "../lib/copy";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
 import {
   adminActJob,
+  adminApproveBulk,
   adminPatchJob,
   adminRejectJob,
+  crawledPatchJob,
   fetchAdminJob,
   refreshAdminApplications,
   refreshAdminQueue,
@@ -77,12 +79,14 @@ export function Admin({
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [selected, setSelected] = useState(() => new Set());
   const [applications, setApplications] = useState(() => (seededApps ? initialApplications : []));
 
   async function load() {
     const data = await refreshAdminQueue();
     setItems(data.jobs);
     setApplications(data.applications);
+    setSelected(new Set());
   }
 
   useEffect(() => {
@@ -113,23 +117,35 @@ export function Admin({
     setError("");
   }
 
+  function isCollected(jobId) {
+    const row = items.find((job) => job.id === jobId);
+    return Boolean(row && !row.owner_subject);
+  }
+
   async function onSave(event) {
     event.preventDefault();
     if (!editing || !form) return;
     setError("");
     setNote("");
-    if (!form.title.trim() || !form.company.trim() || !form.text.trim() || !(form.remote || form.city.trim())) {
+    const scraped = isCollected(editing);
+    if (!form.title.trim() || !form.text.trim() || !(form.remote || form.city.trim())) {
       setError(t.adRequired);
       return;
     }
-    const ready = applyFormReady(form.applicationForm);
-    if (!ready.any) {
-      setError(t.formNeedField);
+    if (!scraped && !form.company.trim()) {
+      setError(t.adRequired);
       return;
     }
-    if (ready.blankQuestion) {
-      setError(t.formQuestionNeeded);
-      return;
+    if (!scraped) {
+      const ready = applyFormReady(form.applicationForm);
+      if (!ready.any) {
+        setError(t.formNeedField);
+        return;
+      }
+      if (ready.blankQuestion) {
+        setError(t.formQuestionNeeded);
+        return;
+      }
     }
     setBusy(true);
     const payload = {
@@ -141,9 +157,13 @@ export function Admin({
       language: form.language,
       salary: form.salary,
       job_type: form.job_type,
-      form: applyFormPayload(form.applicationForm),
     };
-    const res = await adminPatchJob(editing, payload);
+    const res = scraped
+      ? await crawledPatchJob(editing, payload)
+      : await adminPatchJob(editing, {
+          ...payload,
+          form: applyFormPayload(form.applicationForm),
+        });
     setBusy(false);
     if (!res.ok) {
       setError(res.status === 422 ? t.adRequired : t.adminError);
@@ -199,7 +219,46 @@ export function Admin({
     }
   }
 
+  function toggleSelected(jobId) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(jobId)) next.delete(jobId);
+      else next.add(jobId);
+      return next;
+    });
+  }
+
+  function selectAllPending() {
+    setSelected(new Set(items.filter((job) => job.status === "pending").map((job) => job.id)));
+  }
+
+  function clearSelection() {
+    setSelected(new Set());
+  }
+
+  async function approveSelected() {
+    const ids = [...selected];
+    if (!ids.length) return;
+    setError("");
+    setNote("");
+    setBusy(true);
+    const res = await adminApproveBulk(ids);
+    setBusy(false);
+    if (!res.ok) {
+      setError(t.adminError);
+      return;
+    }
+    const count = Number(res.data?.approved) || ids.length;
+    setNote(t.adminBulkApprovedNote(count));
+    try {
+      await load();
+    } catch {
+      setError(t.loadError);
+    }
+  }
+
   const pendingCount = items.filter((job) => job.status === "pending").length;
+  const selectedCount = selected.size;
 
   return (
     <div className="h2-employer">
@@ -289,7 +348,12 @@ export function Admin({
                     </label>
                     <label>
                       {t.companyName}
-                      <input value={form.company} maxLength={120} required onChange={(event) => setField("company", event.target.value)} />
+                      <input
+                        value={form.company}
+                        maxLength={120}
+                        required={!(editing && isCollected(editing))}
+                        onChange={(event) => setField("company", event.target.value)}
+                      />
                     </label>
                     <label>
                       {t.adCityOrRemote}
@@ -331,9 +395,11 @@ export function Admin({
                     <textarea value={form.text} maxLength={8000} required rows={8} onChange={(event) => setField("text", event.target.value)} />
                   </label>
                 </div>
-                <aside className="cabinet-form-side">
-                  <ApplyFormFields locale={locale} value={form.applicationForm} onChange={(applicationForm) => setField("applicationForm", applicationForm)} />
-                </aside>
+                {editing && !isCollected(editing) ? (
+                  <aside className="cabinet-form-side">
+                    <ApplyFormFields locale={locale} value={form.applicationForm} onChange={(applicationForm) => setField("applicationForm", applicationForm)} />
+                  </aside>
+                ) : null}
               </div>
               <div className="ad-actions">
                 <button type="submit" className="btn ink" disabled={busy}>{t.adSave}</button>
@@ -343,11 +409,44 @@ export function Admin({
           ) : null}
           <div className="h2-panel h2-employer-list">
             {items.length === 0 ? <p className="empty-line">{t.adminEmpty}</p> : null}
+            {pendingCount ? (
+              <div className="ad-actions admin-bulk-bar">
+                <button type="button" className="btn" disabled={busy} onClick={selectAllPending}>
+                  {t.adminSelectAllPending}
+                </button>
+                {selectedCount ? (
+                  <button type="button" className="btn" disabled={busy} onClick={clearSelection}>
+                    {t.adminClearSelection}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="btn ink"
+                  disabled={busy || !selectedCount}
+                  onClick={approveSelected}
+                >
+                  {t.adminApproveSelected}
+                </button>
+                {selectedCount ? <span className="hint">{t.adminSelectedCount(selectedCount)}</span> : null}
+              </div>
+            ) : null}
             <div className="h2-ad-list">
               {pageItems.map((job) => (
                 <article key={job.id} className={`h2-ad-row${job.status === "closed" || job.status === "rejected" ? " is-muted" : ""}`}>
                   <div className="h2-ad-row-top">
+                    {job.status === "pending" ? (
+                      <label className="inline admin-select">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(job.id)}
+                          onChange={() => toggleSelected(job.id)}
+                        />
+                      </label>
+                    ) : null}
                     <span className={statusClass(job.status)}>{statusLabel(t, job.status)}</span>
+                    {!job.owner_subject ? (
+                      <span className="source-pill">{t.adminCollectedBadge}</span>
+                    ) : null}
                     <h2 className="h2-ad-title">
                       {job.status === "published" ? (
                         <a href={hrefFor(locale, { jobId: job.id })}>{job.title}</a>
@@ -409,7 +508,7 @@ export function Admin({
                         </button>
                       </>
                     ) : null}
-                    {job.status !== "closed" ? (
+                    {job.status !== "closed" && job.owner_subject ? (
                       <button
                         type="button"
                         className="btn red"

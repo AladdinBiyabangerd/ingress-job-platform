@@ -35,9 +35,10 @@ class ListingLanguageStoreTests(unittest.TestCase):
         )
         self.assertEqual(kind, "created")
         row = self.store.conn.execute(
-            "SELECT language FROM jobs WHERE title LIKE 'Freelance%'"
+            "SELECT language, status FROM jobs WHERE title LIKE 'Freelance%'"
         ).fetchone()
         self.assertEqual(row["language"], "de")
+        self.assertEqual(row["status"], "pending")
 
     def test_backfill_language_rewrites_wrong_en(self):
         body = (

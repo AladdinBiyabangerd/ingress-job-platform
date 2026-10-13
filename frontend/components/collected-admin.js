@@ -195,8 +195,14 @@ export function CollectedAdmin({ locale, initialItems = null }) {
           {pageItems.map((job) => (
             <article key={job.id} className={`h2-ad-row${job.hidden ? " is-muted" : ""}`}>
               <div className="h2-ad-row-top">
-                <span className={job.hidden ? "source-pill closed" : "source-pill live"}>
-                  {job.hidden ? t.collectedHidden : t.statusPublished}
+                <span className={job.hidden ? "source-pill closed" : job.status === "pending" ? "source-pill" : job.status === "rejected" ? "source-pill rejected" : "source-pill live"}>
+                  {job.hidden
+                    ? t.collectedHidden
+                    : job.status === "pending"
+                      ? t.statusPending
+                      : job.status === "rejected"
+                        ? t.statusRejected
+                        : t.statusPublished}
                   {job.merged_into ? ` · ${t.collectedMerged}` : ""}
                 </span>
                 <h2 className="h2-ad-title">{job.title}</h2>

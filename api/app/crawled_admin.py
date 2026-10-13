@@ -91,7 +91,12 @@ def list_crawled() -> list[dict]:
     conn = _connect()
     try:
         rows = conn.execute(
-            f"{_LIST_PREVIEW} ORDER BY COALESCE(j.hidden, 0), j.id DESC"
+            f"""{_LIST_PREVIEW}
+            ORDER BY
+                CASE j.status WHEN 'pending' THEN 0 WHEN 'rejected' THEN 1 ELSE 2 END,
+                COALESCE(j.hidden, 0),
+                j.id DESC
+            """
         ).fetchall()
     finally:
         conn.close()

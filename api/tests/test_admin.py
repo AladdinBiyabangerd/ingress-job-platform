@@ -311,6 +311,63 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(tuple(remembered), (ids[0], ids[1]))
         self.assertEqual(locked, 1)
 
+    def test_scraped_pending_appears_in_queue_and_bulk_approve_publishes(self):
+        conn = sqlite3.connect(self.db)
+        ids = []
+        for index in (1, 2):
+            cur = conn.execute(
+                """
+                INSERT INTO jobs (
+                    title, company, city, text, status, created_at, norm_key, owner_subject
+                ) VALUES (?, 'Crawl Co', 'Baki', 'Scraped body', 'pending', ?, ?, '')
+                """,
+                (f"Scraped {index}", "2026-10-13T12:00:00+04:00", f"scraped-pending-{index}"),
+            )
+            ids.append(int(cur.lastrowid))
+        live = conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key, owner_subject
+            ) VALUES ('Already live', 'Crawl Co', 'Baki', 'Live body', 'published', ?, ?, '')
+            """,
+            ("2026-10-13T12:00:00+04:00", "scraped-live"),
+        )
+        live_id = int(live.lastrowid)
+        conn.commit()
+        conn.close()
+
+        before = {item["id"] for item in self.client.get("/api/v1/jobs").json()["items"]}
+        self.assertEqual(before, {live_id})
+
+        with self._auth("job:staff", "admin-staff"):
+            queue = self.client.get("/api/v1/admin/jobs", headers={"Authorization": "Bearer test"})
+            self.assertEqual(queue.status_code, 200, queue.text)
+            pending_ids = [item["id"] for item in queue.json()["items"] if item["status"] == "pending"]
+            self.assertEqual(set(pending_ids), set(ids))
+            self.assertNotIn(live_id, pending_ids)
+            for item in queue.json()["items"]:
+                if item["id"] in ids:
+                    self.assertEqual(item.get("owner_subject") or "", "")
+
+            one = self.client.post(
+                f"/api/v1/admin/jobs/{ids[0]}/approve",
+                headers={"Authorization": "Bearer test"},
+            )
+            self.assertEqual(one.status_code, 200, one.text)
+            self.assertEqual(one.json()["status"], "published")
+
+            bulk = self.client.post(
+                "/api/v1/admin/jobs/approve-bulk",
+                headers={"Authorization": "Bearer test"},
+                json={"ids": [ids[1], ids[0], 999999]},
+            )
+            self.assertEqual(bulk.status_code, 200, bulk.text)
+            self.assertEqual(bulk.json()["approved"], 1)
+            self.assertEqual(bulk.json()["items"][0]["id"], ids[1])
+
+        public_ids = {item["id"] for item in self.client.get("/api/v1/jobs").json()["items"]}
+        self.assertEqual(public_ids, set(ids) | {live_id})
+
     def test_manual_source_publishes_without_showing_the_url(self):
         body = self._ad(company="Manual MMC", text="LinkedIn-de gorulen rol")
         body["source_url"] = "https://www.linkedin.com/jobs/view/manual-1"

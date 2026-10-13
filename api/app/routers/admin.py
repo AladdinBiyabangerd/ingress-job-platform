@@ -15,6 +15,7 @@ from app.cabinet_store import (
     LANGS,
     CabinetError,
     approve_ad,
+    approve_ads,
     create_sourced_ad,
     get_moderation,
     list_moderation,
@@ -68,6 +69,12 @@ class MergeIn(BaseModel):
 
     keep_id: int
     hide_id: int
+
+
+class BulkApproveIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ids: list[int] = Field(default_factory=list, max_length=200)
 
 
 class AiFlagsIn(BaseModel):
@@ -183,6 +190,11 @@ def manual_ad(body: ManualIn, user: VerifiedAccess = Depends(require_staff)) -> 
 def edit_ad(job_id: int, body: AdIn, _user: VerifiedAccess = Depends(require_staff)) -> dict:
     fields = _attach_form(_fields(body), body, missing="keep")
     return _run(lambda: staff_update_ad(job_id, fields))
+
+
+@router.post("/jobs/approve-bulk")
+def approve_bulk(body: BulkApproveIn, _user: VerifiedAccess = Depends(require_staff)) -> dict:
+    return _run(lambda: approve_ads(body.ids))
 
 
 @router.post("/jobs/{job_id}/approve")
