@@ -157,6 +157,20 @@ def now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
+def _open_sqlite(path: Path) -> sqlite3.Connection:
+    # WAL + busy_timeout: several source threads write at once without
+    # "database is locked"; each thread uses its own connection.
+    conn = sqlite3.connect(path, timeout=60)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA busy_timeout = 60000")
+    try:
+        conn.execute("PRAGMA journal_mode = WAL")
+    except sqlite3.OperationalError:
+        pass
+    return conn
+
+
 class Store:
     def __init__(self, path: Path | None = None, *, sqlite_only: bool = False) -> None:
         from worker.jobs_db import connect, postgres_enabled
@@ -167,9 +181,7 @@ class Store:
         else:
             self.path = path or DB_PATH
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            self.conn = sqlite3.connect(self.path)
-            self.conn.row_factory = sqlite3.Row
-            self.conn.execute("PRAGMA foreign_keys = ON")
+            self.conn = _open_sqlite(self.path)
         self.conn.executescript(SCHEMA)
         self._ensure_cleaned_column()
         self._ensure_staff_columns()
@@ -190,6 +202,18 @@ class Store:
 
     def close(self) -> None:
         self.conn.close()
+
+    def thread_store(self) -> "Store":
+        """Same database, own connection, no schema/seed work. One per thread."""
+        other = Store.__new__(Store)
+        other.__dict__.update(self.__dict__)
+        if self.path is None:
+            from worker.jobs_db import connect
+
+            other.conn = connect()
+        else:
+            other.conn = _open_sqlite(self.path)
+        return other
 
     def _ensure_cleaned_column(self) -> None:
         cols = {row[1] for row in self.conn.execute("PRAGMA table_info(jobs)")}

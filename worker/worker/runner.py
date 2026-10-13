@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import fcntl
 import os
+import threading
+from concurrent.futures import ThreadPoolExecutor, wait as wait_futures
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -277,6 +279,8 @@ def _schedule() -> int:
         print("scheduled: already running, every 1 hour", flush=True)
         return 0
     print("scheduled: every 1 hour", flush=True)
+    global _PASS_WAIT
+    _PASS_WAIT = INTERVAL_SECONDS * 0.75
     while True:
         started = time.monotonic()
         store = Store()
@@ -335,23 +339,18 @@ def _run_pass(store: Store) -> int:
                 print(f"{row['name']}: off, {env_name} not set", flush=True)
         else:
             print(f"{row['name']}: off", flush=True)
-    client = PoliteClient()
-    try:
-        for name, builder in BUILDERS.items():
-            row = store.source_by_name(name)
-            if not row["enabled"] or row["go_decision"] != "go":
-                print(f"{name}: skipped, not enabled", flush=True)
-                continue
-            key_env = str(row["api_key_env"] or "")
-            if key_env and not os.environ.get(key_env, "").strip():
-                print(f"{name}: skipped, {key_env} not set", flush=True)
-                continue
-            connector = builder(client, store)
-            if _too_soon(store, connector, int(row["id"])):
-                continue
-            _run_source(store, client, connector, int(row["id"]))
-    finally:
-        client.close()
+    picked = []
+    for name, builder in BUILDERS.items():
+        row = store.source_by_name(name)
+        if not row["enabled"] or row["go_decision"] != "go":
+            print(f"{name}: skipped, not enabled", flush=True)
+            continue
+        key_env = str(row["api_key_env"] or "")
+        if key_env and not os.environ.get(key_env, "").strip():
+            print(f"{name}: skipped, {key_env} not set", flush=True)
+            continue
+        picked.append((name, builder, int(row["id"])))
+    _run_sources_parallel(store, picked, wait_seconds=_PASS_WAIT)
     try:
         filled = store.backfill_derived()
         if filled:
@@ -451,6 +450,72 @@ def _run_pass(store: Store) -> int:
     except Exception:
         capture_exception()
     return 0
+
+
+# Sources run side by side. A slow source (Djinni, Teamtailor) no longer holds
+# the others; the per-host lock in PoliteClient keeps one request at a time
+# per host, so politeness is unchanged.
+MAX_PARALLEL_SOURCES = 8
+# schedule: a pass waits this long for its sources, then does the tidy work;
+# a source still running keeps going and is not started again next pass.
+# None (one-shot ``python -m worker``) waits for every source.
+_PASS_WAIT: float | None = None
+_RUNNING: set[str] = set()
+_RUNNING_LOCK = threading.Lock()
+_EXECUTOR: ThreadPoolExecutor | None = None
+_CLIENT: PoliteClient | None = None
+
+
+def _shared():
+    global _EXECUTOR, _CLIENT
+    if _EXECUTOR is None:
+        _EXECUTOR = ThreadPoolExecutor(MAX_PARALLEL_SOURCES, thread_name_prefix="source")
+    if _CLIENT is None:
+        _CLIENT = PoliteClient()
+    return _EXECUTOR, _CLIENT
+
+
+def _source_job(store: Store, client: PoliteClient, name: str, builder, source_id: int) -> None:
+    own = store.thread_store() if hasattr(store, "thread_store") else store
+    try:
+        connector = builder(client, own)
+        if _too_soon(own, connector, source_id):
+            return
+        _run_source(own, client, connector, source_id)
+    except Exception as exc:
+        capture_exception()
+        print(f"{name}: failed {type(exc).__name__}", flush=True)
+    finally:
+        with _RUNNING_LOCK:
+            _RUNNING.discard(name)
+        if own is not store:
+            own.close()
+
+
+def _run_sources_parallel(store: Store, picked, *, wait_seconds: float | None = None,
+                          executor=None, client=None) -> list:
+    """Submit each source once; a source still running from before is skipped."""
+    if executor is None or client is None:
+        shared_exec, shared_client = _shared()
+        executor = executor or shared_exec
+        client = client or shared_client
+    futures = []
+    for name, builder, source_id in picked:
+        with _RUNNING_LOCK:
+            if name in _RUNNING:
+                print(f"{name}: skipped, still running", flush=True)
+                continue
+            _RUNNING.add(name)
+        try:
+            futures.append(executor.submit(_source_job, store, client, name, builder, source_id))
+        except Exception:
+            with _RUNNING_LOCK:
+                _RUNNING.discard(name)
+            raise
+    done, pending = wait_futures(futures, timeout=wait_seconds)
+    if pending:
+        print(f"pass: {len(pending)} sources still running, continuing", flush=True)
+    return futures
 
 
 def _too_soon(store: Store, connector, source_id: int) -> bool:
