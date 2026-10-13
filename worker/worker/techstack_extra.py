@@ -52,6 +52,12 @@ def cs(name: str, cat: str, rx: str, *aliases: str) -> Spec:
 
 
 SPECS: list[Spec] = [
+    # ---- JVM resilience / HTTP clients / migrations ----
+    ci("Resilience4j", "backend", "resilience4j", "resilience 4j"),
+    cs("OpenFeign", "backend", r"(?i:open[\s-]?feign|spring[\s-]cloud[\s-]openfeign|feign[\s-]client)|Feign(?=\s*(?:,|/|\)|;|clients?\b|and\b|or\b))", "openfeign", "feign", "feign client"),
+    # "flyway" is also a bird-migration word: capitalised Flyway, or any case
+    # next to migrations/Liquibase/DB words.
+    cs("Flyway", "backend", r"Flyway|(?i:flyway(?=[\s-]+(?:migrations?|db|scripts?|database))|(?<=liquibase[\s,/])\s*flyway|flyway(?=\s*(?:/|,|or|and)\s*liquibase))", "flyway"),
     # ---- languages / markup ----
     cs("Zig", "language", r"Zig(?=\s+(?:language|programming|developer|compiler)|\s*[,/])"),
     ci("OCaml", "language"),

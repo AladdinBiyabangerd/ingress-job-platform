@@ -40,7 +40,7 @@ def _cs(body: str) -> re.Pattern[str]:
 _TECH: list[tuple[str, re.Pattern[str], tuple[str, ...], str]] = [
     # languages
     ("Python", _ci(r"python[23]?|pyspark"), ("py", "python3", "python2"), "language"),
-    ("Java", re.compile(_L + r"java" + r"(?![A-Za-z0-9_+#]|[\s\-]*script)", re.IGNORECASE), ("java",), "language"),
+    ("Java", re.compile(_L + r"java(?:\d{1,2})?" + r"(?![A-Za-z0-9_+#]|[\s\-]*script)", re.IGNORECASE), ("java",), "language"),
     ("Kotlin", _ci(r"kotlin"), (), "language"),
     ("Scala", _cs(r"Scala"), ("scala",), "language"),
     ("Go", re.compile(r"(?i:golang)|" + _L + r"Go(?=\s*(?:,|/|\)|\(|;|\s+(?:developer|engineer|backend|services|microservices|programming|language|or|and|&)\b))"), ("go", "golang"), "language"),
@@ -317,6 +317,67 @@ def _load_extra() -> None:
 
 _load_extra()
 
+# ---- spelling-variant tolerance ---------------------------------------------
+# Case-sensitive single-word patterns whose lowercase form is not an ordinary
+# English word (frozen list, checked against a word list): "vite", "ktor",
+# "JUNIT" mean the same tool, so they also match in any case. Ambiguous words
+# (Rust, Swift, Flask, Jest, Helm, Snowflake, ...) stay case-sensitive.
+_RELAX_CASE = frozenset({
+    "Vite", "Astro", "Ktor", "Prisma", "Shopify", "Splunk", "Trino", "CUDA", "JUnit",
+    "Jira", "OWASP", "JSON", "Prettier", "Retrofit", "MVVM", "RSpec", "Deno", "LINQ",
+    "CQRS", "Okta", "HubSpot", "NoSQL", "GDPR", "Bitcoin", "Agda", "Haxe", "REXX",
+    "MLIR", "CBOR", "urql", "Vuex", "JSPM", "Hexo", "Hono", "GRDB", "Gson", "MMKV",
+    "GORM", "Vavr", "JAXB", "jOOQ", "mypy", "PyPy", "Kivy", "jBPM", "WSO2", "tsup",
+    "MODX", "Pagy", "Riak", "RTIC", "FLTK", "SFML", "LLDB", "MSVC", "NLog", "Xata",
+    "NCCL", "QGIS", "GDAL", "Vaex", "GGUF", "GPTQ", "DSPy", "Dlib", "PyMC", "TiDB",
+    "Gogs", "tmux", "Kops", "Ceph", "Syft", "SPDX", "KEDA", "Jadx", "KAPE", "CWPP",
+    "KSPM", "DSPM", "SSPM", "XSPM", "CMMC", "GLBA", "NIS2", "LGPD", "TPRM", "UEFI",
+    "ESET", "EPSS",
+    # acronyms that are not words in lowercase either ("gcp", "jwt", "mqtt")
+    "GCP", "LLM", "HTML", "CSS", "JWT", "JPA", "NLP", "XSD", "JNI", "DVC", "YAML", "XML",
+    "SAML", "MQTT", "RTOS", "SAST", "OCR", "KVM", "iOS", "Android",
+})
+
+_SEP = r"[\s\-_.]?"
+
+
+def _flex_term(term: str) -> str | None:
+    """'spring boot' -> spring[sep]boot (space, hyphen, dot, underscore or
+    joined). Only multi-token alphanumeric terms; tokens that are bare numbers
+    ("Lean 4", "PCI DSS 4.0") or leading punctuation (".NET") are skipped."""
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 .\-_]*[A-Za-z0-9]", term):
+        return None
+    toks = [x for x in re.split(r"[\s\-_.]+", term) if x]
+    if len(toks) < 2 or any(x.isdigit() for x in toks) or len("".join(toks)) < 5:
+        return None
+    return _SEP.join(re.escape(x) for x in toks)
+
+
+def _with_variants(name: str, pattern: re.Pattern[str], extra: tuple[str, ...]) -> re.Pattern[str]:
+    body = pattern.pattern
+    flags = pattern.flags
+    if name in _RELAX_CASE and not flags & re.IGNORECASE:
+        flags |= re.IGNORECASE
+    inner = body.replace(_L, "").replace(_R, "")
+    if body == "(?!)" or body.endswith("(?:(?!))" + _R) or re.search(r"\(\?<?[=!]", inner):
+        # Never matches, or the author wrote a context guard ("core data" but
+        # not "core data services"): a looser variant would bypass it.
+        terms: list[str] = []
+    else:
+        terms = [name]
+    terms += [a for a in extra if _text_alias(a)]
+    flex = []
+    for term in terms:
+        f = _flex_term(term)
+        if f and f not in flex:
+            flex.append(f)
+    if not flex:
+        return re.compile(body, flags) if flags != pattern.flags else pattern
+    return re.compile("(?:" + body + ")|" + _L + "(?i:" + "|".join(flex) + ")" + _R, flags)
+
+
+_TECH[:] = [(n, _with_variants(n, p, e), e, c) for n, p, e, c in _TECH]
+
 # Vocabulary-only categories: matched in CVs (``find_stack``) but never shown as
 # job-ad chips, so generic words cannot crowd out concrete tools in MAX_STACK.
 from worker.techstack_extra import NON_CHIP_CATEGORIES as _NON_CHIP  # noqa: E402
@@ -426,12 +487,29 @@ def _ci_fullmatch(pattern: re.Pattern[str], tag: str):
     return cached.fullmatch(tag)
 
 
-def _tag_name(tag: str) -> str | None:
+# Separator-free alias keys ("springboot", "nodejs", "githubactions") so a tag
+# spelled "spring-boot", "Node_JS" or "GitHub-Actions" maps the same way. Keys
+# that start with punctuation (".net") or are too short ("ci", "net") stay exact.
+_FLAT_SEP = re.compile(r"[\s\-_.]+")
+_ALIASES_FLAT: dict[str, str] = {}
+for _key, _canon in list(_ALIASES.items()):
+    _flat = _FLAT_SEP.sub("", _key)
+    if len(_flat) >= 4 and _key[:1].isalnum() and _flat not in _ALIASES:
+        _ALIASES_FLAT.setdefault(_flat, _canon)
+
+
+def _tag_name(tag: str, *, loose: bool = True) -> str | None:
     key = re.sub(r"\s+", " ", tag.strip().lower())
     if not key or len(key) > 40:
         return None
     if key in _ALIASES:
         return _ALIASES[key]
+    if loose:
+        flat = _FLAT_SEP.sub("", key)
+        if flat in _ALIASES:
+            return _ALIASES[flat]
+        if flat in _ALIASES_FLAT:
+            return _ALIASES_FLAT[flat]
     for name, pattern, _cat in _candidates(tag):
         found = _ci_fullmatch(pattern, tag.strip())
         if found and name not in {"Go", "C", "SQL"}:
@@ -444,10 +522,12 @@ def _tag_name(tag: str) -> str | None:
 TAGS_ENOUGH = 3
 
 
-def stack_from_tags(tags: object) -> list[str]:
+def stack_from_tags(tags: object, *, loose: bool = True) -> list[str]:
+    """Curated names for source tags. ``loose=False`` skips separator-free
+    alias lookup; ``is_tech_job`` uses it so tag spelling never widens the gate."""
     found: list[str] = []
     for tag in _split_tags(tags):
-        name = _tag_name(tag)
+        name = _tag_name(tag, loose=loose)
         if name and name not in found:
             found.append(name)
     return found
@@ -480,7 +560,9 @@ _MENTION_CUE = re.compile(
     r"\s+(?:include|including|like|such\s+as|range\s+from)|"
     r"(?:supporting|serving|powering|helping|backed\s+by|trusted\s+by|used\s+by|loved\s+by|"
     r"relied\s+on\s+by|chosen\s+by)\b[^.!?\n]{0,80}?\b(?:like|such\s+as|including)\b|"
-    r"\b(?:trusted|backed|funded|loved|chosen)\s+by\b|\bour\s+(?:customers|clients|partners)\b)"
+    r"\b(?:trusted|backed|funded|loved|chosen)\s+by\b|\bour\s+(?:customers|clients|partners)\b|"
+    # the product's own integrations ("integrates with tools like Slack and Hubspot")
+    r"\bintegrates\s+with\b[^.!?\n]{0,60}?\b(?:like|such\s+as|including)\b)"
 )
 _SENTENCE = re.compile(r"[^.!?\n]+[.!?]?")
 
@@ -522,6 +604,13 @@ _CORE_LANGS = ("Java", "Kotlin", "Scala", "Python", "Go", "Rust", "TypeScript",
                "JavaScript", "PHP", "Ruby", "C#", "C++", ".NET", "Swift")
 
 
+_GENERIC_CHIPS = frozenset({
+    "LLM", "GPT", "Pub/Sub", "AI", "A/B Testing", "Incident Response", "Generative AI",
+    "AI Agents", "NLP", "RAG", "OpenAI", "Computer Vision", "Linux", "Git", "CI/CD",
+    "JSON",
+})
+
+
 def _cap(found: list[str]) -> list[str]:
     """Cut to MAX_STACK but never drop a core language that was found: the
     language decides search filters (e.g. "Java"), tools are secondary."""
@@ -529,6 +618,8 @@ def _cap(found: list[str]) -> list[str]:
         return found
     keep = [n for n in found if n in _CORE_LANGS][:MAX_STACK]
     rest = [n for n in found if n not in keep]
+    # Broad buzzwords yield their seats to concrete frameworks, databases, infra.
+    rest = [n for n in rest if n not in _GENERIC_CHIPS] + [n for n in rest if n in _GENERIC_CHIPS]
     chosen = set(keep + rest[: MAX_STACK - len(keep)])
     return [n for n in found if n in chosen]
 
@@ -762,7 +853,7 @@ def is_tech_job(title: str, category: object = "", tags: object = None) -> bool:
         return not re.search(r"(?i)support engineer", title)
     if _TECH_TITLE.search(title):
         return True
-    return len(stack_from_tags(tags)) >= 2 and not cats
+    return len(stack_from_tags(tags, loose=False)) >= 2 and not cats
 
 
 # ---- normalized category ----------------------------------------------------
