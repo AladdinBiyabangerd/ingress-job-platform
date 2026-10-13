@@ -15,6 +15,7 @@ import {
   refreshAdminQueue,
 } from "../lib/server/refresh";
 import { AdminAiFlags } from "./admin-ai-flags";
+import { AdminCategories } from "./admin-categories";
 import { AdminOpsStatus } from "./admin-ops-status";
 import { ApplyFormFields } from "./apply-form-fields";
 import { CollectedAdmin } from "./collected-admin";
@@ -23,7 +24,7 @@ import { PageChrome } from "./page-chrome";
 import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
-const ADMIN_TABS = new Set(["queue", "rejected", "collected", "manual", "ai", "ops"]);
+const ADMIN_TABS = new Set(["queue", "rejected", "collected", "manual", "categories", "ai", "ops"]);
 
 function normalizeAdminTab(value) {
   const tab = String(value || "").trim();
@@ -385,6 +386,15 @@ export function Admin({
         <button
           type="button"
           role="tab"
+          aria-selected={tab === "categories"}
+          className={tab === "categories" ? "on" : ""}
+          onClick={() => selectTab("categories")}
+        >
+          Kateqoriyalar
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={tab === "ai"}
           className={tab === "ai" ? "on" : ""}
           onClick={() => selectTab("ai")}
@@ -724,6 +734,7 @@ export function Admin({
         </div>
       ) : null}
       {tab === "manual" ? <ManualAd locale={locale} onSaved={load} /> : null}
+      {tab === "categories" ? <AdminCategories /> : null}
       {tab === "ai" || seenAi ? (
         <div hidden={tab !== "ai"}>
           <AdminAiFlags locale={locale} initial={initialAiFlags} />

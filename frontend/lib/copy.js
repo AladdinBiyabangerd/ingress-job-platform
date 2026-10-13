@@ -3166,13 +3166,15 @@ export function text(locale) {
   return copy[locale] || copy.az;
 }
 
-// Worker categories (worker/worker/techstack.py CATEGORIES), in this order.
-export const CATEGORY_ORDER = [
+// Job categories live in the job_categories table (API /api/v1/categories,
+// staff-editable in /admin?tab=categories). The layout registers that list
+// with setCategoryCatalog(); the names below are only an offline fallback.
+const FALLBACK_ORDER = [
   "Backend", "Frontend", "Full-stack", "Mobile", "DevOps/Cloud", "Data/ML",
   "QA", "Security", "Design/UX", "Product", "IT Support", "Other tech",
 ];
 
-export const categoryNames = {
+const fallbackNames = {
   az: {
     Backend: "Backend", Frontend: "Frontend", "Full-stack": "Full-stack", Mobile: "Mobil",
     "DevOps/Cloud": "DevOps / Bulud", "Data/ML": "Data / ML", QA: "QA / Test", Security: "Təhlükəsizlik",
@@ -3190,8 +3192,29 @@ export const categoryNames = {
   },
 };
 
+const categoryCatalog = new Map();
+
+/** Register categories from the API ([{name, labels:{az,en,ru}, sort_order}]). */
+export function setCategoryCatalog(items) {
+  if (!Array.isArray(items)) return;
+  for (const item of items) {
+    const name = String(item?.name || item?.slug || "").trim();
+    if (!name || !item.labels) continue;
+    categoryCatalog.set(name, { labels: item.labels, sort: Number(item.sort_order) || 0 });
+  }
+}
+
+export function categoryRank(name) {
+  const known = categoryCatalog.get(name);
+  if (known) return known.sort;
+  const index = FALLBACK_ORDER.indexOf(name);
+  return index < 0 ? 100000 : (index + 1) * 10;
+}
+
 export function categoryLabel(locale, name) {
-  const names = categoryNames[locale] || categoryNames.az;
+  const known = categoryCatalog.get(name);
+  if (known) return known.labels[locale] || known.labels.az || name;
+  const names = fallbackNames[locale] || fallbackNames.az;
   return names[name] || name;
 }
 

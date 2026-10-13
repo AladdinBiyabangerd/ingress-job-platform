@@ -9,6 +9,9 @@ import "@fontsource/plus-jakarta-sans/latin-ext-500.css";
 import "@fontsource/plus-jakarta-sans/latin-ext-600.css";
 import "@fontsource/plus-jakarta-sans/latin-ext-700.css";
 import { MeSeed } from "../components/me-seed";
+import { CategorySeed } from "../components/category-seed";
+import { fetchCategories } from "../lib/api";
+import { setCategoryCatalog } from "../lib/copy";
 import { getMe } from "../lib/server/me";
 import { FOUNDER } from "../lib/founder";
 import { SITE, homeMetadata, siteOrigin } from "../lib/seo";
@@ -57,10 +60,12 @@ export const viewport = {
 export default async function RootLayout({ children }) {
   const headerList = await headers();
   const locale = headerList.get("x-locale") || "az";
-  const me = await getMe();
+  const [me, categories] = await Promise.all([getMe(), fetchCategories()]);
+  setCategoryCatalog(categories);
   return (
     <html lang={locale}>
       <body>
+        <CategorySeed items={categories} />
         <MeSeed me={me}>{children}</MeSeed>
       </body>
     </html>

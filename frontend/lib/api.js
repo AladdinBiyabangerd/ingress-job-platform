@@ -60,6 +60,17 @@ export async function fetchJobs(options = {}) {
   };
 }
 
+export async function fetchCategories() {
+  try {
+    const res = await apiFetch("/api/v1/categories");
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data?.items) ? data.items : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchCompanies({ q = "", sort = "jobs", page = 1, perPage = 24 } = {}) {
   const params = new URLSearchParams();
   if (q) params.set("q", q);

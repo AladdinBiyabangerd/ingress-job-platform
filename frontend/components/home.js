@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { readBoardReturn, saveBoardReturn } from "../lib/board-return";
-import { CATEGORY_ORDER, categoryLabel, hrefFor, languageLabel, text } from "../lib/copy";
+import { categoryLabel, categoryRank, setCategoryCatalog, hrefFor, languageLabel, text } from "../lib/copy";
 import { boardUrlSearchParams, DEFAULT_BOARD_FILTERS, jobsListParams } from "../lib/jobs-params";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
 import { fetchMe } from "../lib/me-client";
@@ -482,11 +482,8 @@ export function Home({
   );
   const categoryOptions = useMemo(() => {
     const list = Array.isArray(facetData.categories) ? facetData.categories : [];
-    const rank = (name) => {
-      const index = CATEGORY_ORDER.indexOf(name);
-      return index < 0 ? 99 : index;
-    };
-    return [...list].sort((a, b) => rank(a.name) - rank(b.name));
+    setCategoryCatalog(list);
+    return [...list].sort((a, b) => categoryRank(a.name) - categoryRank(b.name));
   }, [facetData]);
   const cityOptions = useMemo(() => {
     // Country-only filter. API may still mirror the list under `cities`.
