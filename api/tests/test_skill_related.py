@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from app.cabinet_store import ensure_schema
 from app.main import app
+from app.skill_reco import clear_catalog_memo
 from app.skill_related import categories_compatible, related_skills_for_conn
 from app.trends import _TRENDS_ENSURED, ensure_trend_tables
 
@@ -29,6 +30,7 @@ class SkillRelatedTests(unittest.TestCase):
         cabinet_store._ENSURED.clear()
         _TRENDS_ENSURED.clear()
         role_suggestions._SKILL_LOOKUP_MEMO = None
+        clear_catalog_memo()
         ensure_schema(create=True)
         self._seed()
         self.client = TestClient(app)
@@ -41,6 +43,7 @@ class SkillRelatedTests(unittest.TestCase):
         cabinet_store._ENSURED.clear()
         _TRENDS_ENSURED.clear()
         role_suggestions._SKILL_LOOKUP_MEMO = None
+        clear_catalog_memo()
         self.tmp.cleanup()
 
     def _seed(self):
@@ -56,6 +59,12 @@ class SkillRelatedTests(unittest.TestCase):
                 ("Kubernetes", "[]", "devops"),
                 ("Terraform", "[]", "devops"),
                 ("Git", "[]", "devops"),
+                ("Git Flow", "[]", "devops"),
+                ("Git Hooks", "[]", "devops"),
+                ("Git Rebase", "[]", "devops"),
+                ("Git Submodules", "[]", "devops"),
+                ("GitHub Actions", "[]", "devops"),
+                ("GitLab CI", "[]", "devops"),
                 ("React", "[]", "frontend"),
                 ("CSS", "[]", "frontend"),
                 ("JavaScript", "[]", "language"),
@@ -186,7 +195,7 @@ class SkillRelatedTests(unittest.TestCase):
         names = [item["name"] for item in data["items"]]
         self.assertIn("Docker", names)
         docker = next(item for item in data["items"] if item["name"] == "Docker")
-        self.assertEqual(docker["source"], "pair")
+        self.assertIn(docker["source"], {"exploit", "adjacent", "serendipity", "pair"})
 
     def test_hub_git_does_not_pull_frontend(self):
         """Git is listed lightly on many roles — must not recommend React/CSS."""
@@ -203,6 +212,19 @@ class SkillRelatedTests(unittest.TestCase):
             names,
         )
 
+    def test_mixed_buckets_not_only_exploit(self):
+        """Hybrid mix must leave room beyond same-category exploitation."""
+        with sqlite3.connect(self.db) as conn:
+            conn.row_factory = sqlite3.Row
+            payload = related_skills_for_conn(conn, name="Git", limit=12)
+        sources = {item["source"] for item in payload["items"]}
+        names = [item["name"] for item in payload["items"]]
+        self.assertTrue(sources & {"exploit", "adjacent", "serendipity", "family"}, sources)
+        self.assertTrue(
+            any(not n.startswith("Git") for n in names),
+            names,
+        )
+
     def test_unknown_name_empty_items(self):
         res = self.client.get(
             "/api/v1/skills/related",
@@ -213,15 +235,19 @@ class SkillRelatedTests(unittest.TestCase):
         self.assertEqual(data["skill_id"], None)
         self.assertEqual(data["items"], [])
 
-    def test_conn_helper_priority_family_before_role(self):
+    def test_conn_helper_spring_family_near_focus(self):
         with sqlite3.connect(self.db) as conn:
             conn.row_factory = sqlite3.Row
             payload = related_skills_for_conn(
                 conn, name="Spring", exclude=["Java"], limit=4
             )
-        sources = [item["source"] for item in payload["items"]]
-        self.assertTrue(sources)
-        self.assertEqual(sources[0], "family")
+        names = [item["name"] for item in payload["items"]]
+        self.assertTrue(names)
+        self.assertTrue(
+            any(n.startswith("Spring") for n in names),
+            names,
+        )
+        self.assertNotIn("Java", names)
 
 
 if __name__ == "__main__":

@@ -46,7 +46,7 @@ def read_related_skills(
     limit: int | None = Query(default=None, ge=1, le=RELATED_MAX_LIMIT),
     _rl=dep_ip("public_read"),
 ) -> dict:
-    """Companion skill suggestions for profile review (family + pairs + roles)."""
+    """Companion skill suggestions for profile review (skill_reco hybrid)."""
     return related_skills_from_query(name=name, exclude=exclude, limit=limit)
 
 

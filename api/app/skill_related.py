@@ -1,9 +1,11 @@
 """Related skill suggestions for profile review.
 
-Ranking follows common practice from job-market skill graphs:
-family/prefix → conditional co-occurrence (pair share) → role peers,
-with category compatibility so hub skills (Git, SQL) do not pull
-unrelated stacks (CSS/React from every role that lists Git).
+Primary path: ``app.skill_reco`` session vector + 60/25/15 hybrid mix over
+the skill dictionary (synthetic category/name embeddings). Fallback: legacy
+family → pair → role → category round-robin with source quotas.
+
+Category compatibility still filters hub skills (Git, SQL) so they do not
+pull unrelated stacks (CSS/React from every role that lists Git).
 """
 
 from __future__ import annotations
@@ -431,6 +433,286 @@ def _role_skills(
     return out
 
 
+def _source_quotas(limit: int) -> dict[str, int]:
+    """Cap each source so the list is a mix (family alone must not fill all 12)."""
+    n = max(1, int(limit))
+    family = max(2, min(4, (n + 2) // 3))
+    pair = max(2, min(4, (n + 2) // 3))
+    role = max(2, min(3, max(2, n // 4)))
+    category = max(2, min(4, n - family - pair - role + 2))
+    return {
+        "family": family,
+        "pair": pair,
+        "role": role,
+        "category": category,
+    }
+
+
+def _normalize_item(row: dict) -> dict | None:
+    name = str(row.get("name") or "").strip()
+    if not name:
+        return None
+    return {
+        "skill_id": row.get("skill_id"),
+        "name": name,
+        "source": str(row.get("source") or ""),
+    }
+
+
+def _session_from_profile(
+    catalog,
+    *,
+    focus,
+    exclude_names: list[str],
+):
+    """Build a decaying session: older profile skills, then the focus skill."""
+    from app.skill_reco import UserSession
+
+    session = UserSession(decay=0.7, max_history=8)
+    # Leave one slot for focus so it always anchors the newest click.
+    history: list = []
+    for raw in exclude_names:
+        skill = catalog.get_by_name(raw)
+        if skill is None or skill.id == focus.id:
+            continue
+        history.append(skill)
+    for skill in history[-(session.max_history - 1) :]:
+        session.click(skill)
+    session.click(focus)
+    return session
+
+
+def _catalog_with_market_boosts(
+    catalog,
+    conn,
+    *,
+    skill_id: int | None,
+    focus_category: str,
+):
+    """Raise popularity for pair/role peers so market edges beat name noise."""
+    if not skill_id:
+        return catalog
+    from app.skill_reco.catalog import Skill, SkillCatalog
+
+    boosts: dict[int, float] = {}
+    for row in _pair_skills(
+        conn,
+        skill_id=int(skill_id),
+        focus_category=focus_category,
+        exclude=set(),
+        limit=24,
+    ):
+        sid = int(row.get("skill_id") or 0)
+        if sid > 0:
+            boosts[sid] = max(boosts.get(sid, 0.0), 0.95)
+    for row in _role_skills(
+        conn,
+        skill_id=int(skill_id),
+        focus_category=focus_category,
+        exclude=set(),
+        limit=24,
+    ):
+        sid = int(row.get("skill_id") or 0)
+        if sid > 0:
+            boosts[sid] = max(boosts.get(sid, 0.0), 0.75)
+    if not boosts:
+        return catalog
+
+    skills = []
+    for skill in catalog.all():
+        pop = max(float(skill.popularity_score), boosts.get(skill.id, 0.0))
+        if pop == skill.popularity_score:
+            skills.append(skill)
+            continue
+        skills.append(
+            Skill(
+                id=skill.id,
+                name=skill.name,
+                category=skill.category,
+                tags=skill.tags,
+                popularity_score=pop,
+                embedding=skill.embedding,
+            )
+        )
+    return SkillCatalog(skills=skills, adjacency=catalog.adjacency)
+
+
+def _related_skills_reco_for_conn(
+    conn,
+    *,
+    skill_id: int | None,
+    canonical: str,
+    focus_category: str,
+    exclude: list[str] | None,
+    chosen: int,
+) -> dict[str, Any] | None:
+    """Session-vector hybrid recommender (60/25/15). None → use mix fallback."""
+    from app.skill_reco import HybridRecommender
+    from app.skill_reco.db_catalog import catalog_from_conn
+
+    base = catalog_from_conn(conn)
+    if not base.skills:
+        return None
+    catalog = _catalog_with_market_boosts(
+        base,
+        conn,
+        skill_id=skill_id,
+        focus_category=focus_category,
+    )
+    focus = None
+    if skill_id:
+        focus = catalog.get(int(skill_id))
+    if focus is None:
+        focus = catalog.get_by_name(canonical)
+    if focus is None:
+        return None
+
+    blocked = _norm_exclude(exclude)
+    blocked.add(canonical.lower())
+    exclude_names = [str(x).strip() for x in (exclude or []) if str(x).strip()]
+    session = _session_from_profile(
+        catalog, focus=focus, exclude_names=exclude_names
+    )
+    engine = HybridRecommender(catalog)
+    # Over-fetch so category compatibility can drop hub-noise serendipity.
+    raw = engine.get_recommendations(session, top_n=max(chosen * 3, chosen + 8))
+    items: list[dict] = []
+    seen: set[str] = set(blocked)
+    for row in raw:
+        name = str(row.name or "").strip()
+        key = name.lower()
+        if not name or key in seen:
+            continue
+        if focus_category and not categories_compatible(
+            focus_category, row.category
+        ):
+            continue
+        seen.add(key)
+        items.append(
+            {
+                "skill_id": row.skill.id,
+                "name": name,
+                "source": str(row.bucket),
+            }
+        )
+        if len(items) >= chosen:
+            break
+
+    if not items:
+        return None
+    return {
+        "name": canonical,
+        "skill_id": skill_id,
+        "items": items[:chosen],
+    }
+
+
+def _related_skills_mix_for_conn(
+    conn,
+    *,
+    skill_id: int | None,
+    canonical: str,
+    focus_category: str,
+    blocked: set[str],
+    chosen: int,
+) -> dict[str, Any]:
+    """Legacy family/pair/role/category round-robin mix (fallback)."""
+    pool_n = max(chosen * 2, 16)
+    empty: set[str] = set()
+    pools: dict[str, list[dict]] = {
+        "family": _family_skills(
+            conn, canonical=canonical, exclude=empty, limit=pool_n
+        ),
+        "pair": (
+            _pair_skills(
+                conn,
+                skill_id=skill_id,
+                focus_category=focus_category,
+                exclude=empty,
+                limit=pool_n,
+            )
+            if skill_id
+            else []
+        ),
+        "role": (
+            _role_skills(
+                conn,
+                skill_id=skill_id,
+                focus_category=focus_category,
+                exclude=empty,
+                limit=pool_n,
+            )
+            if skill_id
+            else []
+        ),
+        "category": (
+            _category_peers(
+                conn,
+                focus_category=focus_category,
+                focus_skill_id=skill_id,
+                exclude=empty,
+                limit=pool_n,
+            )
+            if focus_category
+            else []
+        ),
+    }
+
+    quotas = _source_quotas(chosen)
+    cursors = {key: 0 for key in pools}
+    taken = {key: 0 for key in pools}
+    seen: set[str] = set(blocked)
+    items: list[dict] = []
+    order = ("family", "pair", "role", "category")
+
+    def _next_from(src: str) -> dict | None:
+        rows = pools.get(src) or []
+        i = cursors[src]
+        while i < len(rows):
+            cand = _normalize_item(rows[i])
+            i += 1
+            cursors[src] = i
+            if not cand:
+                continue
+            key = cand["name"].lower()
+            if key in seen:
+                continue
+            return cand
+        cursors[src] = i
+        return None
+
+    progress = True
+    while len(items) < chosen and progress:
+        progress = False
+        for src in order:
+            if len(items) >= chosen:
+                break
+            if taken[src] >= quotas.get(src, chosen):
+                continue
+            cand = _next_from(src)
+            if not cand:
+                continue
+            seen.add(cand["name"].lower())
+            items.append(cand)
+            taken[src] += 1
+            progress = True
+
+    if len(items) < chosen:
+        for src in ("pair", "role", "category", "family"):
+            while len(items) < chosen:
+                cand = _next_from(src)
+                if not cand:
+                    break
+                seen.add(cand["name"].lower())
+                items.append(cand)
+
+    return {
+        "name": canonical,
+        "skill_id": skill_id,
+        "items": items[:chosen],
+    }
+
+
 def related_skills_for_conn(
     conn,
     *,
@@ -447,70 +729,25 @@ def related_skills_for_conn(
     if not canonical:
         return {"name": "", "skill_id": None, "items": []}
 
-    items: list[dict] = []
-    seen: set[str] = set(blocked)
+    reco = _related_skills_reco_for_conn(
+        conn,
+        skill_id=skill_id,
+        canonical=canonical,
+        focus_category=focus_category,
+        exclude=exclude,
+        chosen=chosen,
+    )
+    if reco is not None:
+        return reco
 
-    def _take(rows: list[dict]) -> None:
-        for row in rows:
-            key = str(row.get("name") or "").strip().lower()
-            if not key or key in seen:
-                continue
-            seen.add(key)
-            items.append(
-                {
-                    "skill_id": row.get("skill_id"),
-                    "name": str(row.get("name") or "").strip(),
-                    "source": str(row.get("source") or ""),
-                }
-            )
-            if len(items) >= chosen:
-                return
-
-    remaining = chosen
-    _take(_family_skills(conn, canonical=canonical, exclude=seen, limit=remaining))
-    if len(items) < chosen and skill_id:
-        remaining = chosen - len(items)
-        _take(
-            _pair_skills(
-                conn,
-                skill_id=skill_id,
-                focus_category=focus_category,
-                exclude=seen,
-                limit=remaining,
-            )
-        )
-    if len(items) < chosen and skill_id:
-        remaining = chosen - len(items)
-        _take(
-            _role_skills(
-                conn,
-                skill_id=skill_id,
-                focus_category=focus_category,
-                exclude=seen,
-                limit=remaining,
-            )
-        )
-    if len(items) < chosen and focus_category:
-        remaining = chosen - len(items)
-        _take(
-            _category_peers(
-                conn,
-                focus_category=focus_category,
-                focus_skill_id=skill_id,
-                exclude=seen,
-                limit=remaining,
-            )
-        )
-
-    if not skill_id and len(items) < chosen:
-        remaining = chosen - len(items)
-        _take(_family_skills(conn, canonical=canonical, exclude=seen, limit=remaining))
-
-    return {
-        "name": canonical,
-        "skill_id": skill_id,
-        "items": items[:chosen],
-    }
+    return _related_skills_mix_for_conn(
+        conn,
+        skill_id=skill_id,
+        canonical=canonical,
+        focus_category=focus_category,
+        blocked=blocked,
+        chosen=chosen,
+    )
 
 
 def related_skills(
