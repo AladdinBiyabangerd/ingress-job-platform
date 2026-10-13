@@ -52,6 +52,8 @@ from worker.connectors.rssboards import (
     JobspressoConnector,
     PythonOrgJobsConnector,
     RealWorkFromAnywhereConnector,
+    LandingJobsConnector,
+    NoDeskConnector,
     RemoteFirstJobsRssConnector,
     RemoteYeahConnector,
 )
@@ -126,6 +128,8 @@ BUILDERS = {
     "Python.org Jobs": PythonOrgJobsConnector,
     "Crypto Jobs List": CryptoJobsListConnector,
     "Real Work From Anywhere": RealWorkFromAnywhereConnector,
+    "Landing.jobs": LandingJobsConnector,
+    "NoDesk": NoDeskConnector,
     "Berlin Startup Jobs": BerlinStartupJobsConnector,
     "Golang Projects": GolangProjectsConnector,
     "Elixir Jobs": ElixirJobsConnector,

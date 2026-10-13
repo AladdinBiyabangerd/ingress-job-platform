@@ -204,6 +204,24 @@ SOURCES: list[dict] = [
         note="Açıq RSS, dünya üzrə remote. /go/ (robots bağlı) oxunmur.",
     ),
     _row(
+        "Landing.jobs",
+        "https://landing.jobs/",
+        "rss",
+        "https://landing.jobs/feed",
+        enabled=True,
+        go="go",
+        note="Açıq Atom lenti (Avropa/Portuqaliya tech, relocation). /api/ robots.txt-də bağlıdır, oxunmur. Yalnız tam remote və ya relocation elanlar.",
+    ),
+    _row(
+        "NoDesk",
+        "https://nodesk.co/",
+        "rss",
+        "https://nodesk.co/remote-jobs/index.xml",
+        enabled=True,
+        go="go",
+        note="Açıq RSS, remote işlər. Region məhdudiyyəti (USA only və s.) adda olur və qaydalarla rədd edilir.",
+    ),
+    _row(
         "Berlin Startup Jobs",
         "https://berlinstartupjobs.com/",
         "rss",
@@ -517,6 +535,21 @@ _ATS_INFO = {
         "Pinpoint karyera saytlarının açıq postings.json lenti (tam mətn, workplace_type, yer).",
         "Employer's public Pinpoint career site. The link opens the employer's posting.",
     ),
+    "ashby": (
+        "https://www.ashbyhq.com/", "official_api", "https://jobs.ashbyhq.com/",
+        "Ashby karyera saytlarının açıq səhifələri (jobs.ashbyhq.com; api.ashbyhq.com robots.txt-də 401 verdiyi üçün oxunmur).",
+        "Employer's public Ashby job board (jobs.ashbyhq.com). The link opens the employer's original posting.",
+    ),
+    "workable": (
+        "https://www.workable.com/", "official_api", "https://apply.workable.com/api/v1/widget/accounts",
+        "Workable karyera vidjetinin açıq API-si (tam mətn, telecommuting).",
+        "Employer's public Workable careers widget. The link opens the employer's posting on apply.workable.com.",
+    ),
+    "recruitee": (
+        "https://recruitee.com/", "official_api", "https://bunq.recruitee.com/api/offers/",
+        "Recruitee karyera saytlarının açıq offers API-si (tam mətn, remote).",
+        "Employer's public Recruitee careers API. The link opens the employer's posting.",
+    ),
 }
 
 
@@ -530,6 +563,8 @@ def _ats_rows() -> list[dict]:
             entry = f"https://{boards[0]}.breezy.hr/json"
         elif ats == "pinpoint":
             entry = f"https://{boards[0]}.pinpointhq.com/postings.json"
+        elif ats == "recruitee":
+            entry = f"https://{boards[0]}.recruitee.com/api/offers/"
         rotate = (
             f" Hər keçiddə ən çox {ATS_MAX_BOARDS} lövhə oxunur, qalanları növbəti keçidlərdə növbə ilə."
             if len(boards) > ATS_MAX_BOARDS else ""

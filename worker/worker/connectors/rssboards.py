@@ -7,9 +7,10 @@ Only the feed URL and, where the feed text is short, the public listing page
 from __future__ import annotations
 
 import re
+from html import unescape
 from urllib.parse import urlparse
 
-from worker.connectors.feed import FeedConnector, as_list, first, read_rss, text_from_html
+from worker.connectors.feed import RSS_ACCEPT, FeedConnector, as_list, first, read_rss, text_from_html
 from worker.parsing import clean
 
 
@@ -307,3 +308,87 @@ class RemoteFirstJobsRssConnector(FeedConnector):
             except (NotFound, Disallowed):
                 pass
         return super().fetch(url)
+
+
+_LJ_INFO = re.compile(r"At (?P<company>.+?)(?: \([^)]*\))?, in (?P<place>[^<]+?)<br", re.S)
+_LJ_REMOTE = re.compile(r"Remote policy:\s*(?P<policy>[^<]+)", re.I)
+
+
+_ENTRY = re.compile(r"<entry\b[^>]*>(.*?)</entry>", re.S | re.I)
+
+
+def _atom_entries(raw: str) -> list[dict]:
+    """The Landing.jobs feed uses an unbound XML prefix, so it is read loosely."""
+    out: list[dict] = []
+    for body in _ENTRY.findall(raw):
+        def tag(name: str) -> str:
+            m = re.search(rf"<{name}\b[^>]*>(.*?)</{name}>", body, re.S)
+            v = (m.group(1) if m else "").strip()
+            if v.startswith("<![CDATA[") and v.endswith("]]>"):
+                v = v[9:-3]
+            return v
+        link = re.search(r'<link[^>]*href="([^"]+)"', body)
+        out.append({"id": unescape(tag("id")), "title": unescape(tag("title")),
+                    "content": tag("content"), "link": unescape(link.group(1)) if link else ""})
+    return out
+
+
+class LandingJobsConnector(FeedConnector):
+    """Landing.jobs public Atom feed (https://landing.jobs/feed).
+
+    /api/ is disallowed in landing.jobs/robots.txt, so the public feed is used;
+    it carries company, place, remote policy and the full ad text."""
+
+    name = "Landing.jobs"
+    entry_url = "https://landing.jobs/feed"
+    require_remote_or_relocation = True
+    credit_note = "Landing.jobs public job feed. The link opens the ad on landing.jobs."
+
+    def feed_items(self) -> list[dict]:
+        out: list[dict] = []
+        for it in _atom_entries(self.client.get_text(self.entry_url, accept=RSS_ACCEPT)):
+            link = first(it.get("id")) or first(it.get("link")).split("?", 1)[0]
+            html = first(it.get("content"))
+            info = _LJ_INFO.search(html)
+            policy = _LJ_REMOTE.search(html)
+            mode = clean(policy.group("policy")).lower() if policy else ""
+            out.append({
+                "title": first(it.get("title")),
+                "company": clean(info.group("company")) if info else (
+                    link.split("/at/", 1)[-1].split("/", 1)[0].replace("-", " ").title() if "/at/" in link else ""),
+                "city": clean(info.group("place"))[:160] if info else "",
+                "text": text_from_html(html),
+                "source_url": link,
+                "external_id": "landingjobs-" + link.rstrip("/").rsplit("/", 1)[-1],
+                # Only "Full remote" counts; "Partial remote" is hybrid.
+                "remote": True if mode.startswith("full remote") else None,
+            })
+        return out
+
+
+class NoDeskConnector(FeedConnector):
+    """NoDesk remote jobs RSS (https://nodesk.co/remote-jobs/index.xml)."""
+
+    name = "NoDesk"
+    entry_url = "https://nodesk.co/remote-jobs/index.xml"
+    remote_default = True
+    detail = True
+    credit_note = "NoDesk public RSS feed. The link opens the ad on nodesk.co."
+
+    def feed_items(self) -> list[dict]:
+        out: list[dict] = []
+        for it in read_rss(self.client, self.entry_url):
+            full = clean(first(it.get("title")))
+            title, company = (full.rsplit(" at ", 1) + [""])[:2] if " at " in full else (full, "")
+            link = first(it.get("guid")) or first(it.get("link"))
+            out.append({
+                "title": title,
+                "company": company,
+                # Region limits sit in the title, e.g. "(USA Only, 100% Remote)" / "- India".
+                "city": "Remote",
+                "text": full + "\n" + text_from_html(first(it.get("description"))),
+                "source_url": link,
+                "external_id": "nodesk-" + link.rstrip("/").rsplit("/", 1)[-1],
+                "remote": True,
+            })
+        return out
