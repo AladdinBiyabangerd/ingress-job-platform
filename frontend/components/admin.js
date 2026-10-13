@@ -23,7 +23,7 @@ import { PageChrome } from "./page-chrome";
 import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
-const ADMIN_TABS = new Set(["queue", "collected", "manual", "ai", "ops"]);
+const ADMIN_TABS = new Set(["queue", "rejected", "collected", "manual", "ai", "ops"]);
 
 function normalizeAdminTab(value) {
   const tab = String(value || "").trim();
@@ -128,9 +128,25 @@ export function Admin({
     setSelected(new Set());
   }
 
+  const queueItems = items.filter((job) => job.status !== "rejected");
+  const rejectedItems = items.filter((job) => job.status === "rejected");
+  const listItems = tab === "rejected" ? rejectedItems : queueItems;
+  const { pageItems, currentPage, totalPages, pageSize, total, goToPage: goToPaged, resetPage } = usePagination(
+    listItems,
+    LIST_PAGE_SIZE,
+  );
+
+  function cancelEdit() {
+    setEditing(null);
+    setForm(null);
+    setError("");
+  }
+
   function selectTab(next, { push = true } = {}) {
     const value = normalizeAdminTab(next);
+    if (editing) cancelEdit();
     setTab(value);
+    resetPage();
     if (value === "collected") setSeenCollected(true);
     if (value === "ai") setSeenAi(true);
     if (value === "ops") setSeenOps(true);
@@ -140,6 +156,11 @@ export function Admin({
     if (current === url) return;
     if (push) window.history.pushState(null, "", url);
     else window.history.replaceState(null, "", url);
+  }
+
+  function goToPage(page) {
+    if (editing) cancelEdit();
+    goToPaged(page);
   }
 
   useEffect(() => {
@@ -157,6 +178,7 @@ export function Admin({
     function onPopState() {
       const value = normalizeAdminTab(new URLSearchParams(window.location.search).get("tab"));
       setTab(value);
+      resetPage();
       if (value === "collected") setSeenCollected(true);
       if (value === "ai") setSeenAi(true);
       if (value === "ops") setSeenOps(true);
@@ -165,21 +187,8 @@ export function Admin({
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
-  const { pageItems, currentPage, totalPages, pageSize, total, goToPage: goToPaged } = usePagination(items, LIST_PAGE_SIZE);
-
-  function goToPage(page) {
-    if (editing) cancelEdit();
-    goToPaged(page);
-  }
-
   function setField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
-  }
-
-  function cancelEdit() {
-    setEditing(null);
-    setForm(null);
-    setError("");
   }
 
   function isCollected(jobId) {
@@ -348,6 +357,16 @@ export function Admin({
         <button
           type="button"
           role="tab"
+          aria-selected={tab === "rejected"}
+          className={tab === "rejected" ? "on" : ""}
+          onClick={() => selectTab("rejected")}
+        >
+          {t.adminRejectedTab}
+          {rejectedItems.length ? <span className="h2-tab-count">{rejectedItems.length}</span> : null}
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={tab === "collected"}
           className={tab === "collected" ? "on" : ""}
           onClick={() => selectTab("collected")}
@@ -385,13 +404,15 @@ export function Admin({
       {error ? <p className="note">{error}</p> : null}
       {note ? <p className="note">{note}</p> : null}
 
-      {tab === "queue" ? (
+      {tab === "queue" || tab === "rejected" ? (
         <section className="h2-employer-queue">
           <div className="h2-panel h2-employer-list">
-            {items.length === 0 ? <p className="empty-line">{t.adminEmpty}</p> : null}
-            {items.length ? (
+            {listItems.length === 0 ? (
+              <p className="empty-line">{tab === "rejected" ? t.adminRejectedEmpty : t.adminEmpty}</p>
+            ) : null}
+            {listItems.length ? (
             <div className="admin-mod-table-wrap">
-              {selectedCount ? (
+              {tab === "queue" && selectedCount ? (
                 <div className="admin-mod-bulk">
                   <span className="admin-mod-bulk-count">{t.adminSelectedCount(selectedCount)}</span>
                   <button
@@ -415,26 +436,28 @@ export function Admin({
               <table className="admin-mod-table">
                 <thead>
                   <tr>
-                    <th className="admin-mod-check" scope="col">
-                      {pendingCount ? (
-                        <label className="inline admin-select">
-                          <input
-                            type="checkbox"
-                            checked={allPendingSelected}
-                            ref={(el) => {
-                              if (el) el.indeterminate = somePendingSelected && !allPendingSelected;
-                            }}
-                            onChange={() => {
-                              if (allPendingSelected) clearSelection();
-                              else selectAllPending();
-                            }}
-                            aria-label={t.adminSelectAllPending}
-                          />
-                        </label>
-                      ) : (
-                        <span className="visually-hidden">{t.adminSelectAllPending}</span>
-                      )}
-                    </th>
+                    {tab === "queue" ? (
+                      <th className="admin-mod-check" scope="col">
+                        {pendingCount ? (
+                          <label className="inline admin-select">
+                            <input
+                              type="checkbox"
+                              checked={allPendingSelected}
+                              ref={(el) => {
+                                if (el) el.indeterminate = somePendingSelected && !allPendingSelected;
+                              }}
+                              onChange={() => {
+                                if (allPendingSelected) clearSelection();
+                                else selectAllPending();
+                              }}
+                              aria-label={t.adminSelectAllPending}
+                            />
+                          </label>
+                        ) : (
+                          <span className="visually-hidden">{t.adminSelectAllPending}</span>
+                        )}
+                      </th>
+                    ) : null}
                     <th className="admin-mod-date" scope="col">{t.adminColIngested}</th>
                     <th scope="col">{t.adminColTitle}</th>
                     <th className="admin-mod-source" scope="col">{t.adminColSource}</th>
@@ -444,22 +467,29 @@ export function Admin({
                 <tbody>
                   {pageItems.map((job) => {
                     const muted = job.status === "closed" || job.status === "rejected";
-                    const ingested = dateCell(job.created_at, locale, t.adminDateUnknown);
+                    const ingested = dateCell(
+                      tab === "rejected" ? (job.updated_at || job.created_at) : job.created_at,
+                      locale,
+                      t.adminDateUnknown,
+                    );
                     const isOpen = editing === job.id;
+                    const colSpan = tab === "rejected" ? 4 : 5;
                     return (
                       <Fragment key={job.id}>
                       <tr className={`${muted ? "is-muted" : ""}${isOpen ? " is-editing" : ""}`.trim() || undefined}>
-                        <td className="admin-mod-check">
-                          {job.status === "pending" ? (
-                            <label className="inline admin-select">
-                              <input
-                                type="checkbox"
-                                checked={selected.has(job.id)}
-                                onChange={() => toggleSelected(job.id)}
-                              />
-                            </label>
-                          ) : null}
-                        </td>
+                        {tab === "queue" ? (
+                          <td className="admin-mod-check">
+                            {job.status === "pending" ? (
+                              <label className="inline admin-select">
+                                <input
+                                  type="checkbox"
+                                  checked={selected.has(job.id)}
+                                  onChange={() => toggleSelected(job.id)}
+                                />
+                              </label>
+                            ) : null}
+                          </td>
+                        ) : null}
                         <td className="admin-mod-date">{ingested}</td>
                         <td className="admin-mod-title">
                           <div className="admin-mod-title-row">
@@ -496,7 +526,7 @@ export function Admin({
                             ) : (
                               <span className="admin-mod-name">{job.title}</span>
                             )}
-                            {job.status !== "pending" ? (
+                            {job.status !== "pending" && tab !== "rejected" ? (
                               <span className={statusClass(job.status)}>{statusLabel(t, job.status)}</span>
                             ) : null}
                             {job.status === "published" ? (
@@ -535,7 +565,7 @@ export function Admin({
                                 </button>
                               </>
                             ) : null}
-                            {job.status !== "closed" && job.owner_subject ? (
+                            {job.status !== "closed" && job.status !== "rejected" && job.owner_subject ? (
                               <button
                                 type="button"
                                 className="btn small red"
@@ -550,7 +580,7 @@ export function Admin({
                       </tr>
                       {isOpen ? (
                         <tr className="admin-mod-edit-row">
-                          <td colSpan={5}>
+                          <td colSpan={colSpan}>
                             {form ? (
                               <form className="admin-mod-edit-form cabinet-form staff-compose-form" onSubmit={onSave}>
                                 <div className="staff-compose-layout">

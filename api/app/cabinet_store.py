@@ -698,7 +698,7 @@ def _cabinet_row(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
 
 
 def _moderation_row(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
-    """Company ads, or pending scraped ads waiting for staff approval."""
+    """Company ads, or scraped ads that are pending or staff-rejected."""
     return conn.execute(
         f"""
         SELECT {_MOD_COLS}
@@ -706,10 +706,10 @@ def _moderation_row(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None
         WHERE id = ?
           AND (
             owner_subject != ''
-            OR (COALESCE(owner_subject, '') = '' AND status = ?)
+            OR (COALESCE(owner_subject, '') = '' AND status IN (?, ?))
           )
         """,
-        (job_id, PENDING),
+        (job_id, PENDING, REJECTED),
     ).fetchone()
 
 
@@ -725,9 +725,10 @@ LEFT JOIN (
 def list_moderation() -> list[dict]:
     """Pending company and scraped ads first, then other company statuses.
 
-    Scraped rows appear only while pending. List rows omit body text;
-    edit loads the full ad via get_moderation. Staff-only: includes the
-    first crawl source_url when present (empty for company-only ads).
+    Scraped rows appear while pending or staff-rejected. List rows omit
+    body text; edit loads the full ad via get_moderation. Staff-only:
+    includes the first crawl source_url when present (empty for
+    company-only ads).
     """
     conn = _connect()
     try:
@@ -743,7 +744,7 @@ def list_moderation() -> list[dict]:
             FROM jobs j
             {_MOD_SOURCE_JOIN}
             WHERE j.owner_subject != ''
-               OR (COALESCE(j.owner_subject, '') = '' AND j.status = ?)
+               OR (COALESCE(j.owner_subject, '') = '' AND j.status IN (?, ?))
             ORDER BY
                 CASE j.status
                     WHEN 'pending' THEN 0
@@ -754,7 +755,7 @@ def list_moderation() -> list[dict]:
                 END,
                 j.id DESC
             """,
-            (PENDING,),
+            (PENDING, REJECTED),
         ).fetchall()
     finally:
         conn.close()

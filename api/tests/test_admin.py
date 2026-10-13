@@ -363,12 +363,25 @@ class AdminTests(unittest.TestCase):
                     self.assertEqual(item.get("text") or "", "")
                     self.assertEqual(item.get("created_at"), "2026-10-13T12:00:00+04:00")
 
-            one = self.client.post(
-                f"/api/v1/admin/jobs/{ids[0]}/approve",
+            rejected = self.client.post(
+                f"/api/v1/admin/jobs/{ids[0]}/reject",
+                headers={"Authorization": "Bearer test"},
+                json={"reason": "Duplicate scrape"},
+            )
+            self.assertEqual(rejected.status_code, 200, rejected.text)
+            self.assertEqual(rejected.json()["status"], "rejected")
+            after_reject = self.client.get("/api/v1/admin/jobs", headers={"Authorization": "Bearer test"})
+            self.assertEqual(after_reject.status_code, 200, after_reject.text)
+            rejected_row = next(item for item in after_reject.json()["items"] if item["id"] == ids[0])
+            self.assertEqual(rejected_row["status"], "rejected")
+            self.assertEqual(rejected_row.get("reject_reason"), "Duplicate scrape")
+            self.assertEqual(rejected_row.get("owner_subject") or "", "")
+            detail = self.client.get(
+                f"/api/v1/admin/jobs/{ids[0]}",
                 headers={"Authorization": "Bearer test"},
             )
-            self.assertEqual(one.status_code, 200, one.text)
-            self.assertEqual(one.json()["status"], "published")
+            self.assertEqual(detail.status_code, 200, detail.text)
+            self.assertEqual(detail.json()["status"], "rejected")
 
             bulk = self.client.post(
                 "/api/v1/admin/jobs/approve-bulk",
@@ -380,7 +393,8 @@ class AdminTests(unittest.TestCase):
             self.assertEqual(bulk.json()["items"][0]["id"], ids[1])
 
         public_ids = {item["id"] for item in self.client.get("/api/v1/jobs").json()["items"]}
-        self.assertEqual(public_ids, set(ids) | {live_id})
+        self.assertEqual(public_ids, {ids[1], live_id})
+        self.assertNotIn(ids[0], public_ids)
 
     def test_manual_source_publishes_without_showing_the_url(self):
         body = self._ad(company="Manual MMC", text="LinkedIn-de gorulen rol")
