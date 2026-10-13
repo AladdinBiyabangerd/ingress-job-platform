@@ -9,6 +9,7 @@ reader a wildcard rule would silently be ignored.
 from __future__ import annotations
 
 import re
+import threading
 import time
 from urllib.parse import urlparse
 from urllib.robotparser import RobotFileParser
@@ -18,6 +19,14 @@ import httpx
 USER_AGENT = "ingress-job-bot/0.1 (+https://ingress.academy)"
 MIN_DELAY = 1.0
 BLOCK_STATUSES = {401, 403, 407, 429, 451, 503}
+# robots.txt: re-read after a day; a failed read is retried with backoff and,
+# if it still fails, the last good copy for that host is reused. A host whose
+# robots.txt was never read is not crawled.
+ROBOTS_TTL = 24 * 3600
+ROBOTS_RETRY_DELAYS = (2.0, 5.0)
+# host -> (fetched_at, status, lines). Shared by every client in the process.
+_ROBOTS_GOOD: dict[str, tuple[float, int, list[str]]] = {}
+_ROBOTS_GOOD_LOCK = threading.Lock()
 
 # These hosts are not connectors.
 REFUSED_HOSTS = {
@@ -157,6 +166,18 @@ class PoliteClient:
         self._wild: dict[str, WildcardRobots] = {}
         self._delay: dict[str, float] = {}
         self._last: dict[str, float] = {}
+        self._loaded: dict[str, float] = {}
+        # One lock per host: concurrent sources never hit the same host at
+        # once, and the per-host delay is kept across threads.
+        self._locks: dict[str, threading.RLock] = {}
+        self._locks_guard = threading.Lock()
+
+    def _host_lock(self, host: str) -> threading.RLock:
+        with self._locks_guard:
+            lock = self._locks.get(host)
+            if lock is None:
+                lock = self._locks[host] = threading.RLock()
+            return lock
 
     def close(self) -> None:
         self._http.close()
@@ -193,13 +214,14 @@ class PoliteClient:
         self._check_url(url)
         if not self.allowed(url):
             raise Disallowed(label)
-        self._pause(_host(url))
         headers = {"Accept": accept} if accept else None
         try:
-            if auth is not None:
-                response = self._http.get(url, headers=headers, auth=auth)
-            else:
-                response = self._http.get(url, headers=headers)
+            with self._host_lock(_host(url)):
+                self._pause(_host(url))
+                if auth is not None:
+                    response = self._http.get(url, headers=headers, auth=auth)
+                else:
+                    response = self._http.get(url, headers=headers)
         except httpx.TimeoutException as exc:
             raise SourceFailed(f"timeout for {label}") from (None if auth else exc)
         except httpx.HTTPError as exc:
@@ -233,9 +255,10 @@ class PoliteClient:
         self._check_url(url)
         if not self.allowed(url):
             raise Disallowed(label)
-        self._pause(_host(url))
         try:
-            response = self._http.post(url, json=payload, headers={"Accept": "application/json"})
+            with self._host_lock(_host(url)):
+                self._pause(_host(url))
+                response = self._http.post(url, json=payload, headers={"Accept": "application/json"})
         except httpx.TimeoutException:
             raise SourceFailed(f"timeout for {label}") from None
         except httpx.HTTPError as exc:
@@ -272,29 +295,67 @@ class PoliteClient:
 
     def _ensure_robots(self, url: str) -> None:
         host = _host(url)
-        if host in self._robots:
+        loaded = self._loaded.get(host)
+        if host in self._robots and loaded is not None and time.time() - loaded < ROBOTS_TTL:
             return
-        parsed = urlparse(url)
-        robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
-        self._pause(host)
-        try:
-            response = self._http.get(robots_url)
-        except httpx.TimeoutException as exc:
-            raise SourceFailed(f"robots.txt timeout for {host}") from exc
-        except httpx.HTTPError as exc:
-            raise SourceFailed(f"robots.txt failed for {host}: {exc.__class__.__name__}") from exc
-        if response.status_code in BLOCK_STATUSES:
-            raise SourceBlocked(f"robots.txt HTTP {response.status_code} for {host}")
+        with self._host_lock(host):
+            loaded = self._loaded.get(host)
+            if host in self._robots and loaded is not None and time.time() - loaded < ROBOTS_TTL:
+                return
+            parsed = urlparse(url)
+            robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
+            try:
+                status, lines = self._read_robots(host, robots_url)
+            except SourceFailed as exc:
+                with _ROBOTS_GOOD_LOCK:
+                    good = _ROBOTS_GOOD.get(host)
+                if good is None:
+                    # Never read: do not crawl this host this time.
+                    raise
+                print(f"robots.txt {host}: {exc}; reusing last good copy", flush=True)
+                _, status, lines = good
+            else:
+                with _ROBOTS_GOOD_LOCK:
+                    _ROBOTS_GOOD[host] = (time.time(), status, lines)
+            self._apply_robots(host, status, lines)
+
+    def _read_robots(self, host: str, robots_url: str) -> tuple[int, list[str]]:
+        """(status, lines) of a usable robots.txt; SourceFailed after retries."""
+        last: SourceFailed | None = None
+        for attempt in range(len(ROBOTS_RETRY_DELAYS) + 1):
+            if attempt:
+                time.sleep(ROBOTS_RETRY_DELAYS[attempt - 1])
+            self._pause(host)
+            try:
+                response = self._http.get(robots_url)
+            except httpx.TimeoutException as exc:
+                last = SourceFailed(f"robots.txt timeout for {host}")
+                last.__cause__ = exc
+                continue
+            except httpx.HTTPError as exc:
+                last = SourceFailed(f"robots.txt failed for {host}: {exc.__class__.__name__}")
+                last.__cause__ = exc
+                continue
+            if response.status_code in BLOCK_STATUSES:
+                raise SourceBlocked(f"robots.txt HTTP {response.status_code} for {host}")
+            if response.status_code == 404:
+                return 404, []
+            if response.status_code >= 400:
+                last = SourceFailed(f"robots.txt HTTP {response.status_code} for {host}")
+                continue
+            return response.status_code, response.text.splitlines()
+        assert last is not None
+        raise last
+
+    def _apply_robots(self, host: str, status: int, lines: list[str]) -> None:
         parser = RobotFileParser()
         wild = WildcardRobots([])
-        if response.status_code == 404:
+        if status == 404:
             parser.parse([])
             delay = MIN_DELAY
-        elif response.status_code >= 400:
-            raise SourceFailed(f"robots.txt HTTP {response.status_code} for {host}")
         else:
-            parser.parse(response.text.splitlines())
-            wild = WildcardRobots(response.text.splitlines())
+            parser.parse(lines)
+            wild = WildcardRobots(lines)
             raw_delay = parser.crawl_delay(USER_AGENT)
             if raw_delay is None:
                 raw_delay = parser.crawl_delay("*")
@@ -304,6 +365,7 @@ class PoliteClient:
         self._robots[host] = parser
         self._wild[host] = wild
         self._delay[host] = delay
+        self._loaded[host] = time.time()
 
     def _pause(self, host: str) -> None:
         delay = max(MIN_DELAY, self._delay.get(host, MIN_DELAY))
