@@ -766,6 +766,9 @@ def _openai_compat_embed(
     return {"vectors": vectors, "usage": payload.get("usage") or {}}
 
 
+USER_AGENT = "ingress-job/1.0 (+https://github.com/ingress-job)"
+
+
 def _http_json(
     url: str,
     *,
@@ -773,10 +776,13 @@ def _http_json(
     headers: dict[str, str],
     timeout: float,
 ) -> dict[str, Any]:
+    merged = dict(headers)
+    if not any(k.lower() == "user-agent" for k in merged):
+        merged["User-Agent"] = USER_AGENT
     req = urllib.request.Request(
         url,
         data=json.dumps(body).encode("utf-8"),
-        headers=headers,
+        headers=merged,
         method="POST",
     )
     try:
