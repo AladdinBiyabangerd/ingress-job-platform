@@ -13,11 +13,15 @@ from urllib.parse import quote
 FREQUENCIES = ("daily", "weekly", "biweekly", "important_only", "none")
 LOCALES = ("az", "en", "ru")
 WEEKDAYS = frozenset(range(7))  # 0=Mon … 6=Sun
+# Users with no saved prefs row never chose a cadence: weekly digest on Monday.
+# Mail still needs emails consent and no unsubscribe (marketing_allowed).
+DEFAULT_FREQUENCY = "weekly"
+DEFAULT_WEEKDAY = 0
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS email_prefs (
     user_id TEXT PRIMARY KEY,
-    frequency TEXT NOT NULL DEFAULT 'none',
+    frequency TEXT NOT NULL DEFAULT 'weekly',
     digest INTEGER NOT NULL DEFAULT 1,
     high_match INTEGER NOT NULL DEFAULT 1,
     profile_nudge INTEGER NOT NULL DEFAULT 1,
@@ -153,7 +157,7 @@ def _bool_col(row, name: str, *, default: bool = True) -> bool:
 def _row_prefs(row) -> dict:
     if row is None:
         return {
-            "frequency": "none",
+            "frequency": DEFAULT_FREQUENCY,
             "digest": True,
             "high_match": True,
             "profile_nudge": True,
@@ -161,7 +165,7 @@ def _row_prefs(row) -> dict:
             "coach_weekly": True,
             "push_enabled": True,
             "language": "az",
-            "send_weekday": 0,
+            "send_weekday": DEFAULT_WEEKDAY,
             "unsubscribed_at": "",
             "updated_at": None,
         }

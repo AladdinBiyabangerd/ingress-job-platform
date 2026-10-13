@@ -275,3 +275,29 @@ class EmailPrefsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DigestDefaultTests(unittest.TestCase):
+    def test_rowless_user_defaults_to_weekly_monday_but_needs_consent(self):
+        import sqlite3
+
+        from app.email_prefs import digest_enabled, get_prefs, save_prefs
+
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        from app.consents import SCHEMA as CONSENT_SCHEMA
+
+        conn.executescript(CONSENT_SCHEMA)  # module-level ensure cache may skip a fresh conn
+        prefs = get_prefs(conn, "fresh")
+        self.assertEqual(prefs["frequency"], "weekly")
+        self.assertEqual(prefs["send_weekday"], 0)
+        self.assertFalse(digest_enabled(prefs))  # no emails consent yet
+        conn.execute(
+            "INSERT INTO consent (user_id, kind, granted, version, ts, ip, ua)"
+            " VALUES ('fresh', 'emails', 1, '1.0', 'now', '', '')"
+        )
+        self.assertTrue(digest_enabled(get_prefs(conn, "fresh")))
+        save_prefs(conn, "fresh", frequency="none")
+        again = get_prefs(conn, "fresh")
+        self.assertEqual(again["frequency"], "none")
+        self.assertFalse(digest_enabled(again))
