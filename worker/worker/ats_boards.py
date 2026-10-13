@@ -162,5 +162,6 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
     ("Ashby boards (Remote & relocation 1)", "ashby", "Qlobal remote, EMEA və ya relocation siqnallı Ashby lövhələri", (
         "supabase", "constructor", "trust-wallet", "fundamental", "railway",
         "n8n", "whippy", "ava-labs", "squads", "far.ai",
-        "qed-ai", "hyperhug", "dualentry", "percona", "wetravel")),
+        "qed-ai", "hyperhug", "dualentry", "percona", "wetravel",
+        "wundergraph", "poolside", "oplabs", "anagram", "neara")),
 ]
