@@ -901,80 +901,41 @@ def is_tech_job(title: str, category: object = "", tags: object = None) -> bool:
 
 # ---- normalized category ----------------------------------------------------
 
-CATEGORIES = (
-    "Backend", "Frontend", "Full-stack", "Mobile", "DevOps/Cloud", "Data/ML",
-    "QA", "Security", "Design/UX", "Product", "IT Support", "Other tech",
-)
+from worker import categories as _categories  # noqa: E402
 
-# Priority order breaks ties when two rules match at the same position.
-_CATEGORY_RULES: list[tuple[str, re.Pattern[str]]] = [
-    ("Full-stack", re.compile(r"full ?stack")),
-    ("QA", re.compile(r"\bqa\b|quality assurance|\bsdet\b|\btest(?:er|ers|ing)?\b|"
-                      r"software quality|quality engineer|automation (?:qa|test)")),
-    ("Security", re.compile(r"secur|seguridad|cyber|pen ?test|penetration|infosec|\bsoc\b|appsec")),
-    ("Mobile", re.compile(r"mobile(?! traffic)|\bios\b|android|flutter|react native|\bswift\b|xamarin")),
-    ("Data/ML", re.compile(r"\bdata\b|machine learning|\bml\b|mlops|\bai\b|artificial intelligence|"
-                           r"\bllms?\b|\bnlp\b|computer vision|deep learning|analytics|\bbi\b|"
-                           r"business intelligence|\betl\b|database|\bdba\b|scientist|data science")),
-    ("DevOps/Cloud", re.compile(r"devops|\bsre\b|site reliability|infrastructure|platform|cloud|"
-                                r"sys ?admin|system(?:s)? admin\w*|kubernetes|network (?:engineer|admin\w*)|"
-                                r"release engineer|build engineer|\bops\b")),
-    ("Frontend", re.compile(r"front ?end|\bui (?:engineer|developer)|web develop|javascript|typescript|"
-                            r"react(?! native)|\bvue|angular|svelte|next\.? ?js")),
-    ("Backend", re.compile(r"back ?end|server side|\bapi\b|python|\bjava\b|\bphp\b|ruby|golang|"
-                           r"\bgo (?:developer|engineer)|\.net|dotnet|c#|node|scala|\brust\b|elixir|"
-                           r"erlang|c\+\+|django|spring|laravel|rails|microservice")),
-    ("Design/UX", re.compile(r"\bux\b|\bui\b|user experience|user interface|product design|"
-                             r"interaction design|visual design|web design|design system|designer|"
-                             r"\bdesign\b(?! engineer)")),
-    ("Product", re.compile(r"^products?$|product (?:manag|owner|lead|director|analyst|ops|strateg)|"
-                           r"head of product|vp product|chief product|project manag|program manag|"
-                           r"scrum|agile coach|delivery manag|technical project")),
-    ("IT Support", re.compile(r"it support|technical support|tech support|help ?desk|service desk|"
-                              r"desktop support|it (?:technician|specialist|administrator|admin)|"
-                              r"support engineer")),
-]
-_PRIORITY = {label: index for index, (label, _p) in enumerate(_CATEGORY_RULES)}
-
-_STACK_GROUPS = {
-    "Mobile": {"React Native", "Flutter", "iOS", "Android", "Swift", "Objective-C", "Dart",
-               "Jetpack Compose", "Xamarin", "Ionic", "Capacitor"},
-    "Frontend": {"React", "Next.js", "Vue.js", "Nuxt", "Angular", "Svelte", "Redux", "Tailwind",
-                 "jQuery", "Bootstrap", "Vite", "Webpack", "Remix", "Astro", "Gatsby", "Ember",
-                 "Material UI", "Storybook"},
-    "Backend": {"Python", "Java", "Scala", "Go", "Rust", "PHP", "Ruby", "C#", ".NET", "Elixir",
-                "Erlang", "Node.js", "NestJS", "Express", "Django", "Flask", "FastAPI", "Spring",
-                "Ruby on Rails", "Laravel", "Symfony", "Phoenix", "Kotlin", "Fastify", "Quarkus",
-                "Micronaut", "Ktor", "Blazor"},
-    "Data/ML": {"Spark", "Airflow", "dbt", "Snowflake", "BigQuery", "Databricks", "Pandas",
-                "PyTorch", "TensorFlow", "scikit-learn", "LLM", "Keras", "Hugging Face",
-                "LangChain", "MLflow", "NLP", "Tableau", "Power BI"},
-    "DevOps/Cloud": {"Kubernetes", "Terraform", "Ansible", "Helm", "Jenkins", "Prometheus", "Grafana",
-                     "Argo CD", "GitHub Actions", "GitLab CI", "Pulumi", "Istio", "OpenShift"},
-    "QA": {"Selenium", "Cypress", "Playwright", "pytest", "JUnit", "Postman", "Appium"},
-    "Design/UX": {"Figma"},
-}
+# Built-in seed order. The live list is the job_categories table
+# (worker/worker/categories.py); use active_categories() for it.
+CATEGORIES = tuple(item["slug"] for item in _categories.BASE_SEED)
 
 
-def _match_category(text: str) -> str:
+def active_categories() -> tuple[str, ...]:
+    return _categories.rules().slugs
+
+
+def _match_category(text: str, rules=None) -> str:
+    rules = rules or _categories.rules()
     text = _clean_cat(text)
     best: tuple[int, int, str] | None = None
-    for label, pattern in _CATEGORY_RULES:
+    for label, pattern in rules.title_rules:
         found = pattern.search(text)
         if found:
-            key = (found.start(), _PRIORITY[label], label)
+            key = (found.start(), rules.priority[label], label)
             if best is None or key < best:
                 best = key
     return best[2] if best else ""
 
 
-def _category_from_stack(stack: list[str]) -> str:
+def _category_from_stack(stack: list[str], rules=None) -> str:
+    rules = rules or _categories.rules()
+    groups = rules.stack_groups
     top = stack[:5]
-    if any(name in _STACK_GROUPS["Mobile"] for name in top[:3]):
+    if "Mobile" in groups and any(name in groups["Mobile"] for name in top[:3]):
         return "Mobile"
-    counts = {label: sum(1 for name in top if name in names) for label, names in _STACK_GROUPS.items()}
-    if counts["Frontend"] and counts["Backend"]:
+    counts = {label: sum(1 for name in top if name in names) for label, names in groups.items()}
+    if counts.get("Frontend") and counts.get("Backend") and "Full-stack" in rules.active:
         return "Full-stack"
+    if not counts:
+        return ""
     label, count = max(counts.items(), key=lambda pair: pair[1])
     return label if count else ""
 
@@ -983,23 +944,34 @@ _QA_TITLE = re.compile(r"\bqa\b|quality assurance|\bsdet\b|\btesters?\b|test aut
 
 
 def classify_category(category: object, title: str = "", stack: list[str] | None = None) -> str:
-    """One of CATEGORIES. The source's own category first (values that clearly
-    say non-tech are skipped), then the title, then the tech stack."""
-    from_title = _match_category(title or "")
+    """One of the active categories (job_categories table). The source's own
+    category first (values that clearly say non-tech are skipped), then the
+    title, then the tech stack."""
+    rules = _categories.rules()
+    from_title = _match_category(title or "", rules)
     if from_title == "QA" and _QA_TITLE.search(title or ""):
         # "QA Engineer" is QA whatever the source board or stack says
         # (Azure, DevOps, security boards must not move it).
         return "QA"
-    if from_title == "DevOps/Cloud" and re.search(r"(?i)security|seguridad|cyber", title or ""):
+    if (
+        from_title == "DevOps/Cloud"
+        and "Security" in rules.active
+        and re.search(r"(?i)security|seguridad|cyber", title or "")
+    ):
         # "Head of Infrastructure and Cloud Security" is a security role.
         return "Security"
-    if from_title == "Frontend" and re.search(r"(?i)\b(?:android|ios)\b", title or ""):
+    if (
+        from_title == "Frontend"
+        and "Mobile" in rules.active
+        and re.search(r"(?i)\b(?:android|ios)\b", title or "")
+    ):
         # "Front-end Android" is a mobile role.
         return "Mobile"
     for raw in _split_tags(category):
-        if _value_verdict(_clean_cat(raw)) is False:
+        cleaned = _clean_cat(raw)
+        if _value_verdict(cleaned) is False:
             continue
-        label = _match_category(raw)
+        label = rules.aliases.get(cleaned.strip().lower()) or _match_category(raw, rules)
         if not label:
             continue
         if label in {"Design/UX", "Product"} and from_title in {"Design/UX", "Product"}:
@@ -1016,7 +988,7 @@ def classify_category(category: object, title: str = "", stack: list[str] | None
         return label
     if from_title:
         return from_title
-    return _category_from_stack(list(stack or [])) or "Other tech"
+    return _category_from_stack(list(stack or []), rules) or _categories.OTHER
 
 
 # ---- remote / relocation ---------------------------------------------------

@@ -256,6 +256,10 @@ class Store:
 
             self.skills_seeded, self.skills_backfilled = ensure_skills(self.conn)
             self.roles_seeded, self.role_weights_seeded = ensure_roles(self.conn)
+            from worker.categories import ensure_categories, reload_rules
+
+            self.categories_seeded = ensure_categories(self.conn)
+            reload_rules(self.conn)
             self.cv_queue_enqueued = ensure_cv_queue(self.conn)
             from worker.market_fit import ensure_rejects_table
 
