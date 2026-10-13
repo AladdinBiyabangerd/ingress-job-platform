@@ -61,7 +61,10 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
     # accepted ads; sysdig, pigment, scaleway, honeycomb, cribl, bitgo, etc. were all office or
     # country-locked and were not added.
     ("Greenhouse boards (Remote-first & global)", "greenhouse", "Remote-first və qlobal işə götürən şirkətlər", (
-        "mozilla", "wikimedia", "consensys", "tomorrow")),
+        "mozilla", "wikimedia", "consensys", "tomorrow",
+        # 2026-10-13 JVM sweep (Greenhouse/Lever/Ashby, ~95 slugs each): only streamnative
+        # (Apache Pulsar) passed the finish_item dry-run; the rest were office or country-locked.
+        "streamnative")),
     # 2026-10-11 expansion: boards from the public ATS lists (kalil0321/ats-scrapers) kept by
     # scripts/sweep_ats_boards.py (tech titles + Remote/Anywhere/EMEA/relocation/visa signal) and then
     # by a dry-run through finish_item on a temp DB (>= 1 accepted ad, AI off). US-restriction-risk

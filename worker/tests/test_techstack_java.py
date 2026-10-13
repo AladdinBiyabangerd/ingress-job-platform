@@ -30,5 +30,27 @@ class JavaDetection(unittest.TestCase):
         self.assertFalse(is_tech_job("Sales Manager", "sell to java shops"))
 
 
+class JavaRulesStillReject(unittest.TestCase):
+    """Java ads from Polish boards are remote-within-Poland; they must stay out."""
+
+    def test_country_locked_remote_java_rejected(self):
+        from worker.techstack import az_market_relevant
+        self.assertFalse(az_market_relevant(
+            "Senior Java Developer", "Poland - Remote",
+            "100% remote, candidates must be based in Poland. B2B.", remote=True, relocation=False))
+
+    def test_foreign_office_java_rejected(self):
+        from worker.techstack import az_market_relevant
+        self.assertFalse(az_market_relevant(
+            "Java Developer", "Krakow, Poland", "Office in Krakow, 5 days a week.",
+            remote=False, relocation=False))
+
+    def test_worldwide_remote_java_kept(self):
+        from worker.techstack import az_market_relevant
+        self.assertTrue(az_market_relevant(
+            "Senior Java Engineer", "Remote - Worldwide", "Work from anywhere.",
+            remote=True, relocation=False))
+
+
 if __name__ == "__main__":
     unittest.main()
