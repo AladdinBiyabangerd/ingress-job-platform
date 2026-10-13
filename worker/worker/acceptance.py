@@ -26,6 +26,9 @@ def finish_item(connector, item: dict | None) -> dict | None:
         return None
     if not is_tech_job(str(item.get("title") or ""), item.get("category"), item.get("tags")):
         return None
+    # Reject-only guard: a listing without an employer name is never published.
+    if not str(item.get("company") or "").strip():
+        return None
 
     title = str(item.get("title") or "")
     place = str(item.get("city") or "")
