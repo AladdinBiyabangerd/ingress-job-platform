@@ -1,27 +1,20 @@
 # Current task
 
 ## Completed
-- Profile review: dinamik skill tövsiyələri (family + pair + role)
-- `GET /api/v1/skills/related` + BFF `/api/skills/related`
-- UI: fokus pill → suggest chips → kliklə əlavə
+- Related skills relevance harden + density pass for ~2k users
 
 ## Current state
-- Ready for browser QA on `/profile/review` Experience tab
+- More suggestions (limit 12–16): family compounds (Git→GitHub), reverse pairs, softer role weights, same-category popularity fill
+- Still blocks cross-stack hub noise (Git ↛ React/CSS/JS)
 
 ## Decisions
-- Hybrid ranking: dictionary family → skill_pair_daily → role_skill_weight
-- Focus click selects; second click on focused pill edits (draft + remove)
-- “Spring Boot” is synonym of Spring — family shows Spring* siblings
+- Density via category peers + softer thresholds; quality via category compatibility (devops excludes generic language)
+- UI shows up to 12 chips
 
 ## Remaining work
-- Browser QA (Spring / CI/CD focus)
-- Commit when asked
+- Browser QA; commit when asked
 
 ## Relevant files
 - `api/app/skill_related.py`
-- `api/app/routers/trends.py`
 - `api/tests/test_skill_related.py`
-- `frontend/app/api/skills/related/route.js`
 - `frontend/components/profile-review.js`
-- `frontend/lib/copy.js`
-- `frontend/app/globals.css`

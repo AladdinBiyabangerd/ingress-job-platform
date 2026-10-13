@@ -1,12 +1,44 @@
-"""Related skill suggestions for profile review (family + market pairs + role co-skills)."""
+"""Related skill suggestions for profile review.
+
+Ranking follows common practice from job-market skill graphs:
+family/prefix → conditional co-occurrence (pair share) → role peers,
+with category compatibility so hub skills (Git, SQL) do not pull
+unrelated stacks (CSS/React from every role that lists Git).
+"""
 
 from __future__ import annotations
 
 from typing import Any
 
-DEFAULT_LIMIT = 8
-MAX_LIMIT = 16
+DEFAULT_LIMIT = 12
+MAX_LIMIT = 24
 NAME_MAX = 60
+# Conditional co-occurrence floor (lenient enough for sparse local markets).
+MIN_PAIR_SHARE = 0.08
+MIN_PAIR_CO_COUNT = 2
+# Role peers: allow lighter weights; category filter blocks cross-stack noise.
+MIN_FOCUS_ROLE_WEIGHT = 0.15
+MIN_PEER_ROLE_WEIGHT = 0.15
+
+# Compatible category_hint buckets (empty = unknown, allowed with anything).
+_CATEGORY_COMPAT: dict[str, frozenset[str]] = {
+    # Note: hub categories (devops) do not absorb generic "language" peers —
+    # otherwise Git pulls JavaScript from every role that lists both.
+    "frontend": frozenset({"frontend", "design"}),
+    "backend": frozenset({"backend", "devops", "data", "database", "cloud"}),
+    "devops": frozenset({"devops", "backend", "cloud"}),
+    "mobile": frozenset({"mobile", "frontend"}),
+    "data": frozenset({"data", "backend", "database", "ai"}),
+    "database": frozenset({"database", "backend", "data"}),
+    "language": frozenset(
+        {"language", "backend", "frontend", "mobile", "devops", "data", "database", "ai"}
+    ),
+    "ai": frozenset({"ai", "data", "backend"}),
+    "design": frozenset({"design", "frontend"}),
+    "cloud": frozenset({"cloud", "devops", "backend"}),
+    "qa": frozenset({"qa", "backend", "frontend"}),
+    "security": frozenset({"security", "backend", "devops"}),
+}
 
 
 def clamp_limit(value: int | None) -> int:
@@ -50,47 +82,134 @@ def _row_get(row, key: str, index: int):
         return row[index]
 
 
-def _resolve(conn, name: str) -> tuple[int | None, str]:
-    """Return (skill_id, canonical_name). Unresolved → (None, trimmed input)."""
+def _norm_category(raw: object) -> str:
+    return str(raw or "").strip().lower()
+
+
+def categories_compatible(focus_cat: str, other_cat: str) -> bool:
+    """True when categories can sensibly co-recommend."""
+    a = _norm_category(focus_cat)
+    b = _norm_category(other_cat)
+    if not a or not b:
+        return True
+    if a == b:
+        return True
+    allowed = _CATEGORY_COMPAT.get(a)
+    if allowed is None:
+        return a == b
+    return b in allowed
+
+
+def _resolve(conn, name: str) -> tuple[int | None, str, str]:
+    """Return (skill_id, canonical_name, category_hint)."""
     cleaned = str(name or "").strip()[:NAME_MAX]
     if not cleaned:
-        return None, ""
+        return None, "", ""
     from app.role_suggestions import _build_skill_lookup
 
     lookup = _build_skill_lookup(conn)
     hit = lookup.get(cleaned.lower())
-    if hit:
-        return int(hit[0]), str(hit[1])
-    return None, cleaned
+    if not hit:
+        return None, cleaned, ""
+    skill_id = int(hit[0])
+    canonical = str(hit[1])
+    category = ""
+    try:
+        row = conn.execute(
+            "SELECT category_hint FROM skill_dictionary WHERE id = ?",
+            (skill_id,),
+        ).fetchone()
+        category = _norm_category(_row_get(row, "category_hint", 0) if row else "")
+    except Exception:
+        category = ""
+    return skill_id, canonical, category
+
+
+def _skill_categories(conn, skill_ids: list[int]) -> dict[int, str]:
+    if not skill_ids:
+        return {}
+    placeholders = ",".join("?" for _ in skill_ids)
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT id, category_hint
+            FROM skill_dictionary
+            WHERE id IN ({placeholders})
+            """,
+            skill_ids,
+        ).fetchall()
+    except Exception:
+        return {}
+    return {
+        int(_row_get(row, "id", 0) or 0): _norm_category(_row_get(row, "category_hint", 1))
+        for row in rows
+        if int(_row_get(row, "id", 0) or 0) > 0
+    }
 
 
 def _family_skills(conn, *, canonical: str, exclude: set[str], limit: int) -> list[dict]:
-    """Dictionary siblings: names that start with '{canonical} '."""
-    prefix = f"{canonical} "
-    if not prefix.strip() or limit <= 0:
+    """Dictionary siblings: '{canonical} …' and CamelCase compounds (Git→GitHub)."""
+    if not canonical.strip() or limit <= 0:
         return []
+    # Avoid Java→JavaScript style false friends for short language stems.
+    allow_compound = len(canonical) != 4 or canonical.lower() not in {
+        "java",
+        "type",
+        "node",
+        "ruby",
+        "rust",
+        "perl",
+        "bash",
+        "dart",
+    }
     try:
         rows = conn.execute(
             """
             SELECT id, canonical_name
             FROM skill_dictionary
-            WHERE lower(canonical_name) LIKE lower(?)
-              AND lower(canonical_name) != lower(?)
+            WHERE lower(canonical_name) != lower(?)
+              AND (
+                lower(canonical_name) LIKE lower(?) || ' %'
+                OR lower(canonical_name) LIKE lower(?) || '/%'
+                OR lower(canonical_name) LIKE lower(?) || '-%'
+                OR (
+                    ? = 1
+                    AND lower(canonical_name) LIKE lower(?) || '%'
+                    AND length(canonical_name) > length(?)
+                )
+              )
             ORDER BY length(canonical_name), canonical_name
             LIMIT ?
             """,
-            (f"{prefix}%", canonical, limit * 3),
+            (
+                canonical,
+                canonical,
+                canonical,
+                canonical,
+                1 if allow_compound else 0,
+                canonical,
+                canonical,
+                max(limit * 5, 40),
+            ),
         ).fetchall()
     except Exception:
         return []
     out: list[dict] = []
-    prefix_l = prefix.lower()
+    stem = canonical.lower()
     for row in rows:
         skill_id = int(_row_get(row, "id", 0) or 0)
         name = str(_row_get(row, "canonical_name", 1) or "").strip()
         if not name or name.lower() in exclude:
             continue
-        if not name.lower().startswith(prefix_l):
+        lower = name.lower()
+        if lower.startswith(stem + " ") or lower.startswith(stem + "/") or lower.startswith(stem + "-"):
+            pass
+        elif allow_compound and lower.startswith(stem) and len(name) > len(canonical):
+            nxt = name[len(canonical) : len(canonical) + 1]
+            # GitHub / GitLab / GitOps — next char uppercase (or digit).
+            if not (nxt.isupper() or nxt.isdigit()):
+                continue
+        else:
             continue
         out.append({"skill_id": skill_id, "name": name, "source": "family"})
         if len(out) >= limit:
@@ -102,16 +221,18 @@ def _pair_skills(
     conn,
     *,
     skill_id: int,
+    focus_category: str,
     exclude: set[str],
     limit: int,
 ) -> list[dict]:
-    """Top co-occurring skills from skill_pair_daily (lenient for suggestions)."""
+    """Top co-occurring skills by conditional share (forward + reverse edges)."""
     if skill_id <= 0 or limit <= 0:
         return []
     from app.trends import (
         DEFAULT_WINDOW_DAYS,
         _as_of_day,
         _pair_co_counts,
+        _skill_counts,
         _skill_meta,
         _window_bounds,
         ensure_trend_tables,
@@ -123,26 +244,73 @@ def _pair_skills(
         return []
     as_of = _as_of_day(conn)
     start, end = _window_bounds(as_of, DEFAULT_WINDOW_DAYS)
-    co = _pair_co_counts(
-        conn,
-        start=start,
-        end=end,
-        category="",
-        base_skill_ids=[skill_id],
-    )
-    if not co:
+    counts = _skill_counts(conn, start=start, end=end, category="", region="")
+    base_ads = int(counts.get(skill_id) or 0)
+    scores: dict[int, tuple[float, int]] = {}
+
+    if base_ads > 0:
+        co = _pair_co_counts(
+            conn,
+            start=start,
+            end=end,
+            category="",
+            base_skill_ids=[skill_id],
+        )
+        for (_base, pair_id), count in co.items():
+            co_count = int(count or 0)
+            if co_count < MIN_PAIR_CO_COUNT:
+                continue
+            share = co_count / base_ads
+            if share < MIN_PAIR_SHARE:
+                continue
+            pid = int(pair_id)
+            prev = scores.get(pid)
+            if prev is None or share > prev[0]:
+                scores[pid] = (share, co_count)
+
+    # Reverse: ads of other skills that also list this skill.
+    try:
+        rev_rows = conn.execute(
+            """
+            SELECT base_skill_id, SUM(co_ad_count) AS co_ad_count
+            FROM skill_pair_daily
+            WHERE day >= ? AND day <= ? AND pair_skill_id = ?
+            GROUP BY base_skill_id
+            """,
+            (start, end, skill_id),
+        ).fetchall()
+    except Exception:
+        rev_rows = []
+    for row in rev_rows:
+        other_id = int(_row_get(row, "base_skill_id", 0) or 0)
+        co_count = int(_row_get(row, "co_ad_count", 1) or 0)
+        if other_id <= 0 or other_id == skill_id or co_count < MIN_PAIR_CO_COUNT:
+            continue
+        other_ads = int(counts.get(other_id) or 0)
+        if other_ads <= 0:
+            continue
+        share = co_count / other_ads
+        if share < MIN_PAIR_SHARE:
+            continue
+        prev = scores.get(other_id)
+        # Slightly discount reverse edges vs forward.
+        ranked_share = share * 0.85
+        if prev is None or ranked_share > prev[0]:
+            scores[other_id] = (ranked_share, co_count)
+
+    if not scores:
         return []
-    ranked = sorted(
-        ((pair_id, count) for (_base, pair_id), count in co.items() if count > 0),
-        key=lambda row: (-row[1], row[0]),
-    )
-    pair_ids = [pair_id for pair_id, _ in ranked[: limit * 3]]
+    ranked = sorted(scores.items(), key=lambda kv: (-kv[1][0], -kv[1][1], kv[0]))
+    pair_ids = [pid for pid, _ in ranked[: limit * 5]]
     meta = _skill_meta(conn, pair_ids)
+    cats = _skill_categories(conn, pair_ids)
     out: list[dict] = []
-    for pair_id, _count in ranked:
+    for pair_id, _score in ranked:
         info = meta.get(pair_id) or {}
         name = str(info.get("name") or "").strip()
         if not name or name.lower() in exclude:
+            continue
+        if not categories_compatible(focus_category, cats.get(pair_id, "")):
             continue
         out.append({"skill_id": pair_id, "name": name, "source": "pair"})
         if len(out) >= limit:
@@ -150,25 +318,101 @@ def _pair_skills(
     return out
 
 
-def _role_skills(conn, *, skill_id: int, exclude: set[str], limit: int) -> list[dict]:
-    """Skills that share roles with the focus skill, ranked by summed weight."""
+def _category_peers(
+    conn,
+    *,
+    focus_category: str,
+    focus_skill_id: int | None,
+    exclude: set[str],
+    limit: int,
+) -> list[dict]:
+    """Popular same-category skills — dense fill without crossing stacks."""
+    cat = _norm_category(focus_category)
+    if not cat or limit <= 0:
+        return []
+    try:
+        rows = conn.execute(
+            """
+            SELECT
+                s.id AS skill_id,
+                s.canonical_name AS name,
+                COALESCE(SUM(t.ad_count), 0) AS ads
+            FROM skill_dictionary s
+            LEFT JOIN skill_trend_daily t ON t.skill_id = s.id
+            WHERE lower(s.category_hint) = ?
+              AND (? IS NULL OR s.id != ?)
+            GROUP BY s.id, s.canonical_name
+            ORDER BY ads DESC, s.canonical_name
+            LIMIT ?
+            """,
+            (cat, focus_skill_id, focus_skill_id, max(limit * 4, 48)),
+        ).fetchall()
+    except Exception:
+        try:
+            rows = conn.execute(
+                """
+                SELECT id AS skill_id, canonical_name AS name, 0 AS ads
+                FROM skill_dictionary
+                WHERE lower(category_hint) = ?
+                  AND (? IS NULL OR id != ?)
+                ORDER BY canonical_name
+                LIMIT ?
+                """,
+                (cat, focus_skill_id, focus_skill_id, max(limit * 4, 48)),
+            ).fetchall()
+        except Exception:
+            return []
+    out: list[dict] = []
+    for row in rows:
+        sid = int(_row_get(row, "skill_id", 0) or 0)
+        name = str(_row_get(row, "name", 1) or "").strip()
+        if not name or name.lower() in exclude:
+            continue
+        out.append({"skill_id": sid, "name": name, "source": "category"})
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _role_skills(
+    conn,
+    *,
+    skill_id: int,
+    focus_category: str,
+    exclude: set[str],
+    limit: int,
+) -> list[dict]:
+    """High-weight peers from roles where the focus skill is a signature skill."""
     if skill_id <= 0 or limit <= 0:
         return []
     try:
         rows = conn.execute(
             """
-            SELECT s.id AS skill_id, s.canonical_name AS name, SUM(w.weight) AS score
-            FROM role_skill_weight w
-            JOIN skill_dictionary s ON s.id = w.skill_id
-            WHERE w.role_id IN (
-                SELECT role_id FROM role_skill_weight WHERE skill_id = ?
-            )
-              AND w.skill_id != ?
-            GROUP BY s.id, s.canonical_name
+            SELECT
+                s.id AS skill_id,
+                s.canonical_name AS name,
+                COALESCE(s.category_hint, '') AS category_hint,
+                SUM(peer.weight) AS score,
+                MAX(focus.weight) AS focus_weight,
+                MAX(peer.weight) AS peer_weight
+            FROM role_skill_weight focus
+            JOIN role_skill_weight peer
+              ON peer.role_id = focus.role_id
+             AND peer.skill_id != focus.skill_id
+            JOIN skill_dictionary s ON s.id = peer.skill_id
+            WHERE focus.skill_id = ?
+              AND focus.weight >= ?
+              AND peer.weight >= ?
+            GROUP BY s.id, s.canonical_name, s.category_hint
             ORDER BY score DESC, s.canonical_name
             LIMIT ?
             """,
-            (skill_id, skill_id, limit * 3),
+            (
+                skill_id,
+                MIN_FOCUS_ROLE_WEIGHT,
+                MIN_PEER_ROLE_WEIGHT,
+                limit * 4,
+            ),
         ).fetchall()
     except Exception:
         return []
@@ -176,7 +420,10 @@ def _role_skills(conn, *, skill_id: int, exclude: set[str], limit: int) -> list[
     for row in rows:
         sid = int(_row_get(row, "skill_id", 0) or 0)
         name = str(_row_get(row, "name", 1) or "").strip()
+        cat = _norm_category(_row_get(row, "category_hint", 2))
         if not name or name.lower() in exclude:
+            continue
+        if not categories_compatible(focus_category, cat):
             continue
         out.append({"skill_id": sid, "name": name, "source": "role"})
         if len(out) >= limit:
@@ -192,7 +439,7 @@ def related_skills_for_conn(
     limit: int | None = None,
 ) -> dict[str, Any]:
     chosen = clamp_limit(limit)
-    skill_id, canonical = _resolve(conn, name)
+    skill_id, canonical, focus_category = _resolve(conn, name)
     blocked = _norm_exclude(exclude)
     if canonical:
         blocked.add(canonical.lower())
@@ -223,12 +470,38 @@ def related_skills_for_conn(
     _take(_family_skills(conn, canonical=canonical, exclude=seen, limit=remaining))
     if len(items) < chosen and skill_id:
         remaining = chosen - len(items)
-        _take(_pair_skills(conn, skill_id=skill_id, exclude=seen, limit=remaining))
+        _take(
+            _pair_skills(
+                conn,
+                skill_id=skill_id,
+                focus_category=focus_category,
+                exclude=seen,
+                limit=remaining,
+            )
+        )
     if len(items) < chosen and skill_id:
         remaining = chosen - len(items)
-        _take(_role_skills(conn, skill_id=skill_id, exclude=seen, limit=remaining))
+        _take(
+            _role_skills(
+                conn,
+                skill_id=skill_id,
+                focus_category=focus_category,
+                exclude=seen,
+                limit=remaining,
+            )
+        )
+    if len(items) < chosen and focus_category:
+        remaining = chosen - len(items)
+        _take(
+            _category_peers(
+                conn,
+                focus_category=focus_category,
+                focus_skill_id=skill_id,
+                exclude=seen,
+                limit=remaining,
+            )
+        )
 
-    # Unresolved free-text: still try family by raw prefix.
     if not skill_id and len(items) < chosen:
         remaining = chosen - len(items)
         _take(_family_skills(conn, canonical=canonical, exclude=seen, limit=remaining))

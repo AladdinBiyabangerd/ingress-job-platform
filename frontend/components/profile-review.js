@@ -334,7 +334,7 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
       .map((item) => String(item?.name || "").trim())
       .filter(Boolean)
       .join(",");
-    const params = new URLSearchParams({ name, limit: "12" });
+    const params = new URLSearchParams({ name, limit: "16" });
     if (exclude) params.set("exclude", exclude);
     const timer = window.setTimeout(() => {
       fetch(`/api/skills/related?${params}`, {
@@ -353,7 +353,7 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
             items
               .map((item) => String(item?.name || "").trim())
               .filter((itemName) => itemName && !owned.has(itemName.toLowerCase()))
-              .slice(0, 8),
+              .slice(0, 12),
           );
         })
         .catch((err) => {
