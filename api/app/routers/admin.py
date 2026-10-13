@@ -323,3 +323,76 @@ def write_ai_flags(body: AiFlagsIn, user: VerifiedAccess = Depends(require_staff
         finally:
             conn.close()
     return {"key_configured": key_configured(), "flags": flags}
+
+
+# ---- job categories (job_categories table) --------------------------------
+
+
+class CategoryFieldsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name_az: str | None = Field(default=None, max_length=60)
+    name_en: str | None = Field(default=None, max_length=60)
+    name_ru: str | None = Field(default=None, max_length=60)
+    sort_order: int | None = Field(default=None, ge=0, le=100000)
+    priority: int | None = Field(default=None, ge=0, le=100000)
+    stack_rank: int | None = Field(default=None, ge=0, le=100000)
+    active: bool | None = None
+    title_pattern: str | None = Field(default=None, max_length=2000)
+    aliases: list[str] | None = Field(default=None, max_length=200)
+    stack_names: list[str] | None = Field(default=None, max_length=200)
+
+
+class CategoryCreateIn(CategoryFieldsIn):
+    slug: str = Field(min_length=1, max_length=40)
+
+
+class CategoryOrderIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    slugs: list[str] = Field(max_length=200)
+
+
+def _cat(action):
+    from app.job_categories import CategoryError
+
+    try:
+        return action()
+    except CategoryError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
+
+
+@router.get("/categories")
+def read_categories_admin(_user: VerifiedAccess = Depends(require_staff)) -> dict:
+    from app.job_categories import staff_list
+
+    return {"items": staff_list()}
+
+
+@router.post("/categories")
+def create_category(body: CategoryCreateIn, _user: VerifiedAccess = Depends(require_staff)) -> dict:
+    from app.job_categories import create
+
+    fields = body.model_dump(exclude={"slug"}, exclude_none=True)
+    return _cat(lambda: create(body.slug, fields))
+
+
+@router.put("/categories/order")
+def reorder_categories(body: CategoryOrderIn, _user: VerifiedAccess = Depends(require_staff)) -> dict:
+    from app.job_categories import reorder
+
+    return {"items": _cat(lambda: reorder(body.slugs))}
+
+
+@router.post("/categories/recategorise")
+def recategorise_jobs(_user: VerifiedAccess = Depends(require_staff)) -> dict:
+    from app.job_categories import recategorise
+
+    return _cat(recategorise)
+
+
+@router.patch("/categories/{slug:path}")
+def update_category(slug: str, body: CategoryFieldsIn, _user: VerifiedAccess = Depends(require_staff)) -> dict:
+    from app.job_categories import update
+
+    return _cat(lambda: update(slug, body.model_dump(exclude_none=True)))

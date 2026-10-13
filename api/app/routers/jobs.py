@@ -74,6 +74,21 @@ def read_jobs(
     )
 
 
+@router.get("/categories")
+def read_categories(_rl=dep_ip("public_read")) -> dict:
+    """Active job categories in display order, with published-job counts."""
+    from app.job_categories import active_rows, public_item
+    from app.sqlite_jobs import query_jobs as _query
+
+    totals = {}
+    try:
+        facets = _query(page=1, per_page=1).get("facets") or {}
+        totals = {item["name"]: item["total"] for item in facets.get("categories") or []}
+    except Exception:  # noqa: BLE001 - no jobs database yet
+        totals = {}
+    return {"items": [public_item(row, totals.get(row["slug"], 0)) for row in active_rows()]}
+
+
 @router.get("/jobs/{job_id}")
 def read_job(job_id: int) -> dict:
     job = get_job(job_id)

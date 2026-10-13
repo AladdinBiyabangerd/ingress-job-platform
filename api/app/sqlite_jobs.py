@@ -275,17 +275,12 @@ def tech_stack(value: object) -> list[str]:
     return out[:12]
 
 
-# Same list as worker/worker/techstack.py CATEGORIES. Anything else
-# (including the worker's "-" for non-tech rows) is returned as "".
-CATEGORIES = (
-    "Backend", "Frontend", "Full-stack", "Mobile", "DevOps/Cloud", "Data/ML",
-    "QA", "Security", "Design/UX", "Product", "IT Support", "Other tech",
-)
-
-
 def job_category(value: object) -> str:
-    name = str(value or "").strip()
-    return name if name in CATEGORIES else ""
+    """Active category slug from the job_categories table. Inactive ones read
+    as "Other tech"; anything else (the worker's "-") is ""."""
+    from app.job_categories import display_category
+
+    return display_category(value)
 
 
 def _homepage(value: object) -> str:
@@ -573,7 +568,10 @@ def _build_sql_filters(
         clauses.append("COALESCE(j.relocation, 0) = 1")
     if onsite:
         clauses.append("TRIM(COALESCE(j.owner_subject, '')) != ''")
-    valid_cats = [c for c in categories if c in CATEGORIES]
+    from app.job_categories import active_slugs
+
+    known = active_slugs()
+    valid_cats = [c for c in categories if c in known]
     if valid_cats:
         placeholders = ",".join("?" * len(valid_cats))
         clauses.append(f"j.category IN ({placeholders})")
@@ -680,15 +678,16 @@ def _build_facets(conn) -> dict:
     ).fetchall():
         lang_counts[_row_language(row)] += 1
 
-    cat_placeholders = ",".join("?" * len(CATEGORIES))
+    from app.job_categories import active_rows, public_item
+
+    cat_rows = {row["slug"]: row for row in active_rows()}
     for row in conn.execute(
         f"""
         SELECT j.category AS category, COUNT(*) AS total
         {_PUBLISHED_WHERE}
-          AND j.category IN ({cat_placeholders})
+          AND COALESCE(j.category, '') NOT IN ('', '-')
         GROUP BY j.category
-        """,
-        list(CATEGORIES),
+        """
     ).fetchall():
         cat = job_category(row["category"])
         if cat:
@@ -712,11 +711,8 @@ def _build_facets(conn) -> dict:
         ),
     )
     categories = sorted(
-        [{"name": name, "total": total} for name, total in cat_counts.items()],
-        key=lambda item: (
-            CATEGORIES.index(item["name"]) if item["name"] in CATEGORIES else 99,
-            item["name"],
-        ),
+        [public_item(cat_rows[name], total) for name, total in cat_counts.items() if name in cat_rows],
+        key=lambda item: (item["sort_order"], item["name"]),
     )
     stacks = sorted(
         [{"name": name, "total": total} for name, total in stack_counts.items()],
@@ -806,7 +802,9 @@ def _apps_fingerprint(conn) -> tuple:
 def _catalog_facets(conn) -> tuple[dict, int]:
     """Facets + published count. Shared across list pages until the catalog changes."""
     global _FACETS_MEMO
-    key = _cache_db_key()
+    from app.job_categories import version as categories_version
+
+    key = (_cache_db_key(), categories_version())
     fp = _jobs_fingerprint(conn)
     with _CATALOG_LOCK:
         memo = _FACETS_MEMO

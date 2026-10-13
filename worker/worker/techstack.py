@@ -943,11 +943,13 @@ def _category_from_stack(stack: list[str], rules=None) -> str:
 _QA_TITLE = re.compile(r"\bqa\b|quality assurance|\bsdet\b|\btesters?\b|test automation", re.IGNORECASE)
 
 
-def classify_category(category: object, title: str = "", stack: list[str] | None = None) -> str:
+def classify_category(
+    category: object, title: str = "", stack: list[str] | None = None, *, rules=None
+) -> str:
     """One of the active categories (job_categories table). The source's own
     category first (values that clearly say non-tech are skipped), then the
-    title, then the tech stack."""
-    rules = _categories.rules()
+    title, then the tech stack. `rules` overrides the cached table rules."""
+    rules = rules or _categories.rules()
     from_title = _match_category(title or "", rules)
     if from_title == "QA" and _QA_TITLE.search(title or ""):
         # "QA Engineer" is QA whatever the source board or stack says
