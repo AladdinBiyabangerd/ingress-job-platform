@@ -71,17 +71,30 @@ def adjacency_from_compat(
     return out
 
 
+def _hash_into(bins: list[float], token: str, weight: float = 1.0) -> None:
+    if not token:
+        return
+    digest = hashlib.blake2b(token.encode("utf-8"), digest_size=4).digest()
+    idx = int.from_bytes(digest, "big") % len(bins)
+    bins[idx] += weight
+
+
 def _name_features(name: str, dims: int = _NAME_FEATURE_DIMS) -> list[float]:
-    """Stable hashed character-bigram bag — clusters Git/GitHub, Spring/*."""
-    text = f"^{str(name or '').strip().lower()}$"
+    """Bigrams + whitespace/-/ / tokens — clusters Git/GitHub and Spring/*."""
+    raw = str(name or "").strip().lower()
     bins = [0.0] * dims
-    if len(text) < 2:
+    if not raw:
         return bins
-    for i in range(len(text) - 1):
-        gram = text[i : i + 2]
-        digest = hashlib.blake2b(gram.encode("utf-8"), digest_size=4).digest()
-        idx = int.from_bytes(digest, "big") % dims
-        bins[idx] += 1.0
+    text = f"^{raw}$"
+    if len(text) >= 2:
+        for i in range(len(text) - 1):
+            _hash_into(bins, text[i : i + 2], 1.0)
+    for piece in raw.replace("/", " ").replace("-", " ").split():
+        token = piece.strip()
+        if len(token) < 2:
+            continue
+        # Tokens weigh more than bigrams so Spring Security ≈ Spring MVC.
+        _hash_into(bins, f"tok:{token}", 2.0)
     return normalize(bins)
 
 
@@ -91,7 +104,7 @@ def _embedding_for(category: str, name: str) -> list[float]:
     if cat in _CATEGORY_AXES:
         cat_vec[_CATEGORY_AXES.index(cat)] = 1.0
     # Category dominates; name features pull family/prefix siblings together.
-    name_vec = [0.55 * x for x in _name_features(name)]
+    name_vec = [0.50 * x for x in _name_features(name)]
     return normalize(cat_vec + name_vec)
 
 

@@ -5,11 +5,10 @@ Algorithm
 1. Cold start → global popularity (no session vector).
 2. Otherwise score every non-clicked skill by cosine(session, skill).
 3. Partition candidates:
-   - **exploit**: same category as dominant click, or sim ≥ ``exploit_floor``
-     within adjacent categories (tight neighborhood).
-   - **adjacent**: category ∈ adjacency(dominant), moderate similarity band.
-   - **serendipity**: other categories; rank by popularity × mild similarity
-     so we do not inject pure noise.
+   - **exploit**: same category as dominant click.
+   - **adjacent**: category ∈ adjacency(dominant), sim ≥ floor
+     (adjacent categories never fall into serendipity).
+   - **serendipity**: non-adjacent categories only; popularity × mild similarity.
 4. Allocate slots with the 60/25/15 rule (rounded, remainder → exploit),
    then interleave buckets so the UI list is mixed, not three blocks.
 """
@@ -121,11 +120,13 @@ class HybridRecommender:
             if same:
                 # 60% exploitation — stay in the active category.
                 exploit_pool.append((skill, sim, sim * 0.85 + pop * 0.15))
-            elif is_adj and sim >= ADJACENT_SIM_FLOOR:
-                # 25% related exploration — neighboring categories only.
+            elif is_adj:
+                # Neighboring categories never fall into serendipity (even low sim).
+                if sim < ADJACENT_SIM_FLOOR:
+                    continue
                 adjacent_pool.append((skill, sim, sim * 0.70 + pop * 0.30))
             else:
-                # 15% serendipity — distant categories; popularity-led, mild sim.
+                # 15% serendipity — distant categories only; popularity-led.
                 serendipity_pool.append(
                     (skill, sim, pop * 0.75 + max(sim, 0.0) * 0.25)
                 )

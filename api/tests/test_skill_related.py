@@ -225,6 +225,21 @@ class SkillRelatedTests(unittest.TestCase):
             names,
         )
 
+    def test_adjacent_low_sim_not_serendipity(self):
+        """Backend peers of devops focus must not dominate as serendipity."""
+        with sqlite3.connect(self.db) as conn:
+            conn.row_factory = sqlite3.Row
+            payload = related_skills_for_conn(conn, name="CI/CD", limit=8)
+        spring_items = [
+            item for item in payload["items"] if str(item["name"]).startswith("Spring")
+        ]
+        for item in spring_items:
+            self.assertNotEqual(
+                item["source"],
+                "serendipity",
+                payload["items"],
+            )
+
     def test_unknown_name_empty_items(self):
         res = self.client.get(
             "/api/v1/skills/related",

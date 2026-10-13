@@ -307,14 +307,22 @@ def _pair_skills(
     meta = _skill_meta(conn, pair_ids)
     cats = _skill_categories(conn, pair_ids)
     out: list[dict] = []
-    for pair_id, _score in ranked:
+    for pair_id, score in ranked:
         info = meta.get(pair_id) or {}
         name = str(info.get("name") or "").strip()
         if not name or name.lower() in exclude:
             continue
         if not categories_compatible(focus_category, cats.get(pair_id, "")):
             continue
-        out.append({"skill_id": pair_id, "name": name, "source": "pair"})
+        share = float(score[0])
+        out.append(
+            {
+                "skill_id": pair_id,
+                "name": name,
+                "source": "pair",
+                "strength": max(0.0, min(1.0, share)),
+            }
+        )
         if len(out) >= limit:
             break
     return out
@@ -427,7 +435,15 @@ def _role_skills(
             continue
         if not categories_compatible(focus_category, cat):
             continue
-        out.append({"skill_id": sid, "name": name, "source": "role"})
+        peer_w = float(_row_get(row, "peer_weight", 5) or 0.0)
+        out.append(
+            {
+                "skill_id": sid,
+                "name": name,
+                "source": "role",
+                "strength": max(0.0, min(1.0, peer_w)),
+            }
+        )
         if len(out) >= limit:
             break
     return out
@@ -482,42 +498,82 @@ def _session_from_profile(
     return session
 
 
-def _catalog_with_market_boosts(
-    catalog,
+def _clamp01(value: float) -> float:
+    return max(0.0, min(1.0, float(value)))
+
+
+def _adjacent_category_peers(
     conn,
     *,
-    skill_id: int | None,
     focus_category: str,
-):
-    """Raise popularity for pair/role peers so market edges beat name noise."""
-    if not skill_id:
-        return catalog
+    focus_skill_id: int | None,
+    exclude: set[str],
+    limit: int,
+) -> list[dict]:
+    """Top skills from categories adjacent to the focus (for mini-catalog)."""
+    cat = _norm_category(focus_category)
+    if not cat or limit <= 0:
+        return []
+    allowed = _CATEGORY_COMPAT.get(cat) or frozenset()
+    peers = sorted(c for c in allowed if c and c != cat)
+    if not peers:
+        return []
+    # Dictionary may store aliases (ml) while compat uses canonical (ai).
+    query_cats = list(peers)
+    if "ai" in peers and "ml" not in query_cats:
+        query_cats.append("ml")
+    placeholders = ",".join("?" for _ in query_cats)
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT
+                s.id AS skill_id,
+                s.canonical_name AS name,
+                COALESCE(SUM(t.ad_count), 0) AS ads
+            FROM skill_dictionary s
+            LEFT JOIN skill_trend_daily t ON t.skill_id = s.id
+            WHERE lower(s.category_hint) IN ({placeholders})
+              AND (? IS NULL OR s.id != ?)
+            GROUP BY s.id, s.canonical_name
+            ORDER BY ads DESC, s.canonical_name
+            LIMIT ?
+            """,
+            (*query_cats, focus_skill_id, focus_skill_id, max(limit * 3, 36)),
+        ).fetchall()
+    except Exception:
+        try:
+            rows = conn.execute(
+                f"""
+                SELECT id AS skill_id, canonical_name AS name, 0 AS ads
+                FROM skill_dictionary
+                WHERE lower(category_hint) IN ({placeholders})
+                  AND (? IS NULL OR id != ?)
+                ORDER BY canonical_name
+                LIMIT ?
+                """,
+                (*query_cats, focus_skill_id, focus_skill_id, max(limit * 3, 36)),
+            ).fetchall()
+        except Exception:
+            return []
+    out: list[dict] = []
+    for row in rows:
+        sid = int(_row_get(row, "skill_id", 0) or 0)
+        name = str(_row_get(row, "name", 1) or "").strip()
+        if not name or name.lower() in exclude:
+            continue
+        out.append({"skill_id": sid, "name": name, "source": "adjacent"})
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _apply_popularity_boosts(catalog, boosts: dict[int, float]):
+    """Return a catalog copy with max(popularity, boost) applied."""
     from app.skill_reco.catalog import Skill, SkillCatalog
 
-    boosts: dict[int, float] = {}
-    for row in _pair_skills(
-        conn,
-        skill_id=int(skill_id),
-        focus_category=focus_category,
-        exclude=set(),
-        limit=24,
-    ):
-        sid = int(row.get("skill_id") or 0)
-        if sid > 0:
-            boosts[sid] = max(boosts.get(sid, 0.0), 0.95)
-    for row in _role_skills(
-        conn,
-        skill_id=int(skill_id),
-        focus_category=focus_category,
-        exclude=set(),
-        limit=24,
-    ):
-        sid = int(row.get("skill_id") or 0)
-        if sid > 0:
-            boosts[sid] = max(boosts.get(sid, 0.0), 0.75)
     if not boosts:
         return catalog
-
     skills = []
     for skill in catalog.all():
         pop = max(float(skill.popularity_score), boosts.get(skill.id, 0.0))
@@ -537,6 +593,120 @@ def _catalog_with_market_boosts(
     return SkillCatalog(skills=skills, adjacency=catalog.adjacency)
 
 
+def _mini_catalog_for_reco(
+    conn,
+    base,
+    *,
+    skill_id: int | None,
+    canonical: str,
+    focus_category: str,
+):
+    """Prune to ~100 market-relevant candidates; apply graded family/pair/role boosts."""
+    from app.skill_reco.catalog import SkillCatalog
+
+    focus = None
+    if skill_id:
+        focus = base.get(int(skill_id))
+    if focus is None:
+        focus = base.get_by_name(canonical)
+    if focus is None:
+        return None, None
+
+    pool_n = 32
+    empty: set[str] = set()
+    family_rows = _family_skills(
+        conn, canonical=canonical, exclude=empty, limit=pool_n
+    )
+    pair_rows = (
+        _pair_skills(
+            conn,
+            skill_id=int(skill_id),
+            focus_category=focus_category,
+            exclude=empty,
+            limit=pool_n,
+        )
+        if skill_id
+        else []
+    )
+    role_rows = (
+        _role_skills(
+            conn,
+            skill_id=int(skill_id),
+            focus_category=focus_category,
+            exclude=empty,
+            limit=pool_n,
+        )
+        if skill_id
+        else []
+    )
+    category_rows = (
+        _category_peers(
+            conn,
+            focus_category=focus_category,
+            focus_skill_id=skill_id,
+            exclude=empty,
+            limit=pool_n,
+        )
+        if focus_category
+        else []
+    )
+    adjacent_rows = (
+        _adjacent_category_peers(
+            conn,
+            focus_category=focus_category,
+            focus_skill_id=skill_id,
+            exclude=empty,
+            limit=24,
+        )
+        if focus_category
+        else []
+    )
+
+    boosts: dict[int, float] = {}
+    for row in family_rows:
+        sid = int(row.get("skill_id") or 0)
+        if sid > 0:
+            boosts[sid] = max(boosts.get(sid, 0.0), 0.85)
+    for row in pair_rows:
+        sid = int(row.get("skill_id") or 0)
+        if sid <= 0:
+            continue
+        strength = _clamp01(float(row.get("strength") or 0.0))
+        boosts[sid] = max(boosts.get(sid, 0.0), 0.45 + 0.50 * strength)
+    for row in role_rows:
+        sid = int(row.get("skill_id") or 0)
+        if sid <= 0:
+            continue
+        strength = _clamp01(float(row.get("strength") or 0.0))
+        boosts[sid] = max(boosts.get(sid, 0.0), 0.35 + 0.40 * strength)
+
+    candidate_ids: set[int] = {focus.id}
+    for rows in (
+        family_rows,
+        pair_rows,
+        role_rows,
+        category_rows,
+        adjacent_rows,
+    ):
+        for row in rows:
+            sid = int(row.get("skill_id") or 0)
+            if sid > 0:
+                candidate_ids.add(sid)
+
+    # Keep profile-session skills available for the decaying session vector.
+    # (They are excluded from output via clicked_ids / blocked names.)
+    skills = []
+    for sid in candidate_ids:
+        skill = base.get(sid)
+        if skill is not None:
+            skills.append(skill)
+    if len(skills) < 2:
+        return None, focus
+
+    mini = SkillCatalog(skills=skills, adjacency=base.adjacency)
+    return _apply_popularity_boosts(mini, boosts), focus
+
+
 def _related_skills_reco_for_conn(
     conn,
     *,
@@ -546,35 +716,46 @@ def _related_skills_reco_for_conn(
     exclude: list[str] | None,
     chosen: int,
 ) -> dict[str, Any] | None:
-    """Session-vector hybrid recommender (60/25/15). None → use mix fallback."""
+    """Session-vector hybrid on a pruned candidate set. None → mix fallback."""
     from app.skill_reco import HybridRecommender
     from app.skill_reco.db_catalog import catalog_from_conn
 
     base = catalog_from_conn(conn)
     if not base.skills:
         return None
-    catalog = _catalog_with_market_boosts(
-        base,
+    catalog, focus = _mini_catalog_for_reco(
         conn,
+        base,
         skill_id=skill_id,
+        canonical=canonical,
         focus_category=focus_category,
     )
-    focus = None
-    if skill_id:
-        focus = catalog.get(int(skill_id))
-    if focus is None:
-        focus = catalog.get_by_name(canonical)
-    if focus is None:
+    if catalog is None or focus is None:
         return None
+
+    # Session history may reference profile skills outside the mini set — pull
+    # those embeddings from the full catalog so decay still works.
+    exclude_names = [str(x).strip() for x in (exclude or []) if str(x).strip()]
+    session_skills = list(catalog.all())
+    for raw in exclude_names:
+        skill = catalog.get_by_name(raw) or base.get_by_name(raw)
+        if skill is None:
+            continue
+        if catalog.get(skill.id) is None:
+            session_skills.append(skill)
+    if len(session_skills) != len(catalog.skills):
+        from app.skill_reco.catalog import SkillCatalog
+
+        catalog = SkillCatalog(skills=session_skills, adjacency=catalog.adjacency)
+        # Re-resolve focus after rebuild.
+        focus = catalog.get(focus.id) or focus
 
     blocked = _norm_exclude(exclude)
     blocked.add(canonical.lower())
-    exclude_names = [str(x).strip() for x in (exclude or []) if str(x).strip()]
     session = _session_from_profile(
         catalog, focus=focus, exclude_names=exclude_names
     )
     engine = HybridRecommender(catalog)
-    # Over-fetch so category compatibility can drop hub-noise serendipity.
     raw = engine.get_recommendations(session, top_n=max(chosen * 3, chosen + 8))
     items: list[dict] = []
     seen: set[str] = set(blocked)
