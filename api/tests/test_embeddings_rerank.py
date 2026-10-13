@@ -168,7 +168,9 @@ class RerankFlagTests(unittest.TestCase):
 
         with patch.dict(os.environ, {"AI_RERANK_ENABLED": "1"}, clear=False):
             with patch("app.jobs_db.postgres_enabled", return_value=True):
-                with patch("app.embeddings.pgvector_available", return_value=True):
+                with patch("app.embeddings.pgvector_available", return_value=True), patch(
+                    "app.embeddings.ensure_embedding_tables", return_value=True
+                ):
                     with patch("app.embeddings.embedding_model", return_value="text-embedding-3-small"):
                         with patch(
                             "app.embeddings.get_embedding",
@@ -215,9 +217,14 @@ class EmbedGatewayTests(unittest.TestCase):
             "OPENAI_API_KEY": "sk-test",
             "AI_GATEWAY_ENABLED": "1",
             "AI_GATEWAY_DAILY_CALL_LIMIT": "100",
+            "AI_EMBED_PROVIDERS": "openai",
         }
+        from app.ai_gateway import gateway
+
+        gateway._cooldown_reset()
+        self.addCleanup(gateway._cooldown_reset)
         with patch.dict(os.environ, env, clear=False):
-            with patch("app.ai_gateway.gateway._openai_embed", return_value=fake) as api:
+            with patch("app.ai_gateway.gateway._openai_compat_embed", return_value=fake) as api:
                 result = embed(texts=["Java Spring"], purpose="embed_job", conn=None)
         self.assertTrue(result.ok)
         self.assertEqual(result.vectors[0], [0.1, 0.2, 0.3])

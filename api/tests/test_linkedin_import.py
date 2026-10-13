@@ -67,7 +67,8 @@ class LinkedInImportTests(unittest.TestCase):
             conn.close()
         self.assertEqual(row[0], "linkedin-extension")
         self.assertEqual(row[1], "https://jobs.ashbyhq.com/pragmatike/4cc505dc")
-        self.assertEqual(row[2], "published")
+        # Scraped/imported ads wait for staff approval (1be47b1).
+        self.assertEqual(row[2], "pending")
 
 
 if __name__ == "__main__":
