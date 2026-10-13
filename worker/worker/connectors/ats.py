@@ -23,7 +23,7 @@ from worker.parsing import clean
 from worker.techstack import is_tech_job
 
 _REMOTE = re.compile(r"\b(remote|anywhere|distributed|work from home|wfh)\b", re.IGNORECASE)
-PER_BOARD = 15
+PER_BOARD = 25
 
 
 def round_robin(groups: list[list[dict]]) -> list[dict]:
@@ -61,10 +61,10 @@ class AtsConnector(FeedConnector):
     # Employer boards mix onsite and remote; keep only remote / relocation.
     require_remote_or_relocation = True
     # Employer boards change slowly: read each group at most every 3 hours,
-    # look at no more than 40 new candidates, and rotate large groups so one
+    # look at no more than 80 new candidates, and rotate large groups so one
     # pass reads at most ATS_MAX_BOARDS boards.
     min_interval_hours = 3
-    candidates = 40
+    candidates = 80
     max_boards = ATS_MAX_BOARDS
 
     def board_items(self, slug: str) -> list[dict]:
@@ -89,7 +89,12 @@ class AtsConnector(FeedConnector):
         groups: list[list[dict]] = []
         failed = 0
         picked = self.boards_this_pass()
+        deadline = getattr(self, "deadline", None)
+        clock = getattr(self, "clock", time.monotonic)
         for slug in picked:
+            if deadline is not None and clock() >= deadline:
+                # Time budget spent: keep what was read, next pass rotates on.
+                break
             try:
                 rows = self.board_items(slug)
             except (NotFound, SourceFailed, ValueError, ET.ParseError):

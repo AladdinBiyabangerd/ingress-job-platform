@@ -8,7 +8,7 @@ visas/relocation were preferred. Each group reads at most ATS_MAX_BOARDS
 boards per pass; larger groups rotate.
 """
 
-ATS_MAX_BOARDS = 12
+ATS_MAX_BOARDS = 20
 
 # (source name, ATS, short Azerbaijani region label, board slugs)
 GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
@@ -66,7 +66,7 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
     # scripts/sweep_ats_boards.py (tech titles + Remote/Anywhere/EMEA/relocation/visa signal) and then
     # by a dry-run through finish_item on a temp DB (>= 1 accepted ad, AI off). US-restriction-risk
     # boards (axios, actblue, clearstreet, allegiantair, cgsfederal, agile-defense, kepler...) left out.
-    # Each group has <= 40 boards, so a full rotation takes <= 12 h.
+    # Each group has <= 40 boards; at ATS_MAX_BOARDS=20 a full rotation takes <= 2 passes (6 h).
     ("Greenhouse boards (Remote & relocation 1)", "greenhouse", "Remote və ya relocation siqnallı lövhələr (süpürmə 2026-10-11)", (
         "agency", "monzoreferrals", "etchedai", "distantjob", "yipitdata", "think-cell",
         "eqvilentjobs", "platacard", "doitintl", "muonspace", "vannevarlabs", "glydways",
