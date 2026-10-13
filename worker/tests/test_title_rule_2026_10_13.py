@@ -11,6 +11,7 @@ from worker.techstack import is_tech_job
 NON_IT = [
     "Growth Marketer- Reception.ai", "Growth Marketer", "Performance Marketer - Foo.io",
     "AI Strategist", "Data Strategist", "Head of AI Expansion", "Head of Market Expansion",
+    "Delivery Manager", "Senior Delivery Manager", "Delivery Manager - Logistics",
     "Product Designer", "Senior Product Designer, Design Systems",
     "Sr Product Designer", "Motion Designer", "Motion Designer\\Tech Artist",
     "Sales Manager", "Account Executive - AI", "Recruiter (Tech)", "Mechanical Engineer",
@@ -21,7 +22,8 @@ IT = [
     "Technical Project Manager", "IT Project Manager", "Software Project Manager",
     "Program Manager, Cloud Infrastructure", "Marketing Engineer",
     "Product Manager", "Senior Product Manager - Realtime", "Technical Product Manager",
-    "UX/UI Designer", "UI Designer", "Scrum Master",
+    "UX/UI Designer", "UI Designer", "Scrum Master", "Project Manager",
+    "Software Delivery Manager", "Technical Delivery Manager", "IT Delivery Manager",
     "Linux Administrator L2", "System Administrator", "Тестувальник", "Тестировщик",
     "Системний адміністратор", "Системный администратор",
 ]
@@ -74,8 +76,11 @@ class RecheckTest(unittest.TestCase):
         owned = self._add("Motion Designer", owner="u1")
         locked = self._add("Product Designer II", locked=1)
         pending = self._add("AI Strategist", status="pending")
+        delivery = self._add("Delivery Manager")
+        project = self._add("Project Manager")
         hit = {job_id for job_id, _ in self.store.recheck_title_rule()}
-        self.assertEqual(hit, {designer, marketer})
+        self.assertEqual(hit, {designer, marketer, delivery})
+        self.assertEqual(self._row(project)["hidden"], 0)
         self.assertEqual(self._row(designer)["hidden"], 1)
         self.assertEqual(self._row(designer)["reject_reason"], TITLE_RULE_REASON)
         self.assertEqual(self._row(designer)["status"], "published")

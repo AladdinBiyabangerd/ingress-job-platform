@@ -46,7 +46,6 @@ class CategoryRulesTest(unittest.TestCase):
             "Senior Game Designer",
             "Technical Project Manager",
             "Program Manager, Platform",
-            "Delivery Manager",
             "Crypto Engineer",
             "Blockchain Developer",
         ]:

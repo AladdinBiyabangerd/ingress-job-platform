@@ -101,6 +101,9 @@ LATIN_TITLE_STEP = "latin-title-mixed-cjk-2026-10-13"
 MERGE_REMOTE_TWINS_STEP = "merge-remote-place-twins-2026-10-13"
 # One-shot: re-check published collected ads with the 2026-10-13 title rules.
 TITLE_RULE_STEP = "title-rule-recheck-2026-10-13"
+# Second pass after "Delivery Manager" became non-IT (same reason, new marker
+# so databases that already ran the first pass re-check once more).
+TITLE_RULE_STEP_B = "title-rule-recheck-2026-10-13b-delivery"
 TITLE_RULE_REASON = "title_rule_2026_10_13"
 # Collected ads no source has listed for this long are hidden as expired.
 EXPIRE_REASON = "expired_not_seen"
@@ -1031,7 +1034,7 @@ class Store:
         print(f"remote twins {MERGE_REMOTE_TWINS_STEP}: merged={merged} rekeyed={rekeyed}", flush=True)
         return merged
 
-    def recheck_title_rule(self, *, force: bool = False) -> list[tuple[int, str]]:
+    def recheck_title_rule(self, *, force: bool = False, step: str = TITLE_RULE_STEP_B) -> list[tuple[int, str]]:
         """One-time: hide published collected ads that the 2026-10-13 title
         rules make non-IT (hidden=1, reject_reason=TITLE_RULE_REASON). Status
         stays, so staff can unhide. Owner and staff-locked ads are skipped.
@@ -1040,7 +1043,7 @@ class Store:
 
         self.conn.execute(_MAINTENANCE)
         if not force and self.conn.execute(
-            "SELECT 1 FROM maintenance_steps WHERE name = ?", (TITLE_RULE_STEP,)
+            "SELECT 1 FROM maintenance_steps WHERE name = ?", (step,)
         ).fetchone():
             return []
         rows = self.conn.execute(
@@ -1066,9 +1069,9 @@ class Store:
             self.conn.execute(
                 "INSERT INTO maintenance_steps (name, done_at) VALUES (?, ?) "
                 "ON CONFLICT (name) DO NOTHING",
-                (TITLE_RULE_STEP, now_iso()),
+                (step, now_iso()),
             )
-        print(f"title rule {TITLE_RULE_STEP}: checked={len(rows)} hidden={len(hit)}", flush=True)
+        print(f"title rule {step}: checked={len(rows)} hidden={len(hit)}", flush=True)
         for job_id, title in hit:
             print(f"title rule hidden: {job_id} {title}", flush=True)
         return hit

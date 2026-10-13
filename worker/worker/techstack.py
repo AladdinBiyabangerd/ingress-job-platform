@@ -839,6 +839,13 @@ _ROLE_NON_IT = re.compile(
     r"\bproduct designers?\b|\bmotion designers?\b",
     re.IGNORECASE,
 )
+# A delivery manager is IT only when the title says so plainly
+# ("Software Delivery Manager", "Technical Delivery Manager").
+_DELIVERY = re.compile(r"\bdelivery manag(?:er|ers)\b", re.IGNORECASE)
+_DELIVERY_TECH = re.compile(
+    r"engineer|software|technical|\bit\b|\bdata\b|cloud|platform|devops|\bqa\b|\bsaas\b",
+    re.IGNORECASE,
+)
 
 
 def title_rule_2026_10_13_rejects(title: str) -> bool:
@@ -852,6 +859,7 @@ def title_rule_2026_10_13_rejects(title: str) -> bool:
     return bool(
         stripped != raw
         or _ROLE_NON_IT.search(stripped)
+        or _DELIVERY.search(stripped)
     )
 
 
@@ -859,6 +867,8 @@ def is_tech_job(title: str, category: object = "", tags: object = None) -> bool:
     """The source category wins when it is clear; otherwise the title decides."""
     title = _DOMAIN_TOKEN.sub(" ", title or "")
     if _ROLE_NON_IT.search(title) and not _STRONG_TITLE.search(title):
+        return False
+    if _DELIVERY.search(title) and not _DELIVERY_TECH.search(title):
         return False
     if _PHYSICAL_TITLE.search(title):
         return False
