@@ -36,11 +36,12 @@ class _Base(unittest.TestCase):
         self.store.conn.close()
         self.tmp.cleanup()
 
-    def _run(self, when, found=5, status="ok", error=None):
+    def _run(self, when, found=5, status="ok", error=None, complete=1, source_id=None):
         with self.store.conn:
             self.store.conn.execute(
-                "INSERT INTO crawl_runs (source_id, started_at, status, found_count, error) VALUES (?, ?, ?, ?, ?)",
-                (self.source_id, when.isoformat(), status, found, error),
+                "INSERT INTO crawl_runs (source_id, started_at, status, found_count, error, complete_listing) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (source_id or self.source_id, when.isoformat(), status, found, error, complete),
             )
 
     def _seen(self, job_id, when):
@@ -82,9 +83,35 @@ class ExpireTest(_Base):
     def test_kept_when_source_never_crawled_cleanly_since(self):
         self._run(self.now - timedelta(days=12))
         self._run(self.now - timedelta(days=1), status="error", error="boom")
-        self._run(self.now - timedelta(days=1), found=0)
+        self._run(self.now - timedelta(days=1), complete=0)
         self._run(self.now - timedelta(days=1), error="stopped: time budget")
         self.assertEqual(self.store.expire_unseen(now=self.now), 0)
+
+    def test_partial_listing_run_not_trusted(self):
+        # Capped / rotated / budget-stopped runs record complete_listing=0.
+        self._run(self.now - timedelta(days=1), complete=0)
+        self.assertEqual(self.store.expire_unseen(now=self.now), 0)
+
+    def test_complete_run_with_no_new_candidates_counts(self):
+        self._run(self.now - timedelta(days=1), found=0)
+        self.assertEqual(self.store.expire_unseen(now=self.now), 1)
+
+    def test_exempt_source_never_expires(self):
+        with self.store.conn:
+            cur = self.store.conn.execute(
+                "INSERT INTO crawl_sources (name, homepage, connector, entry_url) VALUES ('Himalayas X', '', 'x', '')"
+            )
+            self.store.conn.execute(
+                "UPDATE job_sources SET source_name = 'Himalayas X' WHERE job_id = ?", (self.job_id,)
+            )
+        self._run(self.now - timedelta(days=1), source_id=int(cur.lastrowid))
+        self.assertEqual(self.store.expire_unseen(now=self.now), 0)
+
+    def test_finish_run_records_flag(self):
+        run = self.store.start_run(self.source_id)
+        self.store.finish_run(run, status="ok", found=0, created=0, updated=0, error=None, complete_listing=True)
+        row = self.store.conn.execute("SELECT complete_listing FROM crawl_runs WHERE id = ?", (run,)).fetchone()
+        self.assertEqual(row[0], 1)
 
     def test_mixed_offsets_compare_as_time(self):
         # last_seen 9 days ago in +04:00; run 8.95 days ago written in UTC.
@@ -209,6 +236,87 @@ class TwinTest(_Base):
             "SELECT id FROM jobs WHERE norm_key LIKE ? ESCAPE ?", (like_prefix("backend_engineer|"), "\\")
         ).fetchall()
         self.assertEqual(rows, [])
+
+
+class _Client:
+    def allowed(self, url):
+        return True
+
+
+class _Feed:
+    def __init__(self, rows, full):
+        from worker.connectors.feed import FeedConnector
+
+        class F(FeedConnector):
+            name = "F"
+            entry_url = "https://f.example/feed"
+            full_listing = full
+
+            def feed_items(inner):
+                return [dict(r) for r in rows]
+
+        self.cls = F
+
+
+class ListingTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.store = Store(Path(self.tmp.name) / "t.sqlite", sqlite_only=True)
+        self.store.upsert(_item(url="https://f.example/known"))
+
+    def tearDown(self):
+        self.store.conn.close()
+        self.tmp.cleanup()
+
+    def _rows(self):
+        return [
+            {"title": "Backend Engineer", "source_url": "https://f.example/known"},
+            {"title": "Python Developer", "source_url": "https://f.example/new"},
+        ]
+
+    def test_known_urls_are_listed_for_last_seen(self):
+        conn = _Feed(self._rows(), True).cls(_Client(), self.store)
+        urls = conn.discover()
+        self.assertEqual(urls, ["https://f.example/new"])  # candidates: new only
+        self.assertIn("https://f.example/known", conn.listed_urls)
+        self.assertTrue(conn.listing_complete)
+        self.assertEqual(self.store.touch_seen(conn.listed_urls), 1)
+
+    def test_unknown_feed_is_partial(self):
+        conn = _Feed(self._rows(), False).cls(_Client(), self.store)
+        conn.discover()
+        self.assertFalse(conn.listing_complete)
+
+    def test_empty_listing_is_partial(self):
+        conn = _Feed([], True).cls(_Client(), self.store)
+        conn.discover()
+        self.assertFalse(conn.listing_complete)
+
+    def test_ats_truncation(self):
+        from worker.connectors import ats
+
+        class G(ats.AtsConnector):
+            name = "G"
+            entry_url = "https://g.example/"
+            boards = ("a", "b")
+            sizes = {"a": 2, "b": 2}
+
+            def board_items(inner, slug):
+                return [{"title": "Backend Engineer", "source_url": f"https://g.example/{slug}/{i}"}
+                        for i in range(inner.sizes[slug])]
+
+        full = G(_Client(), self.store)
+        full.discover()
+        self.assertTrue(full.listing_complete)
+        G.sizes = {"a": ats.PER_BOARD + 1, "b": 1}
+        cut = G(_Client(), self.store)
+        cut.discover()
+        self.assertFalse(cut.listing_complete)
+        G.sizes = {"a": 1, "b": 1}
+        G.max_boards = 1
+        rotated = G(_Client(), self.store)
+        rotated.discover()
+        self.assertFalse(rotated.listing_complete)
 
 
 if __name__ == "__main__":

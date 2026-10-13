@@ -105,6 +105,18 @@ TITLE_RULE_REASON = "title_rule_2026_10_13"
 # Collected ads no source has listed for this long are hidden as expired.
 EXPIRE_REASON = "expired_not_seen"
 EXPIRE_AFTER_DAYS = 7
+# Sources whose listing completeness cannot be told (capped APIs, monthly
+# threads, paged search): their ads never expire from absence. Prefix match,
+# lower case ("greenhouse boards" would cover every Greenhouse group).
+EXPIRE_EXEMPT_SOURCES = (
+    "himalayas", "djinni", "hn who is hiring", "jooble", "reed.co.uk",
+    "remote ok", "wellfound", "get on board",
+)
+
+
+def _expire_exempt(name: str) -> bool:
+    low = str(name or "").strip().lower()
+    return any(low.startswith(prefix) for prefix in EXPIRE_EXEMPT_SOURCES)
 
 _MERGES = """
 CREATE TABLE IF NOT EXISTS job_merges (
@@ -229,6 +241,7 @@ class Store:
         self.conn.executescript(SCHEMA)
         self._ensure_cleaned_column()
         self._ensure_staff_columns()
+        self._ensure_run_columns()
         self._seed()
         with self.conn:
             self.hidden_retired = hide_retired_local(self.conn)
@@ -264,6 +277,15 @@ class Store:
         cols = {row[1] for row in self.conn.execute("PRAGMA table_info(jobs)")}
         if "cleaned_text" not in cols:
             self.conn.execute("ALTER TABLE jobs ADD COLUMN cleaned_text TEXT")
+
+    def _ensure_run_columns(self) -> None:
+        cols = {row[1] for row in self.conn.execute("PRAGMA table_info(crawl_runs)")}
+        if "complete_listing" not in cols:
+            with self.conn:
+                # 1 = the run listed the source's whole catalog (expiry may trust it).
+                self.conn.execute(
+                    "ALTER TABLE crawl_runs ADD COLUMN complete_listing INTEGER NOT NULL DEFAULT 0"
+                )
 
     def _ensure_staff_columns(self) -> None:
         cols = {row[1] for row in self.conn.execute("PRAGMA table_info(jobs)")}
@@ -416,16 +438,18 @@ class Store:
         created: int,
         updated: int,
         error: str | None,
+        complete_listing: bool = False,
     ) -> None:
         with self.conn:
             self.conn.execute(
                 """
                 UPDATE crawl_runs
                 SET finished_at = ?, status = ?, found_count = ?, created_count = ?,
-                    updated_count = ?, error = ?
+                    updated_count = ?, error = ?, complete_listing = ?
                 WHERE id = ?
                 """,
-                (now_iso(), status, found, created, updated, error, run_id),
+                (now_iso(), status, found, created, updated, error,
+                 1 if complete_listing else 0, run_id),
             )
 
     def upsert(self, item: dict) -> str:
@@ -1060,20 +1084,22 @@ class Store:
 
         moment = now or datetime.now(timezone.utc)
         cutoff = moment - timedelta(days=days)
-        # Latest clean run per source (ok, listed something, no error such as
-        # a stopped or partly failed run), compared as parsed datetimes (MAX over
-        # text would mis-order mixed UTC offsets).
+        # Latest complete run per source (ok and listed the whole catalog,
+        # see runner.complete_listing), compared as parsed datetimes (MAX over
+        # text would mis-order mixed UTC offsets). Exempt sources never count.
         parsed_ok: dict[str, object] = {}
         for r in self.conn.execute(
             """
             SELECT s.name AS name, r.started_at AS started_at
             FROM crawl_runs r JOIN crawl_sources s ON s.id = r.source_id
-            WHERE r.status = 'ok' AND COALESCE(r.found_count, 0) > 0
+            WHERE r.status = 'ok' AND COALESCE(r.complete_listing, 0) = 1
               AND COALESCE(r.error, '') = ''
             """
         ).fetchall():
             stamp = _parse_ts(r["started_at"])
             name = str(r["name"] or "").lower()
+            if _expire_exempt(name):
+                continue
             if stamp is not None and (name not in parsed_ok or stamp > parsed_ok[name]):
                 parsed_ok[name] = stamp
         rows = self.conn.execute(

@@ -57,6 +57,11 @@ def _rank(rows: list[dict], stamp_key: str = "_stamp") -> list[dict]:
     return rows[:PER_BOARD]
 
 
+def _rank_full(rows: list[dict]) -> tuple[list[dict], bool]:
+    """_rank plus whether the PER_BOARD cut dropped ads (listing truncated)."""
+    return _rank(rows), len(rows) > PER_BOARD
+
+
 class AtsConnector(FeedConnector):
     boards: tuple[str, ...] = ()
     # Employer boards mix onsite and remote; keep only remote / relocation.
@@ -67,6 +72,9 @@ class AtsConnector(FeedConnector):
     min_interval_hours = 3
     candidates = 80
     max_boards = ATS_MAX_BOARDS
+    # Board APIs return every open ad; a pass is complete only when it read
+    # every board of the group in full (see listing_truncated in feed_items).
+    full_listing = True
 
     def board_items(self, slug: str) -> list[dict]:
         raise NotImplementedError
@@ -90,21 +98,29 @@ class AtsConnector(FeedConnector):
         groups: list[list[dict]] = []
         failed = 0
         picked = self.boards_this_pass()
+        # Rotation, a time-budget stop, a failed board or the PER_BOARD cut
+        # mean this pass did not list the whole catalog.
+        truncated = len(picked) < len(tuple(self.boards))
         deadline = getattr(self, "deadline", None)
         clock = getattr(self, "clock", time.monotonic)
         for slug in picked:
             if deadline is not None and clock() >= deadline:
                 # Time budget spent: keep what was read, next pass rotates on.
+                truncated = True
                 break
             try:
                 rows = self.board_items(slug)
             except (NotFound, SourceFailed, ValueError, ET.ParseError):
                 # One retired or broken employer board does not stop the rest.
                 failed += 1
+                truncated = True
                 continue
-            groups.append(_rank([r for r in rows if r.get("title") and r.get("source_url")]))
+            ranked, cut = _rank_full([r for r in rows if r.get("title") and r.get("source_url")])
+            truncated = truncated or cut
+            groups.append(ranked)
         if picked and failed == len(picked):
             raise SourceFailed(f"no {self.name} board could be read")
+        self.listing_truncated = truncated
         return round_robin(groups)
 
 

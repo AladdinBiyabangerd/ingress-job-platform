@@ -576,17 +576,19 @@ def _run_source(store: Store, client: PoliteClient, connector, source_id: int,
     skipped_pages = 0
     page_failures = 0
     stopped = ""
+    capped = False
     try:
         urls = connector.discover()
         found = len(urls)
         try:
             # Still listed = still seen, even when the run stops before
             # fetching every page (time budget, create cap). Expiry reads this.
-            store.touch_seen(urls)
+            store.touch_seen(getattr(connector, "listed_urls", None) or urls)
         except Exception:
             capture_exception()
         for url in urls:
             if created >= getattr(connector, "create_cap", CAP):
+                capped = True
                 break
             if clock() >= deadline:
                 stopped = f"time budget {budget}s reached"
@@ -630,6 +632,16 @@ def _run_source(store: Store, client: PoliteClient, connector, source_id: int,
         error = f"stopped: {stopped}"
     if skipped_pages and not error:
         error = f"skipped {skipped_pages} failed pages"
+    # Expiry trusts only runs that listed the whole catalog: the connector
+    # says so, and nothing cut the run short.
+    complete = bool(
+        status == "ok"
+        and not error
+        and not stopped
+        and not skipped_pages
+        and not capped
+        and getattr(connector, "listing_complete", False)
+    )
     store.finish_run(
         run_id,
         status=status,
@@ -637,6 +649,7 @@ def _run_source(store: Store, client: PoliteClient, connector, source_id: int,
         created=created,
         updated=updated,
         error=error,
+        complete_listing=complete,
     )
     print(
         f"{connector.name}: status={status} found={found} created={created} "

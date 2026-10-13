@@ -34,6 +34,10 @@ class FeedConnector:
     detail_min_text = 600
     credit_note = ""
     candidates = CANDIDATES
+    # True only for connectors whose feed_items() returns the source's whole
+    # catalog (every open ad). Expiry trusts a run only then; see
+    # listing_complete. Unknown/paged/capped feeds stay False.
+    full_listing = False
 
     def __init__(self, client: PoliteClient, store: Store) -> None:
         self.client = client
@@ -56,6 +60,19 @@ class FeedConnector:
             raise SourceFailed(f"feed not found: {exc}") from exc
         except Exception as exc:
             raise SourceFailed(f"feed unreadable: {exc.__class__.__name__}") from exc
+        # Every ad the source lists this pass (known ones too): their stored
+        # last_seen is refreshed from this, not only from new candidates.
+        self.listed_urls = [
+            str(item.get("source_url") or "").strip()
+            for item in items
+            if str(item.get("source_url") or "").strip()
+        ]
+        # An empty listing is never trusted as "everything closed".
+        self.listing_complete = (
+            bool(self.full_listing)
+            and bool(self.listed_urls)
+            and not getattr(self, "listing_truncated", False)
+        )
         urls: list[str] = []
         for item in items:
             url = str(item.get("source_url") or "").strip()
