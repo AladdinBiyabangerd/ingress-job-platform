@@ -16,6 +16,7 @@ import logging
 import os
 import re
 import sqlite3
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -572,6 +573,99 @@ def _embed_providers() -> list[_EmbedProvider]:
     return out
 
 
+# ---------------------------------------------------------------------------
+# Provider cooldown (in-process, thread-safe)
+# ---------------------------------------------------------------------------
+AUTH_COOLDOWN_S = 30 * 60.0
+TRANSIENT_COOLDOWN_S = 3 * 60.0
+MAX_RETRY_AFTER_S = 30 * 60.0
+
+_cooldown_lock = threading.Lock()
+# key -> (until_monotonic, failed_at_monotonic)
+_cooldowns: dict[str, tuple[float, float]] = {}
+
+
+class ProviderHTTPError(RuntimeError):
+    def __init__(self, message: str, status: int, retry_after: float | None = None):
+        super().__init__(message)
+        self.status = status
+        self.retry_after = retry_after
+
+
+def _parse_retry_after(value: str | None) -> float | None:
+    if not value:
+        return None
+    value = value.strip()
+    try:
+        return max(0.0, min(float(value), MAX_RETRY_AFTER_S))
+    except ValueError:
+        pass
+    try:
+        from email.utils import parsedate_to_datetime
+        from datetime import datetime, timezone
+
+        dt = parsedate_to_datetime(value)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        secs = (dt - datetime.now(timezone.utc)).total_seconds()
+        return max(0.0, min(secs, MAX_RETRY_AFTER_S))
+    except Exception:
+        return None
+
+
+def _cooldown_seconds(exc: BaseException) -> float | None:
+    status = getattr(exc, "status", None)
+    if status in (401, 403):
+        return AUTH_COOLDOWN_S
+    if status in (429, 503):
+        ra = getattr(exc, "retry_after", None)
+        return ra if ra else TRANSIENT_COOLDOWN_S
+    if isinstance(exc, (TimeoutError,)) or "timed out" in str(exc).lower():
+        return TRANSIENT_COOLDOWN_S
+    reason = getattr(exc, "reason", None)
+    if isinstance(reason, TimeoutError):
+        return TRANSIENT_COOLDOWN_S
+    return None
+
+
+def _cooldown_note(kind: str, name: str, exc: BaseException) -> None:
+    secs = _cooldown_seconds(exc)
+    if secs is None:
+        return
+    key = f"{kind}:{name}"
+    now = time.monotonic()
+    with _cooldown_lock:
+        prev = _cooldowns.get(key)
+        already = prev is not None and prev[0] > now
+        _cooldowns[key] = (now + secs, now)
+    if not already:
+        log.warning(
+            "ai_gateway %s provider %s cooling down for %ds (%s)",
+            kind, name, int(secs), type(exc).__name__,
+        )
+
+
+def _cooldown_clear(kind: str, name: str) -> None:
+    with _cooldown_lock:
+        _cooldowns.pop(f"{kind}:{name}", None)
+
+
+def _cooldown_reset() -> None:
+    with _cooldown_lock:
+        _cooldowns.clear()
+
+
+def _cooldown_filter(kind: str, providers: list) -> list:
+    """Keep order; drop cooling providers. If all cool, keep least-recently-failed."""
+    now = time.monotonic()
+    with _cooldown_lock:
+        state = {p.name: _cooldowns.get(f"{kind}:{p.name}") for p in providers}
+    active = [p for p in providers if not state[p.name] or state[p.name][0] <= now]
+    if active or not providers:
+        return active
+    return [min(providers, key=lambda p: state[p.name][1])]
+
+
 def _call_chat_json(
     *,
     system: str,
@@ -585,7 +679,7 @@ def _call_chat_json(
         raise RuntimeError("no_chat_provider")
     errors: list[str] = []
     failed_names: list[str] = []
-    for provider in providers:
+    for provider in _cooldown_filter("chat", providers):
         try:
             raw = _chat_json(
                 provider=provider,
@@ -595,6 +689,7 @@ def _call_chat_json(
                 schema_name=schema_name,
                 timeout=timeout,
             )
+            _cooldown_clear("chat", provider.name)
             raw["provider"] = provider.name
             raw["model"] = provider.model
             if failed_names:
@@ -615,6 +710,7 @@ def _call_chat_json(
             msg = f"{provider.name}:{type(exc).__name__}:{exc}"
             errors.append(msg[:180])
             failed_names.append(provider.name)
+            _cooldown_note("chat", provider.name, exc)
             log.warning("ai_gateway chat provider failed: %s", msg)
     raise RuntimeError("; ".join(errors[:4]) or "all_chat_providers_failed")
 
@@ -625,7 +721,7 @@ def _call_embed(*, texts: list[str], timeout: float) -> dict[str, Any]:
         raise RuntimeError("no_embed_provider")
     errors: list[str] = []
     failed_names: list[str] = []
-    for provider in providers:
+    for provider in _cooldown_filter("embed", providers):
         try:
             raw = _openai_compat_embed(
                 key=provider.key,
@@ -634,6 +730,7 @@ def _call_embed(*, texts: list[str], timeout: float) -> dict[str, Any]:
                 texts=texts,
                 timeout=timeout,
             )
+            _cooldown_clear("embed", provider.name)
             raw["provider"] = provider.name
             raw["model"] = provider.model
             if failed_names:
@@ -654,6 +751,7 @@ def _call_embed(*, texts: list[str], timeout: float) -> dict[str, Any]:
             msg = f"{provider.name}:{type(exc).__name__}:{exc}"
             errors.append(msg[:180])
             failed_names.append(provider.name)
+            _cooldown_note("embed", provider.name, exc)
             log.warning("ai_gateway embed provider failed: %s", msg)
     raise RuntimeError("; ".join(errors[:4]) or "all_embed_providers_failed")
 
@@ -777,7 +875,10 @@ def _http_json(
             return json.loads(res.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")[:300]
-        raise RuntimeError(f"HTTP {exc.code}: {detail}") from exc
+        retry_after = _parse_retry_after(exc.headers.get("Retry-After") if exc.headers else None)
+        raise ProviderHTTPError(
+            f"HTTP {exc.code}: {detail}", exc.code, retry_after
+        ) from exc
 
 
 def _loads_json_object(content: str) -> dict[str, Any]:
