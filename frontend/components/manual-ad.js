@@ -86,14 +86,33 @@ export function ManualAd({ locale, onSaved }) {
   }
 
   return (
-    <form className="h2-panel h2-form cabinet-form" onSubmit={onSubmit}>
+    <form className="h2-panel h2-form cabinet-form staff-compose-form" onSubmit={onSubmit}>
       <h2 className="h2-panel-title">{t.manualTitle}</h2>
-      <p className="hint">{t.manualLede}</p>
-      {error ? <p className="note">{error}</p> : null}
+      <p className="hint staff-compose-lede">{t.manualLede}</p>
+      {error ? <p className="note" role="alert">{error}</p> : null}
       {note ? <p className="note">{note}</p> : null}
-      <div className="cabinet-form-layout">
-        <div className="cabinet-form-main">
+      <div className="staff-compose-layout">
+        <div className="staff-compose-main">
           <div className="cabinet-grid">
+            <label className="cabinet-span">
+              {t.adTitle}
+              <input
+                value={form.title}
+                maxLength={140}
+                required
+                autoComplete="off"
+                onChange={(event) => setField("title", event.target.value)}
+              />
+            </label>
+            <label>
+              {t.companyName}
+              <input
+                value={form.company}
+                maxLength={120}
+                required
+                onChange={(event) => setField("company", event.target.value)}
+              />
+            </label>
             <label>
               {t.language}
               <select value={form.language} onChange={(event) => setField("language", event.target.value)}>
@@ -102,32 +121,39 @@ export function ManualAd({ locale, onSaved }) {
                 <option value="ru">{t.langRu}</option>
               </select>
             </label>
-            <label className="cabinet-span">
-              {t.adTitle}
-              <input value={form.title} maxLength={140} required onChange={(event) => setField("title", event.target.value)} />
-            </label>
-            <label>
-              {t.companyName}
-              <input value={form.company} maxLength={120} required onChange={(event) => setField("company", event.target.value)} />
-            </label>
-            <label>
-              {t.adCityOrRemote}
-              <input
-                value={form.city}
-                maxLength={80}
-                required={!form.remote}
-                disabled={form.remote}
-                onChange={(event) => setField("city", event.target.value)}
-              />
-            </label>
-            <label className="inline">
-              <input type="checkbox" checked={form.remote} onChange={(event) => setField("remote", event.target.checked)} />
-              <span>{t.placeRemote}</span>
-            </label>
-            <label className="cabinet-span">
-              {t.adBody}
-              <textarea value={form.text} maxLength={8000} required rows={6} onChange={(event) => setField("text", event.target.value)} />
-            </label>
+            <div className="cabinet-span cabinet-place">
+              <span className="cabinet-place-label">{t.adCityOrRemote}</span>
+              <div className="cabinet-place-mode" role="group" aria-label={t.adCityOrRemote}>
+                <button
+                  type="button"
+                  className={!form.remote ? "on" : ""}
+                  aria-pressed={!form.remote}
+                  onClick={() => setField("remote", false)}
+                >
+                  {t.companyCity}
+                </button>
+                <button
+                  type="button"
+                  className={form.remote ? "on" : ""}
+                  aria-pressed={form.remote}
+                  onClick={() => {
+                    setForm((current) => ({ ...current, remote: true, city: "" }));
+                  }}
+                >
+                  {t.placeRemote}
+                </button>
+              </div>
+              {!form.remote ? (
+                <input
+                  value={form.city}
+                  maxLength={80}
+                  required
+                  autoComplete="address-level2"
+                  placeholder={t.companyCity}
+                  onChange={(event) => setField("city", event.target.value)}
+                />
+              ) : null}
+            </div>
             <label className="cabinet-span">
               {t.manualUrl}
               <input
@@ -135,18 +161,23 @@ export function ManualAd({ locale, onSaved }) {
                 maxLength={500}
                 required
                 inputMode="url"
+                autoComplete="url"
                 placeholder="https://"
                 onChange={(event) => setField("source_url", event.target.value)}
               />
             </label>
             <label>
-              {t.adSalary}
-              <span className="hint">{t.adOptional}</span>
+              <span className="cabinet-label-row">
+                {t.adSalary}
+                <span className="cabinet-optional">{t.adOptional}</span>
+              </span>
               <input value={form.salary} maxLength={120} onChange={(event) => setField("salary", event.target.value)} />
             </label>
             <label>
-              {t.adJobType}
-              <span className="hint">{t.adOptional}</span>
+              <span className="cabinet-label-row">
+                {t.adJobType}
+                <span className="cabinet-optional">{t.adOptional}</span>
+              </span>
               <select value={form.job_type} onChange={(event) => setField("job_type", event.target.value)}>
                 {TYPES.map((value) => (
                   <option key={value || "none"} value={value}>
@@ -156,13 +187,29 @@ export function ManualAd({ locale, onSaved }) {
               </select>
             </label>
           </div>
+          <div className="staff-compose-apply">
+            <ApplyFormFields
+              locale={locale}
+              value={form.applicationForm}
+              onChange={(applicationForm) => setField("applicationForm", applicationForm)}
+            />
+          </div>
         </div>
-        <aside className="cabinet-form-side">
-          <ApplyFormFields locale={locale} value={form.applicationForm} onChange={(applicationForm) => setField("applicationForm", applicationForm)} />
-        </aside>
+        <label className="cabinet-body staff-compose-body">
+          {t.adBody}
+          <textarea
+            value={form.text}
+            maxLength={8000}
+            required
+            rows={12}
+            onChange={(event) => setField("text", event.target.value)}
+          />
+        </label>
       </div>
-      <div className="ad-actions">
-        <button type="submit" className="btn ink" disabled={busy}>{t.adSave}</button>
+      <div className="ad-actions staff-compose-actions">
+        <button type="submit" className="btn primary" disabled={busy} aria-busy={busy}>
+          {t.adSave}
+        </button>
       </div>
     </form>
   );

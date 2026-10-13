@@ -4,13 +4,14 @@ import { privatePageMetadata } from "../../../lib/seo";
 
 export const metadata = privatePageMetadata;
 
-export default async function Page() {
+export default async function Page({ searchParams }) {
+  const query = (await searchParams) || {};
   const initial = await getAdmin();
   return (
     <AdminPage
       locale="en"
+      initialTab={typeof query.tab === "string" ? query.tab : "queue"}
       initialJobs={initial.jobs}
-      initialApplications={initial.applications}
       initialCrawled={initial.crawled}
       initialAiFlags={initial.aiFlags}
     />

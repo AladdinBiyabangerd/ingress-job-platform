@@ -77,7 +77,7 @@ class AdminTests(unittest.TestCase):
             items = queue.json()["items"]
             self.assertEqual(items[0]["id"], ad_id)
             self.assertEqual(items[0]["status"], "pending")
-            self.assertNotIn("source_url", queue.text)
+            self.assertEqual(items[0].get("source_url") or "", "")
             detail = self.client.get(
                 f"/api/v1/admin/jobs/{ad_id}",
                 headers={"Authorization": "Bearer test"},
@@ -238,8 +238,10 @@ class AdminTests(unittest.TestCase):
             listed = self.client.get("/api/v1/admin/crawled", headers={"Authorization": "Bearer test"})
             self.assertEqual(listed.status_code, 200, listed.text)
             self.assertEqual([item["id"] for item in listed.json()["items"]], [ids[1], ids[0]])
-            self.assertNotIn("source_url", listed.text)
-            self.assertNotIn("secret.example", listed.text)
+            listed_items = {item["id"]: item for item in listed.json()["items"]}
+            self.assertEqual(listed_items[ids[0]].get("source_name"), "busy.az")
+            self.assertEqual(listed_items[ids[0]].get("source_url"), "https://secret.example/a")
+            self.assertEqual(listed_items[ids[0]].get("text") or "", "")
             one = self.client.get(
                 f"/api/v1/admin/crawled/{ids[0]}",
                 headers={"Authorization": "Bearer test"},
@@ -350,7 +352,6 @@ class AdminTests(unittest.TestCase):
         with self._auth("job:staff", "admin-staff"):
             queue = self.client.get("/api/v1/admin/jobs", headers={"Authorization": "Bearer test"})
             self.assertEqual(queue.status_code, 200, queue.text)
-            self.assertNotIn("secret.example", queue.text)
             pending_ids = [item["id"] for item in queue.json()["items"] if item["status"] == "pending"]
             self.assertEqual(set(pending_ids), set(ids))
             self.assertNotIn(live_id, pending_ids)
@@ -358,6 +359,7 @@ class AdminTests(unittest.TestCase):
                 if item["id"] in ids:
                     self.assertEqual(item.get("owner_subject") or "", "")
                     self.assertEqual(item.get("source_name"), "busy.az")
+                    self.assertTrue(str(item.get("source_url") or "").startswith("https://secret.example/scraped-"))
                     self.assertEqual(item.get("text") or "", "")
                     self.assertEqual(item.get("created_at"), "2026-10-13T12:00:00+04:00")
 

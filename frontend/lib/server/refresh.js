@@ -65,29 +65,10 @@ function localeLang(lang) {
   return lang === "en" || lang === "ru" ? lang : "az";
 }
 
-/** Queue jobs + applications after admin mutations. Hits FastAPI, not the BFF. */
+/** Moderation queue after admin mutations. Hits FastAPI, not the BFF. */
 export async function refreshAdminQueue() {
   const jobs = await loadJson("/api/v1/admin/jobs");
-  let applications = { items: [] };
-  try {
-    applications = await loadJson("/api/v1/admin/applications");
-  } catch {
-    applications = { items: [] };
-  }
-  return {
-    jobs: itemsOf(jobs),
-    applications: Array.isArray(applications.items) ? applications.items : [],
-  };
-}
-
-/** Applications list only (admin badge / tab after first paint). */
-export async function refreshAdminApplications() {
-  try {
-    const applications = await loadJson("/api/v1/admin/applications");
-    return Array.isArray(applications.items) ? applications.items : [];
-  } catch {
-    return [];
-  }
+  return { jobs: itemsOf(jobs) };
 }
 
 /** Full moderation ad for edit (queue list rows omit body text). */

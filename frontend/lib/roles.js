@@ -28,8 +28,10 @@ export function isCandidateOnly(me) {
 /**
  * Public product navbar tabs in display order.
  * Learning (Academy) is an external link rendered by Shell, not a mode.
- * Role-gated links (post, admin, talent) live in AccountBar / side nav.
+ * Staff get admin inserted after browse in Shell primary nav.
  */
-export function navTabs(_me) {
-  return ["browse", "companies", "trends"];
+export function navTabs(me) {
+  const tabs = ["browse", "companies", "trends"];
+  if (isStaff(me)) tabs.splice(1, 0, "admin");
+  return tabs;
 }

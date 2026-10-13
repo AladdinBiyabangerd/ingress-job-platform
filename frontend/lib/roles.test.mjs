@@ -11,13 +11,15 @@ const staff = { authenticated: true, staff: true, employer: false, candidate: fa
 const noRole = { authenticated: true, employer: false, candidate: false, staff: false };
 
 const PUBLIC_TABS = ["browse", "companies", "trends"];
+const STAFF_TABS = ["browse", "admin", "companies", "trends"];
 
-test("primary nav tabs are the same for every account", () => {
+test("primary nav tabs match role", () => {
   assert.deepEqual(navTabs(undefined), PUBLIC_TABS);
   assert.deepEqual(navTabs(null), PUBLIC_TABS);
-  for (const me of [guest, candidate, studentCandidate, noRole, employer, dual, staff]) {
+  for (const me of [guest, candidate, studentCandidate, noRole, employer, dual]) {
     assert.deepEqual(navTabs(me), PUBLIC_TABS);
   }
+  assert.deepEqual(navTabs(staff), STAFF_TABS);
 });
 
 test("guests and candidate-only accounts never may post or moderate", () => {

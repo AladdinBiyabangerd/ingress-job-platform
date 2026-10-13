@@ -6,12 +6,12 @@ import sqlite3
 
 from app.cabinet_store import CabinetError, _LOCK, _connect, _now
 
-# List responses keep a short body; edit loads the full row via get_crawled.
-_TEXT_PREVIEW = 400
+# List rows omit body text; edit loads the full row via get_crawled.
+# Staff list may include source_url; detail/edit/merge responses omit it.
 
 _SOURCE_JOIN = """
 LEFT JOIN (
-    SELECT job_id, source_name
+    SELECT job_id, source_name, source_url
     FROM job_sources
     WHERE id IN (SELECT MIN(id) FROM job_sources GROUP BY job_id)
 ) js ON js.job_id = j.id
@@ -46,7 +46,7 @@ SELECT
     j.company,
     j.city,
     COALESCE(j.remote, 0) AS remote,
-    substr(j.text, 1, {_TEXT_PREVIEW}) AS text,
+    '' AS text,
     COALESCE(j.language, '') AS language,
     COALESCE(j.salary, '') AS salary,
     COALESCE(j.job_type, '') AS job_type,
@@ -55,7 +55,8 @@ SELECT
     COALESCE(j.updated_at, '') AS updated_at,
     COALESCE(j.hidden, 0) AS hidden,
     j.merged_into,
-    COALESCE(js.source_name, '') AS source_name
+    COALESCE(js.source_name, '') AS source_name,
+    COALESCE(js.source_url, '') AS source_url
 FROM jobs j
 {_SOURCE_JOIN}
 WHERE COALESCE(j.owner_subject, '') = ''
@@ -64,7 +65,8 @@ WHERE COALESCE(j.owner_subject, '') = ''
 
 def _public(row: sqlite3.Row) -> dict:
     merged = row["merged_into"]
-    return {
+    keys = row.keys()
+    payload = {
         "id": int(row["id"]),
         "title": row["title"] or "",
         "company": row["company"] or "",
@@ -81,6 +83,10 @@ def _public(row: sqlite3.Row) -> dict:
         "created_at": row["created_at"] or "",
         "updated_at": row["updated_at"] or "",
     }
+    # Staff list only — detail/edit/merge responses omit source_url.
+    if "source_url" in keys:
+        payload["source_url"] = row["source_url"] or ""
+    return payload
 
 
 def _one(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:

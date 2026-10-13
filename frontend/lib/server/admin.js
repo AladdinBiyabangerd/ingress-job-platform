@@ -20,11 +20,11 @@ async function loadJson(access, path) {
 }
 
 function emptyAdmin() {
-  return { jobs: null, applications: null, crawled: null, aiFlags: null };
+  return { jobs: null, crawled: null, aiFlags: null };
 }
 
 /**
- * Moderation queue + applications for /admin first paint.
+ * Moderation queue for /admin first paint.
  * Crawled ads and AI flags load on tab open (CollectedAdmin / AdminAiFlags).
  * Skips FastAPI for guests and non-staff. Deduped within one RSC request.
  */
@@ -35,11 +35,9 @@ export const getAdmin = cache(async () => {
   }
   const access = await sessionAccess();
   if (!access) return emptyAdmin();
-  // Default tab only. Applications, crawled, and AI flags load after paint / on tab.
   const jobs = await loadJson(access, "/api/v1/admin/jobs");
   return {
     jobs: jobs && Array.isArray(jobs.items) ? jobs.items : null,
-    applications: null,
     crawled: null,
     aiFlags: null,
   };

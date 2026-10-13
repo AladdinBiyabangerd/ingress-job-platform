@@ -9,6 +9,7 @@ import {
   recommendationsEnabled,
   roadmapEnabled,
 } from "../lib/product-features";
+import { isStaff } from "../lib/roles";
 import { useMediaQuery } from "../lib/use-media-query";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
 import { AccountBar } from "./account-bar";
@@ -80,7 +81,18 @@ const PRIMARY_NAV = [
   { key: "learning", external: true },
 ];
 
+/** Staff get Moderasiya right after Elanlar. */
+function primaryNavItems(me) {
+  if (!isStaff(me)) return PRIMARY_NAV;
+  return [
+    PRIMARY_NAV[0],
+    { key: "admin", mode: "admin" },
+    ...PRIMARY_NAV.slice(1),
+  ];
+}
+
 function primaryNavLabel(t, key) {
+  if (key === "admin") return t.admin;
   if (key === "companies") return t.navCompanies;
   if (key === "trends") return t.navTrends;
   if (key === "learning") return t.navLearning;
@@ -89,16 +101,17 @@ function primaryNavLabel(t, key) {
 
 function primaryNavActive(mode, key, jobId) {
   if (key === "browse") return mode === "browse" || Boolean(jobId);
+  if (key === "admin") return mode === "admin";
   if (key === "companies") return mode === "companies" || mode === "company";
   if (key === "trends") return mode === "trends" || mode === "trend" || mode === "trendJobs";
   return false;
 }
 
-function PrimaryNav({ locale, mode, jobId, className }) {
+function PrimaryNav({ locale, mode, jobId, className, me }) {
   const t = text(locale);
   return (
     <nav className={className ? `primary-nav ${className}` : "primary-nav"} aria-label={t.browse}>
-      {PRIMARY_NAV.map((item) => {
+      {primaryNavItems(me).map((item) => {
         const label = primaryNavLabel(t, item.key);
         if (item.external) {
           return (
@@ -158,7 +171,7 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef, jobId }) {
   return (
     <nav id="mobile-nav" className="mobile-nav" aria-label={t.menuLabel} ref={panelRef}>
       <ul className="mobile-nav-links">
-        {PRIMARY_NAV.map((item) => {
+        {primaryNavItems(me).map((item) => {
           const label = primaryNavLabel(t, item.key);
           if (item.external) {
             return (
@@ -251,13 +264,6 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef, jobId }) {
               {t.notifications}
             </a>
           </li>
-          {me.staff ? (
-            <li>
-              <a href={hrefFor(locale, { mode: "admin" })} aria-current={mode === "admin" ? "page" : undefined}>
-                {t.admin}
-              </a>
-            </li>
-          ) : null}
           {employerPostingEnabled() && me.candidate && !me.employer && !me.staff ? (
             <li>
               <LoginLink intent="job_employer" returnTo={hrefFor(locale, { mode: "company" })}>
@@ -472,6 +478,7 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
               locale={locale}
               mode={mode}
               jobId={jobId}
+              me={me}
               className={isBoard ? "board-primary-nav" : undefined}
             />
           </div>

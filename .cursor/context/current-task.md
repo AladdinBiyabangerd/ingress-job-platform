@@ -1,25 +1,26 @@
 # Current task
 
 ## Completed
-- Admin moderation queue redesigned from bulky cards to a compact table list
-- Queue API now returns `source_name` (first crawl source) and omits body text
-- Columns: ingested date, title, source, approve/reject (original-date column removed — never stored)
+- Moderasiya: Academy `job-ops-status` dizaynı ilə Status tabı
+- Proxy: `GET /api/auth/admin/ops-status?days=`
+- KPI, LinkedIn extension, mənbələr / AI detalları (Academy layout)
 
 ## Current state
-- `/admin` queue tab is a thin table; title click opens edit; approve/reject stay on the row
+- Uncommitted: ops status tab + prior admin queue polish
 
 ## Decisions
-- `created_at` = when the ad was ingested into Ingress Job
-- No original-post-date column until the field exists in the DB
-- Company ads without `job_sources` show source label "Şirkət" / Company
-- Bulk select + bulk approve kept above the table
+- Staff Moderasiya tabı; eyni `/api/v1/admin/ops-status` payload
+- Period: 1/7/30 + custom → rolling `days` (API 1–90)
+- Visual: Job tokenləri, Academy strukturu (KPI grid, chips, tables, pills)
 
 ## Remaining work
-- Manual QA on `/admin` with a full pending queue
+- Browser QA on `/admin` → Status
+- Commit when asked
 
 ## Relevant files
+- `frontend/components/admin-ops-status.js`
 - `frontend/components/admin.js`
-- `frontend/app/globals.css`
+- `frontend/app/api/auth/admin/ops-status/route.js`
 - `frontend/lib/copy.js`
-- `api/app/cabinet_store.py`
-- `api/tests/test_admin.py`
+- `frontend/app/globals.css`
+- `api/app/ops_status.py`

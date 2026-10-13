@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { applyFormFromJob, applyFormPayload, applyFormReady } from "../lib/apply-form";
 import { hrefFor, text } from "../lib/copy";
 import { calendarDate } from "../lib/dates";
@@ -12,11 +12,10 @@ import {
   adminRejectJob,
   crawledPatchJob,
   fetchAdminJob,
-  refreshAdminApplications,
   refreshAdminQueue,
 } from "../lib/server/refresh";
 import { AdminAiFlags } from "./admin-ai-flags";
-import { ApplicationList } from "./application-list";
+import { AdminOpsStatus } from "./admin-ops-status";
 import { ApplyFormFields } from "./apply-form-fields";
 import { CollectedAdmin } from "./collected-admin";
 import { ManualAd } from "./manual-ad";
@@ -24,6 +23,18 @@ import { PageChrome } from "./page-chrome";
 import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
+const ADMIN_TABS = new Set(["queue", "collected", "manual", "ai", "ops"]);
+
+function normalizeAdminTab(value) {
+  const tab = String(value || "").trim();
+  return ADMIN_TABS.has(tab) ? tab : "queue";
+}
+
+function adminTabHref(locale, tab) {
+  const base = hrefFor(locale, { mode: "admin" });
+  const next = normalizeAdminTab(tab);
+  return next === "queue" ? base : `${base}?tab=${encodeURIComponent(next)}`;
+}
 
 function typeLabel(t, value) {
   if (value === "ofis") return t.jobOffice;
@@ -46,11 +57,27 @@ function statusClass(status) {
   return "source-pill";
 }
 
-function sourceLabel(t, job) {
+function sourceCell(t, job) {
+  const url = String(job.source_url || "").trim();
   const name = String(job.source_name || "").trim();
-  if (name) return name;
-  if (job.owner_subject) return t.adminCompanySource;
-  return t.adminCollectedBadge;
+  if (!url && !name) {
+    return <span className="admin-mod-source-empty">{t.adminDateUnknown}</span>;
+  }
+  const label = name || t.adminColSource;
+  if (!url) {
+    return <span className="admin-mod-source-empty" title={label}>{label}</span>;
+  }
+  return (
+    <a
+      className="admin-mod-source-link"
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={url}
+    >
+      {label}
+    </a>
+  );
 }
 
 function dateCell(value, locale, fallback) {
@@ -75,18 +102,18 @@ function fromJob(locale, job) {
 
 export function Admin({
   locale,
+  initialTab = "queue",
   initialJobs = null,
-  initialApplications = null,
   initialCrawled = null,
   initialAiFlags = null,
 }) {
   const t = text(locale);
   const seededJobs = Array.isArray(initialJobs);
-  const seededApps = Array.isArray(initialApplications);
-  const seededList = seededJobs && seededApps;
-  const [tab, setTab] = useState("queue");
-  const [seenCollected, setSeenCollected] = useState(false);
-  const [seenAi, setSeenAi] = useState(false);
+  const startTab = normalizeAdminTab(initialTab);
+  const [tab, setTab] = useState(startTab);
+  const [seenCollected, setSeenCollected] = useState(startTab === "collected");
+  const [seenAi, setSeenAi] = useState(startTab === "ai");
+  const [seenOps, setSeenOps] = useState(startTab === "ops");
   const [items, setItems] = useState(() => (seededJobs ? initialJobs : []));
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(null);
@@ -94,32 +121,56 @@ export function Admin({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState(() => new Set());
-  const [applications, setApplications] = useState(() => (seededApps ? initialApplications : []));
 
   async function load() {
     const data = await refreshAdminQueue();
     setItems(data.jobs);
-    setApplications(data.applications);
     setSelected(new Set());
   }
 
+  function selectTab(next, { push = true } = {}) {
+    const value = normalizeAdminTab(next);
+    setTab(value);
+    if (value === "collected") setSeenCollected(true);
+    if (value === "ai") setSeenAi(true);
+    if (value === "ops") setSeenOps(true);
+    if (typeof window === "undefined") return;
+    const url = adminTabHref(locale, value);
+    const current = `${window.location.pathname}${window.location.search}`;
+    if (current === url) return;
+    if (push) window.history.pushState(null, "", url);
+    else window.history.replaceState(null, "", url);
+  }
+
   useEffect(() => {
-    if (seededList) return undefined;
+    if (seededJobs) return undefined;
     let cancelled = false;
-    const boot = seededJobs
-      ? refreshAdminApplications().then((apps) => {
-          if (!cancelled) setApplications(apps);
-        })
-      : load();
-    boot.catch(() => {
+    load().catch(() => {
       if (!cancelled) setError(t.loadError);
     });
     return () => {
       cancelled = true;
     };
-  }, [seededList, seededJobs, t.loadError]);
+  }, [seededJobs, t.loadError]);
 
-  const { pageItems, currentPage, totalPages, pageSize, total, goToPage } = usePagination(items, LIST_PAGE_SIZE);
+  useEffect(() => {
+    function onPopState() {
+      const value = normalizeAdminTab(new URLSearchParams(window.location.search).get("tab"));
+      setTab(value);
+      if (value === "collected") setSeenCollected(true);
+      if (value === "ai") setSeenAi(true);
+      if (value === "ops") setSeenOps(true);
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  const { pageItems, currentPage, totalPages, pageSize, total, goToPage: goToPaged } = usePagination(items, LIST_PAGE_SIZE);
+
+  function goToPage(page) {
+    if (editing) cancelEdit();
+    goToPaged(page);
+  }
 
   function setField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -271,8 +322,11 @@ export function Admin({
     }
   }
 
-  const pendingCount = items.filter((job) => job.status === "pending").length;
+  const pendingIds = items.filter((job) => job.status === "pending").map((job) => job.id);
+  const pendingCount = pendingIds.length;
   const selectedCount = selected.size;
+  const allPendingSelected = pendingCount > 0 && pendingIds.every((id) => selected.has(id));
+  const somePendingSelected = pendingIds.some((id) => selected.has(id));
 
   return (
     <div className="h2-employer">
@@ -286,7 +340,7 @@ export function Admin({
           role="tab"
           aria-selected={tab === "queue"}
           className={tab === "queue" ? "on" : ""}
-          onClick={() => setTab("queue")}
+          onClick={() => selectTab("queue")}
         >
           {t.adminQueue}
           {pendingCount ? <span className="h2-tab-count">{pendingCount}</span> : null}
@@ -296,10 +350,7 @@ export function Admin({
           role="tab"
           aria-selected={tab === "collected"}
           className={tab === "collected" ? "on" : ""}
-          onClick={() => {
-            setTab("collected");
-            setSeenCollected(true);
-          }}
+          onClick={() => selectTab("collected")}
         >
           {t.collectedTitle}
         </button>
@@ -308,31 +359,27 @@ export function Admin({
           role="tab"
           aria-selected={tab === "manual"}
           className={tab === "manual" ? "on" : ""}
-          onClick={() => setTab("manual")}
+          onClick={() => selectTab("manual")}
         >
           {t.manualTitle}
         </button>
         <button
           type="button"
           role="tab"
-          aria-selected={tab === "applications"}
-          className={tab === "applications" ? "on" : ""}
-          onClick={() => setTab("applications")}
+          aria-selected={tab === "ai"}
+          className={tab === "ai" ? "on" : ""}
+          onClick={() => selectTab("ai")}
         >
-          {t.applicationsTitle}
-          {applications.length ? <span className="h2-tab-count">{applications.length}</span> : null}
+          {t.adminAiTitle}
         </button>
         <button
           type="button"
           role="tab"
-          aria-selected={tab === "ai"}
-          className={tab === "ai" ? "on" : ""}
-          onClick={() => {
-            setTab("ai");
-            setSeenAi(true);
-          }}
+          aria-selected={tab === "ops"}
+          className={tab === "ops" ? "on" : ""}
+          onClick={() => selectTab("ops")}
         >
-          {t.adminAiTitle}
+          {t.opsTab}
         </button>
       </div>
       {error ? <p className="note">{error}</p> : null}
@@ -340,119 +387,57 @@ export function Admin({
 
       {tab === "queue" ? (
         <section className="h2-employer-queue">
-          {editing && form ? (
-            <form className="h2-panel h2-form cabinet-form" onSubmit={onSave}>
-              <h2 className="h2-panel-title">{t.editAd}</h2>
-              <div className="cabinet-form-layout">
-                <div className="cabinet-form-main">
-                  <div className="cabinet-grid">
-                    <label>
-                      {t.language}
-                      <select value={form.language} onChange={(event) => setField("language", event.target.value)}>
-                        <option value="az">{t.langAz}</option>
-                        <option value="en">{t.langEn}</option>
-                        <option value="ru">{t.langRu}</option>
-                      </select>
-                    </label>
-                    <label>
-                      {t.adTitle}
-                      <input value={form.title} maxLength={140} required onChange={(event) => setField("title", event.target.value)} />
-                    </label>
-                    <label>
-                      {t.companyName}
-                      <input
-                        value={form.company}
-                        maxLength={120}
-                        required={!(editing && isCollected(editing))}
-                        onChange={(event) => setField("company", event.target.value)}
-                      />
-                    </label>
-                    <label>
-                      {t.adCityOrRemote}
-                      <input
-                        value={form.city}
-                        maxLength={80}
-                        required={!form.remote}
-                        disabled={form.remote}
-                        onChange={(event) => setField("city", event.target.value)}
-                      />
-                    </label>
-                    <label className="inline cabinet-remote">
-                      <input
-                        type="checkbox"
-                        checked={form.remote}
-                        onChange={(event) => setField("remote", event.target.checked)}
-                      />
-                      <span>{t.placeRemote}</span>
-                    </label>
-                    <label>
-                      {t.adSalary}
-                      <span className="hint">{t.adOptional}</span>
-                      <input value={form.salary} maxLength={120} onChange={(event) => setField("salary", event.target.value)} />
-                    </label>
-                    <label>
-                      {t.adJobType}
-                      <span className="hint">{t.adOptional}</span>
-                      <select value={form.job_type} onChange={(event) => setField("job_type", event.target.value)}>
-                        {TYPES.map((value) => (
-                          <option key={value || "none"} value={value}>
-                            {value ? typeLabel(t, value) : t.adJobTypeNone}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                  <label className="cabinet-body">
-                    {t.adBody}
-                    <textarea value={form.text} maxLength={8000} required rows={8} onChange={(event) => setField("text", event.target.value)} />
-                  </label>
-                </div>
-                {editing && !isCollected(editing) ? (
-                  <aside className="cabinet-form-side">
-                    <ApplyFormFields locale={locale} value={form.applicationForm} onChange={(applicationForm) => setField("applicationForm", applicationForm)} />
-                  </aside>
-                ) : null}
-              </div>
-              <div className="ad-actions">
-                <button type="submit" className="btn ink" disabled={busy}>{t.adSave}</button>
-                <button type="button" className="btn red" onClick={cancelEdit}>{t.adCancel}</button>
-              </div>
-            </form>
-          ) : null}
           <div className="h2-panel h2-employer-list">
             {items.length === 0 ? <p className="empty-line">{t.adminEmpty}</p> : null}
-            {pendingCount ? (
-              <div className="ad-actions admin-bulk-bar">
-                <button type="button" className="btn" disabled={busy} onClick={selectAllPending}>
-                  {t.adminSelectAllPending}
-                </button>
-                {selectedCount ? (
-                  <button type="button" className="btn" disabled={busy} onClick={clearSelection}>
-                    {t.adminClearSelection}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="btn ink"
-                  disabled={busy || !selectedCount}
-                  onClick={approveSelected}
-                >
-                  {t.adminApproveSelected}
-                </button>
-                {selectedCount ? <span className="hint">{t.adminSelectedCount(selectedCount)}</span> : null}
-              </div>
-            ) : null}
             {items.length ? (
             <div className="admin-mod-table-wrap">
+              {selectedCount ? (
+                <div className="admin-mod-bulk">
+                  <span className="admin-mod-bulk-count">{t.adminSelectedCount(selectedCount)}</span>
+                  <button
+                    type="button"
+                    className="btn small primary"
+                    disabled={busy}
+                    onClick={approveSelected}
+                  >
+                    {t.adminApprove}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn small"
+                    disabled={busy}
+                    onClick={clearSelection}
+                  >
+                    {t.adminClearSelection}
+                  </button>
+                </div>
+              ) : null}
               <table className="admin-mod-table">
                 <thead>
                   <tr>
                     <th className="admin-mod-check" scope="col">
-                      <span className="visually-hidden">{t.adminSelectAllPending}</span>
+                      {pendingCount ? (
+                        <label className="inline admin-select">
+                          <input
+                            type="checkbox"
+                            checked={allPendingSelected}
+                            ref={(el) => {
+                              if (el) el.indeterminate = somePendingSelected && !allPendingSelected;
+                            }}
+                            onChange={() => {
+                              if (allPendingSelected) clearSelection();
+                              else selectAllPending();
+                            }}
+                            aria-label={t.adminSelectAllPending}
+                          />
+                        </label>
+                      ) : (
+                        <span className="visually-hidden">{t.adminSelectAllPending}</span>
+                      )}
                     </th>
-                    <th scope="col">{t.adminColIngested}</th>
+                    <th className="admin-mod-date" scope="col">{t.adminColIngested}</th>
                     <th scope="col">{t.adminColTitle}</th>
-                    <th scope="col">{t.adminColSource}</th>
+                    <th className="admin-mod-source" scope="col">{t.adminColSource}</th>
                     <th className="admin-mod-actions" scope="col">{t.adminColActions}</th>
                   </tr>
                 </thead>
@@ -460,8 +445,10 @@ export function Admin({
                   {pageItems.map((job) => {
                     const muted = job.status === "closed" || job.status === "rejected";
                     const ingested = dateCell(job.created_at, locale, t.adminDateUnknown);
+                    const isOpen = editing === job.id;
                     return (
-                      <tr key={job.id} className={muted ? "is-muted" : undefined}>
+                      <Fragment key={job.id}>
+                      <tr className={`${muted ? "is-muted" : ""}${isOpen ? " is-editing" : ""}`.trim() || undefined}>
                         <td className="admin-mod-check">
                           {job.status === "pending" ? (
                             <label className="inline admin-select">
@@ -476,25 +463,31 @@ export function Admin({
                         <td className="admin-mod-date">{ingested}</td>
                         <td className="admin-mod-title">
                           <div className="admin-mod-title-row">
-                            {job.status === "published" ? (
-                              <a className="admin-mod-name" href={hrefFor(locale, { jobId: job.id })}>
-                                {job.title}
-                              </a>
-                            ) : job.status !== "closed" ? (
+                            {job.status !== "closed" ? (
                               <button
                                 type="button"
-                                className="admin-mod-name linkish"
-                                disabled={busy}
+                                className={`admin-mod-name linkish${isOpen ? " is-open" : ""}`}
+                                aria-expanded={isOpen}
+                                disabled={busy && !isOpen}
                                 onClick={() => {
+                                  if (isOpen) {
+                                    cancelEdit();
+                                    return;
+                                  }
                                   setError("");
                                   setNote("");
+                                  setEditing(job.id);
+                                  setForm(null);
                                   setBusy(true);
                                   fetchAdminJob(job.id)
                                     .then((full) => {
                                       setEditing(job.id);
                                       setForm(fromJob(locale, full));
                                     })
-                                    .catch(() => setError(t.loadError))
+                                    .catch(() => {
+                                      setError(t.loadError);
+                                      cancelEdit();
+                                    })
                                     .finally(() => setBusy(false));
                                 }}
                               >
@@ -503,7 +496,14 @@ export function Admin({
                             ) : (
                               <span className="admin-mod-name">{job.title}</span>
                             )}
-                            <span className={statusClass(job.status)}>{statusLabel(t, job.status)}</span>
+                            {job.status !== "pending" ? (
+                              <span className={statusClass(job.status)}>{statusLabel(t, job.status)}</span>
+                            ) : null}
+                            {job.status === "published" ? (
+                              <a className="admin-mod-view" href={hrefFor(locale, { jobId: job.id })}>
+                                {t.viewJob}
+                              </a>
+                            ) : null}
                           </div>
                           {job.company ? <span className="admin-mod-sub">{job.company}</span> : null}
                           {job.reject_reason ? (
@@ -512,14 +512,14 @@ export function Admin({
                             </span>
                           ) : null}
                         </td>
-                        <td className="admin-mod-source">{sourceLabel(t, job)}</td>
+                        <td className="admin-mod-source">{sourceCell(t, job)}</td>
                         <td className="admin-mod-actions">
                           <div className="admin-mod-action-row">
                             {job.status === "pending" ? (
                               <>
                                 <button
                                   type="button"
-                                  className="btn small ink"
+                                  className="btn small primary"
                                   disabled={busy}
                                   onClick={() => act(job, "approve", null, t.adminApprovedNote)}
                                 >
@@ -548,6 +548,128 @@ export function Admin({
                           </div>
                         </td>
                       </tr>
+                      {isOpen ? (
+                        <tr className="admin-mod-edit-row">
+                          <td colSpan={5}>
+                            {form ? (
+                              <form className="admin-mod-edit-form cabinet-form staff-compose-form" onSubmit={onSave}>
+                                <div className="staff-compose-layout">
+                                  <div className="staff-compose-main">
+                                    <div className="cabinet-grid">
+                                      <label className="cabinet-span">
+                                        {t.adTitle}
+                                        <input
+                                          value={form.title}
+                                          maxLength={140}
+                                          required
+                                          autoComplete="off"
+                                          onChange={(event) => setField("title", event.target.value)}
+                                        />
+                                      </label>
+                                      <label>
+                                        {t.companyName}
+                                        <input
+                                          value={form.company}
+                                          maxLength={120}
+                                          required={!isCollected(editing)}
+                                          onChange={(event) => setField("company", event.target.value)}
+                                        />
+                                      </label>
+                                      <label>
+                                        {t.language}
+                                        <select value={form.language} onChange={(event) => setField("language", event.target.value)}>
+                                          <option value="az">{t.langAz}</option>
+                                          <option value="en">{t.langEn}</option>
+                                          <option value="ru">{t.langRu}</option>
+                                        </select>
+                                      </label>
+                                      <div className="cabinet-span cabinet-place">
+                                        <span className="cabinet-place-label">{t.adCityOrRemote}</span>
+                                        <div className="cabinet-place-mode" role="group" aria-label={t.adCityOrRemote}>
+                                          <button
+                                            type="button"
+                                            className={!form.remote ? "on" : ""}
+                                            aria-pressed={!form.remote}
+                                            onClick={() => setField("remote", false)}
+                                          >
+                                            {t.companyCity}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className={form.remote ? "on" : ""}
+                                            aria-pressed={form.remote}
+                                            onClick={() => {
+                                              setForm((current) => ({ ...current, remote: true, city: "" }));
+                                            }}
+                                          >
+                                            {t.placeRemote}
+                                          </button>
+                                        </div>
+                                        {!form.remote ? (
+                                          <input
+                                            value={form.city}
+                                            maxLength={80}
+                                            required
+                                            autoComplete="address-level2"
+                                            placeholder={t.companyCity}
+                                            onChange={(event) => setField("city", event.target.value)}
+                                          />
+                                        ) : null}
+                                      </div>
+                                      <label>
+                                        <span className="cabinet-label-row">
+                                          {t.adSalary}
+                                          <span className="cabinet-optional">{t.adOptional}</span>
+                                        </span>
+                                        <input value={form.salary} maxLength={120} onChange={(event) => setField("salary", event.target.value)} />
+                                      </label>
+                                      <label>
+                                        <span className="cabinet-label-row">
+                                          {t.adJobType}
+                                          <span className="cabinet-optional">{t.adOptional}</span>
+                                        </span>
+                                        <select value={form.job_type} onChange={(event) => setField("job_type", event.target.value)}>
+                                          {TYPES.map((value) => (
+                                            <option key={value || "none"} value={value}>
+                                              {value ? typeLabel(t, value) : t.adJobTypeNone}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </label>
+                                    </div>
+                                    {!isCollected(editing) ? (
+                                      <div className="staff-compose-apply">
+                                        <ApplyFormFields
+                                          locale={locale}
+                                          value={form.applicationForm}
+                                          onChange={(applicationForm) => setField("applicationForm", applicationForm)}
+                                        />
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                  <label className="cabinet-body staff-compose-body">
+                                    {t.adBody}
+                                    <textarea
+                                      value={form.text}
+                                      maxLength={8000}
+                                      required
+                                      rows={10}
+                                      onChange={(event) => setField("text", event.target.value)}
+                                    />
+                                  </label>
+                                </div>
+                                <div className="ad-actions staff-compose-actions">
+                                  <button type="button" className="btn" onClick={cancelEdit}>{t.adCancel}</button>
+                                  <button type="submit" className="btn primary" disabled={busy} aria-busy={busy}>{t.adSave}</button>
+                                </div>
+                              </form>
+                            ) : (
+                              <p className="admin-mod-edit-loading hint" aria-busy="true">…</p>
+                            )}
+                          </td>
+                        </tr>
+                      ) : null}
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -572,14 +694,14 @@ export function Admin({
         </div>
       ) : null}
       {tab === "manual" ? <ManualAd locale={locale} onSaved={load} /> : null}
-      {tab === "applications" ? (
-        <div className="h2-panel h2-candidate-list">
-          <ApplicationList locale={locale} items={applications} mode="staff" onChanged={load} />
-        </div>
-      ) : null}
       {tab === "ai" || seenAi ? (
         <div hidden={tab !== "ai"}>
           <AdminAiFlags locale={locale} initial={initialAiFlags} />
+        </div>
+      ) : null}
+      {tab === "ops" || seenOps ? (
+        <div hidden={tab !== "ops"}>
+          <AdminOpsStatus locale={locale} />
         </div>
       ) : null}
     </div>

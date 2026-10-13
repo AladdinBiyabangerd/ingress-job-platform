@@ -11,8 +11,8 @@ import { Shell } from "./shell";
 
 export function AdminPage({
   locale,
+  initialTab = "queue",
   initialJobs = null,
-  initialApplications = null,
   initialCrawled = null,
   initialAiFlags = null,
 }) {
@@ -48,8 +48,8 @@ export function AdminPage({
       {me === undefined ? null : isStaff ? (
         <Admin
           locale={locale}
+          initialTab={initialTab}
           initialJobs={initialJobs}
-          initialApplications={initialApplications}
           initialCrawled={initialCrawled}
           initialAiFlags={initialAiFlags}
         />

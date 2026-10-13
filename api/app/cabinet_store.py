@@ -472,6 +472,8 @@ def _owner(row: sqlite3.Row) -> dict:
         payload["owner_subject"] = row["owner_subject"] or ""
     if "source_name" in keys:
         payload["source_name"] = row["source_name"] or ""
+    if "source_url" in keys:
+        payload["source_url"] = row["source_url"] or ""
     return payload
 
 
@@ -713,7 +715,7 @@ def _moderation_row(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None
 
 _MOD_SOURCE_JOIN = """
 LEFT JOIN (
-    SELECT job_id, source_name
+    SELECT job_id, source_name, source_url
     FROM job_sources
     WHERE id IN (SELECT MIN(id) FROM job_sources GROUP BY job_id)
 ) js ON js.job_id = j.id
@@ -724,8 +726,8 @@ def list_moderation() -> list[dict]:
     """Pending company and scraped ads first, then other company statuses.
 
     Scraped rows appear only while pending. List rows omit body text;
-    edit loads the full ad via get_moderation. source_name is the first
-    crawl source when present (empty for company-only ads).
+    edit loads the full ad via get_moderation. Staff-only: includes the
+    first crawl source_url when present (empty for company-only ads).
     """
     conn = _connect()
     try:
@@ -736,7 +738,8 @@ def list_moderation() -> list[dict]:
                    j.language, j.salary,
                    j.job_type, j.status, j.created_at, j.updated_at, j.reject_reason,
                    '' AS apply_form, j.owner_subject,
-                   COALESCE(js.source_name, '') AS source_name
+                   COALESCE(js.source_name, '') AS source_name,
+                   COALESCE(js.source_url, '') AS source_url
             FROM jobs j
             {_MOD_SOURCE_JOIN}
             WHERE j.owner_subject != ''
