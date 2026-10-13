@@ -26,11 +26,15 @@ async function loadJson(access, path) {
 export const getNotifications = cache(async () => {
   const me = await getMe();
   if (!me?.authenticated) {
-    return { items: null, unread: null };
+    return { items: null, unread: null, nextCursor: null };
   }
   const access = await sessionAccess();
-  if (!access) return { items: null, unread: null };
-  const data = await loadJson(access, "/api/v1/notifications");
-  if (!data || !Array.isArray(data.items)) return { items: null, unread: null };
-  return { items: data.items, unread: Number(data.unread) || 0 };
+  if (!access) return { items: null, unread: null, nextCursor: null };
+  const data = await loadJson(access, "/api/v1/notifications?limit=20");
+  if (!data || !Array.isArray(data.items)) return { items: null, unread: null, nextCursor: null };
+  return {
+    items: data.items,
+    unread: Number(data.unread) || 0,
+    nextCursor: Number.isInteger(data.next_cursor) ? data.next_cursor : null,
+  };
 });

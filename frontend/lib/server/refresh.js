@@ -180,11 +180,14 @@ export async function unsaveJob(id) {
 }
 
 /** Notifications after mark-read. Hits FastAPI, not the BFF. */
-export async function refreshNotifications() {
-  const data = await loadJson("/api/v1/notifications");
+export async function refreshNotifications({ before = null, limit = 20 } = {}) {
+  const qs = new URLSearchParams({ limit: String(limit) });
+  if (Number.isInteger(before) && before > 0) qs.set("before", String(before));
+  const data = await loadJson(`/api/v1/notifications?${qs}`);
   return {
     items: itemsOf(data),
     unread: Number(data.unread) || 0,
+    nextCursor: Number.isInteger(data.next_cursor) ? data.next_cursor : null,
   };
 }
 

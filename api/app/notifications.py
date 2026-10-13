@@ -294,23 +294,53 @@ def unread_count(subject: str) -> int:
         conn.close()
 
 
-def list_for(subject: str) -> dict:
+DEFAULT_PAGE_SIZE = 20
+MAX_PAGE_SIZE = 50
+
+
+def _page_size(limit) -> int:
+    try:
+        size = int(limit)
+    except (TypeError, ValueError):
+        return DEFAULT_PAGE_SIZE
+    return max(1, min(MAX_PAGE_SIZE, size))
+
+
+def list_for(subject: str, *, limit: int | None = None, before: int | None = None) -> dict:
+    """Newest-first page. ``before`` is the cursor (id of the last row seen)."""
+    size = _page_size(limit if limit is not None else DEFAULT_PAGE_SIZE)
+    params: list = [subject]
+    cursor_sql = ""
+    if before is not None:
+        try:
+            cursor = int(before)
+        except (TypeError, ValueError):
+            cursor = 0
+        if cursor > 0:
+            cursor_sql = " AND id < ?"
+            params.append(cursor)
+    params.append(size + 1)
     conn = _connect()
     try:
         rows = conn.execute(
-            """
+            f"""
             SELECT id, kind, job_id, job_title, application_id, status, reason,
                    read_at, created_at, payload
             FROM notifications
-            WHERE recipient_subject = ?
+            WHERE recipient_subject = ?{cursor_sql}
             ORDER BY id DESC
+            LIMIT ?
             """,
-            (subject,),
+            tuple(params),
         ).fetchall()
-        unread = sum(1 for row in rows if not (row["read_at"] or "").strip())
+        unread = unread_count_on(conn, subject)
     finally:
         conn.close()
-    return {"unread": unread, "items": [_view(row) for row in rows]}
+    has_more = len(rows) > size
+    rows = rows[:size]
+    items = [_view(row) for row in rows]
+    next_cursor = items[-1]["id"] if has_more and items else None
+    return {"unread": unread, "items": items, "next_cursor": next_cursor, "has_more": has_more}
 
 
 def mark_read(subject: str, notification_id: int) -> dict | None:

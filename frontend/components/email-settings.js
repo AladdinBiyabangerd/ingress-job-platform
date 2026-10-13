@@ -46,7 +46,7 @@ function weekdayLabel(t, value) {
 function applyPrefs(data, setters, fallbackLang) {
   if (!data || typeof data !== "object") return;
   setters.setPrefs(data);
-  setters.setFrequency(data.frequency || "none");
+  setters.setFrequency(data.frequency || "weekly");
   setters.setDigest(data.digest !== false);
   setters.setHighMatch(data.high_match !== false);
   setters.setMatchNear(data.match_near !== false);
@@ -92,7 +92,7 @@ export function EmailSettings({ locale, initialPrefs = null }) {
     return undefined;
   });
   const [prefs, setPrefs] = useState(() => (seededPrefs ? initialPrefs : null));
-  const [frequency, setFrequency] = useState(() => (seededPrefs ? initialPrefs.frequency || "none" : "none"));
+  const [frequency, setFrequency] = useState(() => (seededPrefs ? initialPrefs.frequency || "weekly" : "weekly"));
   const [digest, setDigest] = useState(() => (seededPrefs ? initialPrefs.digest !== false : true));
   const [highMatch, setHighMatch] = useState(() => (seededPrefs ? initialPrefs.high_match !== false : true));
   const [matchNear, setMatchNear] = useState(() => (seededPrefs ? initialPrefs.match_near !== false : true));

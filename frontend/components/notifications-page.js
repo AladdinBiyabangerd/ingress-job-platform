@@ -447,7 +447,7 @@ function FeedCard({ t, locale, item, selected, onSelect, onMark }) {
   );
 }
 
-export function NotificationsPage({ locale, initialItems = null, initialUnread = null }) {
+export function NotificationsPage({ locale, initialItems = null, initialUnread = null, initialNextCursor = null }) {
   const t = text(locale);
   const initialMe = useInitialMe();
   const seededList = Array.isArray(initialItems);
@@ -458,6 +458,10 @@ export function NotificationsPage({ locale, initialItems = null, initialUnread =
   const [items, setItems] = useState(() => (seededList ? initialItems : []));
   const [unread, setUnread] = useState(() => (seededList ? Number(initialUnread) || 0 : 0));
   const [error, setError] = useState("");
+  const [nextCursor, setNextCursor] = useState(() =>
+    seededList && Number.isInteger(initialNextCursor) ? initialNextCursor : null,
+  );
+  const [loadingMore, setLoadingMore] = useState(false);
   const [pushSubActive, setPushSubActive] = useState(null);
   const [pushBusy, setPushBusy] = useState(false);
   const [pushNote, setPushNote] = useState("");
@@ -501,6 +505,25 @@ export function NotificationsPage({ locale, initialItems = null, initialUnread =
     const data = await refreshNotifications();
     setItems(data.items);
     setUnread(data.unread);
+    setNextCursor(data.nextCursor);
+  }
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const data = await refreshNotifications({ before: nextCursor });
+      setItems((prev) => {
+        const seen = new Set(prev.map((item) => item.id));
+        return [...prev, ...data.items.filter((item) => !seen.has(item.id))];
+      });
+      setUnread(data.unread);
+      setNextCursor(data.nextCursor);
+    } catch {
+      setError(t.notificationsLoadMoreFailed);
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   useEffect(() => {
@@ -739,6 +762,13 @@ export function NotificationsPage({ locale, initialItems = null, initialUnread =
                         setMobileDetail(false);
                       }}
                     />
+                    {nextCursor ? (
+                      <div className="notes-load-more">
+                        <button type="button" className="btn small" onClick={loadMore} disabled={loadingMore}>
+                          {loadingMore ? t.notificationsLoadingMore : t.notificationsLoadMore}
+                        </button>
+                      </div>
+                    ) : null}
                   </>
                 )}
               </section>

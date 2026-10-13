@@ -7,6 +7,6 @@ export const metadata = privatePageMetadata;
 export default async function Page() {
   const initial = await getNotifications();
   return (
-    <NotificationsPage locale="ru" initialItems={initial.items} initialUnread={initial.unread} />
+    <NotificationsPage locale="ru" initialItems={initial.items} initialUnread={initial.unread} initialNextCursor={initial.nextCursor} />
   );
 }

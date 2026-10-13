@@ -14319,3 +14319,9 @@ a.saved-preview-company:hover {
     transition: none;
   }
 }
+
+.notes-load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}

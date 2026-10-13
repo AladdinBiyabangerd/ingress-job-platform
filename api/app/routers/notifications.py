@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.account import VerifiedAccess, current_user
 from app.notifications import list_for, mark_all_read, mark_read
@@ -11,8 +11,12 @@ router = APIRouter(prefix="/api/v1", tags=["notifications"])
 
 
 @router.get("/notifications")
-def read_notifications(user: VerifiedAccess = Depends(current_user)) -> dict:
-    return list_for(user.subject)
+def read_notifications(
+    user: VerifiedAccess = Depends(current_user),
+    limit: int = Query(20, ge=1, le=50),
+    before: int | None = Query(None, ge=1),
+) -> dict:
+    return list_for(user.subject, limit=limit, before=before)
 
 
 @router.post("/notifications/read")

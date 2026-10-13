@@ -357,3 +357,47 @@ class NotificationTests(unittest.TestCase):
             "salary": ad.get("salary") or "",
             "job_type": ad.get("job_type") or "",
         }
+
+
+class NotificationPagingCleanupTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.path_patch = patch("app.sqlite_jobs.DB_PATH", Path(self._tmp.name) / "n.sqlite")
+        self.path_patch.start()
+        ensure_schema(create=True)
+
+    def tearDown(self):
+        self.path_patch.stop()
+        self._tmp.cleanup()
+
+    def _insert(self, subject, created_at, read_at=""):
+        from app.cabinet_store import _connect
+
+        conn = _connect()
+        try:
+            conn.execute(
+                "INSERT INTO notifications (recipient_subject, kind, job_title, read_at, created_at)"
+                " VALUES (?, 'match_new', 't', ?, ?)",
+                (subject, read_at, created_at),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def test_cursor_paging_and_unread_count(self):
+        from app.notifications import list_for
+
+        for i in range(25):
+            self._insert("u1", f"2026-10-{(i % 9) + 1:02d}T10:00:00+04:00", "" if i % 2 else "x")
+        first = list_for("u1")
+        self.assertEqual(len(first["items"]), 20)
+        self.assertTrue(first["has_more"])
+        self.assertEqual(first["unread"], 12)
+        second = list_for("u1", before=first["next_cursor"])
+        self.assertEqual(len(second["items"]), 5)
+        self.assertFalse(second["has_more"])
+        self.assertIsNone(second["next_cursor"])
+        ids = [n["id"] for n in first["items"] + second["items"]]
+        self.assertEqual(len(set(ids)), 25)
+        self.assertEqual(ids, sorted(ids, reverse=True))
+        self.assertEqual(len(list_for("u1", limit=10)["items"]), 10)

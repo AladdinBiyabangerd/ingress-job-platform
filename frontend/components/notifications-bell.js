@@ -20,7 +20,7 @@ export function NotificationsBell({ locale, initialUnread }) {
       return undefined;
     }
     let cancelled = false;
-    fetch("/api/auth/notifications", { cache: "no-store" })
+    fetch("/api/auth/notifications?limit=10", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : { unread: 0 }))
       .then((data) => {
         if (!cancelled) setUnread(Number(data.unread) || 0);

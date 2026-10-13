@@ -282,6 +282,10 @@ def _apply_schema(conn) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS notifications_recipient ON notifications(recipient_subject, id)"
     )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS notifications_recipient_created"
+        " ON notifications(recipient_subject, created_at)"
+    )
     # Same skill/role tables the worker seeds (worker/worker/skills.py, roles.py).
     # API only ensures they exist when it opens the shared database first.
     conn.executescript(
