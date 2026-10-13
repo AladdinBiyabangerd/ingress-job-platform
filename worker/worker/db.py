@@ -148,6 +148,11 @@ CREATE TABLE IF NOT EXISTS api_usage (
 """
 
 
+def _content_norm(value: object) -> str:
+    """Compare ad content ignoring whitespace and letter case."""
+    return " ".join(str(value or "").split()).casefold()
+
+
 def now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
@@ -383,7 +388,7 @@ class Store:
                     """
                     SELECT COALESCE(content_locked, 0) AS content_locked,
                            COALESCE(hidden, 0) AS hidden,
-                           merged_into
+                           merged_into, title, text, status
                     FROM jobs WHERE id = ?
                     """,
                     (existing["job_id"],),
@@ -419,6 +424,16 @@ class Store:
                             existing["job_id"],
                         ),
                     )
+                    if (held["status"] or "") == "published" and (
+                        _content_norm(held["title"]) != _content_norm(title)
+                        or _content_norm(held["text"]) != _content_norm(text)
+                    ):
+                        # Staff approved different content; send it back to the
+                        # moderation queue so the new text is reviewed first.
+                        self.conn.execute(
+                            "UPDATE jobs SET status = 'pending' WHERE id = ?",
+                            (existing["job_id"],),
+                        )
                     if salary:
                         self.conn.execute(
                             "UPDATE jobs SET salary = ? WHERE id = ?", (salary, existing["job_id"])
