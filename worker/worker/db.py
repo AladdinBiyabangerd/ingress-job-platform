@@ -205,6 +205,7 @@ class Store:
             "reject_reason": "TEXT NOT NULL DEFAULT ''",
             # Same declarations as api/app/cabinet_store.py, so either side may add them.
             "owner_subject": "TEXT NOT NULL DEFAULT ''",
+            "updated_at": "TEXT NOT NULL DEFAULT ''",
             "remote": "INTEGER NOT NULL DEFAULT 0",
             # JSON list of curated tech names, e.g. ["Python", "AWS"]. '' = not scanned yet.
             "tech_stack": "TEXT NOT NULL DEFAULT ''",
@@ -415,12 +416,17 @@ class Store:
                         SET title = ?, company = ?, city = ?, text = ?,
                             cleaned_text = CASE WHEN text = ? THEN cleaned_text ELSE NULL END,
                             tech_stack = ?, remote = ?, relocation = ?, category = ?,
-                            language = ?
+                            language = ?,
+                            updated_at = CASE
+                                WHEN title = ? AND text = ? AND company = ? AND city = ?
+                                THEN COALESCE(NULLIF(updated_at, ''), created_at)
+                                ELSE ? END
                         WHERE id = ?
                         """,
                         (
                             title, company, city, text, text,
                             stack_json, remote, relocation, category, language,
+                            title, text, company, city, seen,
                             existing["job_id"],
                         ),
                     )
@@ -454,13 +460,13 @@ class Store:
                     """
                     INSERT INTO jobs (
                         title, company, city, text, status, created_at, norm_key,
-                        tech_stack, remote, relocation, category, language
+                        tech_stack, remote, relocation, category, language, updated_at
                     )
-                    VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         title, company, city, text, seen, key, stack_json,
-                        remote, relocation, category, language,
+                        remote, relocation, category, language, seen,
                     ),
                 )
                 job_id = int(cur.lastrowid)
