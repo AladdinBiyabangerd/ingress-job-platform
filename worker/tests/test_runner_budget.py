@@ -63,6 +63,16 @@ class RunnerBudgetTests(unittest.TestCase):
         self.assertEqual(r["status"], "ok")
         self.assertEqual(c.upserted, ["a", "c"])
 
+    def test_skip_is_default_for_every_connector(self):
+        class Plain(Conn):
+            pass
+        c = Plain(["a", "b", "c"], fail={"a"}, item={"ok": 1})
+        del c.skip_failed_pages
+        r = run(c)
+        self.assertEqual(r["status"], "ok")
+        self.assertEqual(c.upserted, ["b", "c"])
+        self.assertIn("skipped 1", r["error"])
+
     def test_without_opt_in_page_failure_errors(self):
         c = Conn(["a", "b"], fail={"a"}, skip=False, item={"ok": 1})
         self.assertEqual(run(c)["status"], "error")

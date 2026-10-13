@@ -489,7 +489,10 @@ def _run_source(store: Store, client: PoliteClient, connector, source_id: int,
         connector.clock = clock
     except Exception:
         pass
-    skip_failed = bool(getattr(connector, "skip_failed_pages", False))
+    # Every source skips a detail page that still fails (timeout, reset ...);
+    # a connector may opt out with ``skip_failed_pages = False``.
+    skip_failed = bool(getattr(connector, "skip_failed_pages", True))
+    skipped_pages = 0
     page_failures = 0
     stopped = ""
     try:
@@ -517,12 +520,14 @@ def _run_source(store: Store, client: PoliteClient, connector, source_id: int,
                     updated += 1
             except (Disallowed, NotFound):
                 continue
-            except SourceFailed:
+            except SourceFailed as exc:
                 # A flaky detail page (RemoteProtocolError, timeout ...) is
                 # skipped for sources that opt in; the run keeps going.
                 if not skip_failed:
                     raise
                 page_failures += 1
+                skipped_pages += 1
+                print(f"{connector.name}: skipped page {url}: {str(exc)[:160]}", flush=True)
                 if page_failures >= MAX_PAGE_FAILURES:
                     stopped = f"{page_failures} pages failed in a row"
                     break
@@ -536,6 +541,8 @@ def _run_source(store: Store, client: PoliteClient, connector, source_id: int,
         error = str(exc)[:500]
     if stopped and not error:
         error = f"stopped: {stopped}"
+    if skipped_pages and not error:
+        error = f"skipped {skipped_pages} failed pages"
     store.finish_run(
         run_id,
         status=status,

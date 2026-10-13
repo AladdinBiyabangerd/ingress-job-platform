@@ -150,7 +150,7 @@ class PoliteClient:
     def __init__(self) -> None:
         self._http = httpx.Client(
             headers={"User-Agent": USER_AGENT},
-            timeout=httpx.Timeout(25.0),
+            timeout=httpx.Timeout(20.0, connect=10.0),
             follow_redirects=True,
         )
         self._robots: dict[str, RobotFileParser] = {}
