@@ -6,6 +6,12 @@ Accepted rows go through Store.upsert (re-approval / updated_at / job_skill rule
 rows the rules now reject are hidden with reject_reason. Default is dry-run.
 
   .venv/bin/python scripts/refresh_nodesk_2026_10.py [--db data/jobs.sqlite] [--apply]
+  DATABASE_URL=postgres://... .venv/bin/python scripts/refresh_nodesk_2026_10.py --prod [--apply]
+  (on Railway: railway run --service worker -- .venv/bin/python scripts/refresh_nodesk_2026_10.py --prod)
+
+Preview opens the database read-only (sqlite mode=ro / Postgres read-only
+session) and writes nothing. --apply first backs up: sqlite file copy, or for
+Postgres a JSON dump of the touched jobs/job_sources/job_skill rows.
 """
 from __future__ import annotations
 
@@ -13,6 +19,7 @@ import argparse
 import json
 import os
 import shutil
+import sqlite3
 import sys
 import time
 from pathlib import Path
@@ -40,19 +47,39 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--db", default="data/jobs.sqlite")
     ap.add_argument("--apply", action="store_true")
+    ap.add_argument("--prod", action="store_true", help="use DATABASE_URL (Postgres)")
     args = ap.parse_args(argv)
     db = Path(args.db)
-    if args.apply:
-        bak = db.with_name(db.name + time.strftime(".bak-nodesk-%Y%m%d%H%M%S"))
-        shutil.copy2(db, bak)
-        print("backup:", bak)
-    store = Store(db, sqlite_only=True)
-    conn = store.conn
+    if args.prod:
+        from worker.jobs_db import connect
+        conn = connect()
+        conn.execute("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY")
+    else:
+        conn = sqlite3.connect(f"file:{db.resolve()}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
     rows = conn.execute(
         "SELECT j.id, j.title, j.company, j.city, j.status, j.hidden, j.tech_stack, s.source_url, s.external_id "
         "FROM job_sources s JOIN jobs j ON j.id = s.job_id WHERE s.source_name = 'NoDesk' AND j.merged_into IS NULL "
         "ORDER BY j.id"
     ).fetchall()
+    store = None
+    if args.apply:
+        stamp = time.strftime("%Y%m%d%H%M%S")
+        if args.prod:
+            ids = [int(r["id"]) for r in rows] or [0]
+            q = ",".join("?" for _ in ids)
+            dump = {t: [{k: x[k] for k in x.keys()} for x in
+                        conn.execute(f"SELECT * FROM {t} WHERE {c} IN ({q})", ids).fetchall()]
+                    for t, c in (("jobs", "id"), ("job_sources", "job_id"), ("job_skill", "job_id"))}
+            bak = Path("data") / f"prod-nodesk-backup-{stamp}.json"
+            bak.write_text(json.dumps(dump, ensure_ascii=False, default=str, indent=1))
+        else:
+            bak = db.with_name(db.name + f".bak-nodesk-{stamp}")
+            shutil.copy2(db, bak)
+        print("backup:", bak)
+        conn.close()
+        store = Store(None if args.prod else db, sqlite_only=not args.prod)
+        conn = store.conn
     client = PoliteClient()
     changed = rejected = 0
     for r in rows:
