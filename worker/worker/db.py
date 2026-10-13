@@ -91,7 +91,7 @@ RETIRED_LOCAL_SOURCES = (
 )
 HIDE_RETIRED_STEP = "hide-retired-local-sources-2026-10-05"
 # One-shot: re-run extract_stack on scraped ads after the curated dictionary grows.
-REEXTRACT_STACK_STEP = "reextract-tech-stack-dict-v4-2026-10-11"
+REEXTRACT_STACK_STEP = "reextract-tech-stack-variants-v5-2026-10-13"
 
 _MAINTENANCE = """
 CREATE TABLE IF NOT EXISTS maintenance_steps (
@@ -668,34 +668,49 @@ class Store:
               AND (merged_into IS NULL OR merged_into = 0)
             """
         ).fetchall()
+        # Stack/skill rows only: no status, updated_at or acceptance columns are
+        # touched, so approved ads stay approved. Batched commits (Postgres-safe);
+        # the step is recorded after the last batch, a crash just re-runs it and
+        # unchanged rows are skipped (idempotent).
+        from worker.skills import _skill_id_map, ensure_skill_tables
+
+        ensure_skill_tables(self.conn)
+        skill_map = _skill_id_map(self.conn)
         updated = 0
+        batch = 200
+        for start in range(0, len(rows), batch):
+            with self.conn:
+                for row in rows[start:start + batch]:
+                    title = str(row["title"] or "")
+                    body = str(row["body"] or "")
+                    raw = row["tech_stack"]
+                    fresh = extract_stack(body, None, title)
+                    for name in stack_from_tags(raw):
+                        if name not in fresh:
+                            fresh.append(name)
+                    stack = fresh[:MAX_STACK]
+                    stack_json = dump_stack(stack)
+                    previous = raw if isinstance(raw, str) else dump_stack(
+                        [str(x) for x in raw] if isinstance(raw, list) else []
+                    )
+                    if stack_json == previous:
+                        continue
+                    self.conn.execute(
+                        "UPDATE jobs SET tech_stack = ? WHERE id = ?",
+                        (stack_json, row["id"]),
+                    )
+                    sync_job_skills(self.conn, int(row["id"]), stack, skill_map=skill_map)
+                    updated += 1
         with self.conn:
-            for row in rows:
-                title = str(row["title"] or "")
-                body = str(row["body"] or "")
-                raw = row["tech_stack"]
-                fresh = extract_stack(body, None, title)
-                for name in stack_from_tags(raw):
-                    if name not in fresh:
-                        fresh.append(name)
-                stack = fresh[:MAX_STACK]
-                stack_json = dump_stack(stack)
-                previous = raw if isinstance(raw, str) else dump_stack(
-                    [str(x) for x in raw] if isinstance(raw, list) else []
-                )
-                if stack_json == previous:
-                    continue
-                self.conn.execute(
-                    "UPDATE jobs SET tech_stack = ? WHERE id = ?",
-                    (stack_json, row["id"]),
-                )
-                sync_job_skills(self.conn, int(row["id"]), stack)
-                updated += 1
             self.conn.execute(
                 "INSERT INTO maintenance_steps (name, done_at) VALUES (?, ?) "
                 "ON CONFLICT (name) DO NOTHING",
                 (REEXTRACT_STACK_STEP, now_iso()),
             )
+        print(
+            f"tech stack reextract {REEXTRACT_STACK_STEP}: scanned={len(rows)} updated={updated}",
+            flush=True,
+        )
         return updated
 
     def _legacy_remote_twin(self, title: str, company: str):
