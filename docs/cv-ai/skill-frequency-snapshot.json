@@ -1,443 +1,1367 @@
 {
   "version": "1.0",
-  "generated_at": "2026-10-11T19:29:32Z",
-  "total_jobs": 450,
-  "jobs_with_tech_stack": 375,
+  "generated_at": "2026-10-13T11:38:57Z",
+  "total_jobs": 1263,
+  "jobs_with_tech_stack": 1156,
   "skills": [
     {
       "name": "Python",
-      "ad_count": 168
-    },
-    {
-      "name": "AWS",
-      "ad_count": 104
-    },
-    {
-      "name": "CI/CD",
-      "ad_count": 86
-    },
-    {
-      "name": "Kubernetes",
-      "ad_count": 84
+      "ad_count": 448
     },
     {
       "name": "SQL",
-      "ad_count": 79
+      "ad_count": 244
     },
     {
-      "name": "Go",
-      "ad_count": 70
+      "name": "CI/CD",
+      "ad_count": 240
     },
     {
-      "name": "LLM",
-      "ad_count": 69
+      "name": "AWS",
+      "ad_count": 232
     },
     {
       "name": "TypeScript",
-      "ad_count": 57
+      "ad_count": 195
+    },
+    {
+      "name": "Kubernetes",
+      "ad_count": 187
+    },
+    {
+      "name": "AI Agents",
+      "ad_count": 173
     },
     {
       "name": "PostgreSQL",
-      "ad_count": 56
-    },
-    {
-      "name": "Terraform",
-      "ad_count": 54
-    },
-    {
-      "name": "Azure",
-      "ad_count": 51
-    },
-    {
-      "name": "GCP",
-      "ad_count": 50
-    },
-    {
-      "name": "React",
-      "ad_count": 44
-    },
-    {
-      "name": "Docker",
-      "ad_count": 43
-    },
-    {
-      "name": "Linux",
-      "ad_count": 41
+      "ad_count": 165
     },
     {
       "name": "JavaScript",
-      "ad_count": 39
+      "ad_count": 153
+    },
+    {
+      "name": "Go",
+      "ad_count": 149
+    },
+    {
+      "name": "LLM",
+      "ad_count": 147
+    },
+    {
+      "name": "React",
+      "ad_count": 140
     },
     {
       "name": "Git",
-      "ad_count": 39
+      "ad_count": 118
+    },
+    {
+      "name": "GCP",
+      "ad_count": 118
+    },
+    {
+      "name": "Docker",
+      "ad_count": 115
+    },
+    {
+      "name": "Azure",
+      "ad_count": 111
+    },
+    {
+      "name": "Anthropic",
+      "ad_count": 106
     },
     {
       "name": "Java",
-      "ad_count": 36
+      "ad_count": 100
     },
     {
       "name": "C++",
-      "ad_count": 33
+      "ad_count": 100
+    },
+    {
+      "name": "Linux",
+      "ad_count": 98
+    },
+    {
+      "name": "Terraform",
+      "ad_count": 94
     },
     {
       "name": "Node.js",
-      "ad_count": 29
+      "ad_count": 93
     },
     {
-      "name": "Rust",
-      "ad_count": 25
-    },
-    {
-      "name": "Redis",
-      "ad_count": 25
-    },
-    {
-      "name": "iOS",
-      "ad_count": 22
-    },
-    {
-      "name": "Kafka",
-      "ad_count": 22
+      "name": "A/B Testing",
+      "ad_count": 88
     },
     {
       "name": "C#",
-      "ad_count": 19
+      "ad_count": 77
     },
     {
-      "name": "Android",
-      "ad_count": 19
-    },
-    {
-      "name": "GitHub Actions",
-      "ad_count": 18
-    },
-    {
-      "name": "Salesforce",
-      "ad_count": 17
-    },
-    {
-      "name": "PyTorch",
-      "ad_count": 17
-    },
-    {
-      "name": "Ruby",
-      "ad_count": 16
+      "name": "Rust",
+      "ad_count": 75
     },
     {
       "name": "CSS",
-      "ad_count": 16
+      "ad_count": 64
     },
     {
-      "name": "Figma",
-      "ad_count": 16
+      "name": "Android",
+      "ad_count": 60
     },
     {
-      "name": "OpenAI",
-      "ad_count": 16
+      "name": "iOS",
+      "ad_count": 59
     },
     {
-      "name": "Datadog",
-      "ad_count": 16
+      "name": "Blockchain",
+      "ad_count": 58
     },
     {
-      "name": "Grafana",
-      "ad_count": 16
+      "name": "Data Governance",
+      "ad_count": 57
     },
     {
       "name": "HTML",
-      "ad_count": 15
+      "ad_count": 57
+    },
+    {
+      "name": "Redis",
+      "ad_count": 57
     },
     {
       "name": "Jira",
-      "ad_count": 15
+      "ad_count": 55
     },
     {
-      "name": "RAG",
-      "ad_count": 15
-    },
-    {
-      "name": "MongoDB",
-      "ad_count": 15
-    },
-    {
-      "name": "Prometheus",
-      "ad_count": 15
-    },
-    {
-      "name": "Airflow",
-      "ad_count": 14
-    },
-    {
-      "name": "Argo CD",
-      "ad_count": 14
-    },
-    {
-      "name": "Django",
-      "ad_count": 14
-    },
-    {
-      "name": "Angular",
-      "ad_count": 13
-    },
-    {
-      "name": "Postman",
-      "ad_count": 13
-    },
-    {
-      "name": "Spark",
-      "ad_count": 13
-    },
-    {
-      "name": "Kotlin",
-      "ad_count": 13
-    },
-    {
-      "name": "Bash",
-      "ad_count": 13
+      "name": "Incident Response",
+      "ad_count": 53
     },
     {
       "name": ".NET",
-      "ad_count": 13
+      "ad_count": 52
     },
     {
-      "name": "C",
-      "ad_count": 12
+      "name": "Figma",
+      "ad_count": 52
+    },
+    {
+      "name": "Kafka",
+      "ad_count": 47
+    },
+    {
+      "name": "Design Systems",
+      "ad_count": 44
+    },
+    {
+      "name": "Infrastructure as Code",
+      "ad_count": 44
     },
     {
       "name": "GraphQL",
-      "ad_count": 12
+      "ad_count": 41
     },
     {
-      "name": "Elasticsearch",
-      "ad_count": 12
-    },
-    {
-      "name": "Swift",
-      "ad_count": 12
-    },
-    {
-      "name": "RabbitMQ",
-      "ad_count": 12
-    },
-    {
-      "name": "ClickHouse",
-      "ad_count": 11
-    },
-    {
-      "name": "Databricks",
-      "ad_count": 11
-    },
-    {
-      "name": "OpenTelemetry",
-      "ad_count": 10
-    },
-    {
-      "name": "Ansible",
-      "ad_count": 10
-    },
-    {
-      "name": "BigQuery",
-      "ad_count": 10
-    },
-    {
-      "name": "Ruby on Rails",
-      "ad_count": 9
-    },
-    {
-      "name": "SQL Server",
-      "ad_count": 9
+      "name": "Data Modeling",
+      "ad_count": 40
     },
     {
       "name": "MySQL",
-      "ad_count": 9
+      "ad_count": 40
     },
     {
-      "name": "Ethereum",
-      "ad_count": 9
-    },
-    {
-      "name": "Next.js",
-      "ad_count": 8
-    },
-    {
-      "name": "TensorFlow",
-      "ad_count": 8
-    },
-    {
-      "name": "React Native",
-      "ad_count": 8
-    },
-    {
-      "name": "Power BI",
-      "ad_count": 8
-    },
-    {
-      "name": "Helm",
-      "ad_count": 8
-    },
-    {
-      "name": "Pulumi",
-      "ad_count": 8
-    },
-    {
-      "name": "PowerShell",
-      "ad_count": 7
-    },
-    {
-      "name": "Computer Vision",
-      "ad_count": 7
-    },
-    {
-      "name": "Snowflake",
-      "ad_count": 7
-    },
-    {
-      "name": "Jenkins",
-      "ad_count": 7
-    },
-    {
-      "name": "Spring",
-      "ad_count": 7
-    },
-    {
-      "name": "Playwright",
-      "ad_count": 7
-    },
-    {
-      "name": "gRPC",
-      "ad_count": 7
-    },
-    {
-      "name": "DynamoDB",
-      "ad_count": 7
-    },
-    {
-      "name": "Hugging Face",
-      "ad_count": 6
-    },
-    {
-      "name": "Scala",
-      "ad_count": 6
-    },
-    {
-      "name": "GitLab CI",
-      "ad_count": 6
-    },
-    {
-      "name": "Oracle",
-      "ad_count": 6
-    },
-    {
-      "name": "Unity",
-      "ad_count": 6
-    },
-    {
-      "name": "GitLab",
-      "ad_count": 6
-    },
-    {
-      "name": "Selenium",
-      "ad_count": 6
-    },
-    {
-      "name": "Redshift",
-      "ad_count": 6
-    },
-    {
-      "name": "Tableau",
-      "ad_count": 6
-    },
-    {
-      "name": "MATLAB",
-      "ad_count": 5
-    },
-    {
-      "name": "Splunk",
-      "ad_count": 5
-    },
-    {
-      "name": "Vue.js",
-      "ad_count": 5
-    },
-    {
-      "name": "Solidity",
-      "ad_count": 5
-    },
-    {
-      "name": "FastAPI",
-      "ad_count": 5
+      "name": "IAM",
+      "ad_count": 39
     },
     {
       "name": "PHP",
-      "ad_count": 5
+      "ad_count": 39
     },
     {
-      "name": "Cloudflare",
-      "ad_count": 5
+      "name": "RAG",
+      "ad_count": 38
     },
     {
-      "name": "CloudFormation",
-      "ad_count": 5
+      "name": "ETL",
+      "ad_count": 38
     },
     {
-      "name": "Tailwind",
-      "ad_count": 4
+      "name": "Spark",
+      "ad_count": 37
     },
     {
-      "name": "NLP",
-      "ad_count": 4
+      "name": "BigQuery",
+      "ad_count": 37
     },
     {
-      "name": "CUDA",
-      "ad_count": 4
+      "name": "Next.js",
+      "ad_count": 36
     },
     {
-      "name": "Pandas",
-      "ad_count": 4
+      "name": "Ruby",
+      "ad_count": 36
     },
     {
-      "name": "Flask",
-      "ad_count": 4
+      "name": "PyTorch",
+      "ad_count": 34
     },
     {
-      "name": "Celery",
-      "ad_count": 4
+      "name": "OpenAI",
+      "ad_count": 34
     },
     {
-      "name": "dbt",
-      "ad_count": 4
+      "name": "Kotlin",
+      "ad_count": 34
+    },
+    {
+      "name": "Angular",
+      "ad_count": 33
+    },
+    {
+      "name": "Bash",
+      "ad_count": 33
+    },
+    {
+      "name": "Generative AI",
+      "ad_count": 32
+    },
+    {
+      "name": "C",
+      "ad_count": 31
+    },
+    {
+      "name": "Databricks",
+      "ad_count": 31
+    },
+    {
+      "name": "MongoDB",
+      "ad_count": 31
+    },
+    {
+      "name": "Swift",
+      "ad_count": 30
+    },
+    {
+      "name": "Django",
+      "ad_count": 30
+    },
+    {
+      "name": "Fine-tuning",
+      "ad_count": 29
+    },
+    {
+      "name": "SQL Server",
+      "ad_count": 28
+    },
+    {
+      "name": "DNS",
+      "ad_count": 28
+    },
+    {
+      "name": "Vue.js",
+      "ad_count": 28
+    },
+    {
+      "name": "Unity",
+      "ad_count": 28
+    },
+    {
+      "name": "Data Warehouse",
+      "ad_count": 28
+    },
+    {
+      "name": "Playwright",
+      "ad_count": 28
+    },
+    {
+      "name": "Grafana",
+      "ad_count": 28
+    },
+    {
+      "name": "React Native",
+      "ad_count": 27
+    },
+    {
+      "name": "Power BI",
+      "ad_count": 27
+    },
+    {
+      "name": "SLO/SLI",
+      "ad_count": 27
+    },
+    {
+      "name": "Tableau",
+      "ad_count": 27
+    },
+    {
+      "name": "GitHub Actions",
+      "ad_count": 26
+    },
+    {
+      "name": "Ansible",
+      "ad_count": 26
+    },
+    {
+      "name": "RabbitMQ",
+      "ad_count": 26
+    },
+    {
+      "name": "Airflow",
+      "ad_count": 25
+    },
+    {
+      "name": "Prometheus",
+      "ad_count": 25
+    },
+    {
+      "name": "Salesforce",
+      "ad_count": 24
+    },
+    {
+      "name": "Postman",
+      "ad_count": 24
+    },
+    {
+      "name": "Ruby on Rails",
+      "ad_count": 24
+    },
+    {
+      "name": "NoSQL",
+      "ad_count": 24
+    },
+    {
+      "name": "GPT",
+      "ad_count": 23
+    },
+    {
+      "name": "FastAPI",
+      "ad_count": 23
+    },
+    {
+      "name": "Confluence",
+      "ad_count": 22
+    },
+    {
+      "name": "Datadog",
+      "ad_count": 22
+    },
+    {
+      "name": "NestJS",
+      "ad_count": 22
+    },
+    {
+      "name": "Helm",
+      "ad_count": 22
+    },
+    {
+      "name": "Firmware",
+      "ad_count": 22
+    },
+    {
+      "name": "Jenkins",
+      "ad_count": 22
     },
     {
       "name": "Looker",
-      "ad_count": 4
+      "ad_count": 22
     },
     {
-      "name": "JWT",
-      "ad_count": 4
+      "name": "User Research",
+      "ad_count": 21
     },
     {
-      "name": "Jetpack Compose",
-      "ad_count": 4
+      "name": "Spring",
+      "ad_count": 21
     },
     {
-      "name": "scikit-learn",
-      "ad_count": 3
+      "name": "Snowflake",
+      "ad_count": 21
     },
     {
-      "name": "Vercel",
-      "ad_count": 3
+      "name": "GitLab",
+      "ad_count": 21
     },
     {
-      "name": "Redux",
-      "ad_count": 3
+      "name": "OAuth",
+      "ad_count": 21
+    },
+    {
+      "name": "Smart Contracts",
+      "ad_count": 21
+    },
+    {
+      "name": "WebSockets",
+      "ad_count": 21
+    },
+    {
+      "name": "IoT",
+      "ad_count": 20
+    },
+    {
+      "name": "Elasticsearch",
+      "ad_count": 20
+    },
+    {
+      "name": "Azure DevOps",
+      "ad_count": 20
+    },
+    {
+      "name": "ClickHouse",
+      "ad_count": 20
+    },
+    {
+      "name": "dbt",
+      "ad_count": 20
+    },
+    {
+      "name": "gRPC",
+      "ad_count": 20
+    },
+    {
+      "name": "TCP/IP",
+      "ad_count": 19
+    },
+    {
+      "name": "WordPress",
+      "ad_count": 19
+    },
+    {
+      "name": "Ethereum",
+      "ad_count": 19
+    },
+    {
+      "name": "Cloud Security",
+      "ad_count": 18
+    },
+    {
+      "name": "Amazon S3",
+      "ad_count": 18
+    },
+    {
+      "name": "GDPR",
+      "ad_count": 18
+    },
+    {
+      "name": "SOC 2",
+      "ad_count": 18
+    },
+    {
+      "name": "Computer Vision",
+      "ad_count": 17
+    },
+    {
+      "name": "GitOps",
+      "ad_count": 17
+    },
+    {
+      "name": "Amazon RDS",
+      "ad_count": 17
+    },
+    {
+      "name": "Pandas",
+      "ad_count": 17
+    },
+    {
+      "name": "Supabase",
+      "ad_count": 17
+    },
+    {
+      "name": "Application Security",
+      "ad_count": 17
+    },
+    {
+      "name": "TensorFlow",
+      "ad_count": 16
+    },
+    {
+      "name": "Mixpanel",
+      "ad_count": 16
+    },
+    {
+      "name": "I2C/SPI/UART",
+      "ad_count": 16
+    },
+    {
+      "name": "Oracle",
+      "ad_count": 16
+    },
+    {
+      "name": "Model Context Protocol",
+      "ad_count": 16
+    },
+    {
+      "name": "SSO",
+      "ad_count": 16
+    },
+    {
+      "name": "App Store",
+      "ad_count": 16
+    },
+    {
+      "name": "Excel",
+      "ad_count": 16
+    },
+    {
+      "name": "Tailwind",
+      "ad_count": 15
+    },
+    {
+      "name": "VPN",
+      "ad_count": 15
+    },
+    {
+      "name": "MATLAB",
+      "ad_count": 15
+    },
+    {
+      "name": "DeFi",
+      "ad_count": 15
+    },
+    {
+      "name": "Data Lake",
+      "ad_count": 15
+    },
+    {
+      "name": "OpenTelemetry",
+      "ad_count": 14
+    },
+    {
+      "name": "Amazon ECS",
+      "ad_count": 14
+    },
+    {
+      "name": "n8n",
+      "ad_count": 14
+    },
+    {
+      "name": "FPGA",
+      "ad_count": 14
+    },
+    {
+      "name": "GitLab CI",
+      "ad_count": 14
+    },
+    {
+      "name": "OpenAPI",
+      "ad_count": 14
+    },
+    {
+      "name": "Amazon EC2",
+      "ad_count": 13
+    },
+    {
+      "name": "Network Security",
+      "ad_count": 13
+    },
+    {
+      "name": "Selenium",
+      "ad_count": 13
+    },
+    {
+      "name": "Cloudflare",
+      "ad_count": 13
+    },
+    {
+      "name": "Threat Modeling",
+      "ad_count": 13
+    },
+    {
+      "name": "Metabase",
+      "ad_count": 13
+    },
+    {
+      "name": "GitHub Copilot",
+      "ad_count": 12
+    },
+    {
+      "name": "Argo CD",
+      "ad_count": 12
+    },
+    {
+      "name": "Secrets Management",
+      "ad_count": 12
+    },
+    {
+      "name": "Vulnerability Management",
+      "ad_count": 12
+    },
+    {
+      "name": "STM32",
+      "ad_count": 12
+    },
+    {
+      "name": "Shopify",
+      "ad_count": 11
+    },
+    {
+      "name": "Hugging Face",
+      "ad_count": 11
+    },
+    {
+      "name": "Google Workspace",
+      "ad_count": 11
+    },
+    {
+      "name": "Scala",
+      "ad_count": 11
+    },
+    {
+      "name": "Embedded Linux",
+      "ad_count": 11
+    },
+    {
+      "name": "PowerShell",
+      "ad_count": 11
+    },
+    {
+      "name": "Jest",
+      "ad_count": 11
+    },
+    {
+      "name": "Entity Framework",
+      "ad_count": 11
+    },
+    {
+      "name": "Cypress",
+      "ad_count": 11
+    },
+    {
+      "name": "Microsoft 365",
+      "ad_count": 11
+    },
+    {
+      "name": "Pulumi",
+      "ad_count": 11
+    },
+    {
+      "name": "TDD",
+      "ad_count": 11
+    },
+    {
+      "name": "Redshift",
+      "ad_count": 11
+    },
+    {
+      "name": "Camunda",
+      "ad_count": 11
+    },
+    {
+      "name": "ISO 27001",
+      "ad_count": 11
+    },
+    {
+      "name": "Flask",
+      "ad_count": 11
+    },
+    {
+      "name": "VPC",
+      "ad_count": 11
+    },
+    {
+      "name": "macOS",
+      "ad_count": 11
+    },
+    {
+      "name": "Zapier",
+      "ad_count": 10
+    },
+    {
+      "name": "JAX",
+      "ad_count": 10
+    },
+    {
+      "name": "TestRail",
+      "ad_count": 10
+    },
+    {
+      "name": "vLLM",
+      "ad_count": 10
+    },
+    {
+      "name": "Google Analytics",
+      "ad_count": 10
+    },
+    {
+      "name": "Solidity",
+      "ad_count": 10
+    },
+    {
+      "name": "Bitcoin",
+      "ad_count": 10
+    },
+    {
+      "name": "REST Assured",
+      "ad_count": 10
+    },
+    {
+      "name": "DynamoDB",
+      "ad_count": 10
+    },
+    {
+      "name": "Google Sheets",
+      "ad_count": 10
+    },
+    {
+      "name": "SIEM",
+      "ad_count": 9
+    },
+    {
+      "name": "UAT",
+      "ad_count": 9
+    },
+    {
+      "name": "WAF",
+      "ad_count": 9
+    },
+    {
+      "name": "ServiceNow",
+      "ad_count": 9
+    },
+    {
+      "name": "MariaDB",
+      "ad_count": 9
+    },
+    {
+      "name": "Web3.js",
+      "ad_count": 9
+    },
+    {
+      "name": "NumPy",
+      "ad_count": 9
+    },
+    {
+      "name": "LangGraph",
+      "ad_count": 9
+    },
+    {
+      "name": "SOAP",
+      "ad_count": 9
+    },
+    {
+      "name": "API Gateway",
+      "ad_count": 9
+    },
+    {
+      "name": "Gradle",
+      "ad_count": 9
+    },
+    {
+      "name": "Maven",
+      "ad_count": 9
+    },
+    {
+      "name": "pytest",
+      "ad_count": 9
+    },
+    {
+      "name": "MFA",
+      "ad_count": 9
+    },
+    {
+      "name": "MinIO",
+      "ad_count": 9
+    },
+    {
+      "name": "RTOS",
+      "ad_count": 9
+    },
+    {
+      "name": "EDR",
+      "ad_count": 8
+    },
+    {
+      "name": "ONNX",
+      "ad_count": 8
     },
     {
       "name": "LangChain",
-      "ad_count": 3
+      "ad_count": 8
+    },
+    {
+      "name": "Pinecone",
+      "ad_count": 8
+    },
+    {
+      "name": "Apache Iceberg",
+      "ad_count": 8
+    },
+    {
+      "name": "Recommender Systems",
+      "ad_count": 8
+    },
+    {
+      "name": "CUDA",
+      "ad_count": 8
+    },
+    {
+      "name": "Cassandra",
+      "ad_count": 8
+    },
+    {
+      "name": "BGP",
+      "ad_count": 8
+    },
+    {
+      "name": "Azure SQL Database",
+      "ad_count": 8
+    },
+    {
+      "name": "Django REST Framework",
+      "ad_count": 8
+    },
+    {
+      "name": "Celery",
+      "ad_count": 8
+    },
+    {
+      "name": "Prompt Engineering",
+      "ad_count": 8
+    },
+    {
+      "name": "Active Directory",
+      "ad_count": 8
+    },
+    {
+      "name": "Okta",
+      "ad_count": 8
+    },
+    {
+      "name": "Firebase",
+      "ad_count": 8
+    },
+    {
+      "name": "Rollbar",
+      "ad_count": 8
+    },
+    {
+      "name": "Vector Database",
+      "ad_count": 8
+    },
+    {
+      "name": "DevSecOps",
+      "ad_count": 8
+    },
+    {
+      "name": "Flutter",
+      "ad_count": 8
+    },
+    {
+      "name": "Threat Intelligence",
+      "ad_count": 7
+    },
+    {
+      "name": "scikit-learn",
+      "ad_count": 7
+    },
+    {
+      "name": "SAP",
+      "ad_count": 7
+    },
+    {
+      "name": "Blender",
+      "ad_count": 7
+    },
+    {
+      "name": "GRC",
+      "ad_count": 7
+    },
+    {
+      "name": "Cisco",
+      "ad_count": 7
+    },
+    {
+      "name": "Microsoft Entra ID",
+      "ad_count": 7
+    },
+    {
+      "name": "Azure Service Bus",
+      "ad_count": 7
+    },
+    {
+      "name": "Penetration Testing",
+      "ad_count": 7
+    },
+    {
+      "name": "SAML",
+      "ad_count": 7
+    },
+    {
+      "name": "Helm Charts",
+      "ad_count": 7
+    },
+    {
+      "name": "Vercel",
+      "ad_count": 7
+    },
+    {
+      "name": "Reinforcement Learning",
+      "ad_count": 7
+    },
+    {
+      "name": "ElevenLabs",
+      "ad_count": 7
+    },
+    {
+      "name": "Delta Lake",
+      "ad_count": 7
+    },
+    {
+      "name": "Cloud Run",
+      "ad_count": 7
+    },
+    {
+      "name": "NIST",
+      "ad_count": 7
+    },
+    {
+      "name": "Nuxt",
+      "ad_count": 7
+    },
+    {
+      "name": "Symfony",
+      "ad_count": 7
+    },
+    {
+      "name": "NetSuite",
+      "ad_count": 6
+    },
+    {
+      "name": "SageMaker",
+      "ad_count": 6
+    },
+    {
+      "name": "OpenCV",
+      "ad_count": 6
+    },
+    {
+      "name": "NLP",
+      "ad_count": 6
+    },
+    {
+      "name": "Dagster",
+      "ad_count": 6
+    },
+    {
+      "name": "C++17",
+      "ad_count": 6
+    },
+    {
+      "name": "SystemVerilog",
+      "ad_count": 6
+    },
+    {
+      "name": "Splunk",
+      "ad_count": 6
+    },
+    {
+      "name": "NATS",
+      "ad_count": 6
+    },
+    {
+      "name": "Svelte",
+      "ad_count": 6
+    },
+    {
+      "name": "Power Apps",
+      "ad_count": 6
+    },
+    {
+      "name": "NUnit",
+      "ad_count": 6
+    },
+    {
+      "name": "Laravel",
+      "ad_count": 6
+    },
+    {
+      "name": "Intune",
+      "ad_count": 6
+    },
+    {
+      "name": "Windows Server",
+      "ad_count": 6
+    },
+    {
+      "name": "VMware",
+      "ad_count": 6
+    },
+    {
+      "name": "Layer 2",
+      "ad_count": 6
+    },
+    {
+      "name": "Amazon SQS",
+      "ad_count": 6
+    },
+    {
+      "name": "Elixir",
+      "ad_count": 6
+    },
+    {
+      "name": "Appium",
+      "ad_count": 6
+    },
+    {
+      "name": "Bug Bounty",
+      "ad_count": 6
+    },
+    {
+      "name": "CloudFormation",
+      "ad_count": 6
+    },
+    {
+      "name": "Jetpack Compose",
+      "ad_count": 6
+    },
+    {
+      "name": "Verilog",
+      "ad_count": 6
+    },
+    {
+      "name": "FedRAMP",
+      "ad_count": 6
+    },
+    {
+      "name": "Pub/Sub",
+      "ad_count": 6
+    },
+    {
+      "name": "MQTT",
+      "ad_count": 6
+    },
+    {
+      "name": "SQLAlchemy",
+      "ad_count": 6
+    },
+    {
+      "name": "Markdown",
+      "ad_count": 6
+    },
+    {
+      "name": "Photoshop",
+      "ad_count": 6
+    },
+    {
+      "name": "Solana",
+      "ad_count": 6
+    },
+    {
+      "name": "Prisma",
+      "ad_count": 6
+    },
+    {
+      "name": "Redux",
+      "ad_count": 6
+    },
+    {
+      "name": "Digital Forensics",
+      "ad_count": 5
+    },
+    {
+      "name": "PKI",
+      "ad_count": 5
     },
     {
       "name": "Trino",
+      "ad_count": 5
+    },
+    {
+      "name": "Modern C++",
+      "ad_count": 5
+    },
+    {
+      "name": "CMake",
+      "ad_count": 5
+    },
+    {
+      "name": "WCAG",
+      "ad_count": 5
+    },
+    {
+      "name": "CloudWatch",
+      "ad_count": 5
+    },
+    {
+      "name": "JWT",
+      "ad_count": 5
+    },
+    {
+      "name": "asyncio",
+      "ad_count": 5
+    },
+    {
+      "name": "Web Components",
+      "ad_count": 5
+    },
+    {
+      "name": "LDAP",
+      "ad_count": 5
+    },
+    {
+      "name": "Kibana",
+      "ad_count": 5
+    },
+    {
+      "name": "Istio",
+      "ad_count": 5
+    },
+    {
+      "name": "Expo",
+      "ad_count": 5
+    },
+    {
+      "name": "DLP",
+      "ad_count": 5
+    },
+    {
+      "name": "Sentry",
+      "ad_count": 5
+    },
+    {
+      "name": "WebGL",
+      "ad_count": 5
+    },
+    {
+      "name": "Jamf",
+      "ad_count": 5
+    },
+    {
+      "name": "UIKit",
+      "ad_count": 5
+    },
+    {
+      "name": "Vite",
+      "ad_count": 5
+    },
+    {
+      "name": "Game Engine",
+      "ad_count": 5
+    },
+    {
+      "name": "Zendesk",
+      "ad_count": 5
+    },
+    {
+      "name": "OWASP",
+      "ad_count": 5
+    },
+    {
+      "name": "OutSystems",
+      "ad_count": 5
+    },
+    {
+      "name": "Hadoop",
+      "ad_count": 5
+    },
+    {
+      "name": "Three.js",
+      "ad_count": 5
+    },
+    {
+      "name": "Express",
+      "ad_count": 5
+    },
+    {
+      "name": "Jupyter",
+      "ad_count": 5
+    },
+    {
+      "name": "SAST",
+      "ad_count": 5
+    },
+    {
+      "name": "SharePoint",
+      "ad_count": 5
+    },
+    {
+      "name": "jQuery",
+      "ad_count": 5
+    },
+    {
+      "name": "Simulink",
+      "ad_count": 5
+    },
+    {
+      "name": "Prefect",
+      "ad_count": 4
+    },
+    {
+      "name": "After Effects",
+      "ad_count": 4
+    },
+    {
+      "name": "Secure Boot",
+      "ad_count": 4
+    },
+    {
+      "name": "systemd",
+      "ad_count": 4
+    },
+    {
+      "name": "ROS",
+      "ad_count": 4
+    },
+    {
+      "name": "Bazel",
+      "ad_count": 4
+    },
+    {
+      "name": "Protobuf",
+      "ad_count": 4
+    },
+    {
+      "name": "Zabbix",
+      "ad_count": 4
+    },
+    {
+      "name": "New Relic",
+      "ad_count": 4
+    },
+    {
+      "name": "Dynatrace",
+      "ad_count": 4
+    },
+    {
+      "name": "BrowserStack",
+      "ad_count": 4
+    },
+    {
+      "name": "AWS CDK",
+      "ad_count": 4
+    },
+    {
+      "name": "OpenTofu",
+      "ad_count": 4
+    },
+    {
+      "name": "RxJS",
+      "ad_count": 4
+    },
+    {
+      "name": "Arduino",
+      "ad_count": 4
+    },
+    {
+      "name": "Cosmos SDK",
+      "ad_count": 4
+    },
+    {
+      "name": "JUnit",
+      "ad_count": 4
+    },
+    {
+      "name": "CircleCI",
+      "ad_count": 4
+    },
+    {
+      "name": "CrowdStrike",
+      "ad_count": 4
+    },
+    {
+      "name": "SQLite",
+      "ad_count": 4
+    },
+    {
+      "name": "PagerDuty",
+      "ad_count": 4
+    },
+    {
+      "name": "Oracle Cloud",
+      "ad_count": 4
+    },
+    {
+      "name": "Email Security",
+      "ad_count": 4
+    },
+    {
+      "name": "MVVM",
+      "ad_count": 4
+    },
+    {
+      "name": "WebRTC",
+      "ad_count": 4
+    },
+    {
+      "name": "Hardhat",
+      "ad_count": 4
+    },
+    {
+      "name": "Arrow",
+      "ad_count": 4
+    },
+    {
+      "name": "Red Hat",
+      "ad_count": 4
+    },
+    {
+      "name": "Bootstrap",
+      "ad_count": 4
+    },
+    {
+      "name": "Storybook",
+      "ad_count": 4
+    },
+    {
+      "name": "Looker Studio",
+      "ad_count": 4
+    },
+    {
+      "name": "Webflow",
+      "ad_count": 4
+    },
+    {
+      "name": "Container Security",
+      "ad_count": 4
+    },
+    {
+      "name": "Debezium",
+      "ad_count": 4
+    },
+    {
+      "name": "Unreal Engine",
+      "ad_count": 4
+    },
+    {
+      "name": "LangSmith",
+      "ad_count": 4
+    },
+    {
+      "name": "MS Project",
+      "ad_count": 4
+    },
+    {
+      "name": "Clojure",
+      "ad_count": 4
+    },
+    {
+      "name": "BeyondTrust",
+      "ad_count": 3
+    },
+    {
+      "name": "MITRE ATT&CK",
+      "ad_count": 3
+    },
+    {
+      "name": "Endpoint Security",
+      "ad_count": 3
+    },
+    {
+      "name": "HubSpot",
+      "ad_count": 3
+    },
+    {
+      "name": "Apache Druid",
+      "ad_count": 3
+    },
+    {
+      "name": "NCCL",
+      "ad_count": 3
+    },
+    {
+      "name": "AUTOSAR",
       "ad_count": 3
     },
     {
@@ -445,11 +1369,131 @@
       "ad_count": 3
     },
     {
-      "name": "NumPy",
+      "name": "Workato",
       "ad_count": 3
     },
     {
-      "name": "New Relic",
+      "name": "MuleSoft",
+      "ad_count": 3
+    },
+    {
+      "name": "Allure",
+      "ad_count": 3
+    },
+    {
+      "name": "Dynamics 365",
+      "ad_count": 3
+    },
+    {
+      "name": "OData",
+      "ad_count": 3
+    },
+    {
+      "name": "Power Automate",
+      "ad_count": 3
+    },
+    {
+      "name": "Azure Synapse",
+      "ad_count": 3
+    },
+    {
+      "name": "SciPy",
+      "ad_count": 3
+    },
+    {
+      "name": "Dask",
+      "ad_count": 3
+    },
+    {
+      "name": "Webpack",
+      "ad_count": 3
+    },
+    {
+      "name": "Passkeys",
+      "ad_count": 3
+    },
+    {
+      "name": "Chaos Engineering",
+      "ad_count": 3
+    },
+    {
+      "name": "CockroachDB",
+      "ad_count": 3
+    },
+    {
+      "name": "Phoenix",
+      "ad_count": 3
+    },
+    {
+      "name": "Micro Frontends",
+      "ad_count": 3
+    },
+    {
+      "name": "Android SDK",
+      "ad_count": 3
+    },
+    {
+      "name": "LGPD",
+      "ad_count": 3
+    },
+    {
+      "name": "Cosmos DB",
+      "ad_count": 3
+    },
+    {
+      "name": "KVM",
+      "ad_count": 3
+    },
+    {
+      "name": "DMARC",
+      "ad_count": 3
+    },
+    {
+      "name": "Amazon ElastiCache",
+      "ad_count": 3
+    },
+    {
+      "name": "PCI DSS",
+      "ad_count": 3
+    },
+    {
+      "name": "Pentaho",
+      "ad_count": 3
+    },
+    {
+      "name": "Google Composer",
+      "ad_count": 3
+    },
+    {
+      "name": "Azure Databricks",
+      "ad_count": 3
+    },
+    {
+      "name": "AWS Lambda",
+      "ad_count": 3
+    },
+    {
+      "name": "Snyk",
+      "ad_count": 3
+    },
+    {
+      "name": "Dart",
+      "ad_count": 3
+    },
+    {
+      "name": "Jetpack",
+      "ad_count": 3
+    },
+    {
+      "name": "Proxmox",
+      "ad_count": 3
+    },
+    {
+      "name": "UX Writing",
+      "ad_count": 3
+    },
+    {
+      "name": "WordPress Gutenberg",
       "ad_count": 3
     },
     {
@@ -457,19 +1501,83 @@
       "ad_count": 3
     },
     {
-      "name": "Istio",
+      "name": "Airbyte",
       "ad_count": 3
     },
     {
-      "name": "Appium",
+      "name": "DAST",
       "ad_count": 3
     },
     {
-      "name": "Shopify",
+      "name": "Sidekiq",
+      "ad_count": 3
+    },
+    {
+      "name": "Hibernate",
+      "ad_count": 3
+    },
+    {
+      "name": "Thanos",
+      "ad_count": 3
+    },
+    {
+      "name": "Notion",
+      "ad_count": 3
+    },
+    {
+      "name": "WooCommerce",
+      "ad_count": 3
+    },
+    {
+      "name": "Jasmine",
+      "ad_count": 3
+    },
+    {
+      "name": "Informatica",
+      "ad_count": 3
+    },
+    {
+      "name": "Qlik",
+      "ad_count": 3
+    },
+    {
+      "name": "Core Data",
+      "ad_count": 3
+    },
+    {
+      "name": "TypeORM",
+      "ad_count": 3
+    },
+    {
+      "name": "Windows",
+      "ad_count": 3
+    },
+    {
+      "name": "PAM",
       "ad_count": 2
     },
     {
-      "name": "Cassandra",
+      "name": "Docs as Code",
+      "ad_count": 2
+    },
+    {
+      "name": "tcpdump",
+      "ad_count": 2
+    },
+    {
+      "name": "NVIDIA TensorRT-LLM",
+      "ad_count": 2
+    },
+    {
+      "name": "SonarQube",
+      "ad_count": 2
+    },
+    {
+      "name": "Flyte",
+      "ad_count": 2
+    },
+    {
+      "name": "SSIS",
       "ad_count": 2
     },
     {
@@ -477,31 +1585,59 @@
       "ad_count": 2
     },
     {
-      "name": "Svelte",
+      "name": "Django ORM",
       "ad_count": 2
     },
     {
-      "name": "Cypress",
+      "name": "ABAP",
       "ad_count": 2
     },
     {
-      "name": "pytest",
+      "name": "Alpine.js",
       "ad_count": 2
     },
     {
-      "name": "Sentry",
+      "name": "Blade",
       "ad_count": 2
     },
     {
-      "name": "WordPress",
+      "name": "Group Policy",
       "ad_count": 2
     },
     {
-      "name": "NestJS",
+      "name": "Hugging Face Transformers",
       "ad_count": 2
     },
     {
-      "name": "Elixir",
+      "name": "Babel",
+      "ad_count": 2
+    },
+    {
+      "name": "ESLint",
+      "ad_count": 2
+    },
+    {
+      "name": "Prettier",
+      "ad_count": 2
+    },
+    {
+      "name": "Sketch",
+      "ad_count": 2
+    },
+    {
+      "name": "Cilium",
+      "ad_count": 2
+    },
+    {
+      "name": "Phoenix LiveView",
+      "ad_count": 2
+    },
+    {
+      "name": "Erlang",
+      "ad_count": 2
+    },
+    {
+      "name": "Cursor IDE",
       "ad_count": 2
     },
     {
@@ -509,15 +1645,63 @@
       "ad_count": 2
     },
     {
-      "name": "CircleCI",
+      "name": "Pydantic",
       "ad_count": 2
     },
     {
-      "name": "Entity Framework",
+      "name": "Android Studio",
       "ad_count": 2
     },
     {
-      "name": "SQLite",
+      "name": "OpenStack",
+      "ad_count": 2
+    },
+    {
+      "name": "Bluetooth Low Energy",
+      "ad_count": 2
+    },
+    {
+      "name": "Hive",
+      "ad_count": 2
+    },
+    {
+      "name": "DigitalOcean",
+      "ad_count": 2
+    },
+    {
+      "name": "Kotlin Multiplatform",
+      "ad_count": 2
+    },
+    {
+      "name": "Databricks Workflows",
+      "ad_count": 2
+    },
+    {
+      "name": "Amazon Athena",
+      "ad_count": 2
+    },
+    {
+      "name": "Kinesis",
+      "ad_count": 2
+    },
+    {
+      "name": "Linux Kernel",
+      "ad_count": 2
+    },
+    {
+      "name": "Kubernetes Operators",
+      "ad_count": 2
+    },
+    {
+      "name": "Speech Recognition",
+      "ad_count": 2
+    },
+    {
+      "name": "FISMA",
+      "ad_count": 2
+    },
+    {
+      "name": "Control-M",
       "ad_count": 2
     },
     {
@@ -525,12 +1709,232 @@
       "ad_count": 2
     },
     {
-      "name": "Bootstrap",
+      "name": "JDBC",
       "ad_count": 2
     },
     {
-      "name": "Flutter",
+      "name": "Xcode",
       "ad_count": 2
+    },
+    {
+      "name": "AWS Glue",
+      "ad_count": 2
+    },
+    {
+      "name": "Angular Material",
+      "ad_count": 2
+    },
+    {
+      "name": "Rancher",
+      "ad_count": 2
+    },
+    {
+      "name": "Amazon QuickSight",
+      "ad_count": 2
+    },
+    {
+      "name": "Objective-C",
+      "ad_count": 2
+    },
+    {
+      "name": "BDD",
+      "ad_count": 2
+    },
+    {
+      "name": "Google Play Console",
+      "ad_count": 2
+    },
+    {
+      "name": "PixiJS",
+      "ad_count": 2
+    },
+    {
+      "name": "Stable Diffusion",
+      "ad_count": 2
+    },
+    {
+      "name": "Proxmox VE",
+      "ad_count": 2
+    },
+    {
+      "name": "Nginx",
+      "ad_count": 2
+    },
+    {
+      "name": "RLHF",
+      "ad_count": 2
+    },
+    {
+      "name": "Malware Analysis",
+      "ad_count": 2
+    },
+    {
+      "name": "C++11",
+      "ad_count": 2
+    },
+    {
+      "name": "Koa",
+      "ad_count": 2
+    },
+    {
+      "name": "InfluxDB",
+      "ad_count": 2
+    },
+    {
+      "name": "Visual Studio",
+      "ad_count": 2
+    },
+    {
+      "name": "D3.js",
+      "ad_count": 2
+    },
+    {
+      "name": "Electron",
+      "ad_count": 2
+    },
+    {
+      "name": "Astro",
+      "ad_count": 2
+    },
+    {
+      "name": "Smartsheet",
+      "ad_count": 2
+    },
+    {
+      "name": "Elementor",
+      "ad_count": 2
+    },
+    {
+      "name": "LaunchDarkly",
+      "ad_count": 2
+    },
+    {
+      "name": "JMeter",
+      "ad_count": 2
+    },
+    {
+      "name": "JPA",
+      "ad_count": 2
+    },
+    {
+      "name": "Drupal",
+      "ad_count": 2
+    },
+    {
+      "name": "Alembic",
+      "ad_count": 2
+    },
+    {
+      "name": "Exchange Online",
+      "ad_count": 2
+    },
+    {
+      "name": "Fastify",
+      "ad_count": 2
+    },
+    {
+      "name": "Buildkite",
+      "ad_count": 2
+    },
+    {
+      "name": "Strapi",
+      "ad_count": 2
+    },
+    {
+      "name": "Azure AD Conditional Access",
+      "ad_count": 2
+    },
+    {
+      "name": "TeamCity",
+      "ad_count": 2
+    },
+    {
+      "name": "Adobe XD",
+      "ad_count": 2
+    },
+    {
+      "name": "WebdriverIO",
+      "ad_count": 2
+    },
+    {
+      "name": "Zscaler",
+      "ad_count": 2
+    },
+    {
+      "name": "React Testing Library",
+      "ad_count": 2
+    },
+    {
+      "name": "Route 53",
+      "ad_count": 2
+    },
+    {
+      "name": "Material UI",
+      "ad_count": 2
+    },
+    {
+      "name": "Bitbucket",
+      "ad_count": 2
+    },
+    {
+      "name": "VHDL",
+      "ad_count": 2
+    },
+    {
+      "name": "XGBoost",
+      "ad_count": 2
+    },
+    {
+      "name": "Intercom",
+      "ad_count": 2
+    },
+    {
+      "name": "Shaders",
+      "ad_count": 2
+    },
+    {
+      "name": "Machine Learning",
+      "ad_count": 2
+    },
+    {
+      "name": "DuckDB",
+      "ad_count": 2
+    },
+    {
+      "name": "Azure Data Factory",
+      "ad_count": 2
+    },
+    {
+      "name": "Azure Storage",
+      "ad_count": 2
+    },
+    {
+      "name": "Google Cloud Build",
+      "ad_count": 2
+    },
+    {
+      "name": "Excel PivotTables",
+      "ad_count": 2
+    },
+    {
+      "name": "Yii",
+      "ad_count": 2
+    },
+    {
+      "name": "CloudFront",
+      "ad_count": 2
+    },
+    {
+      "name": "Magento",
+      "ad_count": 2
+    },
+    {
+      "name": "Kotlin Coroutines",
+      "ad_count": 2
+    },
+    {
+      "name": ".NET MAUI",
+      "ad_count": 1
     },
     {
       "name": "Xamarin",
@@ -541,19 +1945,119 @@
       "ad_count": 1
     },
     {
-      "name": "Netlify",
+      "name": "Contentful",
       "ad_count": 1
     },
     {
-      "name": "Jest",
+      "name": "Sass/SCSS Modules",
       "ad_count": 1
     },
     {
-      "name": "MariaDB",
+      "name": "CNAPP",
       "ad_count": 1
     },
     {
-      "name": "Laravel",
+      "name": "CWPP",
+      "ad_count": 1
+    },
+    {
+      "name": "FAISS",
+      "ad_count": 1
+    },
+    {
+      "name": "C++20",
+      "ad_count": 1
+    },
+    {
+      "name": "UBSan",
+      "ad_count": 1
+    },
+    {
+      "name": "Valgrind",
+      "ad_count": 1
+    },
+    {
+      "name": "MSVC",
+      "ad_count": 1
+    },
+    {
+      "name": "Tcl",
+      "ad_count": 1
+    },
+    {
+      "name": "JFrog Artifactory",
+      "ad_count": 1
+    },
+    {
+      "name": "Amazon Connect",
+      "ad_count": 1
+    },
+    {
+      "name": "Mosaic AI",
+      "ad_count": 1
+    },
+    {
+      "name": "Robot Framework",
+      "ad_count": 1
+    },
+    {
+      "name": "AL language",
+      "ad_count": 1
+    },
+    {
+      "name": "Bicep",
+      "ad_count": 1
+    },
+    {
+      "name": "Azure Kubernetes Service",
+      "ad_count": 1
+    },
+    {
+      "name": "Azure Key Vault",
+      "ad_count": 1
+    },
+    {
+      "name": "Azure Resource Manager",
+      "ad_count": 1
+    },
+    {
+      "name": "Azure App Service",
+      "ad_count": 1
+    },
+    {
+      "name": "Azure Functions",
+      "ad_count": 1
+    },
+    {
+      "name": "Blazor",
+      "ad_count": 1
+    },
+    {
+      "name": "Razor Pages",
+      "ad_count": 1
+    },
+    {
+      "name": "Moq",
+      "ad_count": 1
+    },
+    {
+      "name": "Supertest",
+      "ad_count": 1
+    },
+    {
+      "name": "Apex",
+      "ad_count": 1
+    },
+    {
+      "name": "SAP HANA Database",
+      "ad_count": 1
+    },
+    {
+      "name": "Azure AD Connect",
+      "ad_count": 1
+    },
+    {
+      "name": "Citrix",
       "ad_count": 1
     },
     {
@@ -565,11 +2069,27 @@
       "ad_count": 1
     },
     {
-      "name": "Webpack",
+      "name": "Llama.cpp",
       "ad_count": 1
     },
     {
-      "name": "RxJS",
+      "name": "MLIR",
+      "ad_count": 1
+    },
+    {
+      "name": "React Hooks",
+      "ad_count": 1
+    },
+    {
+      "name": "AWS Well-Architected",
+      "ad_count": 1
+    },
+    {
+      "name": "Promptfoo",
+      "ad_count": 1
+    },
+    {
+      "name": "AWS Elastic Beanstalk",
       "ad_count": 1
     },
     {
@@ -577,55 +2097,227 @@
       "ad_count": 1
     },
     {
-      "name": "Phoenix",
+      "name": "Azure Event Hubs",
       "ad_count": 1
     },
     {
-      "name": "Erlang",
+      "name": "Zero-Knowledge Proofs",
       "ad_count": 1
     },
     {
-      "name": "Hive",
+      "name": "GitHub Codespaces",
       "ad_count": 1
     },
     {
-      "name": "DigitalOcean",
+      "name": "Pydantic AI",
       "ad_count": 1
     },
     {
-      "name": "JUnit",
+      "name": "TiDB",
       "ad_count": 1
     },
     {
-      "name": "Vite",
+      "name": "Babylon.js",
       "ad_count": 1
     },
     {
-      "name": "Nginx",
+      "name": "Kyverno",
       "ad_count": 1
     },
     {
-      "name": "HAProxy",
+      "name": "Kustomize",
       "ad_count": 1
     },
     {
-      "name": "Traefik",
+      "name": "Core Bluetooth",
       "ad_count": 1
     },
     {
-      "name": "OWASP",
+      "name": "GRDB",
       "ad_count": 1
     },
     {
-      "name": "Dart",
+      "name": "Core Animation",
       "ad_count": 1
     },
     {
-      "name": "Hadoop",
+      "name": "Core Graphics",
       "ad_count": 1
     },
     {
-      "name": "JMeter",
+      "name": "Mockito",
+      "ad_count": 1
+    },
+    {
+      "name": "Optimizely",
+      "ad_count": 1
+    },
+    {
+      "name": "OpenCL",
+      "ad_count": 1
+    },
+    {
+      "name": "DeepSpeed",
+      "ad_count": 1
+    },
+    {
+      "name": "Command and Control",
+      "ad_count": 1
+    },
+    {
+      "name": "AWS Organizations",
+      "ad_count": 1
+    },
+    {
+      "name": "Airtable",
+      "ad_count": 1
+    },
+    {
+      "name": "Freshdesk",
+      "ad_count": 1
+    },
+    {
+      "name": "WebAssembly",
+      "ad_count": 1
+    },
+    {
+      "name": "Packer",
+      "ad_count": 1
+    },
+    {
+      "name": "pg_dump",
+      "ad_count": 1
+    },
+    {
+      "name": "Kubebuilder",
+      "ad_count": 1
+    },
+    {
+      "name": "Crossplane",
+      "ad_count": 1
+    },
+    {
+      "name": "Cloudflare Workers",
+      "ad_count": 1
+    },
+    {
+      "name": "AWS Cost Explorer",
+      "ad_count": 1
+    },
+    {
+      "name": "Burp Suite",
+      "ad_count": 1
+    },
+    {
+      "name": "StoreKit",
+      "ad_count": 1
+    },
+    {
+      "name": "EU AI Act",
+      "ad_count": 1
+    },
+    {
+      "name": "AWS Security Specialty",
+      "ad_count": 1
+    },
+    {
+      "name": "IBM AS/400",
+      "ad_count": 1
+    },
+    {
+      "name": "OpenAI Function Calling",
+      "ad_count": 1
+    },
+    {
+      "name": "Google Dataproc",
+      "ad_count": 1
+    },
+    {
+      "name": "SSIS Packages",
+      "ad_count": 1
+    },
+    {
+      "name": "RSpec",
+      "ad_count": 1
+    },
+    {
+      "name": "Dataflow",
+      "ad_count": 1
+    },
+    {
+      "name": "AWS IoT Core",
+      "ad_count": 1
+    },
+    {
+      "name": "Oracle Cloud Infrastructure",
+      "ad_count": 1
+    },
+    {
+      "name": "CIS Benchmarks",
+      "ad_count": 1
+    },
+    {
+      "name": "Amazon Redshift Serverless",
+      "ad_count": 1
+    },
+    {
+      "name": "QLoRA",
+      "ad_count": 1
+    },
+    {
+      "name": "CocoaPods",
+      "ad_count": 1
+    },
+    {
+      "name": "Riverpod",
+      "ad_count": 1
+    },
+    {
+      "name": "Tricentis Tosca",
+      "ad_count": 1
+    },
+    {
+      "name": "Bitrise",
+      "ad_count": 1
+    },
+    {
+      "name": "Flux CD",
+      "ad_count": 1
+    },
+    {
+      "name": "Metaflow",
+      "ad_count": 1
+    },
+    {
+      "name": "TimescaleDB",
+      "ad_count": 1
+    },
+    {
+      "name": "Puppeteer",
+      "ad_count": 1
+    },
+    {
+      "name": "JSON Schema",
+      "ad_count": 1
+    },
+    {
+      "name": "Streamlit",
+      "ad_count": 1
+    },
+    {
+      "name": "SPARQL",
+      "ad_count": 1
+    },
+    {
+      "name": "PlanetScale",
+      "ad_count": 1
+    },
+    {
+      "name": "AMD SEV",
+      "ad_count": 1
+    },
+    {
+      "name": "Intel SGX",
       "ad_count": 1
     },
     {
@@ -633,11 +2325,687 @@
       "ad_count": 1
     },
     {
-      "name": "Objective-C",
+      "name": "Dataform",
+      "ad_count": 1
+    },
+    {
+      "name": "pfSense",
+      "ad_count": 1
+    },
+    {
+      "name": "HAProxy",
+      "ad_count": 1
+    },
+    {
+      "name": "Hetzner Cloud",
+      "ad_count": 1
+    },
+    {
+      "name": "NIST CSF",
+      "ad_count": 1
+    },
+    {
+      "name": "GPT-4",
+      "ad_count": 1
+    },
+    {
+      "name": "Worker Threads",
+      "ad_count": 1
+    },
+    {
+      "name": "IDA Pro",
+      "ad_count": 1
+    },
+    {
+      "name": "Radare2",
+      "ad_count": 1
+    },
+    {
+      "name": "Wireshark",
+      "ad_count": 1
+    },
+    {
+      "name": "Google Data Fusion",
+      "ad_count": 1
+    },
+    {
+      "name": "Conan",
+      "ad_count": 1
+    },
+    {
+      "name": "VS Code",
+      "ad_count": 1
+    },
+    {
+      "name": "IntelliJ IDEA",
+      "ad_count": 1
+    },
+    {
+      "name": "Groovy",
+      "ad_count": 1
+    },
+    {
+      "name": "Mapbox",
+      "ad_count": 1
+    },
+    {
+      "name": "OpenCTI",
+      "ad_count": 1
+    },
+    {
+      "name": "Backbone.js",
+      "ad_count": 1
+    },
+    {
+      "name": "React Router",
+      "ad_count": 1
+    },
+    {
+      "name": "mypy",
+      "ad_count": 1
+    },
+    {
+      "name": "Flake8",
+      "ad_count": 1
+    },
+    {
+      "name": "npm",
+      "ad_count": 1
+    },
+    {
+      "name": "Vercel AI SDK",
+      "ad_count": 1
+    },
+    {
+      "name": "KEDA",
+      "ad_count": 1
+    },
+    {
+      "name": "Karpenter",
+      "ad_count": 1
+    },
+    {
+      "name": "Cluster Autoscaler",
+      "ad_count": 1
+    },
+    {
+      "name": "Gatling",
+      "ad_count": 1
+    },
+    {
+      "name": "OWASP Top 10",
+      "ad_count": 1
+    },
+    {
+      "name": "Apollo Client",
+      "ad_count": 1
+    },
+    {
+      "name": "REST API",
+      "ad_count": 1
+    },
+    {
+      "name": "Terraform Modules",
+      "ad_count": 1
+    },
+    {
+      "name": "DataStore",
+      "ad_count": 1
+    },
+    {
+      "name": "FIDO2",
+      "ad_count": 1
+    },
+    {
+      "name": "Docker Desktop",
+      "ad_count": 1
+    },
+    {
+      "name": "Docker Hub",
+      "ad_count": 1
+    },
+    {
+      "name": "Docker Scout",
+      "ad_count": 1
+    },
+    {
+      "name": "Collibra",
+      "ad_count": 1
+    },
+    {
+      "name": "shadcn/ui",
+      "ad_count": 1
+    },
+    {
+      "name": "UiPath",
+      "ad_count": 1
+    },
+    {
+      "name": "Spotfire",
+      "ad_count": 1
+    },
+    {
+      "name": "Databricks SQL",
+      "ad_count": 1
+    },
+    {
+      "name": "Sitecore",
+      "ad_count": 1
+    },
+    {
+      "name": "React Three Fiber",
+      "ad_count": 1
+    },
+    {
+      "name": "Jaeger",
+      "ad_count": 1
+    },
+    {
+      "name": "Terragrunt",
+      "ad_count": 1
+    },
+    {
+      "name": "Presto",
+      "ad_count": 1
+    },
+    {
+      "name": "Operations Research",
+      "ad_count": 1
+    },
+    {
+      "name": "PostGIS",
+      "ad_count": 1
+    },
+    {
+      "name": "HTTPX",
+      "ad_count": 1
+    },
+    {
+      "name": "Flask-Migrate",
+      "ad_count": 1
+    },
+    {
+      "name": "Zustand",
+      "ad_count": 1
+    },
+    {
+      "name": "Keycloak",
+      "ad_count": 1
+    },
+    {
+      "name": "GitHub Advanced Security",
+      "ad_count": 1
+    },
+    {
+      "name": "Netsparker",
+      "ad_count": 1
+    },
+    {
+      "name": "Mocha",
+      "ad_count": 1
+    },
+    {
+      "name": "NgRx",
+      "ad_count": 1
+    },
+    {
+      "name": "Angular Signals",
+      "ad_count": 1
+    },
+    {
+      "name": "spaCy",
+      "ad_count": 1
+    },
+    {
+      "name": "Julia",
+      "ad_count": 1
+    },
+    {
+      "name": "ASP.NET MVC",
+      "ad_count": 1
+    },
+    {
+      "name": "Strapi CMS",
+      "ad_count": 1
+    },
+    {
+      "name": "AWS Step Functions",
+      "ad_count": 1
+    },
+    {
+      "name": "Ray",
+      "ad_count": 1
+    },
+    {
+      "name": "Ray Serve",
+      "ad_count": 1
+    },
+    {
+      "name": "NuGet",
+      "ad_count": 1
+    },
+    {
+      "name": "Cluster API",
+      "ad_count": 1
+    },
+    {
+      "name": "Rocky Linux",
+      "ad_count": 1
+    },
+    {
+      "name": "Productboard",
+      "ad_count": 1
+    },
+    {
+      "name": "Kerberos",
+      "ad_count": 1
+    },
+    {
+      "name": "SOAR",
+      "ad_count": 1
+    },
+    {
+      "name": "Heroku",
+      "ad_count": 1
+    },
+    {
+      "name": "Pact",
+      "ad_count": 1
+    },
+    {
+      "name": "Snowflake Cortex",
+      "ad_count": 1
+    },
+    {
+      "name": "CMMC",
+      "ad_count": 1
+    },
+    {
+      "name": "Outlines",
+      "ad_count": 1
+    },
+    {
+      "name": "TensorBoard",
+      "ad_count": 1
+    },
+    {
+      "name": "Weights & Biases",
+      "ad_count": 1
+    },
+    {
+      "name": "IDS/IPS",
+      "ad_count": 1
+    },
+    {
+      "name": "Solr",
+      "ad_count": 1
+    },
+    {
+      "name": "ActiveRecord",
+      "ad_count": 1
+    },
+    {
+      "name": "Framer",
+      "ad_count": 1
+    },
+    {
+      "name": "COBOL",
+      "ad_count": 1
+    },
+    {
+      "name": "JCL",
+      "ad_count": 1
+    },
+    {
+      "name": "LlamaIndex",
+      "ad_count": 1
+    },
+    {
+      "name": "SignalR",
+      "ad_count": 1
+    },
+    {
+      "name": "WebGPU",
+      "ad_count": 1
+    },
+    {
+      "name": "Apple Vision Pro",
+      "ad_count": 1
+    },
+    {
+      "name": "Core ML",
+      "ad_count": 1
+    },
+    {
+      "name": "Docker Swarm",
+      "ad_count": 1
+    },
+    {
+      "name": "Amazon MQ",
+      "ad_count": 1
+    },
+    {
+      "name": "Chainlink",
+      "ad_count": 1
+    },
+    {
+      "name": "Miro",
+      "ad_count": 1
+    },
+    {
+      "name": "Jenkins Pipeline",
+      "ad_count": 1
+    },
+    {
+      "name": "Azure Solutions Architect",
+      "ad_count": 1
+    },
+    {
+      "name": "React Native Reanimated",
+      "ad_count": 1
+    },
+    {
+      "name": "Cython",
+      "ad_count": 1
+    },
+    {
+      "name": "Tokio",
+      "ad_count": 1
+    },
+    {
+      "name": "JSP",
+      "ad_count": 1
+    },
+    {
+      "name": "Struts",
+      "ad_count": 1
+    },
+    {
+      "name": "Adobe Illustrator",
+      "ad_count": 1
+    },
+    {
+      "name": "Unity Addressables",
+      "ad_count": 1
+    },
+    {
+      "name": "SaltStack",
+      "ad_count": 1
+    },
+    {
+      "name": "Mixture of Experts",
+      "ad_count": 1
+    },
+    {
+      "name": "Google Cloud SQL",
+      "ad_count": 1
+    },
+    {
+      "name": "NFT",
+      "ad_count": 1
+    },
+    {
+      "name": "Dramatiq",
+      "ad_count": 1
+    },
+    {
+      "name": "Consul",
+      "ad_count": 1
+    },
+    {
+      "name": "Clang",
+      "ad_count": 1
+    },
+    {
+      "name": "C++14",
+      "ad_count": 1
+    },
+    {
+      "name": "Oracle Fusion",
+      "ad_count": 1
+    },
+    {
+      "name": "Oracle Hyperion",
+      "ad_count": 1
+    },
+    {
+      "name": "Oracle Data Integrator",
+      "ad_count": 1
+    },
+    {
+      "name": "Oracle EBS",
+      "ad_count": 1
+    },
+    {
+      "name": "Oracle Autonomous Database",
+      "ad_count": 1
+    },
+    {
+      "name": "Apache Pulsar",
+      "ad_count": 1
+    },
+    {
+      "name": "Radix UI",
+      "ad_count": 1
+    },
+    {
+      "name": "Stitches",
+      "ad_count": 1
+    },
+    {
+      "name": "Podman",
+      "ad_count": 1
+    },
+    {
+      "name": "GitLab Runner",
+      "ad_count": 1
+    },
+    {
+      "name": "GraphQL Federation",
+      "ad_count": 1
+    },
+    {
+      "name": "Apollo Federation",
+      "ad_count": 1
+    },
+    {
+      "name": "Azure ExpressRoute",
+      "ad_count": 1
+    },
+    {
+      "name": "Rollup",
+      "ad_count": 1
+    },
+    {
+      "name": "Vanilla Extract",
+      "ad_count": 1
+    },
+    {
+      "name": "MobX",
+      "ad_count": 1
+    },
+    {
+      "name": "Vertex AI",
+      "ad_count": 1
+    },
+    {
+      "name": "SCD Type 2",
+      "ad_count": 1
+    },
+    {
+      "name": "Makefile",
+      "ad_count": 1
+    },
+    {
+      "name": "Akeneo",
+      "ad_count": 1
+    },
+    {
+      "name": "Pimcore",
+      "ad_count": 1
+    },
+    {
+      "name": "Amazon MSK",
+      "ad_count": 1
+    },
+    {
+      "name": "Amazon Lake Formation",
+      "ad_count": 1
+    },
+    {
+      "name": "Symantec Endpoint",
+      "ad_count": 1
+    },
+    {
+      "name": "Make.com",
+      "ad_count": 1
+    },
+    {
+      "name": "Google Apps Script",
+      "ad_count": 1
+    },
+    {
+      "name": "Socket.IO",
+      "ad_count": 1
+    },
+    {
+      "name": "Neo4j",
+      "ad_count": 1
+    },
+    {
+      "name": "Phaser",
+      "ad_count": 1
+    },
+    {
+      "name": "CodeIgniter",
+      "ad_count": 1
+    },
+    {
+      "name": "Drizzle ORM",
       "ad_count": 1
     },
     {
       "name": "Lua",
+      "ad_count": 1
+    },
+    {
+      "name": "Styled Components",
+      "ad_count": 1
+    },
+    {
+      "name": "Testing Library",
+      "ad_count": 1
+    },
+    {
+      "name": "React Query",
+      "ad_count": 1
+    },
+    {
+      "name": "Builder.io",
+      "ad_count": 1
+    },
+    {
+      "name": "Vuex",
+      "ad_count": 1
+    },
+    {
+      "name": "Pinia",
+      "ad_count": 1
+    },
+    {
+      "name": "Magento 2",
+      "ad_count": 1
+    },
+    {
+      "name": "Codeception",
+      "ad_count": 1
+    },
+    {
+      "name": "PHPStan",
+      "ad_count": 1
+    },
+    {
+      "name": "WPBakery",
+      "ad_count": 1
+    },
+    {
+      "name": "Confidential Computing",
+      "ad_count": 1
+    },
+    {
+      "name": "Retrofit",
+      "ad_count": 1
+    },
+    {
+      "name": "POSIX",
+      "ad_count": 1
+    },
+    {
+      "name": "QML",
+      "ad_count": 1
+    },
+    {
+      "name": "Crystal Reports",
+      "ad_count": 1
+    },
+    {
+      "name": "LINQ",
+      "ad_count": 1
+    },
+    {
+      "name": "GPT-4o",
+      "ad_count": 1
+    },
+    {
+      "name": "OpenRouter",
+      "ad_count": 1
+    },
+    {
+      "name": "Amazon Bedrock",
+      "ad_count": 1
+    },
+    {
+      "name": "Expo Router",
+      "ad_count": 1
+    },
+    {
+      "name": "Unity C#",
+      "ad_count": 1
+    },
+    {
+      "name": "ARKit",
+      "ad_count": 1
+    },
+    {
+      "name": "Sophos",
+      "ad_count": 1
+    },
+    {
+      "name": "Cisco ISE",
+      "ad_count": 1
+    },
+    {
+      "name": "iptables",
+      "ad_count": 1
+    },
+    {
+      "name": "AlmaLinux",
+      "ad_count": 1
+    },
+    {
+      "name": "Veeam",
+      "ad_count": 1
+    },
+    {
+      "name": "Nagios",
+      "ad_count": 1
+    },
+    {
+      "name": "PyMC",
+      "ad_count": 1
+    },
+    {
+      "name": "Keras",
       "ad_count": 1
     }
   ]
