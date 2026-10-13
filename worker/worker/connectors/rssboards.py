@@ -38,6 +38,7 @@ class PythonOrgJobsConnector(FeedConnector):
                 "city": ", ".join(places[:3]),
                 "text": text_from_html(body or desc),
                 "source_url": first(it.get("link")),
+                "posted_at": first(it.get("pubdate") or it.get("published") or it.get("updated")),
                 "external_id": (re.findall(r"/jobs/(\d+)", first(it.get("link"))) or [""])[0],
                 "tags": ["Python"],
             })
@@ -69,6 +70,7 @@ class CryptoJobsListConnector(FeedConnector):
                 "city": clean(first(it.get("location")))[:160],
                 "text": text_from_html(desc),
                 "source_url": link,
+                "posted_at": first(it.get("pubdate") or it.get("published") or it.get("updated")),
                 "external_id": link.rstrip("/").rsplit("/", 1)[-1],
                 "tags": [t for t in tags if t.lower() != "web3 jobs"],
                 # Tags read like "Web3 Ios Jobs" or "Blockchain Full Time Jobs";
@@ -103,6 +105,7 @@ class RealWorkFromAnywhereConnector(FeedConnector):
                 "city": "Remote (Worldwide)",
                 "text": text_from_html(first(it.get("description"))),
                 "source_url": link,
+                "posted_at": first(it.get("pubdate") or it.get("published") or it.get("updated")),
                 "external_id": link.rstrip("/").rsplit("-", 1)[-1],
                 "remote": True,
             })
@@ -129,6 +132,7 @@ class BerlinStartupJobsConnector(FeedConnector):
                 "city": "Berlin",
                 "text": text_from_html(first(it.get("encoded")) or first(it.get("description"))),
                 "source_url": link,
+                "posted_at": first(it.get("pubdate") or it.get("published") or it.get("updated")),
                 "external_id": first(it.get("post-id")),
                 "tags": cats,
                 "category": [section.replace("-", " ")] + cats[:1],
@@ -156,6 +160,7 @@ class GolangProjectsConnector(FeedConnector):
                 "city": place,
                 "text": text_from_html(desc),
                 "source_url": link,
+                "posted_at": first(it.get("pubdate") or it.get("published") or it.get("updated")),
                 "external_id": (re.findall(r"job-([a-z0-9]+)-", link) or [""])[0],
                 "tags": ["Go"],
                 "remote": True if re.search(r"(?i)remotework\.html$|^remote\b", link + " " + place) else None,
@@ -182,6 +187,7 @@ class ElixirJobsConnector(FeedConnector):
                 "city": clean(place),
                 "text": desc,
                 "source_url": link,
+                "posted_at": first(it.get("pubdate") or it.get("published") or it.get("updated")),
                 "external_id": link.rstrip("/").rsplit("-", 1)[-1],
                 "tags": ["Elixir"],
                 "remote": True if clean(mode).lower() == "remote" else None,
@@ -207,6 +213,7 @@ class JobspressoConnector(FeedConnector):
                 "city": f"Remote ({place})" if place else "Remote",
                 "text": text_from_html(first(it.get("encoded")) or first(it.get("description"))),
                 "source_url": first(it.get("link")),
+                "posted_at": first(it.get("pubdate") or it.get("published") or it.get("updated")),
                 "external_id": first(it.get("post-id")),
                 "category": first(it.get("job_type")),
                 "remote": True,
@@ -252,6 +259,7 @@ class RemoteYeahConnector(FeedConnector):
                 "city": city,
                 "text": text_from_html(desc),
                 "source_url": link,
+                "posted_at": first(it.get("pubdate") or it.get("published") or it.get("updated")),
                 "external_id": link.rstrip("/").rsplit("/", 1)[-1] if link else "",
                 "remote": True,
             })
@@ -286,6 +294,7 @@ class RemoteFirstJobsRssConnector(FeedConnector):
                 "city": "Remote",
                 "text": text_from_html(first(it.get("description"))),
                 "source_url": link,
+                "posted_at": first(it.get("pubdate") or it.get("published") or it.get("updated")),
                 "external_id": link.rstrip("/").rsplit("-", 1)[-1],
                 "remote": True,
             })
@@ -359,6 +368,7 @@ class LandingJobsConnector(FeedConnector):
                 "city": clean(info.group("place"))[:160] if info else "",
                 "text": text_from_html(html),
                 "source_url": link,
+                "posted_at": first(it.get("pubdate") or it.get("published") or it.get("updated")),
                 "external_id": "landingjobs-" + link.rstrip("/").rsplit("/", 1)[-1],
                 # Only "Full remote" counts; "Partial remote" is hybrid.
                 "remote": True if mode.startswith("full remote") else None,
@@ -403,6 +413,7 @@ class NoDeskConnector(FeedConnector):
                 "text": full + "\n" + text_from_html(first(it.get("description"))),
                 "_head": full,
                 "source_url": link,
+                "posted_at": first(it.get("pubdate") or it.get("published") or it.get("updated")),
                 "external_id": "nodesk-" + link.rstrip("/").rsplit("/", 1)[-1],
                 "remote": True,
             })

@@ -67,6 +67,7 @@ class CryptocurrencyJobsConnector(FeedConnector):
                 "city": "",
                 "text": text_from_html(first(it.get("description"))),
                 "source_url": link,
+                "posted_at": first(it.get("pubdate") or it.get("published") or it.get("updated")),
                 "external_id": link.rstrip("/").rsplit("/", 1)[-1],
                 "_stamp": first(it.get("pubdate")),
             })
@@ -98,6 +99,7 @@ class JsJobbsConnector(FeedConnector):
                 "city": place,
                 "text": text_from_html(first(it.get("description"))),
                 "source_url": link,
+                "posted_at": first(it.get("pubdate") or it.get("published") or it.get("updated")),
                 "external_id": clean(first(it.get("guid"))),
                 "remote": True if remote else None,
             })
@@ -142,6 +144,7 @@ class AiDevBoardConnector(FeedConnector):
                 "city": city,
                 "text": "",
                 "source_url": link,
+                "posted_at": first(it.get("pubdate") or it.get("published") or it.get("updated")),
                 "external_id": link.rstrip("/").rsplit("-", 1)[-1],
                 "tags": tags,
                 "remote": True,

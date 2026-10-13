@@ -86,6 +86,7 @@ class RemoteOkConnector:
                 "source_url": url,
                 "source_name": self.name,
                 "external_id": clean(job.get("id") or "")[:200],
+                "posted_at": job.get("epoch") or job.get("date"),
                 "credit_note": getattr(self, "_credit", REMOTE_OK_CREDIT),
                 "tags": [clean(t) for t in (job.get("tags") or []) if clean(t)],
                 "category": [clean(t) for t in (job.get("tags") or []) if clean(t)][:3],

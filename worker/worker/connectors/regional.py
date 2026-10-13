@@ -161,6 +161,7 @@ class GetOnBoardConnector(FeedConnector):
                     "category": attrs.get("category_name"),
                     "remote": True if remote else None,
                     "_ts": int(attrs.get("published_at") or 0),
+                    "posted_at": attrs.get("published_at"),
                 })
         if not read:
             raise SourceFailed("get on board categories unreadable")
@@ -187,6 +188,7 @@ class HasjobConnector(FeedConnector):
                 "city": clean(first(item.get("location"))),
                 "text": text_from_html(html),
                 "source_url": first(item.get("link") or item.get("id")),
+                "posted_at": first(item.get("pubdate") or item.get("published") or item.get("updated")),
                 "external_id": first(item.get("id")),
             })
         return out
@@ -214,6 +216,7 @@ class WordPressJobsConnector(FeedConnector):
                 "city": "",
                 "text": text_from_html(first(item.get("encoded") or item.get("description"))),
                 "source_url": first(item.get("link")),
+                "posted_at": first(item.get("pubdate") or item.get("published") or item.get("updated")),
                 "external_id": first(item.get("guid")),
                 "tags": ["WordPress", "PHP"],
             })
@@ -241,6 +244,7 @@ class RemotePythonConnector(FeedConnector):
                 "city": "Remote",
                 "text": text_from_html(first(item.get("description"))),
                 "source_url": first(item.get("link")),
+                "posted_at": first(item.get("pubdate") or item.get("published") or item.get("updated")),
                 "external_id": first(item.get("guid")),
                 "tags": ["Python"],
                 "remote": True,

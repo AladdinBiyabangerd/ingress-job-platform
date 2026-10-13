@@ -632,7 +632,7 @@ class AshbyConnector(AtsConnector):
                 "category": team,
                 "tags": team,
                 "remote": True if workplace == "remote" else _remote_hint(place),
-                "_stamp": "",
+                "_stamp": job.get("publishedDate") or job.get("publishedAt") or "",
             })
         return rows
 

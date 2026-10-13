@@ -204,6 +204,7 @@ class DjinniConnector:
             "city": city,
             "text": text,
             "external_id": found.group(1) if found else "",
+            "posted_at": (posting.get("datePosted") if posting else "") or "",
             "source_url": url,
             "source_name": self.name,
         }

@@ -87,6 +87,7 @@ class WeWorkRemotelyConnector:
                 "source_url": url,
                 "source_name": self.name,
                 "external_id": clean(_child(item, "guid") or url)[:200],
+                "posted_at": clean(_child(item, "pubDate")),
                 "category": clean(_child(item, "category")),
                 "tags": [clean(el.text or "") for el in item.findall("skills")],
                 "remote": True,

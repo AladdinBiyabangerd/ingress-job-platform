@@ -60,6 +60,7 @@ class ArbeitnowConnector(FeedConnector):
                     "text": text_from_html(job.get("description")),
                     "source_url": job.get("url"),
                     "external_id": job.get("slug"),
+                    "posted_at": job.get("created_at"),
                     "tags": list(job.get("tags") or []),
                     "category": list(job.get("tags") or []),
                     "remote": remote,
@@ -116,6 +117,7 @@ class HimalayasConnector(FeedConnector):
                     "text": text_from_html(job.get("description") or job.get("excerpt")),
                     "source_url": job.get("applicationLink") or job.get("guid"),
                     "external_id": job.get("guid"),
+                    "posted_at": job.get("pubDate"),
                     "tags": cats,
                     # Specific categories ("QA-Engineer") before broad ones ("Developer").
                     "category": list(job.get("categories") or []) + list(job.get("parentCategories") or []),
