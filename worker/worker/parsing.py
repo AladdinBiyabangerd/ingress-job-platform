@@ -345,7 +345,13 @@ def norm_key(title: str, company: str, city: str) -> str:
         text = re.sub(r"[^\w\s]+", " ", text, flags=re.UNICODE)
         return _WS.sub(" ", text).strip()
 
-    return "|".join((norm(title), norm(company), norm(city)))
+    # A remote label ("Remote", "remote worldwide", "Anywhere") is not a place:
+    # the same ad from two boards must get one key whatever remote wording
+    # each board used.
+    from worker.place import is_remote_place
+
+    place = "" if is_remote_place(city or "") else city
+    return "|".join((norm(title), norm(company), norm(place)))
 
 
 def address_locality(location: object) -> str:

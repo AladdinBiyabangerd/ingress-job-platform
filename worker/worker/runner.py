@@ -364,6 +364,14 @@ def _run_pass(store: Store) -> int:
     except Exception:
         capture_exception()
     try:
+        store.merge_remote_twins()
+    except Exception:
+        capture_exception()
+    try:
+        store.expire_unseen()
+    except Exception:
+        capture_exception()
+    try:
         places = store.normalize_cities()
         if places:
             print(f"city normalize: {places}", flush=True)
@@ -567,6 +575,12 @@ def _run_source(store: Store, client: PoliteClient, connector, source_id: int,
     try:
         urls = connector.discover()
         found = len(urls)
+        try:
+            # Still listed = still seen, even when the run stops before
+            # fetching every page (time budget, create cap). Expiry reads this.
+            store.touch_seen(urls)
+        except Exception:
+            capture_exception()
         for url in urls:
             if created >= getattr(connector, "create_cap", CAP):
                 break

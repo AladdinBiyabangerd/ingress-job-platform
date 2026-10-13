@@ -95,6 +95,45 @@ REEXTRACT_STACK_STEP = "reextract-tech-stack-variants-v5-2026-10-13"
 # One-shot: drop the CJK half of "English / 日本語" titles on stored ads.
 LATIN_TITLE_STEP = "latin-title-mixed-cjk-2026-10-13"
 
+# One-shot: merge ads that are one ad saved twice only because two boards wrote
+# the remote place differently ("remote worldwide" vs empty). Keeps the
+# published/older row and moves every source onto it.
+MERGE_REMOTE_TWINS_STEP = "merge-remote-place-twins-2026-10-13"
+# Collected ads no source has listed for this long are hidden as expired.
+EXPIRE_REASON = "expired_not_seen"
+EXPIRE_AFTER_DAYS = 7
+
+_MERGES = """
+CREATE TABLE IF NOT EXISTS job_merges (
+    id INTEGER PRIMARY KEY,
+    kept_id INTEGER NOT NULL,
+    hidden_id INTEGER NOT NULL UNIQUE,
+    created_at TEXT NOT NULL
+)
+"""
+
+
+def like_prefix(value: str) -> str:
+    """LIKE pattern matching values that start with value (use ESCAPE '\\')."""
+    escaped = value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return escaped + "%"
+
+
+def _parse_ts(value: object):
+    from datetime import timezone
+
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
 _MAINTENANCE = """
 CREATE TABLE IF NOT EXISTS maintenance_steps (
     name TEXT PRIMARY KEY,
@@ -191,6 +230,7 @@ class Store:
         with self.conn:
             self.hidden_retired = hide_retired_local(self.conn)
             self.conn.execute(_API_USAGE)
+            self.conn.execute(_MERGES)
             from worker.cv_queue import ensure_cv_queue
             from worker.skills import ensure_skills
             from worker.roles import ensure_roles
@@ -421,7 +461,8 @@ class Store:
                     """
                     SELECT COALESCE(content_locked, 0) AS content_locked,
                            COALESCE(hidden, 0) AS hidden,
-                           merged_into, title, text, status
+                           merged_into, title, text, status,
+                           COALESCE(reject_reason, '') AS reject_reason
                     FROM jobs WHERE id = ?
                     """,
                     (existing["job_id"],),
@@ -434,6 +475,9 @@ class Store:
                     """,
                     (source_name, external_id, seen, credit, existing["id"]),
                 )
+                if held and self._unexpire(int(existing["job_id"]), held):
+                    held = dict(held)
+                    held["hidden"] = 0
                 locked = held and (
                     int(held["content_locked"] or 0) == 1
                     or int(held["hidden"] or 0) == 1
@@ -497,6 +541,13 @@ class Store:
                         "UPDATE jobs SET posted_at = COALESCE(posted_at, ?) WHERE id = ?",
                         (posted, job_id),
                     )
+                again = self.conn.execute(
+                    "SELECT COALESCE(hidden, 0) AS hidden, merged_into, "
+                    "COALESCE(reject_reason, '') AS reject_reason FROM jobs WHERE id = ?",
+                    (job_id,),
+                ).fetchone()
+                if again:
+                    self._unexpire(job_id, again)
             else:
                 cur = self.conn.execute(
                     """
@@ -773,9 +824,9 @@ class Store:
         if twin is not None:
             return twin
         rows = self.conn.execute(
-            "SELECT id, norm_key FROM jobs WHERE norm_key >= ? AND norm_key < ? "
+            "SELECT id, norm_key FROM jobs WHERE norm_key LIKE ? ESCAPE ? "
             "AND COALESCE(merged_into, 0) = 0",
-            (prefix, prefix + "\uffff"),
+            (like_prefix(prefix), "\\"),
         ).fetchall()
         for row in rows:
             tail = str(row["norm_key"])[len(prefix):]
@@ -794,9 +845,9 @@ class Store:
         if not title_key or not wanted:
             return None
         rows = self.conn.execute(
-            "SELECT id, norm_key FROM jobs WHERE norm_key >= ? AND norm_key < ? "
+            "SELECT id, norm_key FROM jobs WHERE norm_key LIKE ? ESCAPE ? "
             "AND COALESCE(merged_into, 0) = 0",
-            (title_key + "|", title_key + "|\uffff"),
+            (like_prefix(title_key + "|"), "\\"),
         ).fetchall()
         for row in rows:
             parts = str(row["norm_key"]).split("|")
@@ -813,6 +864,220 @@ class Store:
         ).fetchone()
         if other is None:
             self.conn.execute("UPDATE jobs SET norm_key = ? WHERE id = ?", (key, job_id))
+            return
+        # Another row already holds this key: the same ad saved twice. Merge
+        # collected twins instead of silently keeping two visible rows.
+        kept = self._merge_twins([job_id, int(other["id"])])
+        if kept is None:
+            print(f"norm_key collision kept apart: job={job_id} other={other['id']} key={key!r}", flush=True)
+
+    def touch_seen(self, urls, *, batch: int = 200) -> int:
+        """Mark stored sources whose URL a board still lists as seen now."""
+        clean = [str(u).strip() for u in urls if str(u or "").strip()]
+        if not clean:
+            return 0
+        seen = now_iso()
+        done = 0
+        for start in range(0, len(clean), batch):
+            chunk = clean[start:start + batch]
+            marks = ", ".join("?" for _ in chunk)
+            with self.conn:
+                cur = self.conn.execute(
+                    f"UPDATE job_sources SET last_seen = ? WHERE source_url IN ({marks})",
+                    [seen, *chunk],
+                )
+                count = getattr(cur, "rowcount", -1)
+                done += int(count) if count is not None and count >= 0 else 0
+        return done
+
+    def _unexpire(self, job_id: int, row) -> bool:
+        """Show again an ad hidden as expired once a source lists it again.
+        Only rows this worker hid as expired are touched (not staff hides,
+        not merged twins). Changed content still goes back to review via the
+        normal upsert path."""
+        if not row or not int(row["hidden"] or 0) or row["merged_into"]:
+            return False
+        if str(row["reject_reason"] or "") != EXPIRE_REASON:
+            return False
+        self.conn.execute(
+            "UPDATE jobs SET hidden = 0, reject_reason = '' WHERE id = ? AND reject_reason = ?",
+            (job_id, EXPIRE_REASON),
+        )
+        return True
+
+    def _merge_twins(self, ids: list[int]) -> int | None:
+        """Merge collected rows that are one ad. Keeps the visible published
+        row, else the oldest; the others get hidden=1 + merged_into and their
+        sources move to the kept row. Cabinet (owner) and staff-locked rows
+        are never merged. Returns the kept id, or None when nothing merged."""
+        unique = sorted({int(i) for i in ids})
+        if len(unique) < 2:
+            return None
+        marks = ", ".join("?" for _ in unique)
+        rows = self.conn.execute(
+            f"""
+            SELECT id, status, COALESCE(hidden, 0) AS hidden, created_at,
+                   COALESCE(owner_subject, '') AS owner_subject,
+                   COALESCE(content_locked, 0) AS content_locked, merged_into
+            FROM jobs WHERE id IN ({marks})
+            """,
+            unique,
+        ).fetchall()
+        rows = [
+            r for r in rows
+            if not r["owner_subject"] and not int(r["content_locked"] or 0)
+            and not r["merged_into"]
+        ]
+        if len(rows) < 2:
+            return None
+
+        def rank(r):
+            visible = str(r["status"] or "") == "published" and not int(r["hidden"] or 0)
+            stamp = _parse_ts(r["created_at"])
+            return (0 if visible else 1, stamp.timestamp() if stamp else float("inf"), int(r["id"]))
+
+        rows.sort(key=rank)
+        keep = int(rows[0]["id"])
+        now = now_iso()
+        for r in rows[1:]:
+            dup = int(r["id"])
+            self.conn.execute(
+                "UPDATE jobs SET hidden = 1, merged_into = ? WHERE id = ?", (keep, dup)
+            )
+            self.conn.execute(
+                "UPDATE job_sources SET job_id = ? WHERE job_id = ?", (keep, dup)
+            )
+            self.conn.execute(
+                "INSERT INTO job_merges (kept_id, hidden_id, created_at) VALUES (?, ?, ?) "
+                "ON CONFLICT (hidden_id) DO NOTHING",
+                (keep, dup, now),
+            )
+        return keep
+
+    def merge_remote_twins(self, *, force: bool = False) -> int:
+        """One-time: re-key collected rows with the current norm_key (remote
+        labels no longer part of the key) and merge rows that now share a key.
+        Returns how many rows were merged away."""
+        self.conn.execute(_MAINTENANCE)
+        self.conn.execute(_MERGES)
+        if not force and self.conn.execute(
+            "SELECT 1 FROM maintenance_steps WHERE name = ?", (MERGE_REMOTE_TWINS_STEP,)
+        ).fetchone():
+            return 0
+        rows = self.conn.execute(
+            """
+            SELECT id, title, company, city, norm_key FROM jobs
+            WHERE COALESCE(owner_subject, '') = ''
+              AND COALESCE(content_locked, 0) = 0
+              AND (merged_into IS NULL OR merged_into = 0)
+            ORDER BY id
+            """
+        ).fetchall()
+        groups: dict[str, list[int]] = {}
+        current: dict[int, str] = {}
+        for r in rows:
+            key = norm_key(str(r["title"] or ""), str(r["company"] or ""), str(r["city"] or ""))
+            groups.setdefault(key, []).append(int(r["id"]))
+            current[int(r["id"])] = str(r["norm_key"] or "")
+        merged = 0
+        rekeyed = 0
+        with self.conn:
+            for key, ids in groups.items():
+                keep = ids[0]
+                if len(ids) > 1:
+                    kept = self._merge_twins(ids)
+                    if kept is not None:
+                        keep = kept
+                        merged += len(ids) - 1
+                if current.get(keep) != key:
+                    taken = self.conn.execute(
+                        "SELECT id FROM jobs WHERE norm_key = ? AND id != ?", (key, keep)
+                    ).fetchone()
+                    if taken is None:
+                        self.conn.execute("UPDATE jobs SET norm_key = ? WHERE id = ?", (key, keep))
+                        rekeyed += 1
+            self.conn.execute(
+                "INSERT INTO maintenance_steps (name, done_at) VALUES (?, ?) "
+                "ON CONFLICT (name) DO NOTHING",
+                (MERGE_REMOTE_TWINS_STEP, now_iso()),
+            )
+        print(f"remote twins {MERGE_REMOTE_TWINS_STEP}: merged={merged} rekeyed={rekeyed}", flush=True)
+        return merged
+
+    def expire_unseen(self, *, now=None, days: int = EXPIRE_AFTER_DAYS, batch: int = 200) -> int:
+        """Hide collected ads no source has listed for `days`, but only when
+        every source of the ad had a successful crawl after it last saw the
+        ad (a broken or paused source never expires anything). Sets
+        hidden=1 and reject_reason='expired_not_seen'; upsert shows the ad
+        again when a source lists it. Timestamps are compared as parsed
+        datetimes, so mixed UTC offsets and Postgres/SQLite text are safe."""
+        from datetime import timedelta, timezone
+
+        moment = now or datetime.now(timezone.utc)
+        cutoff = moment - timedelta(days=days)
+        # Latest clean run per source (ok, listed something, no error such as
+        # a stopped or partly failed run), compared as parsed datetimes (MAX over
+        # text would mis-order mixed UTC offsets).
+        parsed_ok: dict[str, object] = {}
+        for r in self.conn.execute(
+            """
+            SELECT s.name AS name, r.started_at AS started_at
+            FROM crawl_runs r JOIN crawl_sources s ON s.id = r.source_id
+            WHERE r.status = 'ok' AND COALESCE(r.found_count, 0) > 0
+              AND COALESCE(r.error, '') = ''
+            """
+        ).fetchall():
+            stamp = _parse_ts(r["started_at"])
+            name = str(r["name"] or "").lower()
+            if stamp is not None and (name not in parsed_ok or stamp > parsed_ok[name]):
+                parsed_ok[name] = stamp
+        rows = self.conn.execute(
+            """
+            SELECT j.id AS id, js.source_name AS source_name, js.last_seen AS last_seen
+            FROM jobs j JOIN job_sources js ON js.job_id = j.id
+            WHERE COALESCE(j.owner_subject, '') = ''
+              AND COALESCE(j.content_locked, 0) = 0
+              AND COALESCE(j.hidden, 0) = 0
+              AND (j.merged_into IS NULL OR j.merged_into = 0)
+            """
+        ).fetchall()
+        per_job: dict[int, list[tuple[str, object]]] = {}
+        for r in rows:
+            per_job.setdefault(int(r["id"]), []).append(
+                (str(r["source_name"] or "").lower(), _parse_ts(r["last_seen"]))
+            )
+        expired: list[int] = []
+        for job_id, seen in per_job.items():
+            stamps = [stamp for _, stamp in seen]
+            if any(stamp is None for stamp in stamps):
+                continue
+            if max(stamps) >= cutoff:
+                continue
+            ok = True
+            for name, stamp in seen:
+                run = parsed_ok.get(name)
+                if run is None or run <= stamp:
+                    ok = False
+                    break
+            if ok:
+                expired.append(job_id)
+        hidden = 0
+        for start in range(0, len(expired), batch):
+            chunk = expired[start:start + batch]
+            marks = ", ".join("?" for _ in chunk)
+            with self.conn:
+                cur = self.conn.execute(
+                    f"UPDATE jobs SET hidden = 1, reject_reason = ? "
+                    f"WHERE id IN ({marks}) AND COALESCE(hidden, 0) = 0",
+                    [EXPIRE_REASON, *chunk],
+                )
+                count = getattr(cur, "rowcount", -1)
+                hidden += int(count) if count is not None and count >= 0 else len(chunk)
+        print(
+            f"expire unseen: checked={len(per_job)} expired={hidden} cutoff={cutoff.isoformat(timespec='seconds')}",
+            flush=True,
+        )
+        return hidden
 
     def list_jobs(self) -> list[sqlite3.Row]:
         return list(
