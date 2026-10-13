@@ -171,5 +171,6 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
         "arago", "recraft", "stream", "reka", "justplay-gmbh",
         "foundationhealthcareers", "primeintellect", "inferact", "hud", "spellbrush",
         "etched", "camunda", "pennylane", "docker", "tigerdata",
-        "duck-duck-go", "buffer", "blockstream", "parity", "trilitech")),
+        "duck-duck-go", "buffer", "blockstream", "parity", "trilitech",
+        "claimsorted", "inworld-ai", "matter-labs", "flipper", "partly.com")),
 ]
