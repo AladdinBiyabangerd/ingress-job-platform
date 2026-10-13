@@ -334,7 +334,7 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
       .map((item) => String(item?.name || "").trim())
       .filter(Boolean)
       .join(",");
-    const params = new URLSearchParams({ name, limit: "8" });
+    const params = new URLSearchParams({ name, limit: "12" });
     if (exclude) params.set("exclude", exclude);
     const timer = window.setTimeout(() => {
       fetch(`/api/skills/related?${params}`, {
@@ -352,14 +352,15 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
           setSkillSuggestions(
             items
               .map((item) => String(item?.name || "").trim())
-              .filter((itemName) => itemName && !owned.has(itemName.toLowerCase())),
+              .filter((itemName) => itemName && !owned.has(itemName.toLowerCase()))
+              .slice(0, 8),
           );
         })
         .catch((err) => {
           if (err?.name === "AbortError") return;
           setSkillSuggestions([]);
         });
-    }, 180);
+    }, 120);
     return () => {
       controller.abort();
       window.clearTimeout(timer);
@@ -690,18 +691,24 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
     }
   }
 
-  function addSkillByName(name, years = "") {
+  function addSkillByName(name, years = "", { focus = true } = {}) {
     const cleaned = String(name || "").trim();
     if (!cleaned) return false;
     if (skills.some((item) => item.name.toLowerCase() === cleaned.toLowerCase())) {
-      setFocusSkill(cleaned);
+      if (focus) setFocusSkill(cleaned);
       return false;
     }
     setSkills((current) => [
       ...current,
       { name: cleaned, years: formatYears(years), level: "", source: "user" },
     ]);
-    setFocusSkill(cleaned);
+    if (focus) setFocusSkill(cleaned);
+    else {
+      // Keep current focus; drop the chip immediately so the refetch can refill.
+      setSkillSuggestions((current) =>
+        current.filter((item) => item.toLowerCase() !== cleaned.toLowerCase()),
+      );
+    }
     return true;
   }
 
@@ -719,7 +726,8 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
   }
 
   function addSuggestedSkill(name) {
-    addSkillByName(name, "");
+    // Stay on the focused skill so recommendations refill with other matches.
+    addSkillByName(name, "", { focus: false });
   }
 
   function updateSkill(index, patch) {
@@ -797,6 +805,10 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
   const showForm = entry === "form" || entry === "manual" || Boolean(payload?.exists);
   const showChooser = allowed && payload && !payload.exists && !parseOpen(payload.parse_status) && !entry;
   const isParsing = uploading || polling || parseOpen(payload?.parse_status);
+  const ownedSkillNames = skillNamesLower(skills);
+  const visibleSuggestions = skillSuggestions.filter(
+    (name) => name && !ownedSkillNames.has(name.toLowerCase()),
+  );
 
   return (
     <Shell locale={locale} mode="profileReview">
@@ -1137,11 +1149,11 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
                           ) : (
                             <p className="hint">{t.profileReviewSkillsEmpty}</p>
                           )}
-                          {skillSuggestions.length ? (
+                          {visibleSuggestions.length ? (
                             <div className="skill-suggest">
                               <p className="skill-suggest-label hint">{t.profileReviewSkillSuggest}</p>
                               <div className="skill-suggest-cloud" role="list">
-                                {skillSuggestions.map((name) => (
+                                {visibleSuggestions.map((name) => (
                                   <button
                                     key={name}
                                     type="button"
