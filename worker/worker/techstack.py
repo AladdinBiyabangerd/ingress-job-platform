@@ -40,7 +40,7 @@ def _cs(body: str) -> re.Pattern[str]:
 _TECH: list[tuple[str, re.Pattern[str], tuple[str, ...], str]] = [
     # languages
     ("Python", _ci(r"python[23]?|pyspark"), ("py", "python3", "python2"), "language"),
-    ("Java", re.compile(_L + r"Java" + r"(?![A-Za-z0-9_+#]|\s*Script)"), ("java",), "language"),
+    ("Java", re.compile(_L + r"java" + r"(?![A-Za-z0-9_+#]|[\s\-]*script)", re.IGNORECASE), ("java",), "language"),
     ("Kotlin", _ci(r"kotlin"), (), "language"),
     ("Scala", _cs(r"Scala"), ("scala",), "language"),
     ("Go", re.compile(r"(?i:golang)|" + _L + r"Go(?=\s*(?:,|/|\)|\(|;|\s+(?:developer|engineer|backend|services|microservices|programming|language|or|and|&)\b))"), ("go", "golang"), "language"),
@@ -478,7 +478,7 @@ def extract_stack(text: str, tags: object = None, title: str = "") -> list[str]:
     than TAGS_ENOUGH known technologies."""
     found = stack_from_tags(tags)
     if len(found) >= TAGS_ENOUGH:
-        return found[:MAX_STACK]
+        return _cap(found)
     sample = f"{title}\n{text or ''}"[:30000]
     scored: list[tuple[int, int, str]] = []
     for name, pattern, _cat in _candidates(sample):
@@ -493,7 +493,22 @@ def extract_stack(text: str, tags: object = None, title: str = "") -> list[str]:
         if name not in found:
             found.append(name)
     # A JavaScript chip next to TypeScript or a framework adds little.
-    return found[:MAX_STACK]
+    return _cap(found)
+
+
+_CORE_LANGS = ("Java", "Kotlin", "Scala", "Python", "Go", "Rust", "TypeScript",
+               "JavaScript", "PHP", "Ruby", "C#", "C++", ".NET", "Swift")
+
+
+def _cap(found: list[str]) -> list[str]:
+    """Cut to MAX_STACK but never drop a core language that was found: the
+    language decides search filters (e.g. "Java"), tools are secondary."""
+    if len(found) <= MAX_STACK:
+        return found
+    keep = [n for n in found if n in _CORE_LANGS][:MAX_STACK]
+    rest = [n for n in found if n not in keep]
+    chosen = set(keep + rest[: MAX_STACK - len(keep)])
+    return [n for n in found if n in chosen]
 
 
 def dump_stack(stack: list[str]) -> str:
