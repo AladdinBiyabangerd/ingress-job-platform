@@ -13,6 +13,7 @@ GET /jobs list omits description text and apply form; GET /jobs/{id} returns the
 
 from __future__ import annotations
 
+from app.sql_like import LIKE_ESCAPE, like_contains
 import json
 import os
 import re
@@ -547,13 +548,15 @@ def _build_sql_filters(
     params: list = []
     needle = q.strip().lower()
     if needle:
-        like = f"%{needle}%"
-        clauses.append("(LOWER(j.title) LIKE ? OR LOWER(j.company) LIKE ?)")
+        like = like_contains(needle)
+        clauses.append(
+            f"(LOWER(j.title) LIKE ? {LIKE_ESCAPE} OR LOWER(j.company) LIKE ? {LIKE_ESCAPE})"
+        )
         params.extend([like, like])
     company_q = company.strip().lower()
     if company_q:
-        clauses.append("LOWER(j.company) LIKE ?")
-        params.append(f"%{company_q}%")
+        clauses.append(f"LOWER(j.company) LIKE ? {LIKE_ESCAPE}")
+        params.append(like_contains(company_q))
     variants = [v.strip() for v in (city_values or []) if str(v).strip()]
     if variants:
         placeholders = ",".join("?" * len(variants))

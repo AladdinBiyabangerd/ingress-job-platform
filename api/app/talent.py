@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.sql_like import like_contains
 import json
 import re
 
@@ -86,7 +87,7 @@ def search_talent(
     current = max(1, int(page or 1))
     size = min(MAX_PER_PAGE, max(1, int(per_page or DEFAULT_PER_PAGE)))
     needle = _WS.sub(" ", (q or "").strip())[:120]
-    like = f"%{needle.lower()}%" if needle else ""
+    like = like_contains(needle.lower()) if needle else ""
 
     with _LOCK:
         conn = _connect()
@@ -107,9 +108,9 @@ def search_talent(
             if like:
                 where += """
                 AND (
-                    LOWER(COALESCE(cp.headline, '')) LIKE ?
-                    OR LOWER(COALESCE(cp.seniority, '')) LIKE ?
-                    OR LOWER(COALESCE(cp.data, '')) LIKE ?
+                    LOWER(COALESCE(cp.headline, '')) LIKE ? ESCAPE '\\'
+                    OR LOWER(COALESCE(cp.seniority, '')) LIKE ? ESCAPE '\\'
+                    OR LOWER(COALESCE(cp.data, '')) LIKE ? ESCAPE '\\'
                 )
                 """
                 params.extend([like, like, like])
