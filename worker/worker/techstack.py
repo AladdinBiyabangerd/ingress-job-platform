@@ -653,7 +653,9 @@ _TECH_TITLE = re.compile(
     r"kubernetes|\baws\b|salesforce developer|odoo|"
     r"desarrollador|desenvolvedor|ingenier[oa] de (?:software|datos)|seguridad (?:de la )?(?:informaci|inform|de infra|ciber)|"
     r"seguridad de infraestructura|ciberseguridad|seguran[cç]a da informa|analista (?:qa|de (?:datos|sistemas|calidad))|"
-    r"proqramç|proqramlaşdırma|разработчик|программист|тестировщик|девопс",
+    r"proqramç|proqramlaşdırma|разработчик|программист|тестировщик|тестувальник|девопс|"
+    r"\blinux\b|\bunix\b|сисадм|системн\w* (?:адміністратор|администратор)|"
+    r"адміністратор (?:систем|мереж|linux)|администратор (?:систем|сетей|linux)",
     re.IGNORECASE,
 )
 
@@ -824,9 +826,40 @@ _CRYPTO_BIZ_TITLE = re.compile(
 )
 
 
+# A company or product domain inside a title ("Growth Marketer - Reception.ai")
+# says nothing about the role, so ".ai"/".io" must not read as an AI/tech word.
+_DOMAIN_TOKEN = re.compile(
+    r"\b[\w-]+\.(?:ai|io|app|tech|co|com|so|xyz|dev|gg|ly|me)\b", re.IGNORECASE
+)
+# Roles that are not IT whatever the source says, unless the title also names
+# an engineering job ("Marketing Engineer" stays in via _STRONG_TITLE).
+_ROLE_NON_IT = re.compile(
+    r"\bmarketers?\b|\bstrategists?\b|\bhead of\b[^,;|]{0,40}\bexpansion\b|"
+    r"\bexpansion (?:manager|lead|director|specialist)\b|"
+    r"\bproduct designers?\b|\bmotion designers?\b",
+    re.IGNORECASE,
+)
+
+
+def title_rule_2026_10_13_rejects(title: str) -> bool:
+    """True when one of the 2026-10-13 title rules (domain tokens, marketer/
+    strategist/expansion, product/motion designer)
+    is what makes the title non-IT. Used once to re-check published ads."""
+    raw = title or ""
+    if is_tech_job(raw):
+        return False
+    stripped = _DOMAIN_TOKEN.sub(" ", raw)
+    return bool(
+        stripped != raw
+        or _ROLE_NON_IT.search(stripped)
+    )
+
+
 def is_tech_job(title: str, category: object = "", tags: object = None) -> bool:
     """The source category wins when it is clear; otherwise the title decides."""
-    title = title or ""
+    title = _DOMAIN_TOKEN.sub(" ", title or "")
+    if _ROLE_NON_IT.search(title) and not _STRONG_TITLE.search(title):
+        return False
     if _PHYSICAL_TITLE.search(title):
         return False
     if _BIZ_TITLE.search(title) and not _BIZ_KEEP.search(title):

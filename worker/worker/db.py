@@ -99,6 +99,9 @@ LATIN_TITLE_STEP = "latin-title-mixed-cjk-2026-10-13"
 # the remote place differently ("remote worldwide" vs empty). Keeps the
 # published/older row and moves every source onto it.
 MERGE_REMOTE_TWINS_STEP = "merge-remote-place-twins-2026-10-13"
+# One-shot: re-check published collected ads with the 2026-10-13 title rules.
+TITLE_RULE_STEP = "title-rule-recheck-2026-10-13"
+TITLE_RULE_REASON = "title_rule_2026_10_13"
 # Collected ads no source has listed for this long are hidden as expired.
 EXPIRE_REASON = "expired_not_seen"
 EXPIRE_AFTER_DAYS = 7
@@ -1003,6 +1006,48 @@ class Store:
             )
         print(f"remote twins {MERGE_REMOTE_TWINS_STEP}: merged={merged} rekeyed={rekeyed}", flush=True)
         return merged
+
+    def recheck_title_rule(self, *, force: bool = False) -> list[tuple[int, str]]:
+        """One-time: hide published collected ads that the 2026-10-13 title
+        rules make non-IT (hidden=1, reject_reason=TITLE_RULE_REASON). Status
+        stays, so staff can unhide. Owner and staff-locked ads are skipped.
+        Returns (id, title) of the rows hidden."""
+        from worker.techstack import title_rule_2026_10_13_rejects
+
+        self.conn.execute(_MAINTENANCE)
+        if not force and self.conn.execute(
+            "SELECT 1 FROM maintenance_steps WHERE name = ?", (TITLE_RULE_STEP,)
+        ).fetchone():
+            return []
+        rows = self.conn.execute(
+            """
+            SELECT id, title FROM jobs
+            WHERE status = 'published'
+              AND COALESCE(hidden, 0) = 0
+              AND (merged_into IS NULL OR merged_into = 0)
+              AND COALESCE(owner_subject, '') = ''
+              AND COALESCE(content_locked, 0) = 0
+            """
+        ).fetchall()
+        hit = [(int(r["id"]), str(r["title"] or "")) for r in rows
+               if title_rule_2026_10_13_rejects(str(r["title"] or ""))]
+        with self.conn:
+            for start in range(0, len(hit), 200):
+                chunk = [job_id for job_id, _ in hit[start:start + 200]]
+                marks = ", ".join("?" for _ in chunk)
+                self.conn.execute(
+                    f"UPDATE jobs SET hidden = 1, reject_reason = ? WHERE id IN ({marks})",
+                    [TITLE_RULE_REASON, *chunk],
+                )
+            self.conn.execute(
+                "INSERT INTO maintenance_steps (name, done_at) VALUES (?, ?) "
+                "ON CONFLICT (name) DO NOTHING",
+                (TITLE_RULE_STEP, now_iso()),
+            )
+        print(f"title rule {TITLE_RULE_STEP}: checked={len(rows)} hidden={len(hit)}", flush=True)
+        for job_id, title in hit:
+            print(f"title rule hidden: {job_id} {title}", flush=True)
+        return hit
 
     def expire_unseen(self, *, now=None, days: int = EXPIRE_AFTER_DAYS, batch: int = 200) -> int:
         """Hide collected ads no source has listed for `days`, but only when

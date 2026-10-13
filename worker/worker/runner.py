@@ -368,6 +368,10 @@ def _run_pass(store: Store) -> int:
     except Exception:
         capture_exception()
     try:
+        store.recheck_title_rule()
+    except Exception:
+        capture_exception()
+    try:
         store.expire_unseen()
     except Exception:
         capture_exception()

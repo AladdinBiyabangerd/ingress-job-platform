@@ -20,7 +20,7 @@ KEPT = [
     "Senior GTM AI Engineer", "GRC Analyst",
     "Salesforce Developer", "Project Manager", "Game Designer", "Product Manager",
     "Crypto Engineer", "IT Specialist",
-    "Product Designer", "UX Designer", "UI/UX Designer", "Data Analyst",
+    "UX Designer", "UI/UX Designer", "Data Analyst",  # Product Designer: non-IT since 2026-10-13
     "Data Engineer", "CPQ Developer", "Shopify Developer", "Senior Product Manager",
 ]
 # Broad source categories that used to let business titles through.
