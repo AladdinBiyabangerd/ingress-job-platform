@@ -11,6 +11,7 @@ category. robots.txt is checked for the API host and for every posting URL.
 
 from __future__ import annotations
 
+import json
 import re
 import time
 from urllib.parse import urlparse
@@ -18,7 +19,7 @@ from xml.etree import ElementTree as ET
 
 from worker.ats_boards import ATS_MAX_BOARDS, GROUPS
 from worker.connectors.feed import RSS_ACCEPT, FeedConnector, text_from_html
-from worker.http import NotFound, SourceBlocked, SourceFailed
+from worker.http import Disallowed, NotFound, SourceBlocked, SourceFailed
 from worker.parsing import clean
 from worker.techstack import is_tech_job
 
@@ -567,12 +568,101 @@ class PersonioConnector(AtsConnector):
 
 # ------------------------------------------------------------ regional groups
 
+# --------------------------------------------------------------------- Ashby
+
+
+def _ashby_app_data(html: str) -> dict:
+    marker = "window.__appData = "
+    i = html.find(marker)
+    if i < 0:
+        raise SourceFailed("ashby page had no app data")
+    try:
+        data, _ = json.JSONDecoder().raw_decode(html[i + len(marker):])
+    except ValueError as exc:
+        raise SourceFailed("ashby app data unreadable") from exc
+    return data if isinstance(data, dict) else {}
+
+
+class AshbyConnector(AtsConnector):
+    """Employer boards hosted on jobs.ashbyhq.com.
+
+    api.ashbyhq.com answers robots.txt with HTTP 401 (treated as blocked), so we
+    read the robots-allowed hosted pages instead: the board page carries the job
+    list (title, location, workplace type) and each posting page its full text.
+    Only /api/, /b/ and /meeting/ are disallowed on jobs.ashbyhq.com."""
+
+    entry_url = "https://jobs.ashbyhq.com/"
+    credit_note = (
+        "Employer's public Ashby job board (jobs.ashbyhq.com). The link opens the employer's "
+        "original posting."
+    )
+
+    def board_items(self, slug: str) -> list[dict]:
+        url = f"https://jobs.ashbyhq.com/{slug}"
+        if not self.client.allowed(url):
+            return []
+        data = _ashby_app_data(self.client.get_text(url))
+        board = data.get("jobBoard") or {}
+        posts = board.get("jobPostings") if isinstance(board, dict) else None
+        if not isinstance(posts, list):
+            raise SourceFailed(f"ashby board {slug} had no postings")
+        org = data.get("organization") or {}
+        company = clean(org.get("name")) or slug
+        teams = {t.get("id"): clean(t.get("name")) for t in board.get("teams") or [] if isinstance(t, dict)}
+        rows: list[dict] = []
+        for job in posts:
+            if not isinstance(job, dict) or not job.get("id"):
+                continue
+            title = clean(job.get("title"))
+            team = [teams[job.get("teamId")]] if teams.get(job.get("teamId")) else []
+            if not title or not is_tech_job(title, team, team):
+                continue
+            places = [clean(job.get("locationName"))] + [
+                clean(x.get("locationName") if isinstance(x, dict) else x)
+                for x in job.get("secondaryLocations") or []]
+            place = "; ".join(p for p in places if p)[:200]
+            workplace = str(job.get("workplaceType") or "").lower()
+            rows.append({
+                "title": title,
+                "company": company,
+                "city": place,
+                "text": "",
+                "source_url": f"https://jobs.ashbyhq.com/{slug}/{job['id']}",
+                "external_id": f"ashby-{slug}-{job['id']}",
+                "category": team,
+                "tags": team,
+                "remote": True if workplace == "remote" else _remote_hint(place),
+                "_stamp": "",
+            })
+        return rows
+
+    def fetch(self, url: str) -> str:
+        item = self._items.get(url)
+        if item is None:
+            raise SourceFailed(f"feed item missing for {url}")
+        if not self.client.allowed(url):
+            raise Disallowed(url)
+        post = _ashby_app_data(self.client.get_text(url)).get("posting") or {}
+        if isinstance(post, dict) and post:
+            item["text"] = text_from_html(post.get("descriptionHtml") or "")
+            names = [clean(post.get("locationName"))] + [clean(x) for x in post.get("secondaryLocationNames") or []]
+            place = "; ".join(x for x in names if x)
+            if place:
+                item["city"] = place[:200]
+            if str(post.get("workplaceType") or "").lower() == "remote":
+                item["remote"] = True
+        return json.dumps(item, ensure_ascii=False)
+
+
 _BASES = {
     "greenhouse": GreenhouseConnector,
     "lever": LeverConnector,
     "teamtailor": TeamtailorConnector,
     "breezy": BreezyConnector,
     "pinpoint": PinpointConnector,
+    "ashby": AshbyConnector,
+    "workable": WorkableConnector,
+    "recruitee": RecruiteeConnector,
 }
 
 
@@ -585,6 +675,8 @@ def _group_class(name: str, ats: str, boards: tuple[str, ...]) -> type:
         attrs["entry_url"] = f"https://{boards[0]}.breezy.hr/json"
     elif ats == "pinpoint":
         attrs["entry_url"] = f"https://{boards[0]}.pinpointhq.com/postings.json"
+    elif ats == "recruitee":
+        attrs["entry_url"] = f"https://{boards[0]}.recruitee.com/api/offers/"
     cls_name = re.sub(r"[^A-Za-z]", "", name.title()) + "Connector"
     return type(cls_name, (base,), attrs)
 

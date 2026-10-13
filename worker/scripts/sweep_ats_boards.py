@@ -43,7 +43,12 @@ ENDPOINTS = {
     "lever": "https://api.lever.co/v0/postings/{slug}?mode=json",
     "breezy": "https://{slug}.breezy.hr/json",
     "pinpoint": "https://{slug}.pinpointhq.com/postings.json",
+    # api.ashbyhq.com answers robots.txt with 401, so the robots-allowed hosted page is read.
+    "ashby": "https://jobs.ashbyhq.com/{slug}",
+    "workable": "https://apply.workable.com/api/v1/widget/accounts/{slug}?details=true",
+    "recruitee": "https://{slug}.recruitee.com/api/offers/",
 }
+_RELOC = re.compile(r"relocat\w*|visa sponsor\w*|sponsor\w* (?:a )?visa", re.IGNORECASE)
 GLOBAL = re.compile(
     r"\b(anywhere|global(?:ly)?|worldwide|world[- ]wide|emea|europe|eu|apac|asia|relocat\w*|visa|sponsor\w*)\b",
     re.IGNORECASE,
@@ -81,7 +86,12 @@ def load_slugs(path: Path) -> list[str]:
 
 
 def known_slugs(platform: str) -> set[str]:
-    return {b.lower() for _n, ats, _r, boards in GROUPS if ats == platform for b in boards}
+    known = {b.lower() for _n, ats, _r, boards in GROUPS if ats == platform for b in boards}
+    from worker.connectors import ats as _ats
+    single = {"workable": _ats.WorkableConnector, "recruitee": _ats.RecruiteeConnector}.get(platform)
+    if single is not None:
+        known |= {b.lower() for b in single.boards}
+    return known
 
 
 def place_signal(place: str) -> bool:
@@ -156,12 +166,66 @@ def scan_pinpoint(payload: object) -> tuple[int, list[tuple[str, str]]]:
     return len(data), rows
 
 
-SCANNERS = {"greenhouse": scan_greenhouse, "lever": scan_lever, "breezy": scan_breezy, "pinpoint": scan_pinpoint}
+def scan_ashby(payload: object) -> tuple[int, list[tuple[str, str]]]:
+    from worker.connectors.ats import _ashby_app_data
+    board = _ashby_app_data(str(payload)).get("jobBoard") or {}
+    posts = board.get("jobPostings") if isinstance(board, dict) else None
+    if not isinstance(posts, list):
+        raise SourceFailed("no postings")
+    rows = []
+    for job in posts:
+        if not isinstance(job, dict):
+            continue
+        places = [clean(job.get("locationName"))] + [
+            clean(x.get("locationName") if isinstance(x, dict) else x) for x in job.get("secondaryLocations") or []]
+        place = "; ".join(p for p in places if p)
+        if str(job.get("workplaceType") or "").lower() == "remote":
+            place = (place + "; Remote").strip("; ")
+        rows.append((clean(job.get("title")), place))
+    return len(posts), rows
+
+
+def scan_workable(payload: object) -> tuple[int, list[tuple[str, str]]]:
+    jobs = payload.get("jobs") if isinstance(payload, dict) else None
+    if not isinstance(jobs, list):
+        raise SourceFailed("no jobs list")
+    rows = []
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+        place = ", ".join(x for x in (clean(job.get("city")), clean(job.get("country"))) if x)
+        if job.get("telecommuting"):
+            place = (place + "; Remote").strip("; ")
+        if _RELOC.search(str(job.get("description") or "")[:8000]):
+            place = (place + "; relocation").strip("; ")
+        rows.append((clean(job.get("title")), place))
+    return len(jobs), rows
+
+
+def scan_recruitee(payload: object) -> tuple[int, list[tuple[str, str]]]:
+    offers = payload.get("offers") if isinstance(payload, dict) else None
+    if not isinstance(offers, list):
+        raise SourceFailed("no offers list")
+    rows = []
+    for job in offers:
+        if not isinstance(job, dict):
+            continue
+        place = clean(job.get("location")) or clean(job.get("country"))
+        if job.get("remote"):
+            place = (place + "; Remote").strip("; ")
+        if _RELOC.search(str(job.get("description") or "")[:8000] + str(job.get("requirements") or "")[:4000]):
+            place = (place + "; relocation").strip("; ")
+        rows.append((clean(job.get("title")), place))
+    return len(offers), rows
+
+
+SCANNERS = {"ashby": scan_ashby, "workable": scan_workable, "recruitee": scan_recruitee,
+            "greenhouse": scan_greenhouse, "lever": scan_lever, "breezy": scan_breezy, "pinpoint": scan_pinpoint}
 
 
 def sweep_one(client: PoliteClient, platform: str, slug: str) -> dict:
     url = ENDPOINTS[platform].format(slug=slug)
-    payload = client.get_json(url)
+    payload = client.get_text(url) if platform == "ashby" else client.get_json(url)
     total, rows = SCANNERS[platform](payload)
     tech = [(t, p) for t, p in rows if t and is_tech_job(t)]
     sig = [(t, p) for t, p in tech if place_signal(p)]
