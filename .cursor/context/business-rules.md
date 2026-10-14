@@ -64,7 +64,8 @@
 - They appear in staff **moderation queue** (with company pending ads) until approve/reject.
 - Staff may approve one-by-one or bulk-select (`POST /api/v1/admin/jobs/approve-bulk`).
 - Queue shows rule % and AI %; staff may threshold-publish **all** matching pending ads (`POST /api/v1/admin/jobs/approve-threshold`, no batch cap). AI recheck is async: `POST /api/v1/admin/jobs/recheck-market-fit` starts a background job; UI polls `GET .../recheck-market-fit/{job_id}` (~1.5s) for planned/done/left. Collected tab uses `scope=crawled` (published unfit → hide). Approve always means `published`. Checkbox bulk approve stays capped at 200.
-- Legacy pending without scores: `POST /api/v1/admin/jobs/backfill-confidence` (UI: Köhnə faizləri doldur) — rule pass for clear signals, then up to 40 AI/call; click again until `still_unscored=0`.
+- Legacy pending without scores: `POST /api/v1/admin/jobs/backfill-confidence` (UI: Köhnə faizləri doldur) — rule pass for clear signals, then up to 40 AI/call (**oldest id first**); click again until `still_unscored=0`.
+- “AI ilə yenidən yoxla” targets only ads with **empty AI %** (`ai_confidence` null), **oldest → newest**. Publish-by-% still uses the threshold filters and requires an existing score.
 - Re-scrape of an existing row does **not** force `published` (pending stays pending; already live stays live).
 - Already-published scraped ads are left alone (no mass unpublish).
 - Public board still only shows `status=published`.

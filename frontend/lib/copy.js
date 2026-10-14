@@ -523,6 +523,7 @@ export const copy = {
     adminThresholdRecheck: "AI ilə yenidən yoxla",
     adminThresholdConfirm: (n) => `${n} elan dərc olunsun?`,
     adminThresholdNone: "Bu faizə uyğun gözləyən elan yoxdur.",
+    adminRecheckNone: "AI skoru olmayan gözləyən elan yoxdur.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI yoxlama: ${checked} yoxlandı, ${rejected} rədd, ${failed} uğursuz.`,
     adminRecheckCrawledNote: (checked, rejected, hidden, failed) =>
@@ -1615,6 +1616,7 @@ export const copy = {
     adminThresholdRecheck: "Re-check with AI",
     adminThresholdConfirm: (n) => `Publish ${n} ads?`,
     adminThresholdNone: "No pending ads match this percent.",
+    adminRecheckNone: "No pending ads without an AI score.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI recheck: ${checked} checked, ${rejected} rejected, ${failed} failed.`,
     adminRecheckCrawledNote: (checked, rejected, hidden, failed) =>
@@ -2708,6 +2710,7 @@ export const copy = {
     adminThresholdRecheck: "Перепроверить AI",
     adminThresholdConfirm: (n) => `Опубликовать ${n} объявлений?`,
     adminThresholdNone: "Нет ожидающих объявлений с таким процентом.",
+    adminRecheckNone: "Нет ожидающих объявлений без AI-оценки.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI: проверено ${checked}, отклонено ${rejected}, ошибка ${failed}.`,
     adminRecheckCrawledNote: (checked, rejected, hidden, failed) =>

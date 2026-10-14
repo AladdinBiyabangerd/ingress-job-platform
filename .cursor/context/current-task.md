@@ -1,24 +1,22 @@
 # Current task
 
 ## Completed
-- Viewed jobs: mark on detail, badge on list+detail, board filter `viewed`
-- Original opens: count unique users who opened original/external apply URL; show on list+detail
+- Postgres TEXT id fix for market-fit recheck
+- Persist recheck progress across refresh
+- Recheck = missing AI score only; oldest→newest; backfill ASC + UI limit 40
 
 ## Current state
-- Tables: `viewed_jobs`, `job_original_opens`
-- APIs: `POST/GET /me/viewed-jobs…`, `GET /jobs?viewed=true`, opens recorded on `/original` + external `/apply`
-- Frontend: filter chip, card/detail badges, interest count
+- “AI ilə yenidən yoxla” ignores threshold UI; only `ai_confidence` null
 
 ## Decisions
-- Unique openers (not raw click count)
-- Guests with `viewed=true` get empty list (no 401 on public proxy)
-- Prefer `original_opens` over on-site `applications` when both could apply
+- Publish-by-% still uses score/op/threshold
+- Recheck/backfill process oldest id first
 
 ## Remaining work
-- Manual QA on board + detail while logged in
 - Commit when asked
+- QA: empty AI rows get picked; order oldest first
 
 ## Relevant files
-- `api/app/viewed_jobs.py`, `original_opens.py`, `sqlite_jobs.py`, `routers/jobs.py`, `routers/me.py`
-- `frontend/components/viewed-jobs.js`, `job-board-card.js`, `home.js`, `job-detail/*`
-- `frontend/lib/jobs-params.js`, `copy.js`
+- `frontend/components/admin.js`, `collected-admin.js`
+- `frontend/lib/recheck-market-fit.js`
+- `api/app/cabinet_store.py` (backfill ORDER BY id ASC)

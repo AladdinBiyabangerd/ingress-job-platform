@@ -6,12 +6,18 @@ import { hrefFor, text } from "../lib/copy";
 import { calendarDate } from "../lib/dates";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
 import {
+  forgetRecheckJob,
+  pollRecheckJob,
+  progressFromRecheck,
+  rememberRecheckJob,
+  storedRecheckJob,
+} from "../lib/recheck-market-fit";
+import {
   adminActJob,
   adminApproveBulk,
   adminApproveThreshold,
   adminBackfillConfidence,
   adminPatchJob,
-  adminPollRecheckMarketFit,
   adminStartRecheckMarketFit,
   adminRejectJob,
   crawledPatchJob,
@@ -70,6 +76,7 @@ function jobScore(job, score) {
   return Number.isFinite(n) ? n : null;
 }
 
+/** Publish filter: only ads that already have a numeric score. */
 function thresholdMatchIds(items, score, op, threshold) {
   const cut = Number(threshold);
   if (!Number.isFinite(cut)) return [];
@@ -83,14 +90,16 @@ function thresholdMatchIds(items, score, op, threshold) {
     .map((job) => job.id);
 }
 
-function countThresholdMatches(items, score, op, threshold) {
-  return thresholdMatchIds(items, score, op, threshold).length;
+/** Recheck: only pending ads with no AI score; oldest first. */
+function missingAiScoreIds(items) {
+  return items
+    .filter((job) => job.status === "pending" && jobScore(job, "ai") == null)
+    .map((job) => job.id)
+    .sort((a, b) => a - b);
 }
 
-const RECHECK_POLL_MS = 1500;
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function countThresholdMatches(items, score, op, threshold) {
+  return thresholdMatchIds(items, score, op, threshold).length;
 }
 
 function statusLabel(t, status) {
@@ -239,6 +248,35 @@ export function Admin({
     }
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  useEffect(() => {
+    const jobId = storedRecheckJob("queue");
+    if (!jobId) return undefined;
+    let cancelled = false;
+    (async () => {
+      setBusy(true);
+      setError("");
+      setNote("");
+      const { ok, last, cancelled: stopped } = await pollRecheckJob(jobId, {
+        onProgress: (progress) => {
+          if (!cancelled) setRecheckProgress(progress);
+        },
+        isActive: () => !cancelled,
+      });
+      if (cancelled || stopped) return;
+      forgetRecheckJob("queue");
+      setBusy(false);
+      if (!ok) {
+        setRecheckProgress(null);
+        setError(t.adminError);
+        return;
+      }
+      await applyRecheckResult(last);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function setField(key, value) {
@@ -414,49 +452,11 @@ export function Admin({
     }
   }
 
-  async function recheckByThreshold() {
-    const ids = thresholdMatchIds(items, scoreKind, scoreOp, scoreThreshold);
-    if (!ids.length) {
-      setNote(t.adminThresholdNone);
-      return;
-    }
-    setError("");
-    setNote("");
-    setBusy(true);
-    setRecheckProgress({ total: ids.length, done: 0, remaining: ids.length });
-    const started = await adminStartRecheckMarketFit(ids, { scope: "queue" });
-    if (!started.ok || !started.data?.job_id) {
-      setBusy(false);
-      setRecheckProgress(null);
-      setError(t.adminError);
-      return;
-    }
-    const jobId = started.data.job_id;
-    let last = started.data;
-    setRecheckProgress({
-      total: Number(last.total) || ids.length,
-      done: Number(last.done) || 0,
-      remaining: Number(last.remaining) || ids.length,
-    });
-    while (last.status === "queued" || last.status === "running") {
-      await sleep(RECHECK_POLL_MS);
-      const polled = await adminPollRecheckMarketFit(jobId);
-      if (!polled.ok) {
-        setError(t.adminError);
-        break;
-      }
-      last = polled.data || {};
-      setRecheckProgress({
-        total: Number(last.total) || ids.length,
-        done: Number(last.done) || 0,
-        remaining: Number(last.remaining) || 0,
-      });
-    }
-    setBusy(false);
-    const checked = Number(last.checked) || 0;
-    const rejected = Number(last.rejected) || 0;
-    const failed = Number(last.failed) || 0;
-    if (last.status === "failed") {
+  async function applyRecheckResult(last) {
+    const checked = Number(last?.checked) || 0;
+    const rejected = Number(last?.rejected) || 0;
+    const failed = Number(last?.failed) || 0;
+    if (last?.status === "failed") {
       setError(t.adminError);
     } else if (checked === 0 && rejected === 0 && failed > 0) {
       setNote(t.adminRecheckBudgetStop);
@@ -471,11 +471,45 @@ export function Admin({
     setRecheckProgress(null);
   }
 
+  async function recheckByThreshold() {
+    const ids = missingAiScoreIds(items);
+    if (!ids.length) {
+      setNote(t.adminRecheckNone);
+      return;
+    }
+    setError("");
+    setNote("");
+    setBusy(true);
+    setRecheckProgress({ total: ids.length, done: 0, remaining: ids.length });
+    const started = await adminStartRecheckMarketFit(ids, { scope: "queue" });
+    if (!started.ok || !started.data?.job_id) {
+      setBusy(false);
+      setRecheckProgress(null);
+      setError(t.adminError);
+      return;
+    }
+    const jobId = started.data.job_id;
+    rememberRecheckJob("queue", jobId);
+    setRecheckProgress(progressFromRecheck(started.data, ids.length));
+    const { ok, last } = await pollRecheckJob(jobId, {
+      onProgress: setRecheckProgress,
+      fallbackTotal: ids.length,
+    });
+    forgetRecheckJob("queue");
+    setBusy(false);
+    if (!ok) {
+      setRecheckProgress(null);
+      setError(t.adminError);
+      return;
+    }
+    await applyRecheckResult(last);
+  }
+
   async function backfillConfidence() {
     setError("");
     setNote("");
     setBusy(true);
-    const res = await adminBackfillConfidence({ aiLimit: 10 });
+    const res = await adminBackfillConfidence({ aiLimit: 40 });
     setBusy(false);
     if (!res.ok) {
       setError(t.adminError);

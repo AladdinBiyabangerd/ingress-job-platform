@@ -1245,7 +1245,7 @@ def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
                   AND COALESCE(owner_subject, '') = ''
                   AND rule_confidence IS NULL
                   AND ai_confidence IS NULL
-                ORDER BY id DESC
+                ORDER BY id ASC
                 """,
                 (PENDING,),
             ).fetchall()

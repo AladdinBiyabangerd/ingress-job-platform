@@ -5,7 +5,13 @@ import { text } from "../lib/copy";
 import { calendarDate } from "../lib/dates";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
 import {
-  adminPollRecheckMarketFit,
+  forgetRecheckJob,
+  pollRecheckJob,
+  progressFromRecheck,
+  rememberRecheckJob,
+  storedRecheckJob,
+} from "../lib/recheck-market-fit";
+import {
   adminStartRecheckMarketFit,
   crawledMerge,
   crawledPatchJob,
@@ -16,11 +22,6 @@ import {
 import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
-const RECHECK_POLL_MS = 1500;
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function confidenceCell(value, reason) {
   if (value == null || value === "") {
@@ -44,21 +45,18 @@ function jobScore(job, score) {
   return Number.isFinite(n) ? n : null;
 }
 
-function thresholdMatchIds(items, score, op, threshold) {
-  const cut = Number(threshold);
-  if (!Number.isFinite(cut)) return [];
+/** Recheck: only ads with no AI score; oldest first. */
+function missingAiScoreIds(items) {
   return items
     .filter((job) => {
       if (job.hidden || job.merged_into) return false;
       if (job.status !== "pending" && job.status !== "published" && job.status !== "rejected") {
         return false;
       }
-      const value = jobScore(job, score);
-      // Unscored collected ads: include when asking ≥ 0 so staff can fill AI %.
-      if (value == null) return op === "gte" && cut <= 0;
-      return op === "lte" ? value <= cut : value >= cut;
+      return jobScore(job, "ai") == null;
     })
-    .map((job) => job.id);
+    .map((job) => job.id)
+    .sort((a, b) => a - b);
 }
 
 function typeLabel(t, value) {
@@ -154,6 +152,35 @@ export function CollectedAdmin({ locale, initialItems = null }) {
     };
   }, [seeded, t.loadError]);
 
+  useEffect(() => {
+    const jobId = storedRecheckJob("crawled");
+    if (!jobId) return undefined;
+    let cancelled = false;
+    (async () => {
+      setBusy(true);
+      setError("");
+      setNote("");
+      const { ok, last, cancelled: stopped } = await pollRecheckJob(jobId, {
+        onProgress: (progress) => {
+          if (!cancelled) setRecheckProgress(progress);
+        },
+        isActive: () => !cancelled,
+      });
+      if (cancelled || stopped) return;
+      forgetRecheckJob("crawled");
+      setBusy(false);
+      if (!ok) {
+        setRecheckProgress(null);
+        setError(t.adminError);
+        return;
+      }
+      await applyRecheckResult(last);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const { pageItems, currentPage, totalPages, pageSize, total, goToPage: goToPaged } = usePagination(items, LIST_PAGE_SIZE);
 
   function cancelEdit() {
@@ -233,10 +260,30 @@ export function CollectedAdmin({ locale, initialItems = null }) {
     }
   }
 
+  async function applyRecheckResult(last) {
+    const checked = Number(last?.checked) || 0;
+    const rejected = Number(last?.rejected) || 0;
+    const hiddenCount = Number(last?.hidden) || 0;
+    const failed = Number(last?.failed) || 0;
+    if (last?.status === "failed") {
+      setError(t.adminError);
+    } else if (checked === 0 && rejected === 0 && hiddenCount === 0 && failed > 0) {
+      setNote(t.adminRecheckBudgetStop);
+    } else {
+      setNote(t.adminRecheckCrawledNote(checked, rejected, hiddenCount, failed));
+    }
+    try {
+      await load();
+    } catch {
+      setError(t.loadError);
+    }
+    setRecheckProgress(null);
+  }
+
   async function recheckByThreshold() {
-    const ids = thresholdMatchIds(items, scoreKind, scoreOp, scoreThreshold);
+    const ids = missingAiScoreIds(items);
     if (!ids.length) {
-      setNote(t.adminThresholdNone);
+      setNote(t.adminRecheckNone);
       return;
     }
     setError("");
@@ -251,44 +298,20 @@ export function CollectedAdmin({ locale, initialItems = null }) {
       return;
     }
     const jobId = started.data.job_id;
-    let last = started.data;
-    setRecheckProgress({
-      total: Number(last.total) || ids.length,
-      done: Number(last.done) || 0,
-      remaining: Number(last.remaining) || ids.length,
+    rememberRecheckJob("crawled", jobId);
+    setRecheckProgress(progressFromRecheck(started.data, ids.length));
+    const { ok, last } = await pollRecheckJob(jobId, {
+      onProgress: setRecheckProgress,
+      fallbackTotal: ids.length,
     });
-    while (last.status === "queued" || last.status === "running") {
-      await sleep(RECHECK_POLL_MS);
-      const polled = await adminPollRecheckMarketFit(jobId);
-      if (!polled.ok) {
-        setError(t.adminError);
-        break;
-      }
-      last = polled.data || {};
-      setRecheckProgress({
-        total: Number(last.total) || ids.length,
-        done: Number(last.done) || 0,
-        remaining: Number(last.remaining) || 0,
-      });
-    }
+    forgetRecheckJob("crawled");
     setBusy(false);
-    const checked = Number(last.checked) || 0;
-    const rejected = Number(last.rejected) || 0;
-    const hiddenCount = Number(last.hidden) || 0;
-    const failed = Number(last.failed) || 0;
-    if (last.status === "failed") {
+    if (!ok) {
+      setRecheckProgress(null);
       setError(t.adminError);
-    } else if (checked === 0 && rejected === 0 && hiddenCount === 0 && failed > 0) {
-      setNote(t.adminRecheckBudgetStop);
-    } else {
-      setNote(t.adminRecheckCrawledNote(checked, rejected, hiddenCount, failed));
+      return;
     }
-    try {
-      await load();
-    } catch {
-      setError(t.loadError);
-    }
-    setRecheckProgress(null);
+    await applyRecheckResult(last);
   }
 
   return (
