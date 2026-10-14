@@ -86,7 +86,8 @@ function countThresholdMatches(items, score, op, threshold) {
   return thresholdMatchIds(items, score, op, threshold).length;
 }
 
-const RECHECK_BATCH = 15;
+/** Keep small: each id is a live AI call; UI loops until all are done. */
+const RECHECK_BATCH = 3;
 
 function statusLabel(t, status) {
   if (status === "pending") return t.statusPending;
@@ -464,7 +465,7 @@ export function Admin({
     setError("");
     setNote("");
     setBusy(true);
-    const res = await adminBackfillConfidence({ aiLimit: 40 });
+    const res = await adminBackfillConfidence({ aiLimit: 10 });
     setBusy(false);
     if (!res.ok) {
       setError(t.adminError);

@@ -15,7 +15,8 @@ import {
 import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
-const RECHECK_BATCH = 15;
+/** Keep small: each id is a live AI call; UI loops until all are done. */
+const RECHECK_BATCH = 3;
 
 function confidenceCell(value, reason) {
   if (value == null || value === "") {

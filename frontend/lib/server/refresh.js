@@ -5,6 +5,8 @@ import { adPayload } from "./ad";
 import { sessionAccess } from "./me";
 
 const TIMEOUT_MS = 10_000;
+/** Market-fit recheck/backfill: several sequential AI calls per request. */
+const AI_BATCH_TIMEOUT_MS = 120_000;
 const ID_OK = /^\d+$/;
 
 async function bearer() {
@@ -31,7 +33,7 @@ function itemsOf(data) {
   return data.items;
 }
 
-async function mutate(path, { method = "POST", body, empty = false } = {}) {
+async function mutate(path, { method = "POST", body, empty = false, timeoutMs = TIMEOUT_MS } = {}) {
   try {
     const access = await bearer();
     const headers = {
@@ -42,7 +44,7 @@ async function mutate(path, { method = "POST", body, empty = false } = {}) {
       method,
       headers,
       cache: "no-store",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     };
     if (body !== undefined) {
       headers["Content-Type"] = "application/json";
@@ -225,12 +227,14 @@ export async function adminRecheckMarketFit(ids, { scope = "queue" } = {}) {
       ids: list.slice(0, 25),
       scope: scope === "crawled" ? "crawled" : "queue",
     },
+    timeoutMs: AI_BATCH_TIMEOUT_MS,
   });
 }
 
 export async function adminBackfillConfidence({ aiLimit = 40 } = {}) {
   return mutate("/api/v1/admin/jobs/backfill-confidence", {
     body: { ai_limit: Math.max(0, Math.min(50, Number(aiLimit) || 0)) },
+    timeoutMs: AI_BATCH_TIMEOUT_MS,
   });
 }
 
