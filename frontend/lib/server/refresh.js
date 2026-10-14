@@ -208,11 +208,12 @@ export async function adminApproveBulk(ids) {
   return mutate("/api/v1/admin/jobs/approve-bulk", { body: { ids: list } });
 }
 
-export async function adminApproveThreshold({ score, op, threshold }) {
+export async function adminApproveThreshold({ score, op, threshold, status = "pending" }) {
   const body = {
     score: score === "rule" ? "rule" : "ai",
     op: op === "lte" ? "lte" : "gte",
     threshold: Math.max(0, Math.min(100, Number(threshold) || 0)),
+    status: status === "rejected" ? "rejected" : "pending",
   };
   return mutate("/api/v1/admin/jobs/approve-threshold", { body });
 }

@@ -57,13 +57,13 @@
 - Unsuitable → do not upsert; store URL in `crawl_rejects` so the next pass skips without AI.
 - Flag: `market_fit` / `AI_MARKET_FIT_ENABLED=0` to hard-off.
 - Module: `worker/worker/market_fit.py`.
-- Confidence % = AI-nin **bu elanın dərc üçün qaydalara uyğun olduğuna** nə qədər əmin olması (30 ≈ bilmir; 90 ≈ əmin uyğundur). Clear rule signal → `rule_confidence=100`; AI → `ai_confidence` 0–100. Uyğunsuz/reject heç vaxt yüksək % göstərmir (köhnə “100% sure unsuitable” invert edilir) və `rule_confidence` silinir. Company/manual → NULL.
+- Confidence % = **bu elanın dərc üçün qaydalara uyğun olduğuna** nə qədər əminlik (30 ≈ bilmir; 90 ≈ əmin uyğundur). Rule path: `rule_fit_confidence` siqnal gücünə görə graded % (board default ~64, remote keyword ~70–76, open worldwide/EMEA ~84–90, AZ/CIS ~96) — artıq həmişə 100 deyil. AI path → `ai_confidence` 0–100. Uyğunsuz/reject heç vaxt yüksək % göstərmir (köhnə “100% sure unsuitable” invert edilir) və `rule_confidence` silinir. Company/manual → NULL.
 
 ## Scraped ad moderation (2026-10-13)
 - New scraped/crawled jobs are inserted as **`pending`**, not auto-published.
 - They appear in staff **moderation queue** (with company pending ads) until approve/reject.
 - Staff may approve one-by-one or bulk-select (`POST /api/v1/admin/jobs/approve-bulk`).
-- Queue shows rule % and AI %; staff may threshold-publish **all** matching pending ads (`POST /api/v1/admin/jobs/approve-threshold`, no batch cap). AI recheck is async: `POST /api/v1/admin/jobs/recheck-market-fit` starts a background job; UI polls `GET .../recheck-market-fit/{job_id}` (~1.5s) for planned/done/left. Collected tab uses `scope=crawled` (published unfit → hide). Approve always means `published`. Checkbox bulk approve stays capped at 200.
+- Queue shows rule % and AI %; staff may threshold-publish **all** matching pending ads (`POST /api/v1/admin/jobs/approve-threshold`, no batch cap). Rejected tab has the same publish-by-% controls with `status=rejected` (pending default). AI recheck is async: `POST /api/v1/admin/jobs/recheck-market-fit` starts a background job; UI polls `GET .../recheck-market-fit/{job_id}` (~1.5s) for planned/done/left. Collected tab uses `scope=crawled` (published unfit → hide). Approve always means `published` (pending or rejected → published). Checkbox bulk approve stays capped at 200.
 - Legacy pending without scores: `POST /api/v1/admin/jobs/backfill-confidence` (UI: Köhnə faizləri doldur) — rule pass for clear signals, then up to 40 AI/call (**oldest id first**); click again until `still_unscored=0`.
 - “AI ilə yenidən yoxla” targets only ads with **empty AI %** (`ai_confidence` null), **oldest → newest**. Publish-by-% still uses the threshold filters and requires an existing score.
 - Re-scrape of an existing row does **not** force `published` (pending stays pending; already live stays live).

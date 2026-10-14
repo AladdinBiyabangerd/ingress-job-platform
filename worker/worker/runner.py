@@ -65,7 +65,6 @@ from worker.cv_queue import drain_parse_cv_queue
 from worker.db import Store
 from worker.market_fit import (
     clarify_market_fit,
-    has_clear_market_signal,
     is_rejected,
     mark_rejected,
 )

@@ -1317,6 +1317,33 @@ def _place_fully_open(place: str) -> bool:
     return not _named_foreign_place(raw)
 
 
+_PLACE_OPEN_ALONE = re.compile(
+    r"(?i)^(?:\s*(?:remote|worldwide|world[\s-]?wide|global|anywhere|emea|eméa|cis)\s*[|,/–-]?\s*)+$"
+)
+
+
+def open_market_tier(title: str, place: str, text: str) -> str | None:
+    """How strongly the ad names an AZ-reachable open market.
+
+    Returns ``az``, ``place``, ``body``, or None when no open-market wording.
+    """
+    head = f"{title or ''}\n{place or ''}"
+    body = (text or "")[:8000]
+    sample = f"{head}\n{body}"
+    if _AZ_EXPLICIT.search(sample):
+        return "az"
+    if _place_fully_open(place):
+        return "place"
+    raw_place = (place or "").strip()
+    if raw_place and _PLACE_OPEN_ALONE.search(raw_place) and not _named_foreign_place(raw_place):
+        return "place"
+    if _OPEN_MARKET.search(head) and not _named_foreign_place(place or ""):
+        return "place"
+    if _OPEN_MARKET.search(body):
+        return "body"
+    return None
+
+
 # ---- Region restriction (Azerbaijan must be inside the allowed region) ------
 # "Remote, but EU only / authorized to work in the UK" is not
 # reachable from Azerbaijan (UTC+4, Caucasus). Europe-only is treated as

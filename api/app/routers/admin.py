@@ -86,6 +86,7 @@ class ThresholdApproveIn(BaseModel):
     score: str = Field(pattern="^(ai|rule)$")
     op: str = Field(pattern="^(gte|lte)$")
     threshold: int = Field(ge=0, le=100)
+    status: str = Field(default="pending", pattern="^(pending|rejected)$")
 
 
 class RecheckMarketFitIn(BaseModel):
@@ -228,6 +229,7 @@ def approve_threshold(body: ThresholdApproveIn, _user: VerifiedAccess = Depends(
             score=body.score,
             op=body.op,
             threshold=body.threshold,
+            status=body.status,
         )
     )
 

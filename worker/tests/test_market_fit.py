@@ -11,6 +11,7 @@ from worker.market_fit import (
     has_clear_market_signal,
     is_rejected,
     mark_rejected,
+    rule_fit_confidence,
 )
 from worker.runner import finish_item
 
@@ -124,7 +125,7 @@ class MarketFitTest(unittest.TestCase):
             "reason": "visa sponsorship",
             "confidence": 76,
         }
-        with patch("worker.acceptance.has_clear_market_signal", return_value=False):
+        with patch("worker.acceptance.rule_fit_confidence", return_value=None):
             with patch("worker.acceptance.clarify_market_fit", return_value=verdict):
                 out = finish_item(self.conn, item)
         self.assertIsNotNone(out)
@@ -147,8 +148,60 @@ class MarketFitTest(unittest.TestCase):
         }
         out = finish_item(self.conn, item)
         self.assertIsNotNone(out)
-        self.assertEqual(out["rule_confidence"], 100)
+        # Graded: open place + remote evidence, not a flat 100.
+        self.assertGreaterEqual(out["rule_confidence"], 85)
+        self.assertLess(out["rule_confidence"], 100)
         self.assertIsNone(out["ai_confidence"])
+        self.assertIn("open", (out.get("market_fit_reason") or "").lower())
+
+    def test_rule_fit_grades_signal_strength(self):
+        weak = rule_fit_confidence(
+            "Backend Engineer",
+            "Berlin",
+            "Join our team. Nice benefits.",
+            pre_remote=None,
+            pre_relocation=None,
+            remote_default=True,
+            relocation_default=False,
+        )
+        mid = rule_fit_confidence(
+            "Remote Backend Engineer",
+            "Europe",
+            "This is a remote role across our offices.",
+            pre_remote=None,
+            pre_relocation=None,
+            remote_default=False,
+            relocation_default=False,
+        )
+        strong = rule_fit_confidence(
+            "Backend Engineer",
+            "Remote - Worldwide",
+            "Work from anywhere. Hiring globally.",
+            pre_remote=None,
+            pre_relocation=None,
+            remote_default=False,
+            relocation_default=False,
+        )
+        az = rule_fit_confidence(
+            "Backend Engineer",
+            "Remote",
+            "Open to candidates in Azerbaijan and CIS.",
+            pre_remote=True,
+            pre_relocation=None,
+            remote_default=False,
+            relocation_default=False,
+        )
+        self.assertIsNotNone(weak)
+        self.assertIsNotNone(mid)
+        self.assertIsNotNone(strong)
+        self.assertIsNotNone(az)
+        self.assertLess(weak["confidence"], mid["confidence"])
+        self.assertLess(mid["confidence"], strong["confidence"])
+        self.assertGreaterEqual(az["confidence"], strong["confidence"])
+        self.assertLessEqual(az["confidence"], 100)
+        # Not a binary 0/100 switch: weak board-default stays well below open-market.
+        self.assertLessEqual(weak["confidence"], 70)
+        self.assertGreaterEqual(strong["confidence"], 84)
 
     def test_fit_score_unsuitable_never_looks_like_full_match(self):
         # Model "100% sure unsuitable" must not display as 100% rule-fit.

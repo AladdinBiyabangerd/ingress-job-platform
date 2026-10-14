@@ -77,12 +77,13 @@ function jobScore(job, score) {
 }
 
 /** Publish filter: only ads that already have a numeric score. */
-function thresholdMatchIds(items, score, op, threshold) {
+function thresholdMatchIds(items, score, op, threshold, status = "pending") {
   const cut = Number(threshold);
+  const want = status === "rejected" ? "rejected" : "pending";
   if (!Number.isFinite(cut)) return [];
   return items
     .filter((job) => {
-      if (job.status !== "pending") return false;
+      if (job.status !== want) return false;
       const value = jobScore(job, score);
       if (value == null) return false;
       return op === "lte" ? value <= cut : value >= cut;
@@ -98,8 +99,8 @@ function missingAiScoreIds(items) {
     .sort((a, b) => a - b);
 }
 
-function countThresholdMatches(items, score, op, threshold) {
-  return thresholdMatchIds(items, score, op, threshold).length;
+function countThresholdMatches(items, score, op, threshold, status = "pending") {
+  return thresholdMatchIds(items, score, op, threshold, status).length;
 }
 
 function statusLabel(t, status) {
@@ -424,7 +425,8 @@ export function Admin({
   }
 
   async function approveByThreshold({ quick = false } = {}) {
-    const matchCount = countThresholdMatches(items, scoreKind, scoreOp, scoreThreshold);
+    const status = tab === "rejected" ? "rejected" : "pending";
+    const matchCount = countThresholdMatches(items, scoreKind, scoreOp, scoreThreshold, status);
     if (!matchCount) {
       setNote(t.adminThresholdNone);
       return;
@@ -437,6 +439,7 @@ export function Admin({
       score: scoreKind,
       op: scoreOp,
       threshold: Number(scoreThreshold),
+      status,
     });
     setBusy(false);
     if (!res.ok) {
@@ -644,7 +647,7 @@ export function Admin({
             ) : null}
             {listItems.length ? (
             <div className="admin-mod-table-wrap">
-              {tab === "queue" ? (
+              {tab === "queue" || tab === "rejected" ? (
                 <div className="admin-mod-threshold">
                   <label className="admin-mod-threshold-field">
                     <span className="visually-hidden">{t.adminScoreAi}</span>
@@ -696,22 +699,26 @@ export function Admin({
                   >
                     {t.adminThresholdPublishQuick}
                   </button>
-                  <button
-                    type="button"
-                    className="btn small"
-                    disabled={busy}
-                    onClick={recheckByThreshold}
-                  >
-                    {t.adminThresholdRecheck}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn small"
-                    disabled={busy}
-                    onClick={backfillConfidence}
-                  >
-                    {t.adminBackfillConfidence}
-                  </button>
+                  {tab === "queue" ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn small"
+                        disabled={busy}
+                        onClick={recheckByThreshold}
+                      >
+                        {t.adminThresholdRecheck}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn small"
+                        disabled={busy}
+                        onClick={backfillConfidence}
+                      >
+                        {t.adminBackfillConfidence}
+                      </button>
+                    </>
+                  ) : null}
                 </div>
               ) : null}
               {tab === "queue" && selectedCount ? (

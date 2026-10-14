@@ -836,8 +836,8 @@ def _approve_one(conn: sqlite3.Connection, job_id: int) -> tuple[sqlite3.Row, di
     row = _moderation_row(conn, job_id)
     if row is None:
         raise CabinetError(404, "Elan tapılmadı")
-    if (row["status"] or "") != PENDING:
-        raise CabinetError(409, "Yalnız gözləyən elan təsdiqlənə bilər")
+    if (row["status"] or "") not in (PENDING, REJECTED):
+        raise CabinetError(409, "Yalnız gözləyən və ya rədd olunmuş elan təsdiqlənə bilər")
     conn.execute(
         """
         UPDATE jobs
@@ -886,7 +886,7 @@ def approve_ad(job_id: int) -> dict:
 
 
 def approve_ads(job_ids: list[int], *, max_ids: int | None = 200) -> dict:
-    """Approve many pending ads. Skips unknown/non-pending ids without failing.
+    """Approve many pending/rejected ads. Skips unknown/other statuses without failing.
 
     ``max_ids`` caps checkbox bulk (default 200). Pass ``None`` for threshold
     publish of every matching row.
@@ -911,7 +911,7 @@ def approve_ads(job_ids: list[int], *, max_ids: int | None = 200) -> dict:
         try:
             for job_id in ordered:
                 row = _moderation_row(conn, job_id)
-                if row is None or (row["status"] or "") != PENDING:
+                if row is None or (row["status"] or "") not in (PENDING, REJECTED):
                     continue
                 row, note = _approve_one(conn, job_id)
                 approved.append(_owner(row))
@@ -946,12 +946,13 @@ def _threshold_match(value: int | None, op: str, threshold: int) -> bool:
     raise CabinetError(422, "Operator gte və ya lte olmalıdır")
 
 
-def _pending_ids_by_threshold(
+def _ids_by_threshold(
     conn: sqlite3.Connection,
     *,
     score: str,
     op: str,
     threshold: int,
+    status: str = PENDING,
     limit: int | None = None,
     min_score: int | None = None,
     max_score: int | None = None,
@@ -961,6 +962,8 @@ def _pending_ids_by_threshold(
         raise CabinetError(422, "Operator gte və ya lte olmalıdır")
     if threshold < 0 or threshold > 100:
         raise CabinetError(422, "Faiz 0–100 arasında olmalıdır")
+    if status not in (PENDING, REJECTED):
+        raise CabinetError(422, "Status pending və ya rejected olmalıdır")
     if limit is not None and (limit < 1 or limit > 200):
         raise CabinetError(422, "Limit 1–200 arasında olmalıdır")
     rows = conn.execute(
@@ -974,7 +977,7 @@ def _pending_ids_by_threshold(
           )
         ORDER BY id DESC
         """,
-        (PENDING,),
+        (status,),
     ).fetchall()
     matched: list[int] = []
     for row in rows:
@@ -999,13 +1002,19 @@ def approve_ads_by_threshold(
     score: str,
     op: str,
     threshold: int,
+    status: str = PENDING,
 ) -> dict:
-    """Publish every pending ad whose rule/AI confidence matches the threshold."""
+    """Publish every pending/rejected ad whose rule/AI confidence matches the threshold."""
     with _LOCK:
         conn = _connect()
         try:
-            ids = _pending_ids_by_threshold(
-                conn, score=score, op=op, threshold=threshold, limit=None
+            ids = _ids_by_threshold(
+                conn,
+                score=score,
+                op=op,
+                threshold=threshold,
+                status=status,
+                limit=None,
             )
         finally:
             conn.close()
@@ -1221,11 +1230,11 @@ def recheck_market_fit(job_ids: list[int], *, scope: str = "queue") -> dict:
 def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
     """Fill missing rule/AI confidence on pending scraped ads.
 
-    1) Clear market signal → rule_confidence=100 (all matching rows, no AI).
+    1) Rule market signal → graded ``rule_confidence`` (all matching rows, no AI).
     2) Still unscored → sync market_fit for up to ``ai_limit`` rows.
     Company/manual ads (owner_subject set) are skipped.
     """
-    from worker.market_fit import RULE_CONFIDENCE, clarify_market_fit, has_clear_market_signal
+    from worker.market_fit import clarify_market_fit, rule_fit_confidence
 
     if ai_limit < 0 or ai_limit > 50:
         raise CabinetError(422, "AI limit 0–50 arasında olmalıdır")
@@ -1236,15 +1245,22 @@ def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
     with _LOCK:
         conn = _connect()
         try:
+            # Missing scores + legacy flat "clear market signal" → 100 (re-grade).
             rows = conn.execute(
                 """
                 SELECT id, title, company, city, text, remote, relocation,
-                       rule_confidence, ai_confidence
+                       rule_confidence, ai_confidence, market_fit_reason
                 FROM jobs
                 WHERE status = ?
                   AND COALESCE(owner_subject, '') = ''
-                  AND rule_confidence IS NULL
                   AND ai_confidence IS NULL
+                  AND (
+                    rule_confidence IS NULL
+                    OR (
+                      rule_confidence = 100
+                      AND COALESCE(market_fit_reason, '') = 'clear market signal'
+                    )
+                  )
                 ORDER BY id ASC
                 """,
                 (PENDING,),
@@ -1255,7 +1271,8 @@ def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
                 text = row["text"] or ""
                 pre_remote = bool(int(row["remote"] or 0))
                 pre_reloc = bool(int(row["relocation"] or 0))
-                clear = has_clear_market_signal(
+                had_rule = row["rule_confidence"] is not None
+                rule_fit = rule_fit_confidence(
                     title,
                     place,
                     text,
@@ -1264,24 +1281,30 @@ def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
                     remote_default=False,
                     relocation_default=False,
                 )
-                if clear:
+                if rule_fit:
                     conn.execute(
                         """
                         UPDATE jobs
                         SET rule_confidence = ?, market_fit_reason = ?, updated_at = ?
-                        WHERE id = ? AND status = ? AND rule_confidence IS NULL
-                          AND ai_confidence IS NULL
+                        WHERE id = ? AND status = ? AND ai_confidence IS NULL
+                          AND (
+                            rule_confidence IS NULL
+                            OR (
+                              rule_confidence = 100
+                              AND COALESCE(market_fit_reason, '') = 'clear market signal'
+                            )
+                          )
                         """,
                         (
-                            RULE_CONFIDENCE,
-                            "clear market signal",
+                            int(rule_fit["confidence"]),
+                            str(rule_fit.get("reason") or "rule market signal")[:300],
                             _now(),
                             int(row["id"]),
                             PENDING,
                         ),
                     )
                     rule_filled += 1
-                else:
+                elif not had_rule:
                     remaining_for_ai.append(
                         {
                             "id": int(row["id"]),

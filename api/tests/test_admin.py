@@ -458,7 +458,9 @@ class AdminTests(unittest.TestCase):
             (unclear_id,),
         ).fetchone()
         conn.close()
-        self.assertEqual(rule, 100)
+        self.assertIsNotNone(rule)
+        self.assertGreaterEqual(int(rule), 70)
+        self.assertLessEqual(int(rule), 95)
         self.assertIsNone(ai_clear)
         self.assertIsNone(rule2)
         self.assertEqual(ai_unclear, 81)
@@ -592,6 +594,69 @@ class AdminTests(unittest.TestCase):
             self.assertEqual(reason, "not az market")
             self.assertEqual(conf, 22)
             self.assertIsNone(rule_val)
+
+    def test_threshold_approve_rejected_status(self):
+        conn = sqlite3.connect(self.db)
+        cur = conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key, owner_subject,
+                ai_confidence, rule_confidence, reject_reason, market_fit_reason
+            ) VALUES (
+                'Rejected high', 'Co', 'Baki', 'Remote worldwide.', 'rejected', ?, ?, '',
+                88, NULL, 'old reject', 'seed'
+            )
+            """,
+            ("2026-10-14T14:00:00+04:00", "thresh-rej-high"),
+        )
+        high_id = int(cur.lastrowid)
+        cur = conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key, owner_subject,
+                ai_confidence, rule_confidence, reject_reason, market_fit_reason
+            ) VALUES (
+                'Rejected low', 'Co', 'Baki', 'Office only.', 'rejected', ?, ?, '',
+                30, NULL, 'unsuitable', 'seed'
+            )
+            """,
+            ("2026-10-14T14:01:00+04:00", "thresh-rej-low"),
+        )
+        low_id = int(cur.lastrowid)
+        conn.commit()
+        conn.close()
+
+        with self._auth("job:staff", "admin-staff"):
+            pending_only = self.client.post(
+                "/api/v1/admin/jobs/approve-threshold",
+                headers={"Authorization": "Bearer test"},
+                json={"score": "ai", "op": "gte", "threshold": 80},
+            )
+            self.assertEqual(pending_only.status_code, 200, pending_only.text)
+            self.assertEqual(pending_only.json()["approved"], 0)
+
+            published = self.client.post(
+                "/api/v1/admin/jobs/approve-threshold",
+                headers={"Authorization": "Bearer test"},
+                json={"score": "ai", "op": "gte", "threshold": 80, "status": "rejected"},
+            )
+            self.assertEqual(published.status_code, 200, published.text)
+            self.assertEqual(published.json()["approved"], 1)
+            self.assertEqual(published.json()["items"][0]["id"], high_id)
+
+        conn = sqlite3.connect(self.db)
+        high_status, high_reason = conn.execute(
+            "SELECT status, reject_reason FROM jobs WHERE id = ?",
+            (high_id,),
+        ).fetchone()
+        low_status = conn.execute(
+            "SELECT status FROM jobs WHERE id = ?",
+            (low_id,),
+        ).fetchone()[0]
+        conn.close()
+        self.assertEqual(high_status, "published")
+        self.assertEqual(high_reason, "")
+        self.assertEqual(low_status, "rejected")
 
     def test_manual_source_publishes_without_showing_the_url(self):
         body = self._ad(company="Manual MMC", text="LinkedIn-de gorulen rol")

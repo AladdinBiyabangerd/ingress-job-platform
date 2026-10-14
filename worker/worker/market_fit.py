@@ -8,20 +8,38 @@ stored in ``crawl_rejects`` so the next crawl skips them without another call.
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 from datetime import datetime, timezone
 from typing import Any
 
 from worker.ai_flags import feature_on
 from worker.ai_gateway import complete_json
-from worker.techstack import relocation_flag, remote_flag
+from worker.techstack import (
+    international_reloc_offer,
+    open_market_tier,
+    relocation_flag,
+    remote_flag,
+)
 
 log = logging.getLogger("ingress-job.worker.market_fit")
 
 PURPOSE = "market_fit"
 PROMPT_VERSION = "market-fit-v4"
 ENV_FLAG = "AI_MARKET_FIT_ENABLED"
-RULE_CONFIDENCE = 100
+
+# Graded rule confidence (how sure deterministic rules are the ad is OK to publish).
+# Stronger AZ-open signals → higher %; bare board default / weak keyword → lower.
+_RULE_SCORE_AZ = 96
+_RULE_SCORE_OPEN_PLACE = 90
+_RULE_SCORE_OPEN_BODY = 84
+_RULE_SCORE_INTL_RELOC = 86
+_RULE_SCORE_SCHEMA = 78
+_RULE_SCORE_REMOTE_PLACE = 76
+_RULE_SCORE_REMOTE_TITLE = 72
+_RULE_SCORE_REMOTE_TEXT = 70
+_RULE_SCORE_RELOC_KW = 68
+_RULE_SCORE_BOARD_DEFAULT = 64
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS crawl_rejects (
@@ -160,13 +178,124 @@ def has_clear_market_signal(
     relocation_default: bool,
 ) -> bool:
     """True when keywords, source schema, or board default already decides."""
-    if remote_default or relocation_default:
-        return True
-    if pre_remote is True or pre_relocation is True:
-        return True
-    if remote_flag(title, place, text) or relocation_flag(title, place, text):
-        return True
-    return False
+    return rule_fit_confidence(
+        title,
+        place,
+        text,
+        pre_remote=pre_remote,
+        pre_relocation=pre_relocation,
+        remote_default=remote_default,
+        relocation_default=relocation_default,
+    ) is not None
+
+
+def rule_fit_confidence(
+    title: str,
+    place: str,
+    text: str,
+    *,
+    pre_remote: bool | None,
+    pre_relocation: bool | None,
+    remote_default: bool,
+    relocation_default: bool,
+) -> dict[str, Any] | None:
+    """Graded rule %: how sure deterministic rules are the ad is OK to publish.
+
+    Returns ``{"confidence": 0-100, "reason": str}`` when keywords / schema /
+    board default give a market signal; None when AI should decide instead.
+    Never returns a flat 100 for every clear hit — stronger open-market and
+    visa/reloc evidence scores higher than a bare board default.
+    """
+    kw_remote = remote_flag(title, place, text)
+    kw_reloc = relocation_flag(title, place, text)
+    schema_remote = pre_remote is True
+    schema_reloc = pre_relocation is True
+    board_remote = bool(remote_default)
+    board_reloc = bool(relocation_default)
+
+    if not (
+        kw_remote
+        or kw_reloc
+        or schema_remote
+        or schema_reloc
+        or board_remote
+        or board_reloc
+    ):
+        return None
+
+    open_tier = open_market_tier(title, place, text)
+    intl_reloc = international_reloc_offer(title, place, text)
+    title_remote = bool(
+        re.search(r"(?i)\bremote\b", title or "")
+        and not re.search(r"(?i)\bhybrid\b|on[\s-]?site", title or "")
+    )
+    place_remote = bool(
+        re.search(r"(?i)\bremote\b|worldwide|anywhere|telecommute|\bwfh\b", place or "")
+        and not re.search(r"(?i)\bhybrid\b", place or "")
+    )
+
+    # Strongest matching evidence wins; small bonus when several agree.
+    candidates: list[tuple[int, str]] = []
+    if open_tier == "az":
+        candidates.append((_RULE_SCORE_AZ, "azerbaijan / CIS open market"))
+    elif open_tier == "place":
+        candidates.append((_RULE_SCORE_OPEN_PLACE, "open remote place (worldwide/EMEA)"))
+    elif open_tier == "body":
+        candidates.append((_RULE_SCORE_OPEN_BODY, "open-market wording in description"))
+    if intl_reloc:
+        candidates.append((_RULE_SCORE_INTL_RELOC, "international visa / relocation"))
+    elif kw_reloc:
+        candidates.append((_RULE_SCORE_RELOC_KW, "relocation keywords"))
+    if schema_remote or schema_reloc:
+        candidates.append((_RULE_SCORE_SCHEMA, "source schema remote/relocation"))
+    if place_remote:
+        candidates.append((_RULE_SCORE_REMOTE_PLACE, "remote location field"))
+    if title_remote:
+        candidates.append((_RULE_SCORE_REMOTE_TITLE, "remote in title"))
+    if kw_remote and not (place_remote or title_remote or open_tier):
+        candidates.append((_RULE_SCORE_REMOTE_TEXT, "remote keywords in description"))
+    if (board_remote or board_reloc) and not (
+        kw_remote or kw_reloc or schema_remote or schema_reloc or open_tier
+    ):
+        candidates.append((_RULE_SCORE_BOARD_DEFAULT, "board remote/relocation default"))
+
+    if not candidates:
+        # Schema/board + weak overlap already covered; fall back sanely.
+        if schema_remote or schema_reloc:
+            candidates.append((_RULE_SCORE_SCHEMA, "source schema remote/relocation"))
+        elif board_remote or board_reloc:
+            candidates.append((_RULE_SCORE_BOARD_DEFAULT, "board remote/relocation default"))
+        elif kw_remote:
+            candidates.append((_RULE_SCORE_REMOTE_TEXT, "remote keywords"))
+        else:
+            candidates.append((_RULE_SCORE_RELOC_KW, "relocation keywords"))
+
+    score, reason = max(candidates, key=lambda row: row[0])
+
+    bonus = 0
+    evidence = sum(
+        (
+            1 if open_tier else 0,
+            1 if intl_reloc or kw_reloc else 0,
+            1 if kw_remote or place_remote or title_remote else 0,
+            1 if schema_remote or schema_reloc else 0,
+        )
+    )
+    if evidence >= 3:
+        bonus += 6
+    elif evidence >= 2:
+        bonus += 3
+    if (schema_remote or schema_reloc) and (kw_remote or kw_reloc or open_tier):
+        bonus += 2
+
+    # Cap below absolute 100 unless AZ/CIS is named — leaves room for staff doubt.
+    capped = clamp_confidence(score + bonus)
+    if open_tier != "az":
+        capped = min(capped, 95)
+    return {
+        "confidence": capped,
+        "reason": reason,
+    }
 
 
 def clarify_market_fit(

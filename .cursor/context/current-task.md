@@ -1,22 +1,23 @@
 # Current task
 
 ## Completed
-- Postgres TEXT id fix for market-fit recheck
-- Persist recheck progress across refresh
-- Recheck = missing AI score only; oldest→newest; backfill ASC + UI limit 40
+- Graded `rule_confidence` (not flat 100/0): `rule_fit_confidence` in `worker/worker/market_fit.py`
+- Wired into `acceptance.finish_item` + admin `backfill_moderation_confidence` (also re-grades legacy rule=100)
+- Tests updated; business-rules note updated
 
 ## Current state
-- “AI ilə yenidən yoxla” ignores threshold UI; only `ai_confidence` null
+- Rule % reflects signal strength (board default ~64 → open worldwide/EMEA ~84–95 → AZ/CIS up to 100)
+- AI path unchanged (`ai_confidence`)
 
 ## Decisions
-- Publish-by-% still uses score/op/threshold
-- Recheck/backfill process oldest id first
+- Strongest evidence wins + small multi-signal bonus; non-AZ capped at 95
+- Backfill refreshes pending rows with `rule_confidence IS NULL OR = 100` and no AI score
 
 ## Remaining work
+- Deploy; on admin click “Köhnə faizləri doldur” to re-grade flat 100s
 - Commit when asked
-- QA: empty AI rows get picked; order oldest first
 
 ## Relevant files
-- `frontend/components/admin.js`, `collected-admin.js`
-- `frontend/lib/recheck-market-fit.js`
-- `api/app/cabinet_store.py` (backfill ORDER BY id ASC)
+- `worker/worker/market_fit.py`, `worker/worker/acceptance.py`, `worker/worker/techstack.py`
+- `api/app/cabinet_store.py`
+- `worker/tests/test_market_fit.py`, `api/tests/test_admin.py`
