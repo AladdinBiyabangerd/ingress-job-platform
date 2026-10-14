@@ -53,11 +53,10 @@ DEFAULT_MODEL = "gpt-4.1-nano"
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
 # Text-out free-tier cascade (high RPD/RPM first). Skip TTS/Live/Image/Pro.
+# Skip retired 2.5-* (404 for new keys → use 3.5-lite / 3.8). Skip 3.7 (aliases to 3.8).
 DEFAULT_GEMINI_MODELS = (
     "gemini-3.5-flash-lite,"
     "gemini-3.1-flash-lite,"
-    "gemini-2.5-flash-lite,"
-    "gemini-2.5-flash,"
     "gemini-3.6-flash,"
     "gemini-3-flash-preview,"
     "gemini-3.8-flash"

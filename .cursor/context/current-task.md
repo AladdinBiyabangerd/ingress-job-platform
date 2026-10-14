@@ -1,18 +1,16 @@
 # Current task
 
 ## Completed
-- Gemini + NVIDIA model cascades (pushed)
-- Recheck: surface first AI miss reason in job `error` + WARNING logs + UI note
+- Diagnosed recheck fail as `ai_budget_exceeded`; cascade confirmed working
+- Removed retired `gemini-2.5-flash` / `gemini-2.5-flash-lite` from default cascade (404)
 
 ## Current state
-- Flags all on; still "limit/off" — likely `ai_budget_exceeded` (default daily 200) or all providers fail
-- After deploy, UI note will show `[ai_budget_exceeded]` etc.
+- Gemini often 503 high demand → cooldown → Groq succeeds until TPM 429
+- Default GEMINI_MODELS: 3.5-lite → 3.1-lite → 3.6 → 3-preview → 3.8
 
 ## Remaining work
-- Commit/push diagnostic fix when asked
-- Production: raise `AI_GATEWAY_DAILY_CALL_LIMIT` on api+worker (e.g. 1000); recheck and read `[reason]`
+- Commit/push when asked
+- Ensure NVIDIA key on api so after Groq 429 cascade continues
 
 ## Relevant files
-- `worker/worker/market_fit.py`
-- `api/app/market_fit_recheck_jobs.py`
-- `frontend/components/admin.js`, `collected-admin.js`
+- `api/app/ai_gateway/gateway.py`, `worker/worker/ai_gateway/gateway.py`
