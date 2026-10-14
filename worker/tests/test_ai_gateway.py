@@ -261,6 +261,7 @@ class GatewayTest(unittest.TestCase):
             "AI_GATEWAY_ENABLED": "1",
             "AI_CHAT_PROVIDERS": "gemini,groq",
             "GEMINI_MODELS": "gemini-3.8-flash",
+            "GROQ_MODELS": "openai/gpt-oss-20b",
             "AI_GATEWAY_DAILY_CALL_LIMIT": "100",
         }
         calls: list[str] = []
@@ -316,9 +317,15 @@ class ChatProviderOrderTest(unittest.TestCase):
             "GEMINI_API_KEY": "g", "GROQ_API_KEY": "q", "NVIDIA_API_KEY": "n",
             "OPENROUTER_API_KEY": "o", "OPENAI_API_KEY": "x",
             "GEMINI_MODELS": "gemini-3.5-flash-lite,gemini-3.8-flash",
+            "GROQ_MODELS": "openai/gpt-oss-20b",
+            "NVIDIA_MODELS": "nvidia/nemotron-3.5-lightning-30b-a3b",
         }
         with mock.patch.dict(os.environ, env, clear=False):
-            for k in ("GEMINI_API_KEY_2", "GEMINI_API_KEYS", "GEMINI_MODEL"):
+            for k in (
+                "GEMINI_API_KEY_2", "GEMINI_API_KEYS", "GEMINI_MODEL",
+                "GROQ_API_KEY_2", "GROQ_API_KEYS", "GROQ_MODEL",
+                "NVIDIA_CHAT_MODEL",
+            ):
                 os.environ.pop(k, None)
             providers = gw._chat_providers()
             names = _unique_provider_names(providers)
@@ -342,12 +349,45 @@ class ChatProviderOrderTest(unittest.TestCase):
                 "GEMINI_API_KEY",
                 "GEMINI_API_KEY_2",
                 "GEMINI_API_KEYS",
+                "GROQ_API_KEY_2",
+                "GROQ_API_KEYS",
                 "NVIDIA_API_KEY",
                 "OPENROUTER_API_KEY",
             ):
                 os.environ.pop(k, None)
+            os.environ["GROQ_MODELS"] = "openai/gpt-oss-20b"
             names = [p.name for p in gw._chat_providers()]
         self.assertEqual(names, ["groq", "openai"])
+
+    def test_groq_expands_models_and_keys(self):
+        import os
+        from unittest import mock
+
+        from worker.ai_gateway import gateway as gw
+
+        env = {
+            "AI_CHAT_PROVIDERS": "groq",
+            "GROQ_API_KEY": "q1",
+            "GROQ_API_KEY_2": "q2",
+            "GROQ_MODELS": "m-a,m-b",
+            "GEMINI_API_KEY": "",
+            "OPENAI_API_KEY": "",
+            "NVIDIA_API_KEY": "",
+            "OPENROUTER_API_KEY": "",
+        }
+        with mock.patch.dict(os.environ, env, clear=False):
+            os.environ.pop("GROQ_API_KEYS", None)
+            os.environ.pop("GROQ_MODEL", None)
+            slots = gw._chat_providers()
+        self.assertEqual(
+            [(p.key, p.model, p.cooldown_id) for p in slots],
+            [
+                ("q1", "m-a", "groq:k0:m-a"),
+                ("q1", "m-b", "groq:k0:m-b"),
+                ("q2", "m-a", "groq:k1:m-a"),
+                ("q2", "m-b", "groq:k1:m-b"),
+            ],
+        )
 
     def test_gemini_expands_models_and_keys(self):
         import os

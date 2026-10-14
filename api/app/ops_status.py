@@ -48,7 +48,7 @@ _FEATURE_LABELS = {
 
 _PROVIDER_KEY_ENV = {
     "gemini": "GEMINI_API_KEY / GEMINI_API_KEY_2",
-    "groq": "GROQ_API_KEY",
+    "groq": "GROQ_API_KEY / GROQ_API_KEY_2",
     "nvidia": "NVIDIA_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "openai": "OPENAI_API_KEY",

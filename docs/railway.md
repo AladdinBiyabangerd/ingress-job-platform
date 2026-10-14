@@ -102,7 +102,9 @@ that file is applied; set them yourself only if you use another bucket):
 | `GEMINI_API_KEY` | Optional. Free-tier chat (primary). Enables `ai_gateway` when any provider key is set. Cascades all default Gemini text-out models on this key. |
 | `GEMINI_API_KEY_2` | Optional. Second Gemini key; same model cascade runs after key 1 slots are exhausted. |
 | `GEMINI_API_KEYS` | Optional. Comma-separated Gemini keys (overrides `GEMINI_API_KEY` / `_2` when set). |
-| `GROQ_API_KEY` | Optional. Free-tier chat fallback. |
+| `GROQ_API_KEY` | Optional. Free-tier chat fallback. Cascades default Groq text models on this key. |
+| `GROQ_API_KEY_2` | Optional. Second Groq key; same model cascade after key 1. |
+| `GROQ_API_KEYS` | Optional. Comma-separated Groq keys (overrides `GROQ_API_KEY` / `_2` when set). |
 | `NVIDIA_API_KEY` | Optional. Free-tier chat + embeddings (`nemotron-3-embed-1b`, 2048-dim). |
 | `OPENROUTER_API_KEY` | Optional. Free-model chat fallback (`:free` models). |
 | `OPENAI_API_KEY` | Optional. Last-resort chat/embed when you have credits. |
@@ -111,7 +113,8 @@ that file is applied; set them yourself only if you use another bucket):
 | `AI_EMBED_PROVIDERS` | Optional. Comma order, default `nvidia,openai`. |
 | `GEMINI_MODELS` | Optional. Comma list of Gemini chat models to try in order. Default: `3.5-flash-lite` → `3.1-flash-lite` → `3.6-flash` → `3-flash-preview` → `3.8-flash` (retired 2.5-* omitted). |
 | `GEMINI_MODEL` | Optional. Legacy single-model override when `GEMINI_MODELS` is unset. |
-| `GROQ_MODEL` | Optional. Default `openai/gpt-oss-20b`. |
+| `GROQ_MODELS` | Optional. Comma list of Groq chat models. Default: `gpt-oss-20b` → `gpt-oss-120b` → `qwen3.8-27b`. |
+| `GROQ_MODEL` | Optional. Legacy single-model override when `GROQ_MODELS` is unset. |
 | `NVIDIA_MODELS` | Optional. Comma list of NVIDIA Free Endpoint chat models. Default: lightning → gpt-oss-20b → gemma-4-31b → glm-5.3 → nemotron-3-super. |
 | `NVIDIA_CHAT_MODEL` | Optional. Legacy single-model override when `NVIDIA_MODELS` is unset. |
 | `NVIDIA_EMBED_MODEL` | Optional. Default `nvidia/nemotron-3-embed-1b`. |

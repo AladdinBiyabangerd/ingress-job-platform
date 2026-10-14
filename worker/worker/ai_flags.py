@@ -68,11 +68,11 @@ _CACHE_AT = 0.0
 
 
 def key_configured() -> bool:
-    from worker.ai_gateway.gateway import _gemini_keys
+    from worker.ai_gateway.gateway import _gemini_keys, _groq_keys
 
     return bool(
         _gemini_keys()
-        or os.environ.get("GROQ_API_KEY", "").strip()
+        or _groq_keys()
         or os.environ.get("NVIDIA_API_KEY", "").strip()
         or os.environ.get("OPENROUTER_API_KEY", "").strip()
         or os.environ.get("OPENAI_API_KEY", "").strip()

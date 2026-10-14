@@ -62,6 +62,12 @@ DEFAULT_GEMINI_MODELS = (
     "gemini-3.8-flash"
 )
 DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b"
+# Free-tier chat cascade (per-model TPM). Skip whisper/TTS/guards.
+DEFAULT_GROQ_MODELS = (
+    "openai/gpt-oss-20b,"
+    "openai/gpt-oss-120b,"
+    "qwen/qwen3.8-27b"
+)
 DEFAULT_NVIDIA_CHAT_MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b"
 # Free Endpoint text chat cascade (no vision/TTS/embed). Skip thinking extras.
 DEFAULT_NVIDIA_MODELS = (
@@ -186,10 +192,43 @@ def _nvidia_models() -> list[str]:
     return [m.strip() for m in DEFAULT_NVIDIA_MODELS.split(",") if m.strip()]
 
 
+def _groq_keys() -> list[str]:
+    """Configured Groq API keys (optional second key / comma list)."""
+    multi = (os.environ.get("GROQ_API_KEYS") or "").strip()
+    if multi:
+        keys = [k.strip() for k in multi.split(",") if k.strip()]
+    else:
+        keys = []
+        for env_name in ("GROQ_API_KEY", "GROQ_API_KEY_2"):
+            k = os.environ.get(env_name, "").strip()
+            if k:
+                keys.append(k)
+    seen: set[str] = set()
+    out: list[str] = []
+    for k in keys:
+        if k not in seen:
+            seen.add(k)
+            out.append(k)
+    return out
+
+
+def _groq_models() -> list[str]:
+    """Groq chat model cascade. GROQ_MODELS > GROQ_MODEL > default list."""
+    multi = (os.environ.get("GROQ_MODELS") or "").strip()
+    if multi:
+        models = [m.strip() for m in multi.split(",") if m.strip()]
+        if models:
+            return models
+    single = (os.environ.get("GROQ_MODEL") or "").strip()
+    if single:
+        return [single]
+    return [m.strip() for m in DEFAULT_GROQ_MODELS.split(",") if m.strip()]
+
+
 def any_provider_key() -> bool:
     return bool(
         _gemini_keys()
-        or os.environ.get("GROQ_API_KEY", "").strip()
+        or _groq_keys()
         or os.environ.get("NVIDIA_API_KEY", "").strip()
         or os.environ.get("OPENROUTER_API_KEY", "").strip()
         or os.environ.get("OPENAI_API_KEY", "").strip()
@@ -537,22 +576,22 @@ def _chat_providers() -> list[_ChatProvider]:
                         )
                     )
         elif name == "groq":
-            key = os.environ.get("GROQ_API_KEY", "").strip()
-            if not key:
+            keys = _groq_keys()
+            if not keys:
                 continue
-            model = (
-                os.environ.get("GROQ_MODEL") or DEFAULT_GROQ_MODEL
-            ).strip() or DEFAULT_GROQ_MODEL
-            out.append(
-                _ChatProvider(
-                    name="groq",
-                    key=key,
-                    base_url="https://api.groq.com/openai/v1",
-                    model=model,
-                    json_mode="object",
-                    cooldown_id="groq",
-                )
-            )
+            models = _groq_models()
+            for ki, key in enumerate(keys):
+                for model in models:
+                    out.append(
+                        _ChatProvider(
+                            name="groq",
+                            key=key,
+                            base_url="https://api.groq.com/openai/v1",
+                            model=model,
+                            json_mode="object",
+                            cooldown_id=f"groq:k{ki}:{model}",
+                        )
+                    )
         elif name == "nvidia":
             key = os.environ.get("NVIDIA_API_KEY", "").strip()
             if not key:
