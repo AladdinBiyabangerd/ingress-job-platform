@@ -1,25 +1,24 @@
 # Current task
 
 ## Completed
-- Profile related-skills + `app.skill_reco` wired into `/api/v1/skills/related`
-- Quality+speed refine: mini-catalog prune, graded pair/role/family boosts, adjacent≠serendipity, token name features
+- HTML notification email templates (all kinds)
+- Plaintext without raw URLs; production `app_base_url` (no localhost when DEBUG=False)
+- One-shot sample send to `aladdin19.11.21@gmail.com` (5 emails, once-flag in `.tmp/`)
 
 ## Current state
-- Reco path builds ~100-candidate mini-catalog (family/pair/role/category/adjacent) then runs HybridRecommender
-- Pair/role strengths graded; family nudge ~0.85
-- Engine drops low-sim adjacent instead of dumping into serendipity
-- Legacy mix remains fallback
+- Samples sent with subject prefix `[test]`; APP_URL was production web
+- Script: `api/scripts/send_notification_email_samples.py`
+- Once-flag: `.tmp/notification-email-samples.sent` (blocks re-run with same flag)
 
 ## Decisions
-- Speed via candidate prune (not ANN yet)
-- Synthetic embeddings stay (category + bigram/token hashes)
+- SMTP taken from Academy `.env` for the one-shot only (not written into Job `.env`)
 
 ## Remaining work
-- Commit/push when asked
-- Later: real embeddings / ANN; Redis click session
+- Commit email template + URL fixes when asked
+- Ensure live API has `APP_URL` / `WEB_PUBLIC_DOMAIN` = public web origin
 
 ## Relevant files
-- `api/app/skill_related.py`
-- `api/app/skill_reco/engine.py`
-- `api/app/skill_reco/db_catalog.py`
-- `api/tests/test_skill_related.py`
+- `api/app/email_templates.py`
+- `api/app/email_prefs.py`
+- `api/app/digests.py` / `api/app/engagement.py`
+- `api/scripts/send_notification_email_samples.py`

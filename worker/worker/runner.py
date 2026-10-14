@@ -413,9 +413,10 @@ def _run_pass(store: Store) -> int:
     except Exception:
         capture_exception()
     try:
-        from worker.embeddings import embed_stale_jobs
+        from worker.embeddings import embed_stale_jobs, stale_embed_limit
 
-        embed_stats = embed_stale_jobs(store.conn, limit=40)
+        embed_limit = stale_embed_limit()
+        embed_stats = embed_stale_jobs(store.conn, limit=embed_limit)
         if embed_stats.get("ready") and (
             embed_stats.get("attempted") or embed_stats.get("embedded")
         ):

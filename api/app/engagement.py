@@ -107,10 +107,10 @@ NEAR_EMAIL_COPY = {
             "«{title}» ({company}) profilinizə yaxındır (skor {score}%).\n"
             "{explanation}\n"
             "{growth}\n\n"
-            "Baxın: {url}"
+            "Elanı görüntüləmək üçün məktubdakı düyməyə klikləyin."
         ),
-        "growth_academy": "Öyrən: {skills} → {href}",
-        "growth_roadmap": "Öyrənmə yolu: {skills}. Tam yol: /me/insights/roadmap",
+        "growth_academy": "Öyrən: {skills}",
+        "growth_roadmap": "Öyrənmə yolu: {skills}",
     },
     "en": {
         "subject": "Almost a match — grow a skill: {title}",
@@ -118,10 +118,10 @@ NEAR_EMAIL_COPY = {
             "«{title}» ({company}) is close to your profile (score {score}%).\n"
             "{explanation}\n"
             "{growth}\n\n"
-            "View: {url}"
+            "Open the job with the button in this email."
         ),
-        "growth_academy": "Learn: {skills} → {href}",
-        "growth_roadmap": "Learning path: {skills}. Full path: /me/insights/roadmap",
+        "growth_academy": "Learn: {skills}",
+        "growth_roadmap": "Learning path: {skills}",
     },
     "ru": {
         "subject": "Почти совпадение — подтяните навык: {title}",
@@ -129,10 +129,10 @@ NEAR_EMAIL_COPY = {
             "«{title}» ({company}) близко к вашему профилю (оценка {score}%).\n"
             "{explanation}\n"
             "{growth}\n\n"
-            "Смотреть: {url}"
+            "Откройте вакансию кнопкой в этом письме."
         ),
-        "growth_academy": "Учить: {skills} → {href}",
-        "growth_roadmap": "План обучения: {skills}. Полный путь: /me/insights/roadmap",
+        "growth_academy": "Учить: {skills}",
+        "growth_roadmap": "План обучения: {skills}",
     },
 }
 
@@ -142,7 +142,7 @@ NUDGE_EMAIL_COPY = {
         "body": (
             "Profiliniz natamamdır ({reason}).\n"
             "CV və skill-ləri doldurun ki, sənə uyğun elanları tapa bilək.\n\n"
-            "Profil: {url}"
+            "Profilə keçid üçün məktubdakı düyməyə klikləyin."
         ),
     },
     "en": {
@@ -150,7 +150,7 @@ NUDGE_EMAIL_COPY = {
         "body": (
             "Your profile needs attention ({reason}).\n"
             "Add your CV and skills so we can find matching jobs.\n\n"
-            "Profile: {url}"
+            "Open your profile with the button in this email."
         ),
     },
     "ru": {
@@ -158,7 +158,7 @@ NUDGE_EMAIL_COPY = {
         "body": (
             "Профиль неполный ({reason}).\n"
             "Добавьте CV и навыки, чтобы мы могли находить совпадения.\n\n"
-            "Профиль: {url}"
+            "Откройте профиль кнопкой в этом письме."
         ),
     },
 }
@@ -171,7 +171,7 @@ COACH_EMAIL_COPY = {
             "Öyrən: {must_learn}\n"
             "Güclü: {strong}\n"
             "{growth}\n\n"
-            "İnsights: {url}"
+            "Plana baxmaq üçün məktubdakı düyməyə klikləyin."
         ),
     },
     "en": {
@@ -181,7 +181,7 @@ COACH_EMAIL_COPY = {
             "Learn: {must_learn}\n"
             "Strong: {strong}\n"
             "{growth}\n\n"
-            "Insights: {url}"
+            "Open the weekly plan with the button in this email."
         ),
     },
     "ru": {
@@ -191,7 +191,7 @@ COACH_EMAIL_COPY = {
             "Учить: {must_learn}\n"
             "Сильные: {strong}\n"
             "{growth}\n\n"
-            "Insights: {url}"
+            "Откройте план кнопкой в этом письме."
         ),
     },
 }
@@ -668,6 +668,8 @@ def _normalize_match_item(item: dict[str, Any]) -> dict[str, Any] | None:
         "job_id": job_id,
         "title": str(item.get("title") or "").strip(),
         "company": str(item.get("company") or "").strip(),
+        "city": str(item.get("city") or "").strip(),
+        "remote": bool(item.get("remote")),
         "score": float(score),
         "have": have,
         "missing": missing_names,
@@ -788,15 +790,16 @@ def _event_payload(
 
 
 def _growth_email_line(growth: dict[str, Any], *, lang: str) -> str:
+    """Plaintext growth tip without raw URLs (links live in HTML)."""
     pack = NEAR_EMAIL_COPY[_lang(lang)]
     names = growth.get("missing_names") or []
     skills = ", ".join(names[:3]) if names else ""
     courses = growth.get("academy_courses") or []
     if courses:
-        return pack["growth_academy"].format(skills=skills or courses[0].get("skill", ""), href=courses[0]["url"])
+        return pack["growth_academy"].format(skills=skills or courses[0].get("skill", ""))
     career = growth.get("career_path") or {}
     if isinstance(career, dict) and career.get("url"):
-        return pack["growth_academy"].format(skills=skills or career.get("role") or "", href=career["url"])
+        return pack["growth_academy"].format(skills=skills or career.get("role") or "")
     if growth.get("roadmap"):
         return pack["growth_roadmap"].format(skills=skills)
     return ""
@@ -859,18 +862,30 @@ def _send_match_new_email(
     unsub = unsubscribe_url(user_id, lang=lang)
     score_pct = round(float(match["score"]) * 100)
     url = tracked_job_url(user_id, job_id=job_id, kind="high_match", lang=lang)
+    if not url or not unsub:
+        return False
     subject = pack["high_subject"].format(title=match.get("title") or "")
     body = pack["high_body"].format(
         title=match.get("title") or "",
         company=match.get("company") or "",
         score=score_pct,
         explanation=match.get("explanation") or "",
-        url=url,
     )
     tip = (growth_line or "").strip()
     if tip:
         body = body.rstrip() + "\n" + tip + "\n"
-    body = body + "\n\n" + pack["unsub"].format(url=unsub) + "\n" + pack["footer"] + "\n"
+    body = body + "\n\n" + pack["unsub"] + "\n" + pack["footer"] + "\n"
+    from app.email_templates import render_match_job_html
+
+    html_tip = tip or str(match.get("explanation") or "")
+    html_body = render_match_job_html(
+        kind="high_match",
+        lang=lang,
+        match=match,
+        job_url=url,
+        unsubscribe_url=unsub,
+        tip=html_tip,
+    )
     if not log_email(
         conn,
         user_id=user_id,
@@ -881,7 +896,13 @@ def _send_match_new_email(
         meta=json.dumps({"job_id": job_id, "score": match.get("score"), "via": "match_new"}, ensure_ascii=False),
     ):
         return False
-    send_marketing_email(to=to, subject=subject, body=body, unsubscribe_link=unsub)
+    send_marketing_email(
+        to=to,
+        subject=subject,
+        body=body,
+        html_body=html_body,
+        unsubscribe_link=unsub,
+    )
     return True
 
 
@@ -923,6 +944,8 @@ def _send_match_near_email(
     unsub = unsubscribe_url(user_id, lang=lang)
     score_pct = round(float(match["score"]) * 100)
     url = tracked_job_url(user_id, job_id=job_id, kind="match_near", lang=lang)
+    if not url or not unsub:
+        return False
     growth_line = _growth_email_line(growth, lang=lang)
     subject = pack["subject"].format(title=match.get("title") or "")
     body = pack["body"].format(
@@ -931,9 +954,19 @@ def _send_match_near_email(
         score=score_pct,
         explanation=match.get("explanation") or "",
         growth=growth_line,
-        url=url,
     )
-    body = body + "\n\n" + footer["unsub"].format(url=unsub) + "\n" + footer["footer"] + "\n"
+    body = body + "\n\n" + footer["unsub"] + "\n" + footer["footer"] + "\n"
+    from app.email_templates import render_match_job_html
+
+    tip = growth_line or str(match.get("explanation") or "")
+    html_body = render_match_job_html(
+        kind="match_near",
+        lang=lang,
+        match=match,
+        job_url=url,
+        unsubscribe_url=unsub,
+        tip=tip,
+    )
     if not log_email(
         conn,
         user_id=user_id,
@@ -944,7 +977,13 @@ def _send_match_near_email(
         meta=json.dumps({"job_id": job_id, "score": match.get("score")}, ensure_ascii=False),
     ):
         return False
-    send_marketing_email(to=to, subject=subject, body=body, unsubscribe_link=unsub)
+    send_marketing_email(
+        to=to,
+        subject=subject,
+        body=body,
+        html_body=html_body,
+        unsubscribe_link=unsub,
+    )
     return True
 
 
@@ -1116,6 +1155,8 @@ def _app_url(path: str, *, lang: str) -> str:
     from app.email_prefs import app_base_url
 
     base = app_base_url()
+    if not base:
+        return ""
     prefix = "" if lang == "az" else f"/{lang}"
     rel = path if path.startswith("/") else f"/{path}"
     return f"{base}{prefix}{rel}"
@@ -1288,9 +1329,20 @@ def _send_profile_nudge_email(
     footer = COPY[lang]
     unsub = unsubscribe_url(user_id, lang=lang)
     url = _app_url("/profile/review", lang=lang)
+    if not url or not unsub:
+        return False
+    reason = _nudge_reason_text(reasons, lang=lang)
     subject = pack["subject"]
-    body = pack["body"].format(reason=_nudge_reason_text(reasons, lang=lang), url=url)
-    body = body + "\n\n" + footer["unsub"].format(url=unsub) + "\n" + footer["footer"] + "\n"
+    body = pack["body"].format(reason=reason)
+    body = body + "\n\n" + footer["unsub"] + "\n" + footer["footer"] + "\n"
+    from app.email_templates import render_profile_nudge_html
+
+    html_body = render_profile_nudge_html(
+        lang=lang,
+        reason=reason,
+        profile_url=url,
+        unsubscribe_url=unsub,
+    )
     if not log_email(
         conn,
         user_id=user_id,
@@ -1301,7 +1353,13 @@ def _send_profile_nudge_email(
         meta=json.dumps({"reasons": reasons}, ensure_ascii=False),
     ):
         return False
-    send_marketing_email(to=to, subject=subject, body=body, unsubscribe_link=unsub)
+    send_marketing_email(
+        to=to,
+        subject=subject,
+        body=body,
+        html_body=html_body,
+        unsubscribe_link=unsub,
+    )
     return True
 
 
@@ -1339,9 +1397,13 @@ def _send_coach_weekly_email(
     footer = COPY[lang]
     unsub = unsubscribe_url(user_id, lang=lang)
     url = _app_url("/me/insights/roadmap", lang=lang)
+    if not url or not unsub:
+        return False
     role = str(ctx.get("role") or "").strip() or "—"
-    must = ", ".join((ctx.get("must_learn") or [])[:5]) or "—"
-    strong = ", ".join((ctx.get("already_strong") or [])[:5]) or "—"
+    must_list = [str(x).strip() for x in (ctx.get("must_learn") or []) if str(x).strip()]
+    strong_list = [str(x).strip() for x in (ctx.get("already_strong") or []) if str(x).strip()]
+    must = ", ".join(must_list[:5]) or "—"
+    strong = ", ".join(strong_list[:5]) or "—"
     growth_line = _growth_email_line(ctx.get("growth") or {}, lang=lang)
     subject = pack["subject"].format(role=role)
     body = pack["body"].format(
@@ -1349,9 +1411,19 @@ def _send_coach_weekly_email(
         must_learn=must,
         strong=strong,
         growth=growth_line,
-        url=url,
     )
-    body = body + "\n\n" + footer["unsub"].format(url=unsub) + "\n" + footer["footer"] + "\n"
+    body = body + "\n\n" + footer["unsub"] + "\n" + footer["footer"] + "\n"
+    from app.email_templates import render_coach_weekly_html
+
+    html_body = render_coach_weekly_html(
+        lang=lang,
+        role=role,
+        must_learn=must_list,
+        already_strong=strong_list,
+        tip=growth_line,
+        insights_url=url,
+        unsubscribe_url=unsub,
+    )
     if not log_email(
         conn,
         user_id=user_id,
@@ -1362,7 +1434,13 @@ def _send_coach_weekly_email(
         meta=json.dumps({"role": role}, ensure_ascii=False),
     ):
         return False
-    send_marketing_email(to=to, subject=subject, body=body, unsubscribe_link=unsub)
+    send_marketing_email(
+        to=to,
+        subject=subject,
+        body=body,
+        html_body=html_body,
+        unsubscribe_link=unsub,
+    )
     return True
 
 

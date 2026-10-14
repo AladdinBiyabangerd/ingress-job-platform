@@ -110,15 +110,18 @@ def tracked_job_url(
     from app.email_prefs import app_base_url
 
     token = click_token(user_id, job_id=job_id, kind=kind, lang=lang)
-    if not token:
+    base = app_base_url()
+    if not token or not base:
         return ""
-    return f"{app_base_url()}/r/{quote(token, safe='')}"
+    return f"{base}/r/{quote(token, safe='')}"
 
 
 def site_job_url(job_id: int, lang: str) -> str:
     from app.email_prefs import app_base_url
 
     base = app_base_url()
+    if not base:
+        return ""
     locale = (lang or "az").strip().lower()[:2]
     if locale not in LOCALES:
         locale = "az"

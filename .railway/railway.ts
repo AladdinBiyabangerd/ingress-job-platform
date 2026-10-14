@@ -34,6 +34,9 @@ export default defineRailway(() => {
       DATABASE_URL: db.env.DATABASE_URL,
       CV_OCR_ENABLED: "1",
       CV_OCR_LANG: "eng",
+      // Public *web* host for email links (not this service's domain).
+      // Prefer setting APP_URL explicitly; this is the Railway fallback.
+      WEB_PUBLIC_DOMAIN: "${{web.RAILWAY_PUBLIC_DOMAIN}}",
     },
   });
 

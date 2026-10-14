@@ -206,7 +206,10 @@ class EmailPrefsTests(unittest.TestCase):
                 self.assertEqual(first.get("status"), "sent", first)
                 self.assertEqual(send_mock.call_count, 1)
                 body = send_mock.call_args.kwargs["body"]
-                self.assertIn("/r/", body)
+                html_body = send_mock.call_args.kwargs.get("html_body") or ""
+                self.assertNotIn("/r/", body)
+                self.assertNotIn("http://", body)
+                self.assertIn("/r/", html_body)
                 second = send_digest_for_user(conn, user_id=subject, when=monday)
                 self.assertEqual(second.get("reason"), "already_sent")
                 self.assertEqual(send_mock.call_count, 1)

@@ -68,9 +68,10 @@ COPY = {
         "digest_trends": "Bacarıq trendləri:",
         "digest_gap": "Öyrənmə tövsiyəsi:",
         "digest_empty_skip": "empty",
+        "digest_cta": "Elanlara keçid üçün məktubdakı düymələrə klikləyin.",
         "high_subject": "Yüksək uyğunluq: {title}",
-        "high_body": "Yeni elan «{title}» ({company}) profilinizə yaxşı uyğun gəlir (skor {score}%).\n{explanation}\n\nBaxın: {url}",
-        "unsub": "Abunəlikdən çıxmaq: {url}",
+        "high_body": "Yeni elan «{title}» ({company}) profilinizə yaxşı uyğun gəlir (skor {score}%).\n{explanation}\n\nElanı görüntüləmək üçün məktubdakı düyməyə klikləyin.",
+        "unsub": "Abunəlikdən çıxmaq üçün məktubun altındakı linkə klikləyin.",
         "footer": "Ingress Job",
     },
     "en": {
@@ -79,9 +80,10 @@ COPY = {
         "digest_trends": "Skill trends:",
         "digest_gap": "Learning tip:",
         "digest_empty_skip": "empty",
+        "digest_cta": "Use the buttons in this email to open each job.",
         "high_subject": "Strong match: {title}",
-        "high_body": "New job «{title}» ({company}) looks like a strong match (score {score}%).\n{explanation}\n\nView: {url}",
-        "unsub": "Unsubscribe: {url}",
+        "high_body": "New job «{title}» ({company}) looks like a strong match (score {score}%).\n{explanation}\n\nOpen the job with the button in this email.",
+        "unsub": "To unsubscribe, use the link at the bottom of this email.",
         "footer": "Ingress Job",
     },
     "ru": {
@@ -90,9 +92,10 @@ COPY = {
         "digest_trends": "Тренды навыков:",
         "digest_gap": "Совет по обучению:",
         "digest_empty_skip": "empty",
+        "digest_cta": "Откройте вакансии кнопками в этом письме.",
         "high_subject": "Сильное совпадение: {title}",
-        "high_body": "Новая вакансия «{title}» ({company}) хорошо совпадает с профилем (оценка {score}%).\n{explanation}\n\nСмотреть: {url}",
-        "unsub": "Отписаться: {url}",
+        "high_body": "Новая вакансия «{title}» ({company}) хорошо совпадает с профилем (оценка {score}%).\n{explanation}\n\nОткройте вакансию кнопкой в этом письме.",
+        "unsub": "Чтобы отписаться, используйте ссылку внизу письма.",
         "footer": "Ingress Job",
     },
 }
@@ -218,8 +221,9 @@ def _build_digest_body(
     unsub: str,
     ai_intro: str | None = None,
 ) -> str:
-    from app.email_clicks import tracked_job_url
-
+    # Plaintext must not dump tracked / unsubscribe URLs — those live in HTML
+    # anchors (and List-Unsubscribe). ``unsub`` / ``user_id`` kept for call sites.
+    _ = (user_id, unsub)
     pack = COPY[_lang(lang)]
     intro = (ai_intro or "").strip() or pack["digest_intro"]
     lines = [intro, ""]
@@ -228,17 +232,12 @@ def _build_digest_body(
         company = item.get("company") or ""
         score = item.get("score")
         score_pct = f"{round(float(score) * 100)}%" if isinstance(score, (int, float)) else ""
-        url = tracked_job_url(
-            user_id,
-            job_id=int(item["job_id"]),
-            kind="digest",
-            lang=lang,
-        )
         lines.append(f"- {title} ({company}) {score_pct}".rstrip())
         if item.get("explanation"):
             lines.append(f"  {item['explanation']}")
-        lines.append(f"  {url}")
         lines.append("")
+    lines.append(pack["digest_cta"])
+    lines.append("")
     if trends:
         lines.append(pack["digest_trends"])
         for row in trends:
@@ -247,7 +246,7 @@ def _build_digest_body(
     if gap:
         lines.append(f"{pack['digest_gap']} {gap}")
         lines.append("")
-    lines.append(pack["unsub"].format(url=unsub))
+    lines.append(pack["unsub"])
     lines.append(pack["footer"])
     return "\n".join(lines).strip() + "\n"
 
@@ -258,8 +257,13 @@ def send_marketing_email(
     subject: str,
     body: str,
     unsubscribe_link: str,
+    html_body: str | None = None,
 ) -> None:
-    """Like notifications.send_email, plus List-Unsubscribe headers."""
+    """Like notifications.send_email, plus List-Unsubscribe headers.
+
+    Plaintext ``body`` is always set; optional ``html_body`` is added as
+    multipart/alternative for HTML-capable clients.
+    """
     host = (os.environ.get("EMAIL_HOST") or "").strip()
     if not host or not to:
         return
@@ -283,6 +287,8 @@ def send_marketing_email(
         message["List-Unsubscribe"] = f"<{unsubscribe_link}>"
         message["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
     message.set_content(body)
+    if html_body:
+        message.add_alternative(html_body, subtype="html")
     user = os.environ.get("EMAIL_HOST_USER") or ""
     password = os.environ.get("EMAIL_HOST_PASSWORD") or ""
     use_ssl = env_bool("EMAIL_USE_SSL", False)
@@ -347,6 +353,9 @@ def send_digest_for_user(conn, *, user_id: str, when: datetime | None = None) ->
     trends = _trend_lines(conn, category=category, lang=lang)
     gap = _gap_tip(conn, user_id=user_id, lang=lang)
     unsub = unsubscribe_url(user_id, lang=lang)
+    if not unsub:
+        result["reason"] = "no_app_url"
+        return result
     pack = COPY[_lang(lang)]
     from app.digest_intro import maybe_digest_intro
 
@@ -367,6 +376,30 @@ def send_digest_for_user(conn, *, user_id: str, when: datetime | None = None) ->
         unsub=unsub,
         ai_intro=ai_intro,
     )
+    from app.email_clicks import tracked_job_url
+    from app.email_templates import render_digest_html
+
+    job_urls: dict[int, str] = {}
+    for item in matches:
+        try:
+            jid = int(item["job_id"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        href = tracked_job_url(user_id, job_id=jid, kind="digest", lang=lang)
+        if href:
+            job_urls[jid] = href
+    if not job_urls:
+        result["reason"] = "no_app_url"
+        return result
+    html_body = render_digest_html(
+        lang=lang,
+        matches=matches,
+        job_urls=job_urls,
+        trends=trends,
+        gap=gap,
+        unsubscribe_url=unsub,
+        intro=ai_intro or "",
+    )
     if not log_email(
         conn,
         user_id=user_id,
@@ -385,6 +418,7 @@ def send_digest_for_user(conn, *, user_id: str, when: datetime | None = None) ->
         to=to,
         subject=pack["digest_subject"],
         body=body,
+        html_body=html_body,
         unsubscribe_link=unsub,
     )
     result["status"] = "sent"
@@ -449,15 +483,27 @@ def send_high_match_for_user(conn, *, user_id: str, when: datetime | None = None
     unsub = unsubscribe_url(user_id, lang=lang)
     score_pct = round(float(best["score"]) * 100)
     url = tracked_job_url(user_id, job_id=job_id, kind="high_match", lang=lang)
+    if not url or not unsub:
+        result["reason"] = "no_app_url"
+        return result
     subject = pack["high_subject"].format(title=best.get("title") or "")
     body = pack["high_body"].format(
         title=best.get("title") or "",
         company=best.get("company") or "",
         score=score_pct,
         explanation=best.get("explanation") or "",
-        url=url,
     )
-    body = body + "\n\n" + pack["unsub"].format(url=unsub) + "\n" + pack["footer"] + "\n"
+    body = body + "\n\n" + pack["unsub"] + "\n" + pack["footer"] + "\n"
+    from app.email_templates import render_match_job_html
+
+    html_body = render_match_job_html(
+        kind="high_match",
+        lang=lang,
+        match=best,
+        job_url=url,
+        unsubscribe_url=unsub,
+        tip=str(best.get("explanation") or ""),
+    )
     if not log_email(
         conn,
         user_id=user_id,
@@ -469,7 +515,13 @@ def send_high_match_for_user(conn, *, user_id: str, when: datetime | None = None
     ):
         result["reason"] = "already_sent"
         return result
-    send_marketing_email(to=to, subject=subject, body=body, unsubscribe_link=unsub)
+    send_marketing_email(
+        to=to,
+        subject=subject,
+        body=body,
+        html_body=html_body,
+        unsubscribe_link=unsub,
+    )
     result["status"] = "sent"
     result["job_id"] = job_id
     result["period_key"] = period

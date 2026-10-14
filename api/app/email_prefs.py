@@ -109,21 +109,67 @@ def parse_unsubscribe_token(token: str) -> str | None:
     return user_id
 
 
+def _likely_production() -> bool:
+    debug = (os.environ.get("DEBUG") or "").strip().lower()
+    if debug in ("0", "false", "no"):
+        return True
+    if (os.environ.get("RAILWAY_ENVIRONMENT") or "").strip():
+        return True
+    if (os.environ.get("RAILWAY_ENVIRONMENT_NAME") or "").strip().lower() in {
+        "production",
+        "prod",
+    }:
+        return True
+    return False
+
+
+def _origin_from_host(value: str) -> str:
+    text = (value or "").strip().rstrip("/")
+    if not text:
+        return ""
+    # Unresolved Railway template / placeholders must not become hrefs.
+    if "${{" in text or "{{" in text or " " in text:
+        return ""
+    if "://" not in text:
+        return f"https://{text}"
+    lower = text.lower()
+    if not (lower.startswith("http://") or lower.startswith("https://")):
+        return ""
+    return text
+
+
 def app_base_url() -> str:
-    raw = (
-        os.environ.get("APP_URL")
-        or os.environ.get("NEXT_PUBLIC_APP_URL")
-        or "http://localhost:3010"
-    ).strip().rstrip("/")
-    return raw or "http://localhost:3010"
+    """Public *web* origin for email links (not the API host).
+
+    Order: APP_URL → NEXT_PUBLIC_APP_URL → PUBLIC_WEB_URL → WEB_PUBLIC_DOMAIN.
+    Localhost is only a local-dev fallback — never used when production is
+    detected (set APP_URL / WEB_PUBLIC_DOMAIN on the API in production).
+    """
+    for key in ("APP_URL", "NEXT_PUBLIC_APP_URL", "PUBLIC_WEB_URL"):
+        raw = _origin_from_host(os.environ.get(key) or "")
+        if raw:
+            return raw
+    web_host = (
+        os.environ.get("WEB_PUBLIC_DOMAIN")
+        or os.environ.get("WEB_RAILWAY_PUBLIC_DOMAIN")
+        or ""
+    ).strip()
+    raw = _origin_from_host(web_host)
+    if raw:
+        return raw
+    if _likely_production():
+        # Misconfigured deploy: do not embed localhost in real inboxes.
+        return ""
+    return "http://localhost:3010"
 
 
 def unsubscribe_url(user_id: str, *, lang: str = "az") -> str:
     token = unsubscribe_token(user_id)
-    if not token:
+    base = app_base_url()
+    if not token or not base:
         return ""
     prefix = "" if lang == "az" else f"/{lang}"
-    return f"{app_base_url()}{prefix}/unsubscribe/{quote(token, safe='')}"
+    return f"{base}{prefix}/unsubscribe/{quote(token, safe='')}"
 
 
 def _normalize_frequency(value: Any) -> str:

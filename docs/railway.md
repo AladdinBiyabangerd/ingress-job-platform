@@ -114,6 +114,7 @@ that file is applied; set them yourself only if you use another bucket):
 | `OPENROUTER_MODEL` | Optional. Default `openrouter/free` (routes across live `:free` models; single-model free tiers often 429). |
 | `AI_EMBEDDING_MODEL` | Optional. Overrides embed model id. With NVIDIA key defaults to `nvidia/nemotron-3-embed-1b`. |
 | `AI_EMBEDDING_DIMS` | Optional. Vector size for pgvector column. NVIDIA embed = `2048`; OpenAI small = `1536`. Set explicitly when switching. If the `embeddings` table already exists with the old size, drop/recreate it once. |
+| `EMBED_STALE_LIMIT` | Optional. Max jobs to embed per worker pass (default `250`, max `500`). ~13–16 NVIDIA API calls at chunk size 16 — well under typical hosted NIM RPM. |
 | `AI_RERANK_ENABLED` | Optional. Default follows gateway; `0` keeps structured-only matches. |
 | `AI_MATCH_WHY_ENABLED` | Optional. Default follows gateway; `0` skips LLM why sentences. |
 | `INTERNAL_JOB_TOKEN` | Shared secret for worker → API digests + engagement, and Academy staff ops status (`X-Internal-Token`). Set the **same** value on **api**, **worker**, and Academy `JOB_INTERNAL_TOKEN`. If unset on worker, `engagement_jobs` / `email_jobs` are skipped and users get no hourly match notifications. |
@@ -132,8 +133,9 @@ Set on the web service if the private-host wiring is not applied:
 | `JOB_API_BASE_URL` | Full server-side API base. Preferred. Example: `http://${{api.RAILWAY_PRIVATE_DOMAIN}}:${{api.PORT}}`. Must be `http://`, never `https://`. Unset locally keeps `http://127.0.0.1:8010`. |
 | `API_PRIVATE_HOST` | API private hostname only. Used when `JOB_API_BASE_URL` is unset. |
 | `API_PORT` | API listen port. Must match the API service `PORT` variable (set `PORT=8080` on **api** yourself — `${{api.PORT}}` does not read Railway's runtime injection). |
-| `APP_URL` | Public web origin for OIDC. Optional when `RAILWAY_PUBLIC_DOMAIN` is present. |
-| `NEXT_PUBLIC_APP_URL` | Same fallback as `APP_URL`. |
+| `APP_URL` | Public **web** origin for OIDC + email click/unsubscribe links. Set on **api** and **web** (e.g. `https://your-web.up.railway.app`). Do not use the API host. |
+| `NEXT_PUBLIC_APP_URL` | Same fallback as `APP_URL` (web build). |
+| `WEB_PUBLIC_DOMAIN` | Optional on **api**: bare web hostname (no scheme). Used when `APP_URL` is unset; Railway IaC sets `${{web.RAILWAY_PUBLIC_DOMAIN}}`. |
 | `JOB_OIDC_ISSUER` | Academy issuer. Unset locally keeps `http://127.0.0.1:8000/`. |
 | `JOB_OIDC_CLIENT_ID` | Default `job-web`. |
 | `JOB_OIDC_AUTHORIZE_URL` | Academy authorize URL (used as `next=` target). |

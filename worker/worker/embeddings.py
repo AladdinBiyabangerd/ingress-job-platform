@@ -397,14 +397,28 @@ def embed_job(conn, job_id: int) -> bool:
     return ok
 
 
-def embed_stale_jobs(conn, *, limit: int = 40) -> dict[str, Any]:
+def stale_embed_limit(default: int = 250) -> int:
+    """Per-pass max jobs to embed. Env EMBED_STALE_LIMIT; clamped 1..500."""
+    raw = (os.environ.get("EMBED_STALE_LIMIT") or "").strip()
+    if not raw:
+        return max(1, min(int(default), 500))
+    try:
+        return max(1, min(int(raw), 500))
+    except ValueError:
+        return max(1, min(int(default), 500))
+
+
+def embed_stale_jobs(conn, *, limit: int | None = None) -> dict[str, Any]:
     """Hourly batch: embed published jobs missing or with stale content_hash."""
     stats = {"attempted": 0, "embedded": 0, "skipped": 0, "ready": False}
     if not ensure_embedding_tables(conn):
         return stats
     stats["ready"] = True
+    limit = stale_embed_limit() if limit is None else max(1, min(int(limit), 500))
     model = embedding_model()
     # Candidates: published, not hidden, not merged. Prefer newest first.
+    # Scan window grows with limit (up to 2000) so backlog is not stuck in old ids.
+    scan = max(1, min(int(limit) * 5, 2000))
     rows = conn.execute(
         """
         SELECT id, title, category, text, tech_stack,
@@ -416,7 +430,7 @@ def embed_stale_jobs(conn, *, limit: int = 40) -> dict[str, Any]:
         ORDER BY id DESC
         LIMIT ?
         """,
-        (max(1, min(int(limit) * 5, 500)),),
+        (scan,),
     ).fetchall()
 
     from worker.ai_gateway import embed, enabled
