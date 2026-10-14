@@ -10,7 +10,11 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from app.auth_oidc import VerifiedAccess
-from app.cabinet_store import ensure_schema
+from app.cabinet_store import (
+    SWEEP_AI_HIDDEN_STEP,
+    ensure_schema,
+    sweep_published_ai_hidden_to_rejected,
+)
 from app.main import app
 from app.profiles import save_profile
 
@@ -594,6 +598,131 @@ class AdminTests(unittest.TestCase):
             self.assertEqual(reason, "not az market")
             self.assertEqual(conf, 22)
             self.assertIsNone(rule_val)
+
+    def test_crawled_recheck_rejects_published_unsuitable(self):
+        """Published scraped ads AI marks unfit become rejected (Rejected tab), not only hidden."""
+        from app.cabinet_store import recheck_market_fit
+
+        conn = sqlite3.connect(self.db)
+        cur = conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key, owner_subject,
+                hidden, ai_confidence, market_fit_reason
+            ) VALUES (
+                'Live unfit', 'Co', 'Tokyo', 'Office only Japan.', 'published', ?, ?, '',
+                0, NULL, ''
+            )
+            """,
+            ("2026-10-14T15:00:00+04:00", "crawled-pub-unfit"),
+        )
+        job_id = int(cur.lastrowid)
+        conn.commit()
+        conn.close()
+
+        verdict = {
+            "suitable": False,
+            "remote": False,
+            "relocation": False,
+            "visa_support": False,
+            "reason": "foreign office",
+            "confidence": 12,
+        }
+        with patch("worker.market_fit.clarify_market_fit", return_value=verdict):
+            result = recheck_market_fit([job_id], scope="crawled")
+        self.assertEqual(result["rejected"], 1)
+        self.assertEqual(result["hidden"], 0)
+        self.assertEqual(result["failed"], 0)
+
+        conn = sqlite3.connect(self.db)
+        status, reason, hidden, conf = conn.execute(
+            """
+            SELECT status, reject_reason, COALESCE(hidden, 0), ai_confidence
+            FROM jobs WHERE id = ?
+            """,
+            (job_id,),
+        ).fetchone()
+        conn.close()
+        self.assertEqual(status, "rejected")
+        self.assertEqual(reason, "foreign office")
+        self.assertEqual(hidden, 0)
+        self.assertEqual(conf, 12)
+
+        with self._auth("job:staff", "admin-staff"):
+            queue = self.client.get("/api/v1/admin/jobs", headers={"Authorization": "Bearer test"})
+            self.assertEqual(queue.status_code, 200, queue.text)
+            row = next(item for item in queue.json()["items"] if item["id"] == job_id)
+            self.assertEqual(row["status"], "rejected")
+
+    def test_sweep_published_ai_hidden_to_rejected(self):
+        """Legacy published+hidden AI unfit rows move to rejected once."""
+        conn = sqlite3.connect(self.db)
+        # Schema setup already marked the step done on the empty DB.
+        conn.execute("DELETE FROM maintenance_steps WHERE name = ?", (SWEEP_AI_HIDDEN_STEP,))
+        cur = conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key, owner_subject,
+                hidden, ai_confidence, reject_reason, market_fit_reason
+            ) VALUES (
+                'Old AI hide', 'Co', 'Tokyo', 'Office Japan.', 'published', ?, ?, '',
+                1, 18, 'foreign office', 'foreign office'
+            )
+            """,
+            ("2026-10-14T12:00:00+04:00", "sweep-ai-hidden"),
+        )
+        target = int(cur.lastrowid)
+        # Staff hide only (no AI fingerprint) — leave alone.
+        cur = conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key, owner_subject,
+                hidden, ai_confidence, reject_reason, market_fit_reason
+            ) VALUES (
+                'Staff hide', 'Co', 'Baki', 'Remote worldwide.', 'published', ?, ?, '',
+                1, NULL, '', ''
+            )
+            """,
+            ("2026-10-14T12:00:00+04:00", "sweep-staff-hide"),
+        )
+        staff_hide = int(cur.lastrowid)
+        # Title-rule hide (has scores but system reason) — leave alone.
+        cur = conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key, owner_subject,
+                hidden, ai_confidence, reject_reason, market_fit_reason
+            ) VALUES (
+                'Title rule', 'Co', 'Baki', 'Remote worldwide.', 'published', ?, ?, '',
+                1, 40, 'title_rule_2026_10_13', 'title rule pass'
+            )
+            """,
+            ("2026-10-14T12:00:00+04:00", "sweep-title-rule"),
+        )
+        title_hide = int(cur.lastrowid)
+        conn.commit()
+        n = sweep_published_ai_hidden_to_rejected(conn)
+        conn.commit()
+        self.assertEqual(n, 1)
+        self.assertEqual(sweep_published_ai_hidden_to_rejected(conn), 0)
+
+        rows = {
+            int(r[0]): (r[1], int(r[2] or 0), r[3])
+            for r in conn.execute(
+                "SELECT id, status, COALESCE(hidden, 0), reject_reason FROM jobs WHERE id IN (?, ?, ?)",
+                (target, staff_hide, title_hide),
+            )
+        }
+        conn.close()
+        self.assertEqual(rows[target], ("rejected", 0, "foreign office"))
+        self.assertEqual(rows[staff_hide], ("published", 1, ""))
+        self.assertEqual(rows[title_hide], ("published", 1, "title_rule_2026_10_13"))
+
+        with self._auth("job:staff", "admin-staff"):
+            queue = self.client.get("/api/v1/admin/jobs", headers={"Authorization": "Bearer test"})
+            self.assertEqual(queue.status_code, 200, queue.text)
+            row = next(item for item in queue.json()["items"] if item["id"] == target)
+            self.assertEqual(row["status"], "rejected")
 
     def test_threshold_approve_rejected_status(self):
         conn = sqlite3.connect(self.db)

@@ -63,9 +63,10 @@
 - New scraped/crawled jobs are inserted as **`pending`**, not auto-published.
 - They appear in staff **moderation queue** (with company pending ads) until approve/reject.
 - Staff may approve one-by-one or bulk-select (`POST /api/v1/admin/jobs/approve-bulk`).
-- Queue shows rule % and AI %; staff may threshold-publish **all** matching pending ads (`POST /api/v1/admin/jobs/approve-threshold`, no batch cap). Rejected tab has the same publish-by-% controls with `status=rejected` (pending default). AI recheck is async: `POST /api/v1/admin/jobs/recheck-market-fit` starts a background job; UI polls `GET .../recheck-market-fit/{job_id}` (~1.5s) for planned/done/left. Collected tab uses `scope=crawled` (published unfit → hide). Approve always means `published` (pending or rejected → published). Checkbox bulk approve stays capped at 200.
+- Queue shows rule % and AI %; staff may threshold-publish **all** matching pending ads (`POST /api/v1/admin/jobs/approve-threshold`, no batch cap). Rejected tab has the same publish-by-% controls with `status=rejected` (pending default). AI recheck is async: `POST /api/v1/admin/jobs/recheck-market-fit` starts a background job; UI polls `GET .../recheck-market-fit/{job_id}` (~1.5s) for planned/done/left. Collected tab uses `scope=crawled` (published unfit → `rejected`, same Rejected tab as pending unfit). Approve always means `published` (pending or rejected → published). Checkbox bulk approve stays capped at 200.
 - Legacy pending without scores: `POST /api/v1/admin/jobs/backfill-confidence` (UI: Köhnə faizləri doldur) — rule pass for clear signals, then up to 40 AI/call (**oldest id first**); click again until `still_unscored=0`.
 - “AI ilə yenidən yoxla” targets only ads with **empty AI %** (`ai_confidence` null), **oldest → newest**. Publish-by-% still uses the threshold filters and requires an existing score.
+- Legacy rows from the short-lived path that only set `hidden=1` on published unfit ads are one-shot swept to `status=rejected` + `hidden=0` (`sweep-published-ai-hidden-to-rejected-2026-10-14` on API/worker schema setup).
 - Re-scrape of an existing row does **not** force `published` (pending stays pending; already live stays live).
 - Already-published scraped ads are left alone (no mass unpublish).
 - Public board still only shows `status=published`.

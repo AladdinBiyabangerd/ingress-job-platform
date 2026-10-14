@@ -214,6 +214,16 @@ RETIRED_LOCAL_SOURCES = (
     "HRX", "Work.az", "eJob.az", "hh1.az", "hh.ru",
 )
 HIDE_RETIRED_STEP = "hide-retired-local-sources-2026-10-05"
+# One-shot: old crawled AI recheck hid unfit published ads (hidden=1, status
+# stayed published). Move them to rejected so they appear on the Rejected tab.
+# Same step in worker/worker/db.py; whichever process opens the DB first runs it.
+SWEEP_AI_HIDDEN_STEP = "sweep-published-ai-hidden-to-rejected-2026-10-14"
+# System hides that must not be treated as AI market-fit rejects.
+_NON_AI_HIDE_REASONS = (
+    "title_rule_2026_10_13",
+    "expired_not_seen",
+    "non_it_title",
+)
 
 _MAINTENANCE = """
 CREATE TABLE IF NOT EXISTS maintenance_steps (
@@ -254,6 +264,57 @@ def hide_retired_local(conn) -> int:
     conn.execute(
         "INSERT INTO maintenance_steps (name, done_at) VALUES (?, ?) ON CONFLICT (name) DO NOTHING",
         (HIDE_RETIRED_STEP, datetime.now().astimezone().isoformat(timespec="seconds")),
+    )
+    return len(ids)
+
+
+def sweep_published_ai_hidden_to_rejected(conn) -> int:
+    """One-off: published+hidden scraped ads from the old AI recheck path → rejected.
+
+    Fingerprint matches the former write: scraped, still published, hidden=1,
+    ai_confidence set, reject_reason + market_fit_reason from the unfit verdict.
+    Clears hidden (public board already excludes non-published). Returns rows
+    updated (0 when the step already ran). The caller commits.
+    """
+    conn.execute(_MAINTENANCE)
+    done = conn.execute(
+        "SELECT 1 FROM maintenance_steps WHERE name = ?", (SWEEP_AI_HIDDEN_STEP,)
+    ).fetchone()
+    if done:
+        return 0
+    exclude = ", ".join("?" for _ in _NON_AI_HIDE_REASONS)
+    ids = [
+        int(row[0])
+        for row in conn.execute(
+            f"""
+            SELECT id FROM jobs
+            WHERE status = ?
+              AND COALESCE(hidden, 0) = 1
+              AND COALESCE(owner_subject, '') = ''
+              AND merged_into IS NULL
+              AND ai_confidence IS NOT NULL
+              AND TRIM(COALESCE(reject_reason, '')) != ''
+              AND TRIM(COALESCE(market_fit_reason, '')) != ''
+              AND COALESCE(reject_reason, '') NOT IN ({exclude})
+            """,
+            (PUBLISHED, *_NON_AI_HIDE_REASONS),
+        ).fetchall()
+    ]
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    for start in range(0, len(ids), 200):
+        chunk = ids[start : start + 200]
+        marks = ", ".join("?" for _ in chunk)
+        conn.execute(
+            f"""
+            UPDATE jobs
+            SET status = ?, hidden = 0, updated_at = ?
+            WHERE id IN ({marks})
+            """,
+            (REJECTED, now, *chunk),
+        )
+    conn.execute(
+        "INSERT INTO maintenance_steps (name, done_at) VALUES (?, ?) ON CONFLICT (name) DO NOTHING",
+        (SWEEP_AI_HIDDEN_STEP, now),
     )
     return len(ids)
 
@@ -443,6 +504,7 @@ def _apply_schema(conn) -> None:
     except Exception:
         pass
     hide_retired_local(conn)
+    sweep_published_ai_hidden_to_rejected(conn)
     conn.commit()
 
 
@@ -1024,9 +1086,11 @@ def approve_ads_by_threshold(
 def recheck_one(job_id: int, *, scope: str = "queue") -> str:
     """Re-run market_fit on one ad. Returns outcome token for job counters.
 
-    Outcomes: checked | rejected | hidden | failed | skipped
-    ``checked`` = AI answered suitable (scores updated).
-    ``rejected`` / ``hidden`` = AI answered unsuitable (also counted as AI success).
+    Outcomes: checked | rejected | failed | skipped
+    ``checked`` = AI answered suitable (scores updated), or already-rejected
+    score refresh.
+    ``rejected`` = AI answered unsuitable → status rejected (pending or
+    published crawled ads). Counted as AI success.
     """
     from worker.market_fit import clarify_market_fit
 
@@ -1112,54 +1176,38 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
                 if status not in (PENDING, PUBLISHED, REJECTED):
                     return "skipped"
             if not verdict.get("suitable"):
-                if status == PENDING or scope == "queue":
+                # Pending/published → rejected (shows on Rejected tab). Already
+                # rejected → refresh scores only. Do not only-hide published.
+                if status == REJECTED:
                     conn.execute(
                         """
                         UPDATE jobs
-                        SET status = ?, reject_reason = ?, rule_confidence = NULL,
-                            ai_confidence = ?, market_fit_reason = ?, updated_at = ?
+                        SET rule_confidence = NULL, ai_confidence = ?,
+                            market_fit_reason = ?, updated_at = ?
                         WHERE id = ?
                         """,
-                        (
-                            REJECTED,
-                            reason or "unsuitable",
-                            confidence,
-                            reason,
-                            _now(),
-                            job_id,
-                        ),
+                        (confidence, reason, _now(), job_id),
                     )
                     conn.commit()
-                    return "rejected"
-                if status == PUBLISHED:
-                    conn.execute(
-                        """
-                        UPDATE jobs
-                        SET hidden = 1, reject_reason = ?, rule_confidence = NULL,
-                            ai_confidence = ?, market_fit_reason = ?, updated_at = ?
-                        WHERE id = ?
-                        """,
-                        (
-                            reason or "unsuitable",
-                            confidence,
-                            reason,
-                            _now(),
-                            job_id,
-                        ),
-                    )
-                    conn.commit()
-                    return "hidden"
+                    return "checked"
                 conn.execute(
                     """
                     UPDATE jobs
-                    SET rule_confidence = NULL, ai_confidence = ?,
-                        market_fit_reason = ?, updated_at = ?
+                    SET status = ?, reject_reason = ?, rule_confidence = NULL,
+                        ai_confidence = ?, market_fit_reason = ?, updated_at = ?
                     WHERE id = ?
                     """,
-                    (confidence, reason, _now(), job_id),
+                    (
+                        REJECTED,
+                        reason or "unsuitable",
+                        confidence,
+                        reason,
+                        _now(),
+                        job_id,
+                    ),
                 )
                 conn.commit()
-                return "checked"
+                return "rejected"
             remote = 1 if verdict.get("remote") else 0
             relocation = 1 if verdict.get("relocation") else 0
             conn.execute(

@@ -90,6 +90,14 @@ RETIRED_LOCAL_SOURCES = (
     "HRX", "Work.az", "eJob.az", "hh1.az", "hh.ru",
 )
 HIDE_RETIRED_STEP = "hide-retired-local-sources-2026-10-05"
+# One-shot: old crawled AI recheck hid unfit published ads; move to rejected.
+# Same step in api/app/cabinet_store.py; whichever process opens the DB first runs it.
+SWEEP_AI_HIDDEN_STEP = "sweep-published-ai-hidden-to-rejected-2026-10-14"
+_NON_AI_HIDE_REASONS = (
+    "title_rule_2026_10_13",
+    "expired_not_seen",
+    "non_it_title",
+)
 # One-shot: re-run extract_stack on scraped ads after the curated dictionary grows.
 REEXTRACT_STACK_STEP = "reextract-tech-stack-variants-v5-2026-10-13"
 # One-shot: drop the CJK half of "English / 日本語" titles on stored ads.
@@ -195,6 +203,56 @@ def hide_retired_local(conn) -> int:
     return len(ids)
 
 
+def sweep_published_ai_hidden_to_rejected(conn) -> int:
+    """One-off: published+hidden scraped ads from the old AI recheck path → rejected.
+
+    Fingerprint: scraped, published, hidden=1, ai_confidence + reject/market
+    reasons set (former unfit write). Clears hidden. Returns rows updated
+    (0 when the step already ran). The caller commits.
+    """
+    conn.execute(_MAINTENANCE)
+    done = conn.execute(
+        "SELECT 1 FROM maintenance_steps WHERE name = ?", (SWEEP_AI_HIDDEN_STEP,)
+    ).fetchone()
+    if done:
+        return 0
+    exclude = ", ".join("?" for _ in _NON_AI_HIDE_REASONS)
+    ids = [
+        int(row[0])
+        for row in conn.execute(
+            f"""
+            SELECT id FROM jobs
+            WHERE status = 'published'
+              AND COALESCE(hidden, 0) = 1
+              AND COALESCE(owner_subject, '') = ''
+              AND merged_into IS NULL
+              AND ai_confidence IS NOT NULL
+              AND TRIM(COALESCE(reject_reason, '')) != ''
+              AND TRIM(COALESCE(market_fit_reason, '')) != ''
+              AND COALESCE(reject_reason, '') NOT IN ({exclude})
+            """,
+            _NON_AI_HIDE_REASONS,
+        ).fetchall()
+    ]
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    for start in range(0, len(ids), 200):
+        chunk = ids[start : start + 200]
+        marks = ", ".join("?" for _ in chunk)
+        conn.execute(
+            f"""
+            UPDATE jobs
+            SET status = 'rejected', hidden = 0, updated_at = ?
+            WHERE id IN ({marks})
+            """,
+            (now, *chunk),
+        )
+    conn.execute(
+        "INSERT INTO maintenance_steps (name, done_at) VALUES (?, ?) ON CONFLICT (name) DO NOTHING",
+        (SWEEP_AI_HIDDEN_STEP, now),
+    )
+    return len(ids)
+
+
 # Requests spent on metered APIs (Jooble's key allows 500 in total), counted
 # per source and calendar month so a connector can stop before the limit.
 _API_USAGE = """
@@ -248,6 +306,7 @@ class Store:
         self._seed()
         with self.conn:
             self.hidden_retired = hide_retired_local(self.conn)
+            self.swept_ai_hidden = sweep_published_ai_hidden_to_rejected(self.conn)
             self.conn.execute(_API_USAGE)
             self.conn.execute(_MERGES)
             from worker.cv_queue import ensure_cv_queue
