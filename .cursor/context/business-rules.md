@@ -11,7 +11,7 @@
 ## Viewed jobs + original opens
 - Opening a job detail while signed in records `viewed_jobs` (per user+job).
 - Board list/detail show “Bu elana baxmısınız” when the current user has viewed it; filter `viewed=true` scopes the catalogue to those IDs (auth forwarded by BFF).
-- Clicking **Orijinal elanı aç** / external apply (`GET /original` or external `POST /apply`) records `job_original_opens` once per user+job; public `original_opens` count on list/detail.
+- Clicking **Orijinal elanı aç** / external apply (`GET /original` or external `POST /apply`) records `job_original_opens` **once per user+job** (UNIQUE); spam gir/çıx does not inflate the public `original_opens` count.
 - On-site cabinet ads still expose `applications`; external/source ads expose `original_opens` when `has_original`.
 
 ## Location filter (board facets)
@@ -63,7 +63,7 @@
 - New scraped/crawled jobs are inserted as **`pending`**, not auto-published.
 - They appear in staff **moderation queue** (with company pending ads) until approve/reject.
 - Staff may approve one-by-one or bulk-select (`POST /api/v1/admin/jobs/approve-bulk`).
-- Queue shows rule % and AI %; staff may threshold-publish (`POST /api/v1/admin/jobs/approve-threshold`) or sync AI recheck (`POST /api/v1/admin/jobs/recheck-market-fit`) without waiting for the hourly worker. Approve always means `published`.
+- Queue shows rule % and AI %; staff may threshold-publish **all** matching pending ads (`POST /api/v1/admin/jobs/approve-threshold`, no batch cap). AI recheck selects all matching ids in the UI and walks them in small HTTP batches (`POST /api/v1/admin/jobs/recheck-market-fit` with `ids`, ≤25/request) with a top progress bar (planned / done / left); stops early if AI budget/off returns only failures. Approve always means `published`. Checkbox bulk approve stays capped at 200.
 - Legacy pending without scores: `POST /api/v1/admin/jobs/backfill-confidence` (UI: Köhnə faizləri doldur) — rule pass for clear signals, then up to 40 AI/call; click again until `still_unscored=0`.
 - Re-scrape of an existing row does **not** force `published` (pending stays pending; already live stays live).
 - Already-published scraped ads are left alone (no mass unpublish).

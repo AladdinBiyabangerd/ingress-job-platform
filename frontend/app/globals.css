@@ -10717,6 +10717,30 @@ a.saved-preview-company:hover {
   margin-top: 4px;
 }
 
+.admin-mod-progress {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel, #fff) 92%, var(--muted) 8%);
+}
+
+.admin-mod-progress-label {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.admin-mod-progress-track {
+  height: 6px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.admin-mod-progress-bar {
+  height: 100%;
+  background: var(--text);
+  transition: width 0.2s ease;
+}
+
 .admin-mod-threshold {
   display: flex;
   flex-wrap: wrap;

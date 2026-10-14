@@ -86,18 +86,12 @@ class ThresholdApproveIn(BaseModel):
     score: str = Field(pattern="^(ai|rule)$")
     op: str = Field(pattern="^(gte|lte)$")
     threshold: int = Field(ge=0, le=100)
-    limit: int = Field(default=200, ge=1, le=200)
 
 
 class RecheckMarketFitIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    score: str = Field(pattern="^(ai|rule)$")
-    op: str = Field(default="gte", pattern="^(gte|lte)$")
-    threshold: int = Field(default=0, ge=0, le=100)
-    limit: int = Field(default=30, ge=1, le=30)
-    min_score: int | None = Field(default=None, ge=0, le=100)
-    max_score: int | None = Field(default=None, ge=0, le=100)
+    ids: list[int] = Field(default_factory=list, max_length=25)
 
 
 class BackfillConfidenceIn(BaseModel):
@@ -233,25 +227,13 @@ def approve_threshold(body: ThresholdApproveIn, _user: VerifiedAccess = Depends(
             score=body.score,
             op=body.op,
             threshold=body.threshold,
-            limit=body.limit,
         )
     )
 
 
 @router.post("/jobs/recheck-market-fit")
 def recheck_fit(body: RecheckMarketFitIn, _user: VerifiedAccess = Depends(require_staff)) -> dict:
-    if body.min_score is not None and body.max_score is not None and body.min_score > body.max_score:
-        raise HTTPException(status_code=422, detail="min_score max_score-dan böyük ola bilməz")
-    return _run(
-        lambda: recheck_market_fit(
-            score=body.score,
-            op=body.op,
-            threshold=body.threshold,
-            limit=body.limit,
-            min_score=body.min_score,
-            max_score=body.max_score,
-        )
-    )
+    return _run(lambda: recheck_market_fit(body.ids))
 
 
 @router.post("/jobs/backfill-confidence")

@@ -523,6 +523,9 @@ export const copy = {
     adminThresholdNone: "Bu faizə uyğun gözləyən elan yoxdur.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI yoxlama: ${checked} yoxlandı, ${rejected} rədd, ${failed} uğursuz.`,
+    adminRecheckProgress: (total, done, left) =>
+      `AI yoxlama: ${total} plan, ${done} edildi, ${left} qaldı`,
+    adminRecheckBudgetStop: "AI cavab vermədi (limit/off). Qalanlar sonra davam edə bilər.",
     adminBackfillConfidence: "Köhnə faizləri doldur",
     adminBackfillNote: (rule, checked, rejected, failed, left) =>
       `Faiz: qayda ${rule}, AI ${checked} (rədd ${rejected}, uğursuz ${failed}), qalan ${left}.`,
@@ -1608,6 +1611,9 @@ export const copy = {
     adminThresholdNone: "No pending ads match this percent.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI recheck: ${checked} checked, ${rejected} rejected, ${failed} failed.`,
+    adminRecheckProgress: (total, done, left) =>
+      `AI recheck: ${total} planned, ${done} done, ${left} left`,
+    adminRecheckBudgetStop: "AI did not respond (budget/off). Remaining can continue later.",
     adminBackfillConfidence: "Fill missing percents",
     adminBackfillNote: (rule, checked, rejected, failed, left) =>
       `Scores: rule ${rule}, AI ${checked} (rejected ${rejected}, failed ${failed}), left ${left}.`,
@@ -2694,6 +2700,9 @@ export const copy = {
     adminThresholdNone: "Нет ожидающих объявлений с таким процентом.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI: проверено ${checked}, отклонено ${rejected}, ошибка ${failed}.`,
+    adminRecheckProgress: (total, done, left) =>
+      `AI: ${total} в плане, ${done} сделано, ${left} осталось`,
+    adminRecheckBudgetStop: "AI не ответил (лимит/выкл). Остальное можно продолжить позже.",
     adminBackfillConfidence: "Заполнить старые %",
     adminBackfillNote: (rule, checked, rejected, failed, left) =>
       `Проценты: правило ${rule}, AI ${checked} (откл. ${rejected}, ошибка ${failed}), осталось ${left}.`,

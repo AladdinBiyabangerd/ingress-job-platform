@@ -553,7 +553,7 @@ class AdminTests(unittest.TestCase):
                 again = self.client.post(
                     "/api/v1/admin/jobs/recheck-market-fit",
                     headers={"Authorization": "Bearer test"},
-                    json={"score": "ai", "op": "gte", "threshold": 50, "limit": 10},
+                    json={"ids": [recheck_id]},
                 )
             self.assertEqual(again.status_code, 200, again.text)
             self.assertEqual(again.json()["checked"], 1)

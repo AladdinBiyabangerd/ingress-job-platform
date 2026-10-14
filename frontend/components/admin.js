@@ -69,16 +69,24 @@ function jobScore(job, score) {
   return Number.isFinite(n) ? n : null;
 }
 
-function countThresholdMatches(items, score, op, threshold) {
+function thresholdMatchIds(items, score, op, threshold) {
   const cut = Number(threshold);
-  if (!Number.isFinite(cut)) return 0;
-  return items.filter((job) => {
-    if (job.status !== "pending") return false;
-    const value = jobScore(job, score);
-    if (value == null) return false;
-    return op === "lte" ? value <= cut : value >= cut;
-  }).length;
+  if (!Number.isFinite(cut)) return [];
+  return items
+    .filter((job) => {
+      if (job.status !== "pending") return false;
+      const value = jobScore(job, score);
+      if (value == null) return false;
+      return op === "lte" ? value <= cut : value >= cut;
+    })
+    .map((job) => job.id);
 }
+
+function countThresholdMatches(items, score, op, threshold) {
+  return thresholdMatchIds(items, score, op, threshold).length;
+}
+
+const RECHECK_BATCH = 15;
 
 function statusLabel(t, status) {
   if (status === "pending") return t.statusPending;
@@ -161,6 +169,7 @@ export function Admin({
   const [scoreKind, setScoreKind] = useState("ai");
   const [scoreOp, setScoreOp] = useState("gte");
   const [scoreThreshold, setScoreThreshold] = useState("70");
+  const [recheckProgress, setRecheckProgress] = useState(null);
 
   async function load() {
     const data = await refreshAdminQueue();
@@ -401,37 +410,54 @@ export function Admin({
   }
 
   async function recheckByThreshold() {
-    const matchCount = countThresholdMatches(items, scoreKind, scoreOp, scoreThreshold);
-    if (!matchCount) {
+    const ids = thresholdMatchIds(items, scoreKind, scoreOp, scoreThreshold);
+    if (!ids.length) {
       setNote(t.adminThresholdNone);
       return;
     }
     setError("");
     setNote("");
     setBusy(true);
-    const res = await adminRecheckMarketFit({
-      score: scoreKind,
-      op: scoreOp,
-      threshold: Number(scoreThreshold),
-      limit: 30,
-    });
-    setBusy(false);
-    if (!res.ok) {
-      setError(t.adminError);
-      return;
+    const total = ids.length;
+    let done = 0;
+    let checked = 0;
+    let rejected = 0;
+    let failed = 0;
+    setRecheckProgress({ total, done: 0, remaining: total });
+    let stoppedEarly = false;
+    for (let i = 0; i < ids.length; i += RECHECK_BATCH) {
+      const chunk = ids.slice(i, i + RECHECK_BATCH);
+      const res = await adminRecheckMarketFit(chunk);
+      if (!res.ok) {
+        setError(t.adminError);
+        stoppedEarly = true;
+        break;
+      }
+      const batchChecked = Number(res.data?.checked) || 0;
+      const batchRejected = Number(res.data?.rejected) || 0;
+      const batchFailed = Number(res.data?.failed) || 0;
+      checked += batchChecked;
+      rejected += batchRejected;
+      failed += batchFailed;
+      done = Math.min(i + chunk.length, total);
+      setRecheckProgress({ total, done, remaining: total - done });
+      // AI off / daily budget: nothing progressed — stop rather than spin.
+      if (batchChecked === 0 && batchRejected === 0 && batchFailed > 0) {
+        setNote(t.adminRecheckBudgetStop);
+        stoppedEarly = true;
+        break;
+      }
     }
-    setNote(
-      t.adminRecheckNote(
-        Number(res.data?.checked) || 0,
-        Number(res.data?.rejected) || 0,
-        Number(res.data?.failed) || 0,
-      ),
-    );
+    setBusy(false);
+    if (!stoppedEarly || checked + rejected > 0) {
+      setNote(t.adminRecheckNote(checked, rejected, failed));
+    }
     try {
       await load();
     } catch {
       setError(t.loadError);
     }
+    setRecheckProgress(null);
   }
 
   async function backfillConfidence() {
@@ -545,6 +571,29 @@ export function Admin({
       {tab === "queue" || tab === "rejected" ? (
         <section className="h2-employer-queue">
           <div className="h2-panel h2-employer-list">
+            {tab === "queue" && recheckProgress ? (
+              <div className="admin-mod-progress" role="status" aria-live="polite">
+                <div className="admin-mod-progress-label">
+                  {t.adminRecheckProgress(
+                    recheckProgress.total,
+                    recheckProgress.done,
+                    recheckProgress.remaining,
+                  )}
+                </div>
+                <div className="admin-mod-progress-track">
+                  <div
+                    className="admin-mod-progress-bar"
+                    style={{
+                      width: `${
+                        recheckProgress.total
+                          ? Math.min(100, Math.round((100 * recheckProgress.done) / recheckProgress.total))
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ) : null}
             {listItems.length === 0 ? (
               <p className="empty-line">{tab === "rejected" ? t.adminRejectedEmpty : t.adminEmpty}</p>
             ) : null}

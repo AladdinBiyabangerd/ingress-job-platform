@@ -885,8 +885,12 @@ def approve_ad(job_id: int) -> dict:
     return _owner(row)
 
 
-def approve_ads(job_ids: list[int]) -> dict:
-    """Approve many pending ads. Skips unknown/non-pending ids without failing."""
+def approve_ads(job_ids: list[int], *, max_ids: int | None = 200) -> dict:
+    """Approve many pending ads. Skips unknown/non-pending ids without failing.
+
+    ``max_ids`` caps checkbox bulk (default 200). Pass ``None`` for threshold
+    publish of every matching row.
+    """
     seen: set[int] = set()
     ordered: list[int] = []
     for raw in job_ids:
@@ -898,8 +902,8 @@ def approve_ads(job_ids: list[int]) -> dict:
             continue
         seen.add(job_id)
         ordered.append(job_id)
-    if len(ordered) > 200:
-        raise CabinetError(422, "Birdən çox 200 elan seçilə bilər")
+    if max_ids is not None and len(ordered) > max_ids:
+        raise CabinetError(422, f"Birdən çox {max_ids} elan seçilə bilər")
     notes: list[dict] = []
     approved: list[dict] = []
     with _LOCK:
@@ -948,7 +952,7 @@ def _pending_ids_by_threshold(
     score: str,
     op: str,
     threshold: int,
-    limit: int,
+    limit: int | None = None,
     min_score: int | None = None,
     max_score: int | None = None,
 ) -> list[int]:
@@ -957,7 +961,7 @@ def _pending_ids_by_threshold(
         raise CabinetError(422, "Operator gte və ya lte olmalıdır")
     if threshold < 0 or threshold > 100:
         raise CabinetError(422, "Faiz 0–100 arasında olmalıdır")
-    if limit < 1 or limit > 200:
+    if limit is not None and (limit < 1 or limit > 200):
         raise CabinetError(422, "Limit 1–200 arasında olmalıdır")
     rows = conn.execute(
         f"""
@@ -985,7 +989,7 @@ def _pending_ids_by_threshold(
         elif not _threshold_match(value, op, threshold):
             continue
         matched.append(int(row["id"]))
-        if len(matched) >= limit:
+        if limit is not None and len(matched) >= limit:
             break
     return matched
 
@@ -995,46 +999,48 @@ def approve_ads_by_threshold(
     score: str,
     op: str,
     threshold: int,
-    limit: int = 200,
 ) -> dict:
-    """Publish pending ads whose rule/AI confidence matches the threshold."""
+    """Publish every pending ad whose rule/AI confidence matches the threshold."""
     with _LOCK:
         conn = _connect()
         try:
             ids = _pending_ids_by_threshold(
-                conn, score=score, op=op, threshold=threshold, limit=limit
+                conn, score=score, op=op, threshold=threshold, limit=None
             )
         finally:
             conn.close()
-    return approve_ads(ids)
+    return approve_ads(ids, max_ids=None)
 
 
-def recheck_market_fit(
-    *,
-    score: str,
-    op: str,
-    threshold: int,
-    limit: int = 30,
-    min_score: int | None = None,
-    max_score: int | None = None,
-) -> dict:
-    """Re-run market_fit AI on matching pending ads (sync, no worker wait)."""
+def recheck_market_fit(job_ids: list[int]) -> dict:
+    """Re-run market_fit AI on the given pending ads (one HTTP batch).
+
+    Client loops batches until every selected id is done; keep each request
+    small so AI budget / gateway timeouts stay manageable.
+    """
     from worker.market_fit import clarify_market_fit
+
+    seen: set[int] = set()
+    ordered: list[int] = []
+    for raw in job_ids:
+        try:
+            job_id = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if job_id <= 0 or job_id in seen:
+            continue
+        seen.add(job_id)
+        ordered.append(job_id)
+    if not ordered:
+        raise CabinetError(422, "Elan seçilməyib")
+    if len(ordered) > 25:
+        raise CabinetError(422, "Bir sorğuda ən çox 25 elan yoxlanıla bilər")
 
     with _LOCK:
         conn = _connect()
         try:
-            ids = _pending_ids_by_threshold(
-                conn,
-                score=score,
-                op=op,
-                threshold=threshold,
-                limit=limit,
-                min_score=min_score,
-                max_score=max_score,
-            )
             snapshots: list[dict] = []
-            for job_id in ids:
+            for job_id in ordered:
                 row = conn.execute(
                     """
                     SELECT id, title, company, city, text, status
@@ -1059,6 +1065,7 @@ def recheck_market_fit(
     checked = 0
     rejected = 0
     failed = 0
+    skipped = len(ordered) - len(snapshots)
     updated: list[dict] = []
 
     for snap in snapshots:
@@ -1089,6 +1096,7 @@ def recheck_market_fit(
                     (job_id,),
                 ).fetchone()
                 if row is None or (row["status"] or "") != PENDING:
+                    skipped += 1
                     continue
                 if not verdict.get("suitable"):
                     conn.execute(
@@ -1134,6 +1142,8 @@ def recheck_market_fit(
         "checked": checked,
         "rejected": rejected,
         "failed": failed,
+        "skipped": skipped,
+        "requested": len(ordered),
         "items": updated,
     }
 
