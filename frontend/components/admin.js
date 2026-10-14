@@ -462,7 +462,8 @@ export function Admin({
     if (last?.status === "failed") {
       setError(t.adminError);
     } else if (checked === 0 && rejected === 0 && failed > 0) {
-      setNote(t.adminRecheckBudgetStop);
+      const why = String(last?.error || "").trim();
+      setNote(why ? `${t.adminRecheckBudgetStop} [${why}]` : t.adminRecheckBudgetStop);
     } else {
       setNote(t.adminRecheckNote(checked, rejected, failed));
     }

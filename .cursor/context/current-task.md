@@ -1,23 +1,18 @@
 # Current task
 
 ## Completed
-- Gemini multi-model + multi-key failover (pushed `9bd4f24`)
-- NVIDIA Free Endpoint chat model cascade (same for-loop pattern)
+- Gemini + NVIDIA model cascades (pushed)
+- Recheck: surface first AI miss reason in job `error` + WARNING logs + UI note
 
 ## Current state
-- NVIDIA expands to: lightning → gpt-oss-20b → gemma-4-31b-it → glm-5.3 → nemotron-3-super
-- Per-model cooldown `nvidia:{model}`; embed stays `nemotron-3-embed-1b`
-- Override: `NVIDIA_MODELS` > `NVIDIA_CHAT_MODEL` > default list
-
-## Decisions
-- Skip vision/omni/TTS; no thinking/reasoning_budget extras on NVIDIA calls
-- One `NVIDIA_API_KEY` covers all Free Endpoint models
+- Flags all on; still "limit/off" — likely `ai_budget_exceeded` (default daily 200) or all providers fail
+- After deploy, UI note will show `[ai_budget_exceeded]` etc.
 
 ## Remaining work
-- Commit/push when asked
-- Deploy: unset legacy `NVIDIA_CHAT_MODEL` if full cascade wanted
+- Commit/push diagnostic fix when asked
+- Production: raise `AI_GATEWAY_DAILY_CALL_LIMIT` on api+worker (e.g. 1000); recheck and read `[reason]`
 
 ## Relevant files
-- `api/app/ai_gateway/gateway.py`, `worker/worker/ai_gateway/gateway.py`
-- `worker/tests/test_ai_gateway.py`, `worker/tests/test_gateway_cooldown.py`
-- `.env.example`, `docs/railway.md`
+- `worker/worker/market_fit.py`
+- `api/app/market_fit_recheck_jobs.py`
+- `frontend/components/admin.js`, `collected-admin.js`

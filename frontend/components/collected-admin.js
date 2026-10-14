@@ -268,7 +268,8 @@ export function CollectedAdmin({ locale, initialItems = null }) {
     if (last?.status === "failed") {
       setError(t.adminError);
     } else if (checked === 0 && rejected === 0 && hiddenCount === 0 && failed > 0) {
-      setNote(t.adminRecheckBudgetStop);
+      const why = String(last?.error || "").trim();
+      setNote(why ? `${t.adminRecheckBudgetStop} [${why}]` : t.adminRecheckBudgetStop);
     } else {
       setNote(t.adminRecheckCrawledNote(checked, rejected, hiddenCount, failed));
     }

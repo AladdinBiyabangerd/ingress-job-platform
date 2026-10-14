@@ -215,6 +215,7 @@ def _run_job(job_id: str) -> None:
 
         if not isinstance(ids, list):
             ids = []
+        first_fail = ""
         for raw in ids:
             try:
                 ad_id = int(raw)
@@ -230,10 +231,23 @@ def _run_job(job_id: str) -> None:
                 _bump(job_id, fields=["checked", "hidden"])
             elif outcome == "failed":
                 _bump(job_id, fields=["failed"])
+                if not first_fail:
+                    try:
+                        from worker.market_fit import last_miss_error
+
+                        first_fail = (last_miss_error or "failed")[:180]
+                    except Exception:
+                        first_fail = "failed"
+                    log.warning(
+                        "market_fit recheck first fail job=%s ad=%s reason=%s",
+                        job_id[:8],
+                        ad_id,
+                        first_fail,
+                    )
             else:
                 _bump(job_id, fields=["skipped"])
 
-        _finish(job_id, status="done")
+        _finish(job_id, status="done", error=first_fail)
     except Exception as exc:
         log.exception("market_fit recheck job %s failed", job_id)
         _finish(job_id, status="failed", error=str(exc)[:300])

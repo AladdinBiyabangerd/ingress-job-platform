@@ -298,6 +298,10 @@ def rule_fit_confidence(
     }
 
 
+# Last clarify miss reason (for recheck job / ops; not a public API).
+last_miss_error: str = ""
+
+
 def clarify_market_fit(
     *,
     title: str,
@@ -307,7 +311,14 @@ def clarify_market_fit(
     conn: sqlite3.Connection | None,
 ) -> dict[str, Any] | None:
     """Ask AI. Returns verdict dict, or None when AI is off / fails."""
+    global last_miss_error
     if not feature_on("market_fit", conn):
+        last_miss_error = "market_fit_off"
+        log.warning("market_fit skipped: feature off")
+        return None
+    if not feature_on("gateway", conn):
+        last_miss_error = "ai_disabled"
+        log.warning("market_fit skipped: gateway off")
         return None
     user = (
         f"Title: {title}\n"
@@ -326,8 +337,10 @@ def clarify_market_fit(
         timeout=45.0,
     )
     if not result.ok or not isinstance(result.data, dict):
-        log.info("market_fit ai miss: %s", result.error or "failed")
+        last_miss_error = (result.error or "failed")[:180]
+        log.warning("market_fit ai miss: %s", last_miss_error)
         return None
+    last_miss_error = ""
     data = result.data
     remote = bool(data.get("remote"))
     relocation = bool(data.get("relocation") or data.get("visa_support"))
