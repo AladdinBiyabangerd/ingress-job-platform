@@ -63,7 +63,7 @@
 - New scraped/crawled jobs are inserted as **`pending`**, not auto-published.
 - They appear in staff **moderation queue** (with company pending ads) until approve/reject.
 - Staff may approve one-by-one or bulk-select (`POST /api/v1/admin/jobs/approve-bulk`).
-- Queue shows rule % and AI %; staff may threshold-publish **all** matching pending ads (`POST /api/v1/admin/jobs/approve-threshold`, no batch cap). AI recheck selects all matching ids in the UI and walks them in small HTTP batches (`POST /api/v1/admin/jobs/recheck-market-fit` with `ids`, ≤25/request) with a top progress bar (planned / done / left); stops early if AI budget/off returns only failures. Approve always means `published`. Checkbox bulk approve stays capped at 200.
+- Queue shows rule % and AI %; staff may threshold-publish **all** matching pending ads (`POST /api/v1/admin/jobs/approve-threshold`, no batch cap). AI recheck is async: `POST /api/v1/admin/jobs/recheck-market-fit` starts a background job; UI polls `GET .../recheck-market-fit/{job_id}` (~1.5s) for planned/done/left. Collected tab uses `scope=crawled` (published unfit → hide). Approve always means `published`. Checkbox bulk approve stays capped at 200.
 - Legacy pending without scores: `POST /api/v1/admin/jobs/backfill-confidence` (UI: Köhnə faizləri doldur) — rule pass for clear signals, then up to 40 AI/call; click again until `still_unscored=0`.
 - Re-scrape of an existing row does **not** force `published` (pending stays pending; already live stays live).
 - Already-published scraped ads are left alone (no mass unpublish).

@@ -21,11 +21,11 @@ from app.cabinet_store import (
     create_sourced_ad,
     get_moderation,
     list_moderation,
-    recheck_market_fit,
     reject_ad,
     staff_close_ad,
     staff_update_ad,
 )
+from app.market_fit_recheck_jobs import get_recheck_job, start_recheck_job
 from app.crawled_admin import get_crawled, list_crawled, merge_crawled, set_crawled_hidden, update_crawled
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
@@ -91,7 +91,7 @@ class ThresholdApproveIn(BaseModel):
 class RecheckMarketFitIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    ids: list[int] = Field(default_factory=list, max_length=25)
+    ids: list[int] = Field(default_factory=list, max_length=2000)
     scope: str = Field(default="queue", pattern="^(queue|crawled)$")
 
 
@@ -233,8 +233,20 @@ def approve_threshold(body: ThresholdApproveIn, _user: VerifiedAccess = Depends(
 
 
 @router.post("/jobs/recheck-market-fit")
-def recheck_fit(body: RecheckMarketFitIn, _user: VerifiedAccess = Depends(require_staff)) -> dict:
-    return _run(lambda: recheck_market_fit(body.ids, scope=body.scope))
+def recheck_fit(body: RecheckMarketFitIn, user: VerifiedAccess = Depends(require_staff)) -> dict:
+    """Start async recheck; poll GET .../recheck-market-fit/{job_id} for progress."""
+    return _run(
+        lambda: start_recheck_job(
+            body.ids,
+            scope=body.scope,
+            created_by=user.subject,
+        )
+    )
+
+
+@router.get("/jobs/recheck-market-fit/{job_id}")
+def recheck_fit_status(job_id: str, _user: VerifiedAccess = Depends(require_staff)) -> dict:
+    return _run(lambda: get_recheck_job(job_id))
 
 
 @router.post("/jobs/backfill-confidence")

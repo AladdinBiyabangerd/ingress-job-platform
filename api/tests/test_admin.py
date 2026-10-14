@@ -558,10 +558,27 @@ class AdminTests(unittest.TestCase):
                     headers={"Authorization": "Bearer test"},
                     json={"ids": [recheck_id]},
                 )
-            self.assertEqual(again.status_code, 200, again.text)
-            self.assertEqual(again.json()["checked"], 1)
-            self.assertEqual(again.json()["rejected"], 1)
-            self.assertEqual(again.json()["failed"], 0)
+                self.assertEqual(again.status_code, 200, again.text)
+                job_key = again.json()["job_id"]
+                self.assertTrue(job_key)
+                status_body = None
+                for _ in range(40):
+                    polled = self.client.get(
+                        f"/api/v1/admin/jobs/recheck-market-fit/{job_key}",
+                        headers={"Authorization": "Bearer test"},
+                    )
+                    self.assertEqual(polled.status_code, 200, polled.text)
+                    status_body = polled.json()
+                    if status_body.get("status") in ("done", "failed"):
+                        break
+                    import time
+
+                    time.sleep(0.05)
+            self.assertIsNotNone(status_body)
+            self.assertEqual(status_body["status"], "done")
+            self.assertEqual(status_body["checked"], 1)
+            self.assertEqual(status_body["rejected"], 1)
+            self.assertEqual(status_body["failed"], 0)
             conn = sqlite3.connect(self.db)
             status, reason, conf, rule_val = conn.execute(
                 """

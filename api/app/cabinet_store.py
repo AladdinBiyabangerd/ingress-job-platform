@@ -1012,20 +1012,166 @@ def approve_ads_by_threshold(
     return approve_ads(ids, max_ids=None)
 
 
-def recheck_market_fit(job_ids: list[int], *, scope: str = "queue") -> dict:
-    """Re-run market_fit AI on the given ads (one HTTP batch).
+def recheck_one(job_id: int, *, scope: str = "queue") -> str:
+    """Re-run market_fit on one ad. Returns outcome token for job counters.
 
-    ``scope=queue``: pending moderation rows only (reject if unsuitable).
-    ``scope=crawled``: scraped rows (empty owner); pending → reject,
-    published → hide if unsuitable; rejected → score update only.
-
-    Client loops batches until every selected id is done.
+    Outcomes: checked | rejected | hidden | failed | skipped
+    ``checked`` = AI answered suitable (scores updated).
+    ``rejected`` / ``hidden`` = AI answered unsuitable (also counted as AI success).
     """
     from worker.market_fit import clarify_market_fit
 
     if scope not in ("queue", "crawled"):
-        raise CabinetError(422, "scope queue və ya crawled olmalıdır")
+        return "skipped"
 
+    with _LOCK:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                """
+                SELECT id, title, company, city, text, status,
+                       COALESCE(owner_subject, '') AS owner_subject,
+                       COALESCE(hidden, 0) AS hidden,
+                       merged_into
+                FROM jobs WHERE id = ?
+                """,
+                (job_id,),
+            ).fetchone()
+            if row is None:
+                return "skipped"
+            status = row["status"] or ""
+            if scope == "queue":
+                if status != PENDING:
+                    return "skipped"
+            else:
+                if (row["owner_subject"] or "") != "":
+                    return "skipped"
+                if row["merged_into"]:
+                    return "skipped"
+                if int(row["hidden"] or 0) == 1:
+                    return "skipped"
+                if status not in (PENDING, PUBLISHED, REJECTED):
+                    return "skipped"
+            snap = {
+                "id": int(row["id"]),
+                "title": row["title"] or "",
+                "company": row["company"] or "",
+                "city": row["city"] or "",
+                "text": row["text"] or "",
+            }
+        finally:
+            conn.close()
+
+    conn = _connect()
+    try:
+        verdict = clarify_market_fit(
+            title=snap["title"],
+            company=snap["company"],
+            place=snap["city"],
+            text=snap["text"],
+            conn=conn,
+        )
+    finally:
+        conn.close()
+    if verdict is None:
+        return "failed"
+
+    reason = str(verdict.get("reason") or "")[:300]
+    confidence = int(verdict.get("confidence") or 0)
+    with _LOCK:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                """
+                SELECT status, COALESCE(owner_subject, '') AS owner_subject,
+                       COALESCE(hidden, 0) AS hidden, merged_into
+                FROM jobs WHERE id = ?
+                """,
+                (job_id,),
+            ).fetchone()
+            if row is None:
+                return "skipped"
+            status = row["status"] or ""
+            if scope == "queue":
+                if status != PENDING:
+                    return "skipped"
+            else:
+                if (row["owner_subject"] or "") != "" or row["merged_into"]:
+                    return "skipped"
+                if int(row["hidden"] or 0) == 1:
+                    return "skipped"
+                if status not in (PENDING, PUBLISHED, REJECTED):
+                    return "skipped"
+            if not verdict.get("suitable"):
+                if status == PENDING or scope == "queue":
+                    conn.execute(
+                        """
+                        UPDATE jobs
+                        SET status = ?, reject_reason = ?, rule_confidence = NULL,
+                            ai_confidence = ?, market_fit_reason = ?, updated_at = ?
+                        WHERE id = ?
+                        """,
+                        (
+                            REJECTED,
+                            reason or "unsuitable",
+                            confidence,
+                            reason,
+                            _now(),
+                            job_id,
+                        ),
+                    )
+                    conn.commit()
+                    return "rejected"
+                if status == PUBLISHED:
+                    conn.execute(
+                        """
+                        UPDATE jobs
+                        SET hidden = 1, reject_reason = ?, rule_confidence = NULL,
+                            ai_confidence = ?, market_fit_reason = ?, updated_at = ?
+                        WHERE id = ?
+                        """,
+                        (
+                            reason or "unsuitable",
+                            confidence,
+                            reason,
+                            _now(),
+                            job_id,
+                        ),
+                    )
+                    conn.commit()
+                    return "hidden"
+                conn.execute(
+                    """
+                    UPDATE jobs
+                    SET rule_confidence = NULL, ai_confidence = ?,
+                        market_fit_reason = ?, updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (confidence, reason, _now(), job_id),
+                )
+                conn.commit()
+                return "checked"
+            remote = 1 if verdict.get("remote") else 0
+            relocation = 1 if verdict.get("relocation") else 0
+            conn.execute(
+                """
+                UPDATE jobs
+                SET remote = ?, relocation = ?, ai_confidence = ?,
+                    market_fit_reason = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (remote, relocation, confidence, reason, _now(), job_id),
+            )
+            conn.commit()
+            return "checked"
+        finally:
+            conn.close()
+
+
+def recheck_market_fit(job_ids: list[int], *, scope: str = "queue") -> dict:
+    """Sync batch helper (tests). Prefer start_recheck_job + poll in the UI."""
+    if scope not in ("queue", "crawled"):
+        raise CabinetError(422, "scope queue və ya crawled olmalıdır")
     seen: set[int] = set()
     ordered: list[int] = []
     for raw in job_ids:
@@ -1042,175 +1188,25 @@ def recheck_market_fit(job_ids: list[int], *, scope: str = "queue") -> dict:
     if len(ordered) > 25:
         raise CabinetError(422, "Bir sorğuda ən çox 25 elan yoxlanıla bilər")
 
-    with _LOCK:
-        conn = _connect()
-        try:
-            snapshots: list[dict] = []
-            for job_id in ordered:
-                row = conn.execute(
-                    """
-                    SELECT id, title, company, city, text, status,
-                           COALESCE(owner_subject, '') AS owner_subject,
-                           COALESCE(hidden, 0) AS hidden,
-                           merged_into
-                    FROM jobs WHERE id = ?
-                    """,
-                    (job_id,),
-                ).fetchone()
-                if row is None:
-                    continue
-                status = row["status"] or ""
-                if scope == "queue":
-                    if status != PENDING:
-                        continue
-                else:
-                    if (row["owner_subject"] or "") != "":
-                        continue
-                    if row["merged_into"]:
-                        continue
-                    if int(row["hidden"] or 0) == 1:
-                        continue
-                    if status not in (PENDING, PUBLISHED, REJECTED):
-                        continue
-                snapshots.append(
-                    {
-                        "id": int(row["id"]),
-                        "title": row["title"] or "",
-                        "company": row["company"] or "",
-                        "city": row["city"] or "",
-                        "text": row["text"] or "",
-                        "status": status,
-                    }
-                )
-        finally:
-            conn.close()
-
     checked = 0
     rejected = 0
     hidden = 0
     failed = 0
-    skipped = len(ordered) - len(snapshots)
-    updated: list[dict] = []
-
-    for snap in snapshots:
-        job_id = snap["id"]
-        # AI call outside cabinet lock so other staff actions stay responsive.
-        conn = _connect()
-        try:
-            verdict = clarify_market_fit(
-                title=snap["title"],
-                company=snap["company"],
-                place=snap["city"],
-                text=snap["text"],
-                conn=conn,
-            )
-        finally:
-            conn.close()
-        if verdict is None:
+    skipped = 0
+    for job_id in ordered:
+        outcome = recheck_one(job_id, scope=scope)
+        if outcome == "checked":
+            checked += 1
+        elif outcome == "rejected":
+            checked += 1
+            rejected += 1
+        elif outcome == "hidden":
+            checked += 1
+            hidden += 1
+        elif outcome == "failed":
             failed += 1
-            continue
-        checked += 1
-        reason = str(verdict.get("reason") or "")[:300]
-        confidence = int(verdict.get("confidence") or 0)
-        with _LOCK:
-            conn = _connect()
-            try:
-                row = conn.execute(
-                    """
-                    SELECT status, COALESCE(owner_subject, '') AS owner_subject,
-                           COALESCE(hidden, 0) AS hidden, merged_into
-                    FROM jobs WHERE id = ?
-                    """,
-                    (job_id,),
-                ).fetchone()
-                if row is None:
-                    skipped += 1
-                    continue
-                status = row["status"] or ""
-                if scope == "queue":
-                    if status != PENDING:
-                        skipped += 1
-                        continue
-                else:
-                    if (row["owner_subject"] or "") != "" or row["merged_into"]:
-                        skipped += 1
-                        continue
-                    if int(row["hidden"] or 0) == 1:
-                        skipped += 1
-                        continue
-                    if status not in (PENDING, PUBLISHED, REJECTED):
-                        skipped += 1
-                        continue
-                if not verdict.get("suitable"):
-                    # Fit % is AZ-rule match — unsuitable must not keep a high
-                    # rule score from the earlier keyword pass.
-                    if status == PENDING or scope == "queue":
-                        conn.execute(
-                            """
-                            UPDATE jobs
-                            SET status = ?, reject_reason = ?, rule_confidence = NULL,
-                                ai_confidence = ?, market_fit_reason = ?, updated_at = ?
-                            WHERE id = ?
-                            """,
-                            (
-                                REJECTED,
-                                reason or "unsuitable",
-                                confidence,
-                                reason,
-                                _now(),
-                                job_id,
-                            ),
-                        )
-                        rejected += 1
-                    elif status == PUBLISHED:
-                        conn.execute(
-                            """
-                            UPDATE jobs
-                            SET hidden = 1, reject_reason = ?, rule_confidence = NULL,
-                                ai_confidence = ?, market_fit_reason = ?, updated_at = ?
-                            WHERE id = ?
-                            """,
-                            (
-                                reason or "unsuitable",
-                                confidence,
-                                reason,
-                                _now(),
-                                job_id,
-                            ),
-                        )
-                        hidden += 1
-                    else:
-                        conn.execute(
-                            """
-                            UPDATE jobs
-                            SET rule_confidence = NULL, ai_confidence = ?,
-                                market_fit_reason = ?, updated_at = ?
-                            WHERE id = ?
-                            """,
-                            (confidence, reason, _now(), job_id),
-                        )
-                else:
-                    remote = 1 if verdict.get("remote") else 0
-                    relocation = 1 if verdict.get("relocation") else 0
-                    conn.execute(
-                        """
-                        UPDATE jobs
-                        SET remote = ?, relocation = ?, ai_confidence = ?,
-                            market_fit_reason = ?, updated_at = ?
-                        WHERE id = ?
-                        """,
-                        (remote, relocation, confidence, reason, _now(), job_id),
-                    )
-                refreshed = conn.execute(
-                    f"SELECT {_MOD_COLS} FROM jobs WHERE id = ?",
-                    (job_id,),
-                ).fetchone()
-                conn.commit()
-                if refreshed:
-                    updated.append(_owner(refreshed))
-            finally:
-                conn.close()
-
+        else:
+            skipped += 1
     return {
         "checked": checked,
         "rejected": rejected,
@@ -1218,7 +1214,7 @@ def recheck_market_fit(job_ids: list[int], *, scope: str = "queue") -> dict:
         "failed": failed,
         "skipped": skipped,
         "requested": len(ordered),
-        "items": updated,
+        "items": [],
     }
 
 

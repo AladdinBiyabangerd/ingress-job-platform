@@ -217,18 +217,32 @@ export async function adminApproveThreshold({ score, op, threshold }) {
   return mutate("/api/v1/admin/jobs/approve-threshold", { body });
 }
 
-export async function adminRecheckMarketFit(ids, { scope = "queue" } = {}) {
+export async function adminStartRecheckMarketFit(ids, { scope = "queue" } = {}) {
   const list = Array.isArray(ids)
     ? ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
     : [];
   if (!list.length) return { ok: false, status: 422, data: {} };
   return mutate("/api/v1/admin/jobs/recheck-market-fit", {
     body: {
-      ids: list.slice(0, 25),
+      ids: list.slice(0, 2000),
       scope: scope === "crawled" ? "crawled" : "queue",
     },
-    timeoutMs: AI_BATCH_TIMEOUT_MS,
+    timeoutMs: 30_000,
   });
+}
+
+export async function adminPollRecheckMarketFit(jobId) {
+  const id = String(jobId || "").trim();
+  if (!id) return { ok: false, status: 404, data: {} };
+  try {
+    const data = await loadJson(
+      `/api/v1/admin/jobs/recheck-market-fit/${encodeURIComponent(id)}`,
+      15_000,
+    );
+    return { ok: true, status: 200, data };
+  } catch {
+    return { ok: false, status: 401, data: {} };
+  }
 }
 
 export async function adminBackfillConfidence({ aiLimit = 40 } = {}) {

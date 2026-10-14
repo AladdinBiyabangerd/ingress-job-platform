@@ -11,7 +11,8 @@ import {
   adminApproveThreshold,
   adminBackfillConfidence,
   adminPatchJob,
-  adminRecheckMarketFit,
+  adminPollRecheckMarketFit,
+  adminStartRecheckMarketFit,
   adminRejectJob,
   crawledPatchJob,
   fetchAdminJob,
@@ -86,8 +87,11 @@ function countThresholdMatches(items, score, op, threshold) {
   return thresholdMatchIds(items, score, op, threshold).length;
 }
 
-/** Keep small: each id is a live AI call; UI loops until all are done. */
-const RECHECK_BATCH = 3;
+const RECHECK_POLL_MS = 1500;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function statusLabel(t, status) {
   if (status === "pending") return t.statusPending;
@@ -419,38 +423,44 @@ export function Admin({
     setError("");
     setNote("");
     setBusy(true);
-    const total = ids.length;
-    let done = 0;
-    let checked = 0;
-    let rejected = 0;
-    let failed = 0;
-    setRecheckProgress({ total, done: 0, remaining: total });
-    let stoppedEarly = false;
-    for (let i = 0; i < ids.length; i += RECHECK_BATCH) {
-      const chunk = ids.slice(i, i + RECHECK_BATCH);
-      const res = await adminRecheckMarketFit(chunk);
-      if (!res.ok) {
+    setRecheckProgress({ total: ids.length, done: 0, remaining: ids.length });
+    const started = await adminStartRecheckMarketFit(ids, { scope: "queue" });
+    if (!started.ok || !started.data?.job_id) {
+      setBusy(false);
+      setRecheckProgress(null);
+      setError(t.adminError);
+      return;
+    }
+    const jobId = started.data.job_id;
+    let last = started.data;
+    setRecheckProgress({
+      total: Number(last.total) || ids.length,
+      done: Number(last.done) || 0,
+      remaining: Number(last.remaining) || ids.length,
+    });
+    while (last.status === "queued" || last.status === "running") {
+      await sleep(RECHECK_POLL_MS);
+      const polled = await adminPollRecheckMarketFit(jobId);
+      if (!polled.ok) {
         setError(t.adminError);
-        stoppedEarly = true;
         break;
       }
-      const batchChecked = Number(res.data?.checked) || 0;
-      const batchRejected = Number(res.data?.rejected) || 0;
-      const batchFailed = Number(res.data?.failed) || 0;
-      checked += batchChecked;
-      rejected += batchRejected;
-      failed += batchFailed;
-      done = Math.min(i + chunk.length, total);
-      setRecheckProgress({ total, done, remaining: total - done });
-      // AI off / daily budget: nothing progressed — stop rather than spin.
-      if (batchChecked === 0 && batchRejected === 0 && batchFailed > 0) {
-        setNote(t.adminRecheckBudgetStop);
-        stoppedEarly = true;
-        break;
-      }
+      last = polled.data || {};
+      setRecheckProgress({
+        total: Number(last.total) || ids.length,
+        done: Number(last.done) || 0,
+        remaining: Number(last.remaining) || 0,
+      });
     }
     setBusy(false);
-    if (!stoppedEarly || checked + rejected > 0) {
+    const checked = Number(last.checked) || 0;
+    const rejected = Number(last.rejected) || 0;
+    const failed = Number(last.failed) || 0;
+    if (last.status === "failed") {
+      setError(t.adminError);
+    } else if (checked === 0 && rejected === 0 && failed > 0) {
+      setNote(t.adminRecheckBudgetStop);
+    } else {
       setNote(t.adminRecheckNote(checked, rejected, failed));
     }
     try {
