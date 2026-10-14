@@ -2,10 +2,10 @@
 
 Plain data, no imports: catalog.py builds the source rows from it and
 connectors/ats.py builds one connector per group. Every slug was checked on
-2026-10-05 (base set) or 2026-10-10 / 2026-10-11 (expansions): the board answered, robots.txt
-allowed it and it listed tech roles. Companies that hire remotely or sponsor
-visas/relocation were preferred. Each group reads at most ATS_MAX_BOARDS
-boards per pass; larger groups rotate.
+2026-10-05 (base set) or later expansions (2026-10-10 … 2026-10-14): the board
+answered, robots.txt allowed it and it listed tech roles. Companies that hire
+remotely or sponsor visas/relocation were preferred. Each group reads at most
+ATS_MAX_BOARDS boards per pass; larger groups rotate.
 """
 
 ATS_MAX_BOARDS = 20
@@ -118,6 +118,10 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
     ("Greenhouse boards (Remote & relocation 7)", "greenhouse", "Remote siqnallı lövhələr (dry-run, 3-cü dalğa)", (
         "kayzen", "openzeppelin", "recall", "miris",
         "strike", "flex", "archer56")),
+    # 2026-10-14 wave: kalil greenhouse slug sweep (~1.7k new) + finish_item dry-run (AI off).
+    # Also fixed ONSITE_HEAVY false positive on "no travel required" which blocked bare Remote.
+    ("Greenhouse boards (Remote & relocation 8)", "greenhouse", "Remote siqnallı lövhələr (süpürmə 2026-10-14)", (
+        "ciq", "coverahealth", "documocareers", "enformion", "khealthcareers")),
     # ---- Lever (api.lever.co)
     ("Lever boards (Europe)", "lever", "Avropa", (
         "spotify", "qonto", "swile", "aircall", "zopa", "farfetch", "malt", "blablacar",
@@ -136,6 +140,10 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
         "InfrastructureandCapitalProjects", "zencore", "synapticure", "vrchat", "nibiru",
         "Onehouse", "floqast", "cyara", "significanceinc", "voltus", "accesssoftek",
         "distru", "postera", "Termius")),
+    # 2026-10-14: leftover signal boards re-dry-run after travel-required fix; US-clearance /
+    # gov-contractor heavy boards (clearstreet, agile-defense, ans, shieldai, …) left out.
+    ("Lever boards (Remote & relocation 2)", "lever", "Remote siqnallı lövhələr (dry-run 2026-10-14)", (
+        "entefy", "egen", "oddin", "raya", "ioconnectservices.com", "pingwind")),
     # ---- Teamtailor ({company}.teamtailor.com/jobs.rss)
     ("Teamtailor boards (Nordics)", "teamtailor", "Skandinaviya", (
         "tibber", "polestar", "anyfin", "instabee", "templafy", "detectify", "doktor", "bannerflow",
