@@ -223,12 +223,38 @@ export async function adminStartRecheckMarketFit(ids, { scope = "queue" } = {}) 
     ? ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
     : [];
   if (!list.length) return { ok: false, status: 422, data: {} };
+  const resolved =
+    scope === "crawled" ? "crawled" : scope === "crawl_rejects" ? "crawl_rejects" : "queue";
   return mutate("/api/v1/admin/jobs/recheck-market-fit", {
     body: {
       ids: list.slice(0, 2000),
-      scope: scope === "crawled" ? "crawled" : "queue",
+      scope: resolved,
     },
     timeoutMs: 30_000,
+  });
+}
+
+export async function refreshCrawlRejects() {
+  return itemsOf(await loadJson("/api/v1/admin/crawl-rejects"));
+}
+
+export async function adminPublishCrawlRejectsThreshold({ score, op, threshold }) {
+  return mutate("/api/v1/admin/crawl-rejects/publish-threshold", {
+    body: {
+      score: score === "rule" ? "rule" : "ai",
+      op: op === "lte" ? "lte" : "gte",
+      threshold: Math.max(0, Math.min(100, Number(threshold) || 0)),
+    },
+  });
+}
+
+export async function adminClearCrawlRejects(urls) {
+  const list = Array.isArray(urls)
+    ? urls.map((u) => String(u || "").trim()).filter(Boolean)
+    : [];
+  if (!list.length) return { ok: false, status: 422, data: {} };
+  return mutate("/api/v1/admin/crawl-rejects/clear", {
+    body: { urls: list.slice(0, 500) },
   });
 }
 

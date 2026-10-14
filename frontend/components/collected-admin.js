@@ -1,6 +1,11 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import {
+  adminListFilterActive,
+  emptyAdminListFilter,
+  filterAdminList,
+} from "../lib/admin-list-filter";
 import { text } from "../lib/copy";
 import { calendarDate } from "../lib/dates";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
@@ -19,6 +24,7 @@ import {
   fetchCrawledJob,
   refreshCrawled,
 } from "../lib/server/refresh";
+import { AdminListFilterBar } from "./admin-list-filter-bar";
 import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
@@ -50,7 +56,7 @@ function missingAiScoreIds(items) {
   return items
     .filter((job) => {
       if (job.hidden || job.merged_into) return false;
-      if (job.status !== "pending" && job.status !== "published" && job.status !== "rejected") {
+      if (job.status !== "pending" && job.status !== "published") {
         return false;
       }
       return jobScore(job, "ai") == null;
@@ -136,6 +142,7 @@ export function CollectedAdmin({ locale, initialItems = null }) {
   const [scoreOp, setScoreOp] = useState("gte");
   const [scoreThreshold, setScoreThreshold] = useState("70");
   const [recheckProgress, setRecheckProgress] = useState(null);
+  const [listFilter, setListFilter] = useState(emptyAdminListFilter);
 
   async function load() {
     setItems(await refreshCrawled());
@@ -181,7 +188,16 @@ export function CollectedAdmin({ locale, initialItems = null }) {
     };
   }, []);
 
-  const { pageItems, currentPage, totalPages, pageSize, total, goToPage: goToPaged } = usePagination(items, LIST_PAGE_SIZE);
+  const viewItems = useMemo(() => filterAdminList(items, listFilter), [items, listFilter]);
+  const { pageItems, currentPage, totalPages, pageSize, total, goToPage: goToPaged, resetPage } = usePagination(
+    viewItems,
+    LIST_PAGE_SIZE,
+  );
+
+  function updateListFilter(next) {
+    setListFilter(next);
+    resetPage();
+  }
 
   function cancelEdit() {
     setEditing(null);
@@ -347,6 +363,15 @@ export function CollectedAdmin({ locale, initialItems = null }) {
         {items.length === 0 ? <p className="empty-line">{t.collectedEmpty}</p> : null}
         {items.length ? (
           <div className="admin-mod-table-wrap">
+            <AdminListFilterBar
+              t={t}
+              filter={listFilter}
+              onChange={updateListFilter}
+              disabled={busy}
+            />
+            {adminListFilterActive(listFilter) && viewItems.length === 0 ? (
+              <p className="empty-line">{t.adminListFilterEmpty}</p>
+            ) : null}
             <div className="admin-mod-threshold">
               <label className="admin-mod-threshold-field">
                 <span className="visually-hidden">{t.adminScoreAi}</span>

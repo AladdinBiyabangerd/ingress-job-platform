@@ -5,7 +5,8 @@ import { adminPollRecheckMarketFit } from "./server/refresh";
 export const RECHECK_POLL_MS = 1500;
 
 function storageKey(scope) {
-  const s = scope === "crawled" ? "crawled" : "queue";
+  const s =
+    scope === "crawled" ? "crawled" : scope === "crawl_rejects" ? "crawl_rejects" : "queue";
   return `ij:marketFitRecheck:${s}`;
 }
 

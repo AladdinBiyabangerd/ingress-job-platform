@@ -25,6 +25,11 @@ from app.cabinet_store import (
     staff_close_ad,
     staff_update_ad,
 )
+from app.crawl_rejects_admin import (
+    clear_crawl_rejects,
+    list_crawl_rejects,
+    publish_crawl_rejects_by_threshold,
+)
 from app.market_fit_recheck_jobs import get_recheck_job, start_recheck_job
 from app.crawled_admin import get_crawled, list_crawled, merge_crawled, set_crawled_hidden, update_crawled
 
@@ -93,7 +98,21 @@ class RecheckMarketFitIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     ids: list[int] = Field(default_factory=list, max_length=2000)
-    scope: str = Field(default="queue", pattern="^(queue|crawled)$")
+    scope: str = Field(default="queue", pattern="^(queue|crawled|crawl_rejects)$")
+
+
+class CrawlRejectThresholdIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    score: str = Field(pattern="^(ai|rule)$")
+    op: str = Field(pattern="^(gte|lte)$")
+    threshold: int = Field(ge=0, le=100)
+
+
+class CrawlRejectClearIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    urls: list[str] = Field(default_factory=list, max_length=500)
 
 
 class BackfillConfidenceIn(BaseModel):
@@ -385,6 +404,36 @@ def write_ai_flags(body: AiFlagsIn, user: VerifiedAccess = Depends(require_staff
         finally:
             conn.close()
     return {"key_configured": key_configured(), "flags": flags}
+
+
+# ---- crawl_rejects (URL skip list) ----------------------------------------
+
+
+@router.get("/crawl-rejects")
+def read_crawl_rejects(_user: VerifiedAccess = Depends(require_staff)) -> dict:
+    return {"items": list_crawl_rejects()}
+
+
+@router.post("/crawl-rejects/publish-threshold")
+def publish_crawl_rejects_threshold(
+    body: CrawlRejectThresholdIn,
+    _user: VerifiedAccess = Depends(require_staff),
+) -> dict:
+    return _run(
+        lambda: publish_crawl_rejects_by_threshold(
+            score=body.score,
+            op=body.op,
+            threshold=body.threshold,
+        )
+    )
+
+
+@router.post("/crawl-rejects/clear")
+def clear_crawl_reject_urls(
+    body: CrawlRejectClearIn,
+    _user: VerifiedAccess = Depends(require_staff),
+) -> dict:
+    return _run(lambda: clear_crawl_rejects(body.urls))
 
 
 # ---- job categories (job_categories table) --------------------------------

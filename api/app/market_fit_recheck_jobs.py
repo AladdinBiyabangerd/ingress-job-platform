@@ -85,8 +85,8 @@ def start_recheck_job(
     scope: str = "queue",
     created_by: str = "",
 ) -> dict[str, Any]:
-    if scope not in ("queue", "crawled"):
-        raise CabinetError(422, "scope queue və ya crawled olmalıdır")
+    if scope not in ("queue", "crawled", "crawl_rejects"):
+        raise CabinetError(422, "scope queue, crawled və ya crawl_rejects olmalıdır")
     ordered = _normalize_ids(job_ids)
     if not ordered:
         raise CabinetError(422, "Elan seçilməyib")

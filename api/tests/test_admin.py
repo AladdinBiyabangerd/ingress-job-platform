@@ -649,10 +649,14 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(conf, 12)
 
         with self._auth("job:staff", "admin-staff"):
-            queue = self.client.get("/api/v1/admin/jobs", headers={"Authorization": "Bearer test"})
+            headers = {"Authorization": "Bearer test"}
+            queue = self.client.get("/api/v1/admin/jobs", headers=headers)
             self.assertEqual(queue.status_code, 200, queue.text)
             row = next(item for item in queue.json()["items"] if item["id"] == job_id)
             self.assertEqual(row["status"], "rejected")
+            crawled = self.client.get("/api/v1/admin/crawled", headers=headers)
+            self.assertEqual(crawled.status_code, 200, crawled.text)
+            self.assertNotIn(job_id, {item["id"] for item in crawled.json()["items"]})
 
     def test_sweep_published_ai_hidden_to_rejected(self):
         """Legacy published+hidden AI unfit rows move to rejected once."""
@@ -834,6 +838,89 @@ class AdminTests(unittest.TestCase):
             )
             self.assertEqual(original.status_code, 200)
             self.assertEqual(original.json()["url"], body["source_url"])
+
+    def test_crawl_rejects_list_publish_threshold_and_clear(self):
+        conn = sqlite3.connect(self.db)
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS crawl_rejects (
+                source_url TEXT PRIMARY KEY,
+                reason TEXT NOT NULL DEFAULT '',
+                decided_at TEXT NOT NULL DEFAULT '',
+                via_ai INTEGER NOT NULL DEFAULT 0
+            );
+            """
+        )
+        cur = conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key,
+                owner_subject, hidden, ai_confidence, market_fit_reason
+            ) VALUES (
+                'Remote World', 'Co', '', 'Worldwide remote role.', 'published',
+                '2026-10-14T12:00:00+04:00', 'cr-linked', '', 1, 88, 'ok'
+            )
+            """
+        )
+        job_id = int(cur.lastrowid)
+        conn.execute(
+            """
+            INSERT INTO job_sources (job_id, source_name, source_url, last_seen)
+            VALUES (?, 'Example', 'https://example.com/jobs/1', '2026-10-14T12:00:00+04:00')
+            """,
+            (job_id,),
+        )
+        conn.execute(
+            """
+            INSERT INTO crawl_rejects (source_url, reason, decided_at, via_ai)
+            VALUES
+              ('https://example.com/jobs/1', 'foreign_locked_remote', '2026-10-14T13:00:00+00:00', 0),
+              ('https://example.com/jobs/orphan', 'thin_description', '2026-10-14T14:00:00+00:00', 1)
+            """
+        )
+        conn.commit()
+        conn.close()
+
+        with self._auth("job:staff", "admin-staff"):
+            headers = {"Authorization": "Bearer test"}
+            listed = self.client.get("/api/v1/admin/crawl-rejects", headers=headers)
+            self.assertEqual(listed.status_code, 200, listed.text)
+            items = listed.json()["items"]
+            self.assertEqual(len(items), 2)
+            by_url = {item["source_url"]: item for item in items}
+            self.assertEqual(by_url["https://example.com/jobs/1"]["job_id"], job_id)
+            self.assertEqual(by_url["https://example.com/jobs/1"]["ai_confidence"], 88)
+            self.assertIsNone(by_url["https://example.com/jobs/orphan"]["job_id"])
+
+            published = self.client.post(
+                "/api/v1/admin/crawl-rejects/publish-threshold",
+                headers=headers,
+                json={"score": "ai", "op": "gte", "threshold": 80},
+            )
+            self.assertEqual(published.status_code, 200, published.text)
+            self.assertEqual(published.json()["published"], 1)
+
+            cleared = self.client.post(
+                "/api/v1/admin/crawl-rejects/clear",
+                headers=headers,
+                json={"urls": ["https://example.com/jobs/orphan"]},
+            )
+            self.assertEqual(cleared.status_code, 200, cleared.text)
+            self.assertEqual(cleared.json()["cleared"], 1)
+
+            again = self.client.get("/api/v1/admin/crawl-rejects", headers=headers)
+            self.assertEqual(again.json()["items"], [])
+
+        conn = sqlite3.connect(self.db)
+        status, hidden = conn.execute(
+            "SELECT status, hidden FROM jobs WHERE id = ?",
+            (job_id,),
+        ).fetchone()
+        left = conn.execute("SELECT COUNT(*) FROM crawl_rejects").fetchone()[0]
+        conn.close()
+        self.assertEqual(status, "published")
+        self.assertEqual(hidden, 0)
+        self.assertEqual(left, 0)
 
 
 class AdminAiFlagTests(unittest.TestCase):

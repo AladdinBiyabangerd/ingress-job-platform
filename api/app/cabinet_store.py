@@ -505,6 +505,12 @@ def _apply_schema(conn) -> None:
         pass
     hide_retired_local(conn)
     sweep_published_ai_hidden_to_rejected(conn)
+    try:
+        from worker.market_fit import ensure_rejects_table
+
+        ensure_rejects_table(conn)
+    except Exception:
+        pass
     conn.commit()
 
 
@@ -1083,6 +1089,43 @@ def approve_ads_by_threshold(
     return approve_ads(ids, max_ids=None)
 
 
+def _recheck_eligible(row: sqlite3.Row, *, scope: str) -> bool:
+    status = row["status"] or ""
+    if scope == "queue":
+        return status == PENDING
+    if (row["owner_subject"] or "") != "" or row["merged_into"]:
+        return False
+    if scope == "crawl_rejects":
+        # Purge / AI skip list may still point at hidden rows.
+        return status in (PENDING, PUBLISHED, REJECTED)
+    if int(row["hidden"] or 0) == 1:
+        return False
+    return status in (PENDING, PUBLISHED, REJECTED)
+
+
+def _touch_crawl_reject_reason(conn: sqlite3.Connection, job_id: int, reason: str) -> None:
+    """Refresh crawl_rejects.reason for URLs of this job (keep URL skip)."""
+    from worker.market_fit import mark_rejected
+
+    urls = conn.execute(
+        """
+        SELECT source_url FROM job_sources
+        WHERE job_id = ? AND TRIM(COALESCE(source_url, '')) != ''
+        """,
+        (job_id,),
+    ).fetchall()
+    for url_row in urls:
+        url = str(url_row["source_url"] or "").strip()
+        if not url:
+            continue
+        exists = conn.execute(
+            "SELECT 1 FROM crawl_rejects WHERE source_url = ?",
+            (url,),
+        ).fetchone()
+        if exists:
+            mark_rejected(conn, url, reason or "unsuitable", via_ai=True)
+
+
 def recheck_one(job_id: int, *, scope: str = "queue") -> str:
     """Re-run market_fit on one ad. Returns outcome token for job counters.
 
@@ -1094,7 +1137,7 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
     """
     from worker.market_fit import clarify_market_fit
 
-    if scope not in ("queue", "crawled"):
+    if scope not in ("queue", "crawled", "crawl_rejects"):
         return "skipped"
 
     with _LOCK:
@@ -1110,21 +1153,8 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
                 """,
                 (job_id,),
             ).fetchone()
-            if row is None:
+            if row is None or not _recheck_eligible(row, scope=scope):
                 return "skipped"
-            status = row["status"] or ""
-            if scope == "queue":
-                if status != PENDING:
-                    return "skipped"
-            else:
-                if (row["owner_subject"] or "") != "":
-                    return "skipped"
-                if row["merged_into"]:
-                    return "skipped"
-                if int(row["hidden"] or 0) == 1:
-                    return "skipped"
-                if status not in (PENDING, PUBLISHED, REJECTED):
-                    return "skipped"
             snap = {
                 "id": int(row["id"]),
                 "title": row["title"] or "",
@@ -1162,23 +1192,14 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
                 """,
                 (job_id,),
             ).fetchone()
-            if row is None:
+            if row is None or not _recheck_eligible(row, scope=scope):
                 return "skipped"
             status = row["status"] or ""
-            if scope == "queue":
-                if status != PENDING:
-                    return "skipped"
-            else:
-                if (row["owner_subject"] or "") != "" or row["merged_into"]:
-                    return "skipped"
-                if int(row["hidden"] or 0) == 1:
-                    return "skipped"
-                if status not in (PENDING, PUBLISHED, REJECTED):
-                    return "skipped"
             if not verdict.get("suitable"):
                 # Pending/published → rejected (shows on Rejected tab). Already
                 # rejected → refresh scores only. Do not only-hide published.
-                if status == REJECTED:
+                # crawl_rejects scope: score refresh + keep URL skip (hidden OK).
+                if status == REJECTED or scope == "crawl_rejects":
                     conn.execute(
                         """
                         UPDATE jobs
@@ -1188,8 +1209,19 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
                         """,
                         (confidence, reason, _now(), job_id),
                     )
+                    if scope == "crawl_rejects" and status != REJECTED:
+                        conn.execute(
+                            """
+                            UPDATE jobs
+                            SET status = ?, reject_reason = ?
+                            WHERE id = ? AND status != ?
+                            """,
+                            (REJECTED, reason or "unsuitable", job_id, REJECTED),
+                        )
+                    if scope == "crawl_rejects":
+                        _touch_crawl_reject_reason(conn, job_id, reason)
                     conn.commit()
-                    return "checked"
+                    return "checked" if status == REJECTED else "rejected"
                 conn.execute(
                     """
                     UPDATE jobs
@@ -1227,8 +1259,8 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
 
 def recheck_market_fit(job_ids: list[int], *, scope: str = "queue") -> dict:
     """Sync batch helper (tests). Prefer start_recheck_job + poll in the UI."""
-    if scope not in ("queue", "crawled"):
-        raise CabinetError(422, "scope queue və ya crawled olmalıdır")
+    if scope not in ("queue", "crawled", "crawl_rejects"):
+        raise CabinetError(422, "scope queue, crawled və ya crawl_rejects olmalıdır")
     seen: set[int] = set()
     ordered: list[int] = []
     for raw in job_ids:

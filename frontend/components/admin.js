@@ -1,6 +1,11 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import {
+  adminListFilterActive,
+  emptyAdminListFilter,
+  filterAdminList,
+} from "../lib/admin-list-filter";
 import { applyFormFromJob, applyFormPayload, applyFormReady } from "../lib/apply-form";
 import { hrefFor, text } from "../lib/copy";
 import { calendarDate } from "../lib/dates";
@@ -25,7 +30,8 @@ import {
   refreshAdminQueue,
 } from "../lib/server/refresh";
 import { AdminAiFlags } from "./admin-ai-flags";
-import { AdminCategories } from "./admin-categories";
+import { AdminCrawlRejects } from "./admin-crawl-rejects";
+import { AdminListFilterBar } from "./admin-list-filter-bar";
 import { AdminOpsStatus } from "./admin-ops-status";
 import { ApplyFormFields } from "./apply-form-fields";
 import { CollectedAdmin } from "./collected-admin";
@@ -34,10 +40,11 @@ import { PageChrome } from "./page-chrome";
 import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
-const ADMIN_TABS = new Set(["queue", "rejected", "collected", "manual", "categories", "ai", "ops"]);
+const ADMIN_TABS = new Set(["queue", "rejected", "collected", "manual", "crawl_rejects", "ai", "ops"]);
 
 function normalizeAdminTab(value) {
   const tab = String(value || "").trim();
+  if (tab === "categories") return "crawl_rejects";
   return ADMIN_TABS.has(tab) ? tab : "queue";
 }
 
@@ -185,6 +192,7 @@ export function Admin({
   const [scoreOp, setScoreOp] = useState("gte");
   const [scoreThreshold, setScoreThreshold] = useState("70");
   const [recheckProgress, setRecheckProgress] = useState(null);
+  const [listFilter, setListFilter] = useState(emptyAdminListFilter);
 
   async function load() {
     const data = await refreshAdminQueue();
@@ -195,10 +203,16 @@ export function Admin({
   const queueItems = items.filter((job) => job.status !== "rejected");
   const rejectedItems = items.filter((job) => job.status === "rejected");
   const listItems = tab === "rejected" ? rejectedItems : queueItems;
+  const viewItems = useMemo(() => filterAdminList(listItems, listFilter), [listItems, listFilter]);
   const { pageItems, currentPage, totalPages, pageSize, total, goToPage: goToPaged, resetPage } = usePagination(
-    listItems,
+    viewItems,
     LIST_PAGE_SIZE,
   );
+
+  function updateListFilter(next) {
+    setListFilter(next);
+    resetPage();
+  }
 
   function cancelEdit() {
     setEditing(null);
@@ -589,11 +603,11 @@ export function Admin({
         <button
           type="button"
           role="tab"
-          aria-selected={tab === "categories"}
-          className={tab === "categories" ? "on" : ""}
-          onClick={() => selectTab("categories")}
+          aria-selected={tab === "crawl_rejects"}
+          className={tab === "crawl_rejects" ? "on" : ""}
+          onClick={() => selectTab("crawl_rejects")}
         >
-          Kateqoriyalar
+          {t.crawlRejectsTab}
         </button>
         <button
           type="button"
@@ -648,6 +662,15 @@ export function Admin({
             ) : null}
             {listItems.length ? (
             <div className="admin-mod-table-wrap">
+              <AdminListFilterBar
+                t={t}
+                filter={listFilter}
+                onChange={updateListFilter}
+                disabled={busy}
+              />
+              {adminListFilterActive(listFilter) && viewItems.length === 0 ? (
+                <p className="empty-line">{t.adminListFilterEmpty}</p>
+              ) : null}
               {tab === "queue" || tab === "rejected" ? (
                 <div className="admin-mod-threshold">
                   <label className="admin-mod-threshold-field">
@@ -1042,7 +1065,7 @@ export function Admin({
         </div>
       ) : null}
       {tab === "manual" ? <ManualAd locale={locale} onSaved={load} /> : null}
-      {tab === "categories" ? <AdminCategories /> : null}
+      {tab === "crawl_rejects" ? <AdminCrawlRejects locale={locale} /> : null}
       {tab === "ai" || seenAi ? (
         <div hidden={tab !== "ai"}>
           <AdminAiFlags locale={locale} initial={initialAiFlags} />

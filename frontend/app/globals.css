@@ -10762,6 +10762,48 @@ a.saved-preview-company:hover {
   font-size: 12px;
 }
 
+.admin-mod-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border, #dfe1e5);
+}
+
+.admin-mod-filter-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-mod-filter-label {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.admin-mod-filter-field select,
+.admin-mod-filter-field input[type="number"] {
+  min-width: 52px;
+  max-width: 72px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.admin-mod-filter-source input {
+  min-width: 120px;
+  max-width: 180px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.admin-mod-filter .btn.small {
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
 .admin-mod-pct-col {
   width: 64px;
   text-align: right;
