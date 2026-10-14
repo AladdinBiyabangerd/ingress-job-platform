@@ -1,26 +1,25 @@
 # Current task
 
 ## Completed
-- For You: CV vs öz filterləri (sidebar radio)
-- Filter persistensiya **əsas board `/` + For You**: localStorage + URL
-- Logo / Elanlar / bottom+side nav → `PersistedBrowseLink` (saved query saxlayır)
+- Moderasiya: `rule_confidence` + `ai_confidence` (+ reason)
+- Threshold publish + sync AI recheck (admin queue)
+- market_fit schema v2 (`confidence`)
 
 ## Current state
-- Key: `ingress.job.board.v1`; Clear silənə qədər qalır
-- Hydrate: `useLayoutEffect`; URL sync `persistReady` sonra
+- Crawl: clear signal → rule=100; AI path → ai confidence
+- Queue UI: iki % sütunu + skor/op/threshold + publish / tez / AI recheck
+- Approve = publish; auto-publish yox
 
 ## Decisions
-- Browse linkləri LS filterlərini `?` ilə aparır ki, SSR də eyni qalsın
+- Hər elan yenə pending queue-ya düşür
+- NULL skor threshold match olmur
+- Recheck unsuitable → rejected
 
 ## Remaining work
 - Deploy + production QA
 - Commit when asked
 
 ## Relevant files
-- `frontend/lib/board-persist.js`
-- `frontend/components/persisted-browse-link.js`
-- `frontend/components/home.js`
-- `frontend/components/shell.js`
-- `frontend/components/board-side-nav.js`
-- `frontend/components/command-palette.js`
-- `frontend/components/job-detail/job-detail-header.js`
+- `worker/worker/market_fit.py`, `acceptance.py`, `db.py`
+- `api/app/cabinet_store.py`, `api/app/routers/admin.py`
+- `frontend/components/admin.js`, `frontend/lib/copy.js`, `frontend/lib/server/refresh.js`

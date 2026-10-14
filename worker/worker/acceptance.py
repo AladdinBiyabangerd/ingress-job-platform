@@ -4,6 +4,7 @@ and the LinkedIn extension import (API), so both apply the same checks."""
 from __future__ import annotations
 
 from worker.market_fit import (
+    RULE_CONFIDENCE,
     clarify_market_fit,
     has_clear_market_signal,
     is_rejected,
@@ -68,7 +69,11 @@ def finish_item(connector, item: dict | None) -> dict | None:
             mark_rejected(conn, url, "foreign_office", via_ai=False)
         return None
 
-    if not clear:
+    if clear:
+        item["rule_confidence"] = RULE_CONFIDENCE
+        item["ai_confidence"] = None
+        item["market_fit_reason"] = "clear market signal"
+    else:
         verdict = clarify_market_fit(
             title=title, company=company, place=place, text=text, conn=conn
         )
@@ -83,6 +88,9 @@ def finish_item(connector, item: dict | None) -> dict | None:
             return None
         item["remote"] = bool(verdict.get("remote"))
         item["relocation"] = bool(verdict.get("relocation"))
+        item["rule_confidence"] = None
+        item["ai_confidence"] = int(verdict.get("confidence") or 0)
+        item["market_fit_reason"] = str(verdict.get("reason") or "")[:300]
 
     if getattr(connector, "require_remote_or_relocation", False):
         if not (item.get("remote") or item.get("relocation")):

@@ -96,8 +96,9 @@ class MarketFitTest(unittest.TestCase):
             "relocation": False,
             "visa_support": False,
             "reason": "onsite Tokyo, no visa",
+            "confidence": 88,
         }
-        with patch("worker.runner.clarify_market_fit", return_value=verdict):
+        with patch("worker.acceptance.clarify_market_fit", return_value=verdict):
             self.assertIsNone(finish_item(self.conn, item))
         self.assertTrue(is_rejected(self.store.conn, url))
 
@@ -120,21 +121,43 @@ class MarketFitTest(unittest.TestCase):
             "relocation": True,
             "visa_support": True,
             "reason": "visa sponsorship",
+            "confidence": 76,
         }
-        with patch("worker.runner.clarify_market_fit", return_value=verdict):
-            out = finish_item(self.conn, item)
+        with patch("worker.acceptance.has_clear_market_signal", return_value=False):
+            with patch("worker.acceptance.clarify_market_fit", return_value=verdict):
+                out = finish_item(self.conn, item)
         self.assertIsNotNone(out)
         self.assertTrue(out["relocation"])
+        self.assertEqual(out["ai_confidence"], 76)
+        self.assertIsNone(out["rule_confidence"])
         self.assertFalse(is_rejected(self.store.conn, url))
 
+    def test_clear_signal_sets_rule_confidence(self):
+        item = {
+            "title": "Remote Backend Engineer",
+            "company": "Acme",
+            "city": "Worldwide",
+            "text": "Fully remote role. Work from anywhere.",
+            "source_url": "https://example.com/remote-backend",
+            "remote": None,
+            "relocation": None,
+            "tags": ["Python"],
+            "category": "Engineering",
+        }
+        out = finish_item(self.conn, item)
+        self.assertIsNotNone(out)
+        self.assertEqual(out["rule_confidence"], 100)
+        self.assertIsNone(out["ai_confidence"])
+
     def test_clarify_uses_complete_json(self):
-        result = GatewayResult(ok=True, prompt_version="market-fit-v1", model="x")
+        result = GatewayResult(ok=True, prompt_version="market-fit-v2", model="x")
         result.data = {
             "suitable": True,
             "remote": True,
             "relocation": False,
             "visa_support": False,
             "reason": "worldwide remote",
+            "confidence": 91,
         }
         with patch("worker.market_fit.feature_on", return_value=True):
             with patch("worker.market_fit.complete_json", return_value=result) as call:
@@ -148,6 +171,7 @@ class MarketFitTest(unittest.TestCase):
         call.assert_called_once()
         self.assertTrue(out["suitable"])
         self.assertTrue(out["remote"])
+        self.assertEqual(out["confidence"], 91)
 
 
 if __name__ == "__main__":

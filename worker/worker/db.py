@@ -325,6 +325,10 @@ class Store:
             # Date the source says the ad was posted (worker.posted.parse_posted).
             # NULL = unknown; the API then falls back to created_at.
             "posted_at": "TEXT",
+            # Staff moderation: rule vs AI market-fit confidence (NULL = unset).
+            "rule_confidence": "INTEGER",
+            "ai_confidence": "INTEGER",
+            "market_fit_reason": "TEXT NOT NULL DEFAULT ''",
         }
         for name, decl in alters.items():
             if name not in cols:
@@ -488,6 +492,19 @@ class Store:
         language = listing_language(title, text)[:8]
         key = norm_key(title, company, city)
         seen = now_iso()
+        rule_conf = item.get("rule_confidence", None)
+        ai_conf = item.get("ai_confidence", None)
+        if rule_conf is not None:
+            try:
+                rule_conf = max(0, min(100, int(rule_conf)))
+            except (TypeError, ValueError):
+                rule_conf = None
+        if ai_conf is not None:
+            try:
+                ai_conf = max(0, min(100, int(ai_conf)))
+            except (TypeError, ValueError):
+                ai_conf = None
+        fit_reason = str(item.get("market_fit_reason") or "")[:300]
         with self.conn:
             existing = self.conn.execute(
                 "SELECT id, job_id FROM job_sources WHERE source_url = ?",
@@ -530,6 +547,7 @@ class Store:
                             cleaned_text = CASE WHEN text = ? THEN cleaned_text ELSE NULL END,
                             tech_stack = ?, remote = ?, relocation = ?, category = ?,
                             language = ?,
+                            rule_confidence = ?, ai_confidence = ?, market_fit_reason = ?,
                             updated_at = CASE
                                 WHEN title = ? AND text = ? AND company = ? AND city = ?
                                 THEN COALESCE(NULLIF(updated_at, ''), created_at)
@@ -539,6 +557,7 @@ class Store:
                         (
                             title, company, city, text, text,
                             stack_json, remote, relocation, category, language,
+                            rule_conf, ai_conf, fit_reason,
                             title, text, company, city, seen,
                             existing["job_id"],
                         ),
@@ -590,13 +609,15 @@ class Store:
                     """
                     INSERT INTO jobs (
                         title, company, city, text, status, created_at, norm_key,
-                        tech_stack, remote, relocation, category, language, updated_at
+                        tech_stack, remote, relocation, category, language, updated_at,
+                        rule_confidence, ai_confidence, market_fit_reason
                     )
-                    VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         title, company, city, text, seen, key, stack_json,
                         remote, relocation, category, language, seen,
+                        rule_conf, ai_conf, fit_reason,
                     ),
                 )
                 job_id = int(cur.lastrowid)

@@ -89,6 +89,10 @@ _COLUMNS = {
     "relocation": "INTEGER NOT NULL DEFAULT 0",
     # Normalized tech category from the worker ("Backend", "QA", ...).
     "category": "TEXT NOT NULL DEFAULT ''",
+    # Market-fit confidence for staff moderation (NULL = not set).
+    "rule_confidence": "INTEGER",
+    "ai_confidence": "INTEGER",
+    "market_fit_reason": "TEXT NOT NULL DEFAULT ''",
 }
 
 _APP_COLUMNS = {
@@ -454,6 +458,18 @@ def _connect():
     return conn
 
 
+def _score_or_none(row: sqlite3.Row, key: str) -> int | None:
+    if key not in set(row.keys()):
+        return None
+    raw = row[key]
+    if raw is None:
+        return None
+    try:
+        return max(0, min(100, int(raw)))
+    except (TypeError, ValueError):
+        return None
+
+
 def _owner(row: sqlite3.Row) -> dict:
     keys = set(row.keys())
     payload = {
@@ -478,6 +494,12 @@ def _owner(row: sqlite3.Row) -> dict:
         payload["source_name"] = row["source_name"] or ""
     if "source_url" in keys:
         payload["source_url"] = row["source_url"] or ""
+    if "rule_confidence" in keys:
+        payload["rule_confidence"] = _score_or_none(row, "rule_confidence")
+    if "ai_confidence" in keys:
+        payload["ai_confidence"] = _score_or_none(row, "ai_confidence")
+    if "market_fit_reason" in keys:
+        payload["market_fit_reason"] = row["market_fit_reason"] or ""
     return payload
 
 
@@ -686,7 +708,8 @@ def close_ad(subject: str, job_id: int) -> dict:
 
 _MOD_COLS = """
     id, title, company, city, remote, text, language, salary,
-    job_type, status, created_at, updated_at, reject_reason, apply_form, owner_subject
+    job_type, status, created_at, updated_at, reject_reason, apply_form, owner_subject,
+    rule_confidence, ai_confidence, market_fit_reason
 """
 
 
@@ -743,6 +766,8 @@ def list_moderation() -> list[dict]:
                    j.language, j.salary,
                    j.job_type, j.status, j.created_at, j.updated_at, j.reject_reason,
                    '' AS apply_form, j.owner_subject,
+                   j.rule_confidence, j.ai_confidence,
+                   COALESCE(j.market_fit_reason, '') AS market_fit_reason,
                    COALESCE(js.source_name, '') AS source_name,
                    COALESCE(js.source_url, '') AS source_url
             FROM jobs j
@@ -867,6 +892,220 @@ def approve_ads(job_ids: list[int]) -> dict:
         for note in notes:
             deliver_email(note)
     return {"approved": len(approved), "items": approved}
+
+
+def _score_column(score: str) -> str:
+    if score == "ai":
+        return "ai_confidence"
+    if score == "rule":
+        return "rule_confidence"
+    raise CabinetError(422, "Skor ai və ya rule olmalıdır")
+
+
+def _threshold_match(value: int | None, op: str, threshold: int) -> bool:
+    if value is None:
+        return False
+    if op == "gte":
+        return value >= threshold
+    if op == "lte":
+        return value <= threshold
+    raise CabinetError(422, "Operator gte və ya lte olmalıdır")
+
+
+def _pending_ids_by_threshold(
+    conn: sqlite3.Connection,
+    *,
+    score: str,
+    op: str,
+    threshold: int,
+    limit: int,
+    min_score: int | None = None,
+    max_score: int | None = None,
+) -> list[int]:
+    col = _score_column(score)
+    if op not in ("gte", "lte"):
+        raise CabinetError(422, "Operator gte və ya lte olmalıdır")
+    if threshold < 0 or threshold > 100:
+        raise CabinetError(422, "Faiz 0–100 arasında olmalıdır")
+    if limit < 1 or limit > 200:
+        raise CabinetError(422, "Limit 1–200 arasında olmalıdır")
+    rows = conn.execute(
+        f"""
+        SELECT id, {col} AS score
+        FROM jobs
+        WHERE status = ?
+          AND (
+            owner_subject != ''
+            OR COALESCE(owner_subject, '') = ''
+          )
+        ORDER BY id DESC
+        """,
+        (PENDING,),
+    ).fetchall()
+    matched: list[int] = []
+    for row in rows:
+        value = _score_or_none(row, "score")
+        if min_score is not None or max_score is not None:
+            if value is None:
+                continue
+            if min_score is not None and value < min_score:
+                continue
+            if max_score is not None and value > max_score:
+                continue
+        elif not _threshold_match(value, op, threshold):
+            continue
+        matched.append(int(row["id"]))
+        if len(matched) >= limit:
+            break
+    return matched
+
+
+def approve_ads_by_threshold(
+    *,
+    score: str,
+    op: str,
+    threshold: int,
+    limit: int = 200,
+) -> dict:
+    """Publish pending ads whose rule/AI confidence matches the threshold."""
+    with _LOCK:
+        conn = _connect()
+        try:
+            ids = _pending_ids_by_threshold(
+                conn, score=score, op=op, threshold=threshold, limit=limit
+            )
+        finally:
+            conn.close()
+    return approve_ads(ids)
+
+
+def recheck_market_fit(
+    *,
+    score: str,
+    op: str,
+    threshold: int,
+    limit: int = 30,
+    min_score: int | None = None,
+    max_score: int | None = None,
+) -> dict:
+    """Re-run market_fit AI on matching pending ads (sync, no worker wait)."""
+    from worker.market_fit import clarify_market_fit
+
+    with _LOCK:
+        conn = _connect()
+        try:
+            ids = _pending_ids_by_threshold(
+                conn,
+                score=score,
+                op=op,
+                threshold=threshold,
+                limit=limit,
+                min_score=min_score,
+                max_score=max_score,
+            )
+            snapshots: list[dict] = []
+            for job_id in ids:
+                row = conn.execute(
+                    """
+                    SELECT id, title, company, city, text, status
+                    FROM jobs WHERE id = ?
+                    """,
+                    (job_id,),
+                ).fetchone()
+                if row is None or (row["status"] or "") != PENDING:
+                    continue
+                snapshots.append(
+                    {
+                        "id": int(row["id"]),
+                        "title": row["title"] or "",
+                        "company": row["company"] or "",
+                        "city": row["city"] or "",
+                        "text": row["text"] or "",
+                    }
+                )
+        finally:
+            conn.close()
+
+    checked = 0
+    rejected = 0
+    failed = 0
+    updated: list[dict] = []
+
+    for snap in snapshots:
+        job_id = snap["id"]
+        # AI call outside cabinet lock so other staff actions stay responsive.
+        conn = _connect()
+        try:
+            verdict = clarify_market_fit(
+                title=snap["title"],
+                company=snap["company"],
+                place=snap["city"],
+                text=snap["text"],
+                conn=conn,
+            )
+        finally:
+            conn.close()
+        if verdict is None:
+            failed += 1
+            continue
+        checked += 1
+        reason = str(verdict.get("reason") or "")[:300]
+        confidence = int(verdict.get("confidence") or 0)
+        with _LOCK:
+            conn = _connect()
+            try:
+                row = conn.execute(
+                    "SELECT status FROM jobs WHERE id = ?",
+                    (job_id,),
+                ).fetchone()
+                if row is None or (row["status"] or "") != PENDING:
+                    continue
+                if not verdict.get("suitable"):
+                    conn.execute(
+                        """
+                        UPDATE jobs
+                        SET status = ?, reject_reason = ?, ai_confidence = ?,
+                            market_fit_reason = ?, updated_at = ?
+                        WHERE id = ?
+                        """,
+                        (
+                            REJECTED,
+                            reason or "unsuitable",
+                            confidence,
+                            reason,
+                            _now(),
+                            job_id,
+                        ),
+                    )
+                    rejected += 1
+                else:
+                    remote = 1 if verdict.get("remote") else 0
+                    relocation = 1 if verdict.get("relocation") else 0
+                    conn.execute(
+                        """
+                        UPDATE jobs
+                        SET remote = ?, relocation = ?, ai_confidence = ?,
+                            market_fit_reason = ?, updated_at = ?
+                        WHERE id = ?
+                        """,
+                        (remote, relocation, confidence, reason, _now(), job_id),
+                    )
+                refreshed = conn.execute(
+                    f"SELECT {_MOD_COLS} FROM jobs WHERE id = ?",
+                    (job_id,),
+                ).fetchone()
+                conn.commit()
+                if refreshed:
+                    updated.append(_owner(refreshed))
+            finally:
+                conn.close()
+
+    return {
+        "checked": checked,
+        "rejected": rejected,
+        "failed": failed,
+        "items": updated,
+    }
 
 
 def reject_ad(job_id: int, reason: str) -> dict:

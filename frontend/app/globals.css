@@ -10717,6 +10717,47 @@ a.saved-preview-company:hover {
   margin-top: 4px;
 }
 
+.admin-mod-threshold {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.admin-mod-threshold-field select,
+.admin-mod-threshold-field input {
+  min-width: 64px;
+  max-width: 88px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.admin-mod-threshold .btn.small {
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+.admin-mod-pct-col {
+  width: 64px;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.admin-mod-table thead th.admin-mod-pct-col {
+  text-align: right;
+}
+
+.admin-mod-pct {
+  color: var(--text);
+}
+
+.admin-mod-pct-empty {
+  color: var(--muted);
+}
+
 .admin-mod-bulk {
   display: flex;
   align-items: center;

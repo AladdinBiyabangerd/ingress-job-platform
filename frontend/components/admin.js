@@ -8,7 +8,9 @@ import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
 import {
   adminActJob,
   adminApproveBulk,
+  adminApproveThreshold,
   adminPatchJob,
+  adminRecheckMarketFit,
   adminRejectJob,
   crawledPatchJob,
   fetchAdminJob,
@@ -42,6 +44,39 @@ function typeLabel(t, value) {
   if (value === "hibrid") return t.jobHybrid;
   if (value === "uzaqdan") return t.jobRemoteType;
   return "";
+}
+
+function confidenceCell(value, reason) {
+  if (value == null || value === "") {
+    return <span className="admin-mod-pct-empty">—</span>;
+  }
+  const label = `${value}%`;
+  if (reason) {
+    return (
+      <span className="admin-mod-pct" title={reason}>
+        {label}
+      </span>
+    );
+  }
+  return <span className="admin-mod-pct">{label}</span>;
+}
+
+function jobScore(job, score) {
+  const raw = score === "rule" ? job.rule_confidence : job.ai_confidence;
+  if (raw == null || raw === "") return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function countThresholdMatches(items, score, op, threshold) {
+  const cut = Number(threshold);
+  if (!Number.isFinite(cut)) return 0;
+  return items.filter((job) => {
+    if (job.status !== "pending") return false;
+    const value = jobScore(job, score);
+    if (value == null) return false;
+    return op === "lte" ? value <= cut : value >= cut;
+  }).length;
 }
 
 function statusLabel(t, status) {
@@ -122,6 +157,9 @@ export function Admin({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState(() => new Set());
+  const [scoreKind, setScoreKind] = useState("ai");
+  const [scoreOp, setScoreOp] = useState("gte");
+  const [scoreThreshold, setScoreThreshold] = useState("70");
 
   async function load() {
     const data = await refreshAdminQueue();
@@ -332,6 +370,69 @@ export function Admin({
     }
   }
 
+  async function approveByThreshold({ quick = false } = {}) {
+    const matchCount = countThresholdMatches(items, scoreKind, scoreOp, scoreThreshold);
+    if (!matchCount) {
+      setNote(t.adminThresholdNone);
+      return;
+    }
+    if (!quick && !window.confirm(t.adminThresholdConfirm(matchCount))) return;
+    setError("");
+    setNote("");
+    setBusy(true);
+    const res = await adminApproveThreshold({
+      score: scoreKind,
+      op: scoreOp,
+      threshold: Number(scoreThreshold),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setError(t.adminError);
+      return;
+    }
+    const count = Number(res.data?.approved) || 0;
+    setNote(count ? t.adminBulkApprovedNote(count) : t.adminThresholdNone);
+    try {
+      await load();
+    } catch {
+      setError(t.loadError);
+    }
+  }
+
+  async function recheckByThreshold() {
+    const matchCount = countThresholdMatches(items, scoreKind, scoreOp, scoreThreshold);
+    if (!matchCount) {
+      setNote(t.adminThresholdNone);
+      return;
+    }
+    setError("");
+    setNote("");
+    setBusy(true);
+    const res = await adminRecheckMarketFit({
+      score: scoreKind,
+      op: scoreOp,
+      threshold: Number(scoreThreshold),
+      limit: 30,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setError(t.adminError);
+      return;
+    }
+    setNote(
+      t.adminRecheckNote(
+        Number(res.data?.checked) || 0,
+        Number(res.data?.rejected) || 0,
+        Number(res.data?.failed) || 0,
+      ),
+    );
+    try {
+      await load();
+    } catch {
+      setError(t.loadError);
+    }
+  }
+
   const pendingIds = items.filter((job) => job.status === "pending").map((job) => job.id);
   const pendingCount = pendingIds.length;
   const selectedCount = selected.size;
@@ -422,6 +523,68 @@ export function Admin({
             ) : null}
             {listItems.length ? (
             <div className="admin-mod-table-wrap">
+              {tab === "queue" ? (
+                <div className="admin-mod-threshold">
+                  <label className="admin-mod-threshold-field">
+                    <span className="visually-hidden">{t.adminScoreAi}</span>
+                    <select
+                      value={scoreKind}
+                      disabled={busy}
+                      onChange={(event) => setScoreKind(event.target.value === "rule" ? "rule" : "ai")}
+                    >
+                      <option value="ai">{t.adminScoreAi}</option>
+                      <option value="rule">{t.adminScoreRule}</option>
+                    </select>
+                  </label>
+                  <label className="admin-mod-threshold-field">
+                    <span className="visually-hidden">{t.adminOpGte}</span>
+                    <select
+                      value={scoreOp}
+                      disabled={busy}
+                      onChange={(event) => setScoreOp(event.target.value === "lte" ? "lte" : "gte")}
+                    >
+                      <option value="gte">{t.adminOpGte}</option>
+                      <option value="lte">{t.adminOpLte}</option>
+                    </select>
+                  </label>
+                  <label className="admin-mod-threshold-field">
+                    <span className="visually-hidden">{t.adminThresholdLabel}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={scoreThreshold}
+                      disabled={busy}
+                      onChange={(event) => setScoreThreshold(event.target.value)}
+                      aria-label={t.adminThresholdLabel}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn small primary"
+                    disabled={busy}
+                    onClick={() => approveByThreshold({ quick: false })}
+                  >
+                    {t.adminThresholdPublish}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn small"
+                    disabled={busy}
+                    onClick={() => approveByThreshold({ quick: true })}
+                  >
+                    {t.adminThresholdPublishQuick}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn small"
+                    disabled={busy}
+                    onClick={recheckByThreshold}
+                  >
+                    {t.adminThresholdRecheck}
+                  </button>
+                </div>
+              ) : null}
               {tab === "queue" && selectedCount ? (
                 <div className="admin-mod-bulk">
                   <span className="admin-mod-bulk-count">{t.adminSelectedCount(selectedCount)}</span>
@@ -470,6 +633,8 @@ export function Admin({
                     ) : null}
                     <th className="admin-mod-date" scope="col">{t.adminColIngested}</th>
                     <th scope="col">{t.adminColTitle}</th>
+                    <th className="admin-mod-pct-col" scope="col">{t.adminColRulePct}</th>
+                    <th className="admin-mod-pct-col" scope="col">{t.adminColAiPct}</th>
                     <th className="admin-mod-source" scope="col">{t.adminColSource}</th>
                     <th className="admin-mod-actions" scope="col">{t.adminColActions}</th>
                   </tr>
@@ -483,7 +648,7 @@ export function Admin({
                       t.adminDateUnknown,
                     );
                     const isOpen = editing === job.id;
-                    const colSpan = tab === "rejected" ? 4 : 5;
+                    const colSpan = tab === "rejected" ? 6 : 7;
                     return (
                       <Fragment key={job.id}>
                       <tr className={`${muted ? "is-muted" : ""}${isOpen ? " is-editing" : ""}`.trim() || undefined}>
@@ -551,6 +716,12 @@ export function Admin({
                               {t.rejectReason}: {job.reject_reason}
                             </span>
                           ) : null}
+                        </td>
+                        <td className="admin-mod-pct-col">
+                          {confidenceCell(job.rule_confidence, job.market_fit_reason)}
+                        </td>
+                        <td className="admin-mod-pct-col">
+                          {confidenceCell(job.ai_confidence, job.market_fit_reason)}
                         </td>
                         <td className="admin-mod-source">{sourceCell(t, job)}</td>
                         <td className="admin-mod-actions">

@@ -396,6 +396,112 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(public_ids, {ids[1], live_id})
         self.assertNotIn(ids[0], public_ids)
 
+    def test_threshold_approve_and_recheck_market_fit(self):
+        conn = sqlite3.connect(self.db)
+        rows = [
+            ("High AI", 90, None),
+            ("Low AI", 40, None),
+            ("Rule clear", None, 100),
+            ("No score", None, None),
+        ]
+        ids = {}
+        for title, ai, rule in rows:
+            cur = conn.execute(
+                """
+                INSERT INTO jobs (
+                    title, company, city, text, status, created_at, norm_key, owner_subject,
+                    ai_confidence, rule_confidence, market_fit_reason
+                ) VALUES (?, 'Co', 'Baki', 'Body for market fit recheck.', 'pending', ?, ?, '', ?, ?, ?)
+                """,
+                (
+                    title,
+                    "2026-10-14T12:00:00+04:00",
+                    f"thresh-{title}",
+                    ai,
+                    rule,
+                    "seed",
+                ),
+            )
+            ids[title] = int(cur.lastrowid)
+        conn.commit()
+        conn.close()
+
+        with self._auth("job:staff", "admin-staff"):
+            queue = self.client.get("/api/v1/admin/jobs", headers={"Authorization": "Bearer test"})
+            self.assertEqual(queue.status_code, 200, queue.text)
+            by_id = {item["id"]: item for item in queue.json()["items"]}
+            self.assertEqual(by_id[ids["High AI"]]["ai_confidence"], 90)
+            self.assertEqual(by_id[ids["Rule clear"]]["rule_confidence"], 100)
+            self.assertIsNone(by_id[ids["No score"]]["ai_confidence"])
+
+            published = self.client.post(
+                "/api/v1/admin/jobs/approve-threshold",
+                headers={"Authorization": "Bearer test"},
+                json={"score": "ai", "op": "gte", "threshold": 80},
+            )
+            self.assertEqual(published.status_code, 200, published.text)
+            self.assertEqual(published.json()["approved"], 1)
+            self.assertEqual(published.json()["items"][0]["id"], ids["High AI"])
+
+            low = self.client.post(
+                "/api/v1/admin/jobs/approve-threshold",
+                headers={"Authorization": "Bearer test"},
+                json={"score": "ai", "op": "lte", "threshold": 50},
+            )
+            self.assertEqual(low.status_code, 200, low.text)
+            self.assertEqual(low.json()["approved"], 1)
+            self.assertEqual(low.json()["items"][0]["id"], ids["Low AI"])
+
+            rule_pub = self.client.post(
+                "/api/v1/admin/jobs/approve-threshold",
+                headers={"Authorization": "Bearer test"},
+                json={"score": "rule", "op": "gte", "threshold": 90},
+            )
+            self.assertEqual(rule_pub.status_code, 200, rule_pub.text)
+            self.assertEqual(rule_pub.json()["approved"], 1)
+            self.assertEqual(rule_pub.json()["items"][0]["id"], ids["Rule clear"])
+
+            verdict = {
+                "suitable": False,
+                "remote": False,
+                "relocation": False,
+                "visa_support": False,
+                "reason": "not az market",
+                "confidence": 22,
+            }
+            conn = sqlite3.connect(self.db)
+            cur = conn.execute(
+                """
+                INSERT INTO jobs (
+                    title, company, city, text, status, created_at, norm_key, owner_subject,
+                    ai_confidence, market_fit_reason
+                ) VALUES ('Recheck me', 'Co', 'Tokyo', 'Office only.', 'pending', ?, ?, '', 55, '')
+                """,
+                ("2026-10-14T13:00:00+04:00", "thresh-recheck"),
+            )
+            recheck_id = int(cur.lastrowid)
+            conn.commit()
+            conn.close()
+            with patch("worker.market_fit.clarify_market_fit", return_value=verdict):
+                again = self.client.post(
+                    "/api/v1/admin/jobs/recheck-market-fit",
+                    headers={"Authorization": "Bearer test"},
+                    json={"score": "ai", "op": "gte", "threshold": 50, "limit": 10},
+                )
+            self.assertEqual(again.status_code, 200, again.text)
+            self.assertEqual(again.json()["checked"], 1)
+            self.assertEqual(again.json()["rejected"], 1)
+            self.assertEqual(again.json()["failed"], 0)
+            conn = sqlite3.connect(self.db)
+            status, reason, conf = conn.execute(
+                "SELECT status, reject_reason, ai_confidence FROM jobs WHERE id = ?",
+                (recheck_id,),
+            ).fetchone()
+            conn.close()
+            self.assertEqual(status, "rejected")
+            self.assertEqual(reason, "not az market")
+            self.assertEqual(conf, 22)
+
     def test_manual_source_publishes_without_showing_the_url(self):
         body = self._ad(company="Manual MMC", text="LinkedIn-de gorulen rol")
         body["source_url"] = "https://www.linkedin.com/jobs/view/manual-1"

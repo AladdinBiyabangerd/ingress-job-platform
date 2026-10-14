@@ -19,8 +19,9 @@ from worker.techstack import relocation_flag, remote_flag
 log = logging.getLogger("ingress-job.worker.market_fit")
 
 PURPOSE = "market_fit"
-PROMPT_VERSION = "market-fit-v1"
+PROMPT_VERSION = "market-fit-v2"
 ENV_FLAG = "AI_MARKET_FIT_ENABLED"
+RULE_CONFIDENCE = 100
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS crawl_rejects (
@@ -44,21 +45,40 @@ _SYSTEM = (
     "Set remote/relocation/visa_support from the ad. visa_support that only helps "
     "relocation counts as relocation=true.\n"
     "Be strict. If unclear, suitable=false.\n"
+    "confidence is an integer 0-100: how sure you are that suitable is correct "
+    "for an Azerbaijan-based candidate (remote worldwide / reloc / visa).\n"
     "Reply with JSON only matching the schema."
 )
 
 _JSON_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["suitable", "remote", "relocation", "visa_support", "reason"],
+    "required": [
+        "suitable",
+        "remote",
+        "relocation",
+        "visa_support",
+        "reason",
+        "confidence",
+    ],
     "properties": {
         "suitable": {"type": "boolean"},
         "remote": {"type": "boolean"},
         "relocation": {"type": "boolean"},
         "visa_support": {"type": "boolean"},
         "reason": {"type": "string"},
+        "confidence": {"type": "integer", "minimum": 0, "maximum": 100},
     },
 }
+
+
+def clamp_confidence(raw: Any) -> int:
+    """Normalize AI confidence to 0–100."""
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(100, value))
 
 
 def ensure_rejects_table(conn: sqlite3.Connection | None) -> None:
@@ -170,5 +190,6 @@ def clarify_market_fit(
         "relocation": relocation,
         "visa_support": bool(data.get("visa_support")),
         "reason": str(data.get("reason") or "")[:300],
+        "confidence": clamp_confidence(data.get("confidence")),
         "cached": result.cached,
     }

@@ -200,6 +200,39 @@ export async function adminApproveBulk(ids) {
   return mutate("/api/v1/admin/jobs/approve-bulk", { body: { ids: list } });
 }
 
+export async function adminApproveThreshold({ score, op, threshold, limit = 200 }) {
+  const body = {
+    score: score === "rule" ? "rule" : "ai",
+    op: op === "lte" ? "lte" : "gte",
+    threshold: Math.max(0, Math.min(100, Number(threshold) || 0)),
+    limit: Math.max(1, Math.min(200, Number(limit) || 200)),
+  };
+  return mutate("/api/v1/admin/jobs/approve-threshold", { body });
+}
+
+export async function adminRecheckMarketFit({
+  score,
+  op,
+  threshold,
+  limit = 30,
+  minScore = null,
+  maxScore = null,
+}) {
+  const body = {
+    score: score === "rule" ? "rule" : "ai",
+    op: op === "lte" ? "lte" : "gte",
+    threshold: Math.max(0, Math.min(100, Number(threshold) || 0)),
+    limit: Math.max(1, Math.min(30, Number(limit) || 30)),
+  };
+  if (minScore != null && minScore !== "") {
+    body.min_score = Math.max(0, Math.min(100, Number(minScore)));
+  }
+  if (maxScore != null && maxScore !== "") {
+    body.max_score = Math.max(0, Math.min(100, Number(maxScore)));
+  }
+  return mutate("/api/v1/admin/jobs/recheck-market-fit", { body });
+}
+
 export async function crawledPatchJob(id, payload) {
   const jobId = numericId(id);
   if (!jobId) return { ok: false, status: 404, data: {} };
