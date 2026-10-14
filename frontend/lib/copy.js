@@ -276,6 +276,12 @@ export const copy = {
     companyPlaceholder: "Şirkət adı",
     remoteFilter: "Uzaqdan iş",
     relocationFilter: "Relokasiya və ya viza dəstəyi",
+    viewedFilter: "Baxdıqlarım",
+    viewedFilterLegend: "Baxılmış elanlar",
+    viewedJobBadge: "Bu elana baxmısınız",
+    originalOpensCount: (n) => `${n} nəfər orijinalı açıb`,
+    originalOpensNone: "Hələ heç kim orijinalı açmayıb",
+    originalOpensFirst: "İlk açan ol",
     relocationBadge: "Relokasiya / viza",
     techStack: "Texnologiyalar",
     techPlaceholder: "Texnologiya axtarın",
@@ -517,6 +523,9 @@ export const copy = {
     adminThresholdNone: "Bu faizə uyğun gözləyən elan yoxdur.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI yoxlama: ${checked} yoxlandı, ${rejected} rədd, ${failed} uğursuz.`,
+    adminBackfillConfidence: "Köhnə faizləri doldur",
+    adminBackfillNote: (rule, checked, rejected, failed, left) =>
+      `Faiz: qayda ${rule}, AI ${checked} (rədd ${rejected}, uğursuz ${failed}), qalan ${left}.`,
     rejectReason: "Rədd səbəbi",
     rejectReasonRequired: "Rədd səbəbi yazılmalıdır.",
     resubmitHint: "Rədd edilmiş elanı saxlayanda o yenidən moderasiyaya düşür və ictimai siyahıdan kənarda qalır.",
@@ -1351,6 +1360,13 @@ export const copy = {
     companyPlaceholder: "Company name",
     remoteFilter: "Remote work",
     relocationFilter: "Relocation or visa support",
+    viewedFilter: "Viewed by me",
+    viewedFilterLegend: "Viewed jobs",
+    viewedJobBadge: "You've viewed this job",
+    originalOpensCount: (n) =>
+      `${n} ${n === 1 ? "person opened" : "people opened"} the original`,
+    originalOpensNone: "No one has opened the original yet",
+    originalOpensFirst: "Be the first to open it",
     relocationBadge: "Relocation / visa",
     techStack: "Tech stack",
     techPlaceholder: "Find a technology",
@@ -1592,6 +1608,9 @@ export const copy = {
     adminThresholdNone: "No pending ads match this percent.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI recheck: ${checked} checked, ${rejected} rejected, ${failed} failed.`,
+    adminBackfillConfidence: "Fill missing percents",
+    adminBackfillNote: (rule, checked, rejected, failed, left) =>
+      `Scores: rule ${rule}, AI ${checked} (rejected ${rejected}, failed ${failed}), left ${left}.`,
     rejectReason: "Rejection reason",
     rejectReasonRequired: "A rejection reason is required.",
     resubmitHint: "Saving a rejected ad sends it back to moderation and keeps it off the public list.",
@@ -2427,6 +2446,13 @@ export const copy = {
     companyPlaceholder: "Название компании",
     remoteFilter: "Удалённая работа",
     relocationFilter: "Релокация или визовая поддержка",
+    viewedFilter: "Просмотренные",
+    viewedFilterLegend: "Просмотренные вакансии",
+    viewedJobBadge: "Вы смотрели эту вакансию",
+    originalOpensCount: (n) =>
+      `${n} ${ruPlural(n, "человек открыл", "человека открыли", "человек открыли")} оригинал`,
+    originalOpensNone: "Оригинал ещё никто не открывал",
+    originalOpensFirst: "Откройте первым",
     relocationBadge: "Релокация / виза",
     techStack: "Технологии",
     techPlaceholder: "Найти технологию",
@@ -2668,6 +2694,9 @@ export const copy = {
     adminThresholdNone: "Нет ожидающих объявлений с таким процентом.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI: проверено ${checked}, отклонено ${rejected}, ошибка ${failed}.`,
+    adminBackfillConfidence: "Заполнить старые %",
+    adminBackfillNote: (rule, checked, rejected, failed, left) =>
+      `Проценты: правило ${rule}, AI ${checked} (откл. ${rejected}, ошибка ${failed}), осталось ${left}.`,
     rejectReason: "Причина отклонения",
     rejectReasonRequired: "Нужно написать причину отклонения.",
     resubmitHint: "Сохранение отклонённого объявления снова отправляет его на модерацию и оставляет вне общего списка.",

@@ -32,6 +32,7 @@ export function normalizePersistedBoard(raw = {}) {
     remote: _asBool(raw.remote),
     relocation: _asBool(raw.relocation),
     onsite: _asBool(raw.onsite),
+    viewed: _asBool(raw.viewed),
     stacks: _asStringArray(raw.stacks),
     categories: _asStringArray(raw.categories),
     when: whenRaw === "today" || whenRaw === "week" ? whenRaw : "any",
@@ -89,6 +90,7 @@ export function urlHasBoardState(search = "") {
     "remote",
     "relocation",
     "onsite",
+    "viewed",
     "stack",
     "category",
     "when",
@@ -124,6 +126,7 @@ export function mergeBoardWithPersist(urlBoard = {}, saved = null, search = "") 
     remote: params.has("remote") ? base.remote : fill.remote,
     relocation: params.has("relocation") ? base.relocation : fill.relocation,
     onsite: params.has("onsite") ? base.onsite : fill.onsite,
+    viewed: params.has("viewed") ? base.viewed : fill.viewed,
     stacks: params.has("stack") ? base.stacks : fill.stacks,
     categories: params.has("category") ? base.categories : fill.categories,
     when: params.has("when") ? base.when : fill.when,
@@ -151,6 +154,7 @@ export function boardEqualsDefault(board) {
     && n.remote === false
     && n.relocation === false
     && n.onsite === false
+    && n.viewed === false
     && n.stacks.length === 0
     && n.categories.length === 0
     && n.when === "any"

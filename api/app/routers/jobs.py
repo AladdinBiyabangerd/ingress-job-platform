@@ -2,11 +2,12 @@
 
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 
 from app.account import VerifiedAccess, current_user
 from app.applications import create_application
 from app.cabinet_store import CabinetError
+from app.original_opens import record_original_open
 from app.rate_limit import dep_ip, dep_user
 from app.sqlite_jobs import (
     DEFAULT_PER_PAGE,
@@ -46,6 +47,7 @@ def read_jobs(
     remote: bool = Query(False),
     relocation: bool = Query(False),
     onsite: bool = Query(False),
+    viewed: bool = Query(False),
     when: str = Query("any"),
     sort: str = Query("newest"),
     language: list[str] | None = Query(None),
@@ -53,8 +55,20 @@ def read_jobs(
     stack: list[str] | None = Query(None),
     salary_min: int | None = Query(None, ge=0),
     salary_max: int | None = Query(None, ge=0),
+    authorization: str | None = Header(default=None),
     _rl=dep_ip("public_read"),
 ) -> dict:
+    viewed_user_id = None
+    if _bool_flag(viewed):
+        # Viewed filter is per-candidate; guests get an empty board, not 401,
+        # so the public list proxy can stay unauthenticated.
+        if authorization and authorization.lower().startswith("bearer "):
+            try:
+                viewed_user_id = current_user(authorization).subject
+            except HTTPException:
+                viewed_user_id = ""
+        else:
+            viewed_user_id = ""
     return query_jobs(
         page=page,
         per_page=per_page,
@@ -71,6 +85,7 @@ def read_jobs(
         stacks=stack,
         salary_min=salary_min,
         salary_max=salary_max,
+        viewed_user_id=viewed_user_id,
     )
 
 
@@ -103,6 +118,7 @@ def original(job_id: int, user: VerifiedAccess = Depends(current_user)) -> dict:
     url = published_source_url(job_id)
     if not url:
         raise HTTPException(status_code=404, detail="Elan tapılmadı")
+    record_original_open(user_id=user.subject, job_id=job_id)
     return {"url": url}
 
 
@@ -182,6 +198,7 @@ async def apply(
     if target is None:
         raise HTTPException(status_code=404, detail="Elan tapılmadı")
     if target["kind"] == "external":
+        record_original_open(user_id=user.subject, job_id=job_id)
         return {"url": target["url"]}
     fields, cv = await _application_body(request)
     try:

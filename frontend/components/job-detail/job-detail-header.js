@@ -9,6 +9,7 @@ import { JdIcon } from "./jd-icons";
 export function JobDetailHeader({
   locale,
   model,
+  viewed = false,
   onRevealForm,
   onRevealAnalyze,
   onRevealApplyDraft,
@@ -28,9 +29,22 @@ export function JobDetailHeader({
     setBackHref(boardReturnHref(readBoardReturn(), persisted || boardHref));
   }, [boardHref, locale]);
   const external = model.listingType === "external";
+  const opensLabel =
+    model.hasOriginal && typeof model.originalOpens === "number"
+      ? model.originalOpens > 0
+        ? t.originalOpensCount?.(model.originalOpens)
+        : t.originalOpensNone
+      : null;
+  const appsLabel =
+    !opensLabel && typeof model.applications === "number"
+      ? model.applications > 0
+        ? t.applicationsCount?.(model.applications)
+        : t.applicationsNone
+      : null;
+  const interestLabel = opensLabel || appsLabel;
 
   return (
-    <header className="jd-header">
+    <header className={`jd-header${viewed ? " is-viewed" : ""}`}>
       <a className="jd-back" href={backHref}>
         <JdIcon name="back" size={16} />
         <span>{t.back}</span>
@@ -44,6 +58,7 @@ export function JobDetailHeader({
             </span>
             <span className="jd-company-name">{company.name}</span>
             {external ? <span className="jd-external-badge">{t.jdExternal}</span> : null}
+            {viewed ? <span className="jd-viewed-badge">{t.viewedJobBadge}</span> : null}
             {company.pageHref ? (
               <a className="jd-company-page-link" href={company.pageHref}>
                 {t.jdCompanyPage}
@@ -54,6 +69,7 @@ export function JobDetailHeader({
 
           <h1 className="jd-title">{model.title}</h1>
           {model.intro ? <p className="jd-intro">{model.intro}</p> : null}
+          {interestLabel ? <p className="jd-interest-count">{interestLabel}</p> : null}
         </div>
       </div>
 

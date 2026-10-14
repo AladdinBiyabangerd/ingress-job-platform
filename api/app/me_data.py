@@ -122,6 +122,19 @@ def build_export_payload(*, user_id: str) -> dict:
                     saved.append({"job_id": int(row[0]), "saved_at": row[1] or ""})
             except Exception:
                 saved = []
+            viewed = []
+            try:
+                for row in conn.execute(
+                    """
+                    SELECT job_id, created_at FROM viewed_jobs
+                    WHERE user_id = ?
+                    ORDER BY id
+                    """,
+                    (user_id,),
+                ):
+                    viewed.append({"job_id": int(row[0]), "viewed_at": row[1] or ""})
+            except Exception:
+                viewed = []
             grants = conn.execute(
                 """
                 SELECT kind, granted, version, ts FROM consent
@@ -151,6 +164,7 @@ def build_export_payload(*, user_id: str) -> dict:
         "consents": consents,
         "applications": apps,
         "saved_jobs": saved,
+        "viewed_jobs": viewed,
         "cv_files": cv_meta,
     }
 
@@ -261,6 +275,14 @@ def delete_my_data(*, user_id: str) -> dict:
             conn.execute("DELETE FROM parse_cv_queue WHERE user_id = ?", (subject,))
             try:
                 conn.execute("DELETE FROM saved_jobs WHERE user_id = ?", (subject,))
+            except Exception:
+                pass
+            try:
+                conn.execute("DELETE FROM viewed_jobs WHERE user_id = ?", (subject,))
+            except Exception:
+                pass
+            try:
+                conn.execute("DELETE FROM job_original_opens WHERE user_id = ?", (subject,))
             except Exception:
                 pass
             try:

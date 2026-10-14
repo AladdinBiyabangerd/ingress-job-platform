@@ -1,6 +1,6 @@
 import { categoryLabel, hrefFor, text } from "../lib/copy";
 import { calendarDate } from "../lib/dates";
-import { applicationsLabel } from "./job-card";
+import { applicationsLabel, originalOpensLabel } from "./job-card";
 import { SaveJobButton } from "./save-job-button";
 
 function companyInitial(name) {
@@ -37,7 +37,8 @@ export function FeaturedJob({ locale, job, matchScore = null }) {
   const company = job.company || t.noCompany;
   const place = job.remote ? t.placeRemote : job.city || t.noCity;
   const when = calendarDate(job.created_at, locale);
-  const applications = applicationsLabel(t, job, { short: true });
+  const applications =
+    originalOpensLabel(t, job, { short: true }) || applicationsLabel(t, job, { short: true });
   const tags = featuredTags(locale, t, job);
   const jobHref = hrefFor(locale, { jobId: job.id });
   const score =

@@ -9,6 +9,7 @@ import {
   adminActJob,
   adminApproveBulk,
   adminApproveThreshold,
+  adminBackfillConfidence,
   adminPatchJob,
   adminRecheckMarketFit,
   adminRejectJob,
@@ -433,6 +434,32 @@ export function Admin({
     }
   }
 
+  async function backfillConfidence() {
+    setError("");
+    setNote("");
+    setBusy(true);
+    const res = await adminBackfillConfidence({ aiLimit: 40 });
+    setBusy(false);
+    if (!res.ok) {
+      setError(t.adminError);
+      return;
+    }
+    setNote(
+      t.adminBackfillNote(
+        Number(res.data?.rule_filled) || 0,
+        Number(res.data?.ai_checked) || 0,
+        Number(res.data?.ai_rejected) || 0,
+        Number(res.data?.ai_failed) || 0,
+        Number(res.data?.still_unscored) || 0,
+      ),
+    );
+    try {
+      await load();
+    } catch {
+      setError(t.loadError);
+    }
+  }
+
   const pendingIds = items.filter((job) => job.status === "pending").map((job) => job.id);
   const pendingCount = pendingIds.length;
   const selectedCount = selected.size;
@@ -582,6 +609,14 @@ export function Admin({
                     onClick={recheckByThreshold}
                   >
                     {t.adminThresholdRecheck}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn small"
+                    disabled={busy}
+                    onClick={backfillConfidence}
+                  >
+                    {t.adminBackfillConfidence}
                   </button>
                 </div>
               ) : null}

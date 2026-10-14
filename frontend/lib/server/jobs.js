@@ -35,6 +35,7 @@ export async function loadHomeJobs(board = {}) {
     remote: Boolean(board.remote),
     relocation: Boolean(board.relocation),
     onsite: Boolean(board.onsite),
+    viewed: Boolean(board.viewed),
     when: board.when || "any",
     sort: board.sort || "newest",
     languages: Array.isArray(board.languages) ? board.languages : [],

@@ -29,6 +29,7 @@ from app.saved_jobs import (
     save_job,
     unsave_job,
 )
+from app.viewed_jobs import list_viewed_ids, mark_viewed
 from app.product_features import recommendations_enabled, roadmap_enabled
 from app.rate_limit import dep_user
 from app.skill_gap import MAX_TOP as SKILL_GAP_MAX_TOP, skill_gap
@@ -91,6 +92,21 @@ def post_saved_job(job_id: int, user: VerifiedAccess = Depends(current_user)) ->
 def delete_saved_job(job_id: int, user: VerifiedAccess = Depends(current_user)) -> Response:
     _run(lambda: unsave_job(user_id=user.subject, job_id=job_id))
     return Response(status_code=204)
+
+
+@router.get("/viewed-jobs/ids")
+def get_viewed_job_ids(user: VerifiedAccess = Depends(current_user)) -> dict:
+    return {"ids": list_viewed_ids(user_id=user.subject)}
+
+
+@router.post("/viewed-jobs/{job_id}")
+def post_viewed_job(job_id: int, user: VerifiedAccess = Depends(current_user)) -> JSONResponse:
+    result = _run(lambda: mark_viewed(user_id=user.subject, job_id=job_id))
+    created = bool(result.pop("created", False))
+    return JSONResponse(
+        {"job_id": result["job_id"], "viewed_at": result["viewed_at"]},
+        status_code=201 if created else 200,
+    )
 
 
 @router.get("/roles")

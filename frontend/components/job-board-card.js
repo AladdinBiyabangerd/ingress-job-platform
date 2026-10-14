@@ -1,6 +1,10 @@
+"use client";
+
 import { hrefFor, text } from "../lib/copy";
 import { relativePosted } from "../lib/dates";
+import { applicationsLabel, originalOpensLabel } from "./job-card";
 import { SaveJobButton } from "./save-job-button";
+import { useJobViewed } from "./viewed-jobs";
 
 function companyInitial(name) {
   const s = String(name || "").trim();
@@ -57,6 +61,7 @@ export function JobBoardCard({
 }) {
   const t = text(locale);
   const jobId = job.id ?? job.job_id;
+  const viewed = useJobViewed(jobId);
   const company = job.company || t.noCompany;
   const salary = String(job.salary || "").trim();
   const place = placeLine(t, job);
@@ -67,9 +72,12 @@ export function JobBoardCard({
   const when = relativePosted(job.created_at, locale);
   const jobHref = hrefFor(locale, { jobId });
   const match = resolveMatchDisplay(t, matchScore, matchConfidence);
+  const opens = originalOpensLabel(t, job, { short: true });
+  const apps = applicationsLabel(t, job, { short: true });
+  const interest = opens || apps;
 
   return (
-    <article className={`job-board-card${featured ? " is-featured" : ""}`}>
+    <article className={`job-board-card${featured ? " is-featured" : ""}${viewed ? " is-viewed" : ""}`}>
       {featured ? <span className="job-board-card-badge">{t.featuredBadge}</span> : null}
       <div className="job-board-card-main">
         <span className="job-board-card-logo" aria-hidden="true">
@@ -89,6 +97,9 @@ export function JobBoardCard({
             <h3 className="job-board-card-title">
               <a href={jobHref}>{job.title}</a>
             </h3>
+            {viewed ? (
+              <span className="job-board-card-viewed">{t.viewedJobBadge || t.viewedFilter}</span>
+            ) : null}
           </div>
           {stack.length ? (
             <ul className="job-board-card-tags">
@@ -113,6 +124,9 @@ export function JobBoardCard({
                 <MetaPay />
                 {salary}
               </span>
+            ) : null}
+            {interest ? (
+              <span className="job-board-card-meta-item">{interest}</span>
             ) : null}
           </div>
         </div>

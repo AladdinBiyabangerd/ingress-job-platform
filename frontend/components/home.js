@@ -166,6 +166,8 @@ function FilterPanelBody({
   setRemote,
   relocation,
   setRelocation,
+  viewed,
+  setViewed,
   categories,
   setCategories,
   stacks,
@@ -305,6 +307,20 @@ function FilterPanelBody({
             onClick={() => setRelocation(!relocation)}
           >
             {t.relocationFilter}
+          </button>
+        </div>
+      </fieldset>
+
+      <fieldset className="home-board-filter-group">
+        <legend>{t.viewedFilterLegend || t.viewedFilter}</legend>
+        <div className="home-board-filter-chips" role="group" aria-label={t.viewedFilter}>
+          <button
+            type="button"
+            className={`home-board-filter-chip${viewed ? " is-active" : ""}`}
+            aria-pressed={viewed}
+            onClick={() => setViewed(!viewed)}
+          >
+            {t.viewedFilter}
           </button>
         </div>
       </fieldset>
@@ -484,6 +500,7 @@ export function Home({
   const [remote, setRemote] = useState(() => Boolean(board0.remote));
   const [relocation, setRelocation] = useState(() => Boolean(board0.relocation));
   const [onsite, setOnsite] = useState(() => Boolean(board0.onsite));
+  const [viewed, setViewed] = useState(() => Boolean(board0.viewed));
   const [forYouMode, setForYouMode] = useState(() => Boolean(board0.forYouMode));
   const [forYouSource, setForYouSource] = useState(() =>
     String(board0.forYouSource || "cv") === "filters" ? "filters" : "cv",
@@ -558,6 +575,7 @@ export function Home({
         remote,
         relocation,
         onsite,
+        viewed,
         stacks,
         categories,
         when,
@@ -565,7 +583,7 @@ export function Home({
         salaryMin,
         salaryMax,
       }),
-    [q, company, city, languages, remote, relocation, onsite, stacks, categories, when, sort, salaryMin, salaryMax],
+    [q, company, city, languages, remote, relocation, onsite, viewed, stacks, categories, when, sort, salaryMin, salaryMax],
   );
 
   const showForYouTab = Boolean(me?.authenticated && (me.candidate || me.staff));
@@ -581,6 +599,7 @@ export function Home({
       remote,
       relocation,
       onsite,
+      viewed,
       stacks,
       categories,
       when,
@@ -599,6 +618,7 @@ export function Home({
       remote,
       relocation,
       onsite,
+      viewed,
       stacks,
       categories,
       when,
@@ -621,6 +641,7 @@ export function Home({
     setRemote(Boolean(board.remote));
     setRelocation(Boolean(board.relocation));
     setOnsite(Boolean(board.onsite));
+    setViewed(Boolean(board.viewed));
     setForYouMode(Boolean(board.forYouMode));
     setForYouSource(String(board.forYouSource || "cv") === "filters" ? "filters" : "cv");
     setStacks(Array.isArray(board.stacks) ? board.stacks : []);
@@ -825,6 +846,7 @@ export function Home({
         remote,
         relocation,
         onsite,
+        viewed,
         when,
         sort,
         languages,
@@ -985,6 +1007,7 @@ export function Home({
     setRemote(false);
     setRelocation(false);
     setOnsite(false);
+    setViewed(false);
     setForYouMode(false);
     setForYouSource("cv");
     setStacks([]);
@@ -1019,6 +1042,7 @@ export function Home({
     if (remote) chips.push({ key: "remote", label: t.placeRemote, onRemove: () => setRemote(false) });
     if (relocation) chips.push({ key: "relocation", label: t.relocationFilter, onRemove: () => setRelocation(false) });
     if (onsite) chips.push({ key: "onsite", label: t.tabCompanyPosted, onRemove: () => setOnsite(false) });
+    if (viewed) chips.push({ key: "viewed", label: t.viewedFilter, onRemove: () => setViewed(false) });
     for (const code of languages) {
       chips.push({
         key: `lang-${code}`,
@@ -1065,6 +1089,7 @@ export function Home({
     remote,
     relocation,
     onsite,
+    viewed,
     languages,
     categories,
     stacks,
@@ -1165,6 +1190,13 @@ export function Home({
       else setForYouMode(false);
       setRelocation(next);
       if (next) setOnsite(false);
+    },
+    viewed,
+    setViewed: (value) => {
+      const next = typeof value === "boolean" ? value : Boolean(value);
+      if (forYouMode) keepForYouOnFilterEdit();
+      else setForYouMode(false);
+      setViewed(next);
     },
     categories,
     setCategories: (value) => {

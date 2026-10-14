@@ -396,6 +396,73 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(public_ids, {ids[1], live_id})
         self.assertNotIn(ids[0], public_ids)
 
+    def test_backfill_confidence_fills_rule_then_ai(self):
+        conn = sqlite3.connect(self.db)
+        clear_id = int(
+            conn.execute(
+                """
+                INSERT INTO jobs (
+                    title, company, city, text, status, created_at, norm_key, owner_subject,
+                    remote, relocation
+                ) VALUES (
+                    'Remote Engineer', 'Co', 'Worldwide', 'Fully remote role.',
+                    'pending', '2026-10-14T12:00:00+04:00', 'bf-clear', '', 1, 0
+                )
+                """
+            ).lastrowid
+        )
+        unclear_id = int(
+            conn.execute(
+                """
+                INSERT INTO jobs (
+                    title, company, city, text, status, created_at, norm_key, owner_subject,
+                    remote, relocation
+                ) VALUES (
+                    'Office Engineer', 'Co', 'Tokyo', 'Build products in Tokyo office.',
+                    'pending', '2026-10-14T12:00:00+04:00', 'bf-unclear', '', 0, 0
+                )
+                """
+            ).lastrowid
+        )
+        conn.commit()
+        conn.close()
+
+        verdict = {
+            "suitable": True,
+            "remote": False,
+            "relocation": True,
+            "visa_support": True,
+            "reason": "visa ok",
+            "confidence": 81,
+        }
+        with self._auth("job:staff", "admin-staff"):
+            with patch("worker.market_fit.clarify_market_fit", return_value=verdict):
+                res = self.client.post(
+                    "/api/v1/admin/jobs/backfill-confidence",
+                    headers={"Authorization": "Bearer test"},
+                    json={"ai_limit": 40},
+                )
+            self.assertEqual(res.status_code, 200, res.text)
+            body = res.json()
+            self.assertGreaterEqual(body["rule_filled"], 1)
+            self.assertEqual(body["ai_checked"], 1)
+            self.assertEqual(body["ai_rejected"], 0)
+
+        conn = sqlite3.connect(self.db)
+        rule, ai_clear = conn.execute(
+            "SELECT rule_confidence, ai_confidence FROM jobs WHERE id = ?",
+            (clear_id,),
+        ).fetchone()
+        rule2, ai_unclear = conn.execute(
+            "SELECT rule_confidence, ai_confidence FROM jobs WHERE id = ?",
+            (unclear_id,),
+        ).fetchone()
+        conn.close()
+        self.assertEqual(rule, 100)
+        self.assertIsNone(ai_clear)
+        self.assertIsNone(rule2)
+        self.assertEqual(ai_unclear, 81)
+
     def test_threshold_approve_and_recheck_market_fit(self):
         conn = sqlite3.connect(self.db)
         rows = [

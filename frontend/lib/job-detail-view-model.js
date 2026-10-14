@@ -90,6 +90,8 @@ export function jobToDetailViewModel({ locale, job, authState = "guest", company
     benefits,
     benefitsTitle: benefitSection?.title || t.jdBenefits || "Benefits",
     hasOriginal: Boolean(job.has_original),
+    originalOpens: typeof job.original_opens === "number" ? job.original_opens : null,
+    applications: typeof job.applications === "number" ? job.applications : null,
     form: job.form || null,
     returnTo: jobHref,
     companyPageLabel: Boolean(job.company_slug),

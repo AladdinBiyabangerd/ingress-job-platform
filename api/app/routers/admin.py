@@ -17,6 +17,7 @@ from app.cabinet_store import (
     approve_ad,
     approve_ads,
     approve_ads_by_threshold,
+    backfill_moderation_confidence,
     create_sourced_ad,
     get_moderation,
     list_moderation,
@@ -97,6 +98,12 @@ class RecheckMarketFitIn(BaseModel):
     limit: int = Field(default=30, ge=1, le=30)
     min_score: int | None = Field(default=None, ge=0, le=100)
     max_score: int | None = Field(default=None, ge=0, le=100)
+
+
+class BackfillConfidenceIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ai_limit: int = Field(default=40, ge=0, le=50)
 
 
 class AiFlagsIn(BaseModel):
@@ -245,6 +252,14 @@ def recheck_fit(body: RecheckMarketFitIn, _user: VerifiedAccess = Depends(requir
             max_score=body.max_score,
         )
     )
+
+
+@router.post("/jobs/backfill-confidence")
+def backfill_confidence(
+    body: BackfillConfidenceIn,
+    _user: VerifiedAccess = Depends(require_staff),
+) -> dict:
+    return _run(lambda: backfill_moderation_confidence(ai_limit=body.ai_limit))
 
 
 @router.post("/jobs/{job_id}/approve")

@@ -13,9 +13,12 @@ import { JobDetailHeader } from "./job-detail-header";
 import { JobDetailMobileSticky } from "./job-detail-mobile-sticky";
 import { JobDetailSkills } from "./job-detail-skills";
 import { JobDetailTailoredCvPanel } from "./job-detail-tailored-cv-panel";
+import { useJobViewed, useMarkJobViewed } from "../viewed-jobs";
 
 export function JobDetailView({ locale, model: baseModel }) {
   const preview = Boolean(baseModel.preview);
+  useMarkJobViewed(baseModel.jobId, { enabled: !preview });
+  const viewed = useJobViewed(baseModel.jobId);
   const initialMe = useInitialMe();
   const [me, setMe] = useState(() => {
     if (preview) return { authenticated: baseModel.authState === "signed_in" };
@@ -132,6 +135,7 @@ export function JobDetailView({ locale, model: baseModel }) {
             <JobDetailHeader
               locale={locale}
               model={model}
+              viewed={viewed}
               onRevealForm={revealForm}
               onRevealAnalyze={revealAnalyze}
               onRevealApplyDraft={revealApplyDraft}

@@ -162,6 +162,26 @@ CREATE TABLE IF NOT EXISTS saved_jobs (
 )
 """
 
+_VIEWED_JOBS = """
+CREATE TABLE IF NOT EXISTS viewed_jobs (
+    id INTEGER PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    job_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (user_id, job_id)
+)
+"""
+
+_JOB_ORIGINAL_OPENS = """
+CREATE TABLE IF NOT EXISTS job_original_opens (
+    id INTEGER PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    job_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (user_id, job_id)
+)
+"""
+
 
 class CabinetError(Exception):
     def __init__(self, status: int, detail: str) -> None:
@@ -245,6 +265,8 @@ def _apply_schema(conn) -> None:
     conn.execute(_MERGES)
     conn.execute(_APPLICATIONS)
     conn.execute(_SAVED_JOBS)
+    conn.execute(_VIEWED_JOBS)
+    conn.execute(_JOB_ORIGINAL_OPENS)
     cols = {row[1] for row in conn.execute("PRAGMA table_info(jobs)")}
     for name, decl in _COLUMNS.items():
         if name not in cols:
@@ -264,6 +286,14 @@ def _apply_schema(conn) -> None:
     )
     conn.execute("CREATE INDEX IF NOT EXISTS saved_jobs_user ON saved_jobs(user_id, id)")
     conn.execute("CREATE INDEX IF NOT EXISTS saved_jobs_job ON saved_jobs(job_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS viewed_jobs_user ON viewed_jobs(user_id, id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS viewed_jobs_job ON viewed_jobs(job_id)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS job_original_opens_job ON job_original_opens(job_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS job_original_opens_user ON job_original_opens(user_id)"
+    )
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS notifications (
@@ -1105,6 +1135,165 @@ def recheck_market_fit(
         "rejected": rejected,
         "failed": failed,
         "items": updated,
+    }
+
+
+def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
+    """Fill missing rule/AI confidence on pending scraped ads.
+
+    1) Clear market signal → rule_confidence=100 (all matching rows, no AI).
+    2) Still unscored → sync market_fit for up to ``ai_limit`` rows.
+    Company/manual ads (owner_subject set) are skipped.
+    """
+    from worker.market_fit import RULE_CONFIDENCE, clarify_market_fit, has_clear_market_signal
+
+    if ai_limit < 0 or ai_limit > 50:
+        raise CabinetError(422, "AI limit 0–50 arasında olmalıdır")
+
+    rule_filled = 0
+    remaining_for_ai: list[dict] = []
+
+    with _LOCK:
+        conn = _connect()
+        try:
+            rows = conn.execute(
+                """
+                SELECT id, title, company, city, text, remote, relocation,
+                       rule_confidence, ai_confidence
+                FROM jobs
+                WHERE status = ?
+                  AND COALESCE(owner_subject, '') = ''
+                  AND rule_confidence IS NULL
+                  AND ai_confidence IS NULL
+                ORDER BY id DESC
+                """,
+                (PENDING,),
+            ).fetchall()
+            for row in rows:
+                title = row["title"] or ""
+                place = row["city"] or ""
+                text = row["text"] or ""
+                pre_remote = bool(int(row["remote"] or 0))
+                pre_reloc = bool(int(row["relocation"] or 0))
+                clear = has_clear_market_signal(
+                    title,
+                    place,
+                    text,
+                    pre_remote=True if pre_remote else None,
+                    pre_relocation=True if pre_reloc else None,
+                    remote_default=False,
+                    relocation_default=False,
+                )
+                if clear:
+                    conn.execute(
+                        """
+                        UPDATE jobs
+                        SET rule_confidence = ?, market_fit_reason = ?, updated_at = ?
+                        WHERE id = ? AND status = ? AND rule_confidence IS NULL
+                          AND ai_confidence IS NULL
+                        """,
+                        (
+                            RULE_CONFIDENCE,
+                            "clear market signal",
+                            _now(),
+                            int(row["id"]),
+                            PENDING,
+                        ),
+                    )
+                    rule_filled += 1
+                else:
+                    remaining_for_ai.append(
+                        {
+                            "id": int(row["id"]),
+                            "title": title,
+                            "company": row["company"] or "",
+                            "city": place,
+                            "text": text,
+                        }
+                    )
+            conn.commit()
+        finally:
+            conn.close()
+
+    ai_snapshots = remaining_for_ai[:ai_limit]
+    still_unscored = max(0, len(remaining_for_ai) - len(ai_snapshots))
+    checked = 0
+    rejected = 0
+    failed = 0
+
+    for snap in ai_snapshots:
+        job_id = snap["id"]
+        conn = _connect()
+        try:
+            verdict = clarify_market_fit(
+                title=snap["title"],
+                company=snap["company"],
+                place=snap["city"],
+                text=snap["text"],
+                conn=conn,
+            )
+        finally:
+            conn.close()
+        if verdict is None:
+            failed += 1
+            continue
+        checked += 1
+        reason = str(verdict.get("reason") or "")[:300]
+        confidence = int(verdict.get("confidence") or 0)
+        with _LOCK:
+            conn = _connect()
+            try:
+                row = conn.execute(
+                    """
+                    SELECT status, rule_confidence, ai_confidence
+                    FROM jobs WHERE id = ?
+                    """,
+                    (job_id,),
+                ).fetchone()
+                if row is None or (row["status"] or "") != PENDING:
+                    continue
+                if row["rule_confidence"] is not None or row["ai_confidence"] is not None:
+                    continue
+                if not verdict.get("suitable"):
+                    conn.execute(
+                        """
+                        UPDATE jobs
+                        SET status = ?, reject_reason = ?, ai_confidence = ?,
+                            market_fit_reason = ?, updated_at = ?
+                        WHERE id = ?
+                        """,
+                        (
+                            REJECTED,
+                            reason or "unsuitable",
+                            confidence,
+                            reason,
+                            _now(),
+                            job_id,
+                        ),
+                    )
+                    rejected += 1
+                else:
+                    remote = 1 if verdict.get("remote") else 0
+                    relocation = 1 if verdict.get("relocation") else 0
+                    conn.execute(
+                        """
+                        UPDATE jobs
+                        SET remote = ?, relocation = ?, ai_confidence = ?,
+                            market_fit_reason = ?, updated_at = ?
+                        WHERE id = ?
+                        """,
+                        (remote, relocation, confidence, reason, _now(), job_id),
+                    )
+                conn.commit()
+            finally:
+                conn.close()
+
+    return {
+        "rule_filled": rule_filled,
+        "ai_checked": checked,
+        "ai_rejected": rejected,
+        "ai_failed": failed,
+        "still_unscored": still_unscored + failed,
     }
 
 

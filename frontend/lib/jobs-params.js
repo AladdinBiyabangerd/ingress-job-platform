@@ -15,6 +15,7 @@ export function jobsListParams({
   stacks = [],
   salaryMin = "",
   salaryMax = "",
+  viewed = false,
 } = {}) {
   const params = new URLSearchParams();
   params.set("page", String(Math.max(1, Number(page) || 1)));
@@ -28,6 +29,7 @@ export function jobsListParams({
   if (remote) params.set("remote", "true");
   if (relocation) params.set("relocation", "true");
   if (onsite) params.set("onsite", "true");
+  if (viewed) params.set("viewed", "true");
   if (when && when !== "any") params.set("when", when);
   if (sort && sort !== "newest") params.set("sort", sort);
   for (const code of languages || []) {
@@ -81,6 +83,7 @@ export const DEFAULT_BOARD_FILTERS = {
   sort: "newest",
   salaryMin: "",
   salaryMax: "",
+  viewed: false,
   page: 1,
   forYouMode: false,
   /** For-you tab only: CV matches vs manual sidebar filters. */
@@ -109,6 +112,7 @@ export function boardFiltersFromSearchParams(query = {}) {
     sort: sortRaw === "newest" ? "newest" : sortRaw || "newest",
     salaryMin: String(_firstParam(query, "salary_min") || "").trim(),
     salaryMax: String(_firstParam(query, "salary_max") || "").trim(),
+    viewed: _truthyParam(_firstParam(query, "viewed")),
     page,
     forYouMode,
     forYouSource: forYouMode && fyRaw === "filters" ? "filters" : "cv",
@@ -131,6 +135,7 @@ export function boardUrlSearchParams(board = {}) {
   if (board.remote) params.set("remote", "true");
   if (board.relocation) params.set("relocation", "true");
   if (board.onsite) params.set("onsite", "true");
+  if (board.viewed) params.set("viewed", "true");
   if (board.when && board.when !== "any") params.set("when", board.when);
   if (board.sort && board.sort !== "newest") params.set("sort", board.sort);
   for (const code of board.languages || []) {

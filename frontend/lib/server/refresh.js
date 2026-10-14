@@ -160,6 +160,12 @@ export async function unsaveJob(id) {
   return mutate(`/api/v1/me/saved-jobs/${jobId}`, { method: "DELETE", empty: true });
 }
 
+export async function markJobViewed(id) {
+  const jobId = numericId(id);
+  if (!jobId) return { ok: false, status: 404, data: {} };
+  return mutate(`/api/v1/me/viewed-jobs/${jobId}`);
+}
+
 /** Notifications after mark-read. Hits FastAPI, not the BFF. */
 export async function refreshNotifications({ before = null, limit = 20 } = {}) {
   const qs = new URLSearchParams({ limit: String(limit) });
@@ -231,6 +237,12 @@ export async function adminRecheckMarketFit({
     body.max_score = Math.max(0, Math.min(100, Number(maxScore)));
   }
   return mutate("/api/v1/admin/jobs/recheck-market-fit", { body });
+}
+
+export async function adminBackfillConfidence({ aiLimit = 40 } = {}) {
+  return mutate("/api/v1/admin/jobs/backfill-confidence", {
+    body: { ai_limit: Math.max(0, Math.min(50, Number(aiLimit) || 0)) },
+  });
 }
 
 export async function crawledPatchJob(id, payload) {

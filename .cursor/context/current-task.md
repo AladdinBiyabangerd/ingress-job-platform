@@ -1,25 +1,24 @@
 # Current task
 
 ## Completed
-- Moderasiya: `rule_confidence` + `ai_confidence` (+ reason)
-- Threshold publish + sync AI recheck (admin queue)
-- market_fit schema v2 (`confidence`)
+- Viewed jobs: mark on detail, badge on list+detail, board filter `viewed`
+- Original opens: count unique users who opened original/external apply URL; show on list+detail
 
 ## Current state
-- Crawl: clear signal → rule=100; AI path → ai confidence
-- Queue UI: iki % sütunu + skor/op/threshold + publish / tez / AI recheck
-- Approve = publish; auto-publish yox
+- Tables: `viewed_jobs`, `job_original_opens`
+- APIs: `POST/GET /me/viewed-jobs…`, `GET /jobs?viewed=true`, opens recorded on `/original` + external `/apply`
+- Frontend: filter chip, card/detail badges, interest count
 
 ## Decisions
-- Hər elan yenə pending queue-ya düşür
-- NULL skor threshold match olmur
-- Recheck unsuitable → rejected
+- Unique openers (not raw click count)
+- Guests with `viewed=true` get empty list (no 401 on public proxy)
+- Prefer `original_opens` over on-site `applications` when both could apply
 
 ## Remaining work
-- Deploy + production QA
+- Manual QA on board + detail while logged in
 - Commit when asked
 
 ## Relevant files
-- `worker/worker/market_fit.py`, `acceptance.py`, `db.py`
-- `api/app/cabinet_store.py`, `api/app/routers/admin.py`
-- `frontend/components/admin.js`, `frontend/lib/copy.js`, `frontend/lib/server/refresh.js`
+- `api/app/viewed_jobs.py`, `original_opens.py`, `sqlite_jobs.py`, `routers/jobs.py`, `routers/me.py`
+- `frontend/components/viewed-jobs.js`, `job-board-card.js`, `home.js`, `job-detail/*`
+- `frontend/lib/jobs-params.js`, `copy.js`

@@ -28,6 +28,7 @@ from bs4 import BeautifulSoup
 
 from app.apply_form import parse_stored
 from app.companies import application_count, application_counts, company_slug
+from app.original_opens import original_open_count, original_open_counts
 from app.place import aggregate_countries, is_remote_place, matching_stored_cities
 
 
@@ -306,7 +307,13 @@ def _row_body_sample(row: sqlite3.Row, *, full_body: str = "") -> str:
     return ""
 
 
-def _public(row: sqlite3.Row, applications: dict[int, int] | None = None, *, full: bool = False) -> dict:
+def _public(
+    row: sqlite3.Row,
+    applications: dict[int, int] | None = None,
+    *,
+    full: bool = False,
+    original_opens: dict[int, int] | None = None,
+) -> dict:
     title = _plain(row["title"] or "")
     body = public_text(row["text"] or "") if full else ""
     stored = (row["language"] or "").strip().lower()
@@ -316,8 +323,10 @@ def _public(row: sqlite3.Row, applications: dict[int, int] | None = None, *, ful
         job_type = ""
     company = _plain(row["company"] or "")
     onsite = bool((row["owner_subject"] or "").strip())
+    job_id = int(row["id"])
+    has_original = bool(int(row["has_original"] or 0))
     job = {
-        "id": int(row["id"]),
+        "id": job_id,
         "title": title,
         "company": company,
         "company_slug": company_slug(company),
@@ -333,8 +342,10 @@ def _public(row: sqlite3.Row, applications: dict[int, int] | None = None, *, ful
         "created_at": row["created_at"] or "",
         "onsite": onsite,
         # On-site applications only; external ads are applied to on the source site.
-        "applications": int((applications or {}).get(int(row["id"]), 0)) if onsite else None,
-        "has_original": bool(int(row["has_original"] or 0)),
+        "applications": int((applications or {}).get(job_id, 0)) if onsite else None,
+        "has_original": has_original,
+        # Unique candidates who opened the original listing URL.
+        "original_opens": int((original_opens or {}).get(job_id, 0)) if has_original else None,
     }
     if full:
         job["text"] = body
@@ -363,9 +374,10 @@ def list_jobs() -> list[dict]:
     try:
         rows = conn.execute(_LIST_SQL).fetchall()
         counts = application_counts(conn)
+        opens = original_open_counts(conn)
     finally:
         conn.close()
-    return [_public(row, counts, full=False) for row in rows]
+    return [_public(row, counts, full=False, original_opens=opens) for row in rows]
 
 
 def _company_catalog_job(row, counts: dict[int, int]) -> dict:
@@ -408,7 +420,12 @@ def _public_jobs_for_ids(conn, ids: list[int]) -> list[dict]:
     ).fetchall()
     by_id = {int(row["id"]): row for row in rows}
     counts = _page_counts(conn, ids)
-    return [_public(by_id[job_id], counts, full=False) for job_id in ids if job_id in by_id]
+    opens = _page_original_opens(conn, ids)
+    return [
+        _public(by_id[job_id], counts, full=False, original_opens=opens)
+        for job_id in ids
+        if job_id in by_id
+    ]
 
 
 def query_companies(*, q: str = "", sort: str = "jobs", page: int = 1, per_page: int = 24) -> dict:
@@ -538,6 +555,7 @@ def _build_sql_filters(
     relocation: bool,
     onsite: bool = False,
     categories: list[str],
+    viewed_user_id: str | None = None,
 ) -> tuple[str, list]:
     clauses: list[str] = []
     params: list = []
@@ -568,6 +586,16 @@ def _build_sql_filters(
         clauses.append("COALESCE(j.relocation, 0) = 1")
     if onsite:
         clauses.append("TRIM(COALESCE(j.owner_subject, '')) != ''")
+    if viewed_user_id is not None:
+        who = (viewed_user_id or "").strip()
+        if who:
+            clauses.append(
+                "j.id IN (SELECT job_id FROM viewed_jobs WHERE user_id = ?)"
+            )
+            params.append(who)
+        else:
+            # Guest / missing auth with viewed=true → empty result.
+            clauses.append("1 = 0")
     from app.job_categories import active_slugs
 
     known = active_slugs()
@@ -642,6 +670,10 @@ def _page_counts(conn, job_ids: list[int]) -> dict[int, int]:
     except Exception:
         return {}
     return {int(row["job_id"]): int(row["total"] or 0) for row in rows}
+
+
+def _page_original_opens(conn, job_ids: list[int]) -> dict[int, int]:
+    return original_open_counts(conn, job_ids)
 
 
 def _build_facets(conn) -> dict:
@@ -853,6 +885,7 @@ def query_jobs(
     stacks: list[str] | str | None = None,
     salary_min: int | None = None,
     salary_max: int | None = None,
+    viewed_user_id: str | None = None,
 ) -> dict:
     """Paginated public job list with optional filters and catalog facets."""
     import math
@@ -904,6 +937,7 @@ def query_jobs(
             relocation=relocation,
             onsite=onsite,
             categories=cat_filter,
+            viewed_user_id=viewed_user_id,
         )
         # Narrow SQL to stored language matches + empty (infer in Python).
         if lang_filter:
@@ -954,11 +988,12 @@ def query_jobs(
 
         ids = [int(row["id"]) for row in page_rows]
         counts = _page_counts(conn, ids)
+        opens = _page_original_opens(conn, ids)
     finally:
         conn.close()
 
     return {
-        "items": [_public(row, counts, full=False) for row in page_rows],
+        "items": [_public(row, counts, full=False, original_opens=opens) for row in page_rows],
         "total": total,
         "page": current,
         "per_page": per_page,
@@ -976,11 +1011,12 @@ def get_job(job_id: int) -> dict | None:
             (job_id,),
         ).fetchone()
         counts = {job_id: application_count(conn, job_id)} if row is not None else {}
+        opens = {job_id: original_open_count(conn, job_id)} if row is not None else {}
     finally:
         conn.close()
     if row is None:
         return None
-    job = _public(row, counts, full=True)
+    job = _public(row, counts, full=True, original_opens=opens)
     # Only the detail page links the source site (attribution some feeds
     # require). The list stays free of addresses for guests.
     job["source_homepage"] = _homepage(row["source_homepage"])

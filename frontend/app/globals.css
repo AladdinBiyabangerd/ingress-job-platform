@@ -13328,6 +13328,19 @@ button.admin-mod-name.linkish {
   border-color: var(--brand-border-active);
 }
 
+.job-board-card.is-viewed {
+  border-color: color-mix(in srgb, var(--brand-border-soft) 80%, var(--board-border));
+  background: color-mix(in srgb, var(--brand-tint) 35%, var(--surface));
+}
+
+.job-board-card-viewed {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--brand-deep);
+}
+
 .job-board-card-badge {
   position: absolute;
   top: 10px;
@@ -14085,6 +14098,24 @@ button.admin-mod-name.linkish {
   font-size: 11px;
   font-weight: var(--fw-semibold);
   letter-spacing: 0.02em;
+}
+
+.jd-viewed-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-tint) 80%, var(--surface));
+  color: var(--brand-deep);
+  font-size: 11px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.02em;
+}
+
+.jd-interest-count {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .jd-company-page-link {
