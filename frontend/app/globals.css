@@ -14307,9 +14307,11 @@ button.admin-mod-name.linkish {
 .jd-section-title,
 .jd-desc-heading {
   margin: 0 0 12px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: var(--fw-bold);
-  color: #0b1220;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+  color: var(--ink);
 }
 
 .jd-skill-list {
@@ -14334,37 +14336,73 @@ button.admin-mod-name.linkish {
   margin-top: 28px;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 26px;
 }
 
 .jd-desc-section {
   min-width: 0;
 }
 
+.jd-desc-section--why {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--brand) 4%, transparent);
+}
+
+.jd-desc-section--responsibilities,
+.jd-desc-section--requirements,
+.jd-desc-section--nice {
+  padding-left: 14px;
+  border-left: 2px solid color-mix(in srgb, var(--brand) 22%, transparent);
+}
+
 .jd-desc-p {
   margin: 0 0 10px;
   font-size: 14.5px;
-  line-height: 1.65;
-  color: #1f2937;
-  max-width: none;
+  line-height: 1.7;
+  color: #344054;
+  max-width: 62ch;
+}
+
+.jd-desc-p:last-child {
+  margin-bottom: 0;
 }
 
 .jd-desc-list {
   margin: 0;
-  padding: 0 0 0 1.15rem;
+  padding: 0;
+  list-style: none;
   font-size: 14.5px;
-  line-height: 1.6;
-  color: #1f2937;
+  line-height: 1.65;
+  color: #344054;
+}
+
+.jd-desc-list li {
+  position: relative;
+  padding-left: 1.2rem;
+}
+
+.jd-desc-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--brand);
+  opacity: 0.55;
 }
 
 .jd-desc-list li + li {
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 .jd-desc-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px 28px;
+  gap: 22px 32px;
+  align-items: start;
 }
 
 .jd-benefits-grid {
@@ -14380,12 +14418,12 @@ button.admin-mod-name.linkish {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 12px;
+  padding: 12px 12px 12px 11px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fafbff;
+  background: color-mix(in srgb, var(--brand) 3%, var(--surface));
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.45;
   color: #344054;
 }
 

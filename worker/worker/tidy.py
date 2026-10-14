@@ -27,10 +27,20 @@ SYNC_PER_RUN = 12
 INPUT_CHARS = 14000
 OPEN = ("validating", "in_progress", "finalizing", "cancelling")
 PURPOSE = "job_tidy"
-PROMPT_VERSION = "job-tidy-v2"
+PROMPT_VERSION = "job-tidy-v3"
 
 _AZ = re.compile(r"[əğıöüşçƏĞİÖÜŞÇ]")
 _CYR = re.compile(r"[а-яёА-ЯЁ]")
+_EMOJI_RE = re.compile(
+    "["
+    "\U0001F300-\U0001F9FF"
+    "\U0001FA00-\U0001FAFF"
+    "\U00002700-\U000027BF"
+    "\U0000FE00-\U0000FE0F"
+    "\U0000200D"
+    "]+",
+)
+_MD_DECOR_RE = re.compile(r"[*_`#]{1,3}")
 
 _HEADINGS = {
     "en": {
@@ -65,9 +75,11 @@ _SYSTEM = (
     "- Keep the same language as the ad.\n"
     "- Do NOT invent facts, requirements, salary, benefits, links, or tech.\n"
     "- Do NOT drop real duties, requirements, or offers that appear in the ad.\n"
-    "- Drop apply spam, tracking phrases, and duplicated boilerplate.\n"
+    "- Drop apply spam, tracking phrases, CTA fluff, and duplicated boilerplate.\n"
     "- Split dense paragraphs into short bullet items when the source lists duties "
     "or requirements in prose or semicolon chains.\n"
+    "- Prefer one clear idea per bullet; keep each bullet concise (about one line).\n"
+    "- Plain text only: no markdown, HTML, emoji, icons, or decorative symbols.\n"
     "- Put content into the schema fields that fit; use extra_sections only for "
     "leftover titled blocks that do not fit.\n"
     "- Leave a field empty when the ad has no matching content.\n"
@@ -150,15 +162,22 @@ def messy(text: str) -> bool:
     return False
 
 
+def _clean_text(value: Any, *, limit: int = 500) -> str:
+    text = " ".join(str(value or "").split())
+    text = _EMOJI_RE.sub("", text)
+    text = _MD_DECOR_RE.sub("", text)
+    return text.strip(" -\u2022\t")[:limit].strip()
+
+
 def _clean_items(values: Any, *, limit: int = 24) -> list[str]:
     out: list[str] = []
     if not isinstance(values, list):
         return out
     for raw in values:
-        item = " ".join(str(raw or "").split()).strip(" -\u2022\t")
+        item = _clean_text(raw, limit=500)
         if len(item) < 2:
             continue
-        out.append(item[:500])
+        out.append(item)
         if len(out) >= limit:
             break
     return out
@@ -184,9 +203,9 @@ def format_structured(data: dict[str, Any], *, lang: str = "en") -> str:
     if why:
         blocks.append(_section_block(heads["why"], why))
 
-    about = " ".join(str(data.get("about") or "").split()).strip()
+    about = _clean_text(data.get("about"), limit=1200)
     if about:
-        blocks.append(_section_block(heads["about"], paragraphs=[about[:1200]]))
+        blocks.append(_section_block(heads["about"], paragraphs=[about]))
 
     do = _clean_items(data.get("what_youll_do"))
     if do:
@@ -209,7 +228,7 @@ def format_structured(data: dict[str, Any], *, lang: str = "en") -> str:
         for extra in extras[:8]:
             if not isinstance(extra, dict):
                 continue
-            title = " ".join(str(extra.get("title") or "").split()).strip(" :")
+            title = _clean_text(extra.get("title"), limit=70).strip(" :")
             if not title or len(title) > 70:
                 continue
             items = _clean_items(extra.get("items"))
@@ -386,7 +405,9 @@ def _line(job_id: int, text: str) -> dict:
     cap = min(4500, max(700, len(snippet) // 2))
     prompt = (
         "Reformat the whole job ad for a structured detail page. Do not stop early. "
-        "Same language. No new facts, salary, or links. Drop spam. "
+        "Same language. No new facts, salary, or links. Drop spam and duplicated CTA fluff. "
+        "Plain text only: no markdown, HTML, emoji, or icons. "
+        "Prefer one concise idea per bullet. "
         "Use these headings exactly (each on its own line, ending with ':'): "
         f"{heads['why']}: / {heads['about']}: / {heads['do']}: / "
         f"{heads['need']}: / {heads['nice']}: / {heads['offer']}:. "

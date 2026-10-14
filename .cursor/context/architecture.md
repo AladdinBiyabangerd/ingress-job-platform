@@ -74,7 +74,7 @@ compose.yaml
 - Object storage for uploads (when configured)
 - Optional `JOOBLE_API_KEY`, `REED_API_KEY`, `HH_API_KEY`
 - Optional AI keys: `GEMINI_API_KEY` (+ `_2`) / `GROQ_API_KEY` / `NVIDIA_API_KEY` / `OPENROUTER_API_KEY` / `OPENAI_API_KEY` (job tidy + CV AI #1 + engagement_copy + embeddings via `ai_gateway`)
-- Job tidy (`worker/tidy.py`, flag `job_tidy`): after market rules pass, messy published ads are reformatted for detail UI (headings + bullets) into `cleaned_text` — **no new facts**. Sync path uses `ai_gateway.complete_json` (`job-tidy-v2`); OpenAI Batch remains a backlog fallback. Staff tab `/admin?tab=tidy` lists untidy messy ads and can start/stop an async run (`GET /admin/job-tidy`, `POST /admin/job-tidy/run` + poll/cancel). API serves `COALESCE(cleaned_text, text)`; frontend `descriptionBlocks` + `sectionsFromBlocks` map Relocue-style sections (why / do / requirements / nice / benefits)
+- Job tidy (`worker/tidy.py`, flag `job_tidy`): after market rules pass, messy published ads are reformatted for detail UI (headings + bullets) into `cleaned_text` — **no new facts**, no emoji/markdown. Sync path uses `ai_gateway.complete_json` (`job-tidy-v3`); OpenAI Batch remains a backlog fallback. Staff tab `/admin?tab=tidy` lists untidy messy ads and can start/stop an async run (`GET /admin/job-tidy`, `POST /admin/job-tidy/run` + poll/cancel). API serves `COALESCE(cleaned_text, text)`; frontend `descriptionBlocks` + `sectionsFromBlocks` map Relocue-style sections (why / do / requirements / nice / benefits)
 - Optional Web Push: `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` (API `pywebpush`; public key also exposed to browser via `/me/push-vapid-key`)
 
 ## Notes

@@ -71,6 +71,26 @@ class FormatStructuredTest(unittest.TestCase):
         self.assertEqual(text.count(":"), 1)
         self.assertIn("What you'll do:", text)
 
+    def test_strips_emoji_and_markdown(self):
+        text = format_structured(
+            {
+                "why_interesting": [],
+                "about": "**Backend** role 🚀",
+                "what_youll_do": ["*Ship* features ✅"],
+                "requirements": [],
+                "nice_to_have": [],
+                "benefits": [],
+                "extra_sections": [],
+            },
+            lang="en",
+        )
+        self.assertIn("Backend role", text)
+        self.assertIn("• Ship features", text)
+        self.assertNotIn("🚀", text)
+        self.assertNotIn("✅", text)
+        self.assertNotIn("**", text)
+        self.assertNotIn("*Ship*", text)
+
 
 if __name__ == "__main__":
     unittest.main()

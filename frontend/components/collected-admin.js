@@ -355,7 +355,6 @@ export function CollectedAdmin({ locale, initialItems = null }) {
 
   return (
     <section className="h2-employer-queue">
-      <p className="hint h2-employer-hint" title={t.collectedLede}>{t.collectedLede}</p>
       {error ? <p className="note">{error}</p> : null}
       {note ? <p className="note">{note}</p> : null}
       <div className="h2-panel h2-employer-list">

@@ -15,8 +15,11 @@ function Linked({ value }) {
 
 function SectionBlock({ section }) {
   if (!section) return null;
+  const sectionClass = section.id
+    ? `jd-desc-section jd-desc-section--${section.id}`
+    : "jd-desc-section";
   return (
-    <section className="jd-desc-section" data-section={section.id || undefined}>
+    <section className={sectionClass} data-section={section.id || undefined}>
       {section.title ? <h2 className="jd-desc-heading">{section.title}</h2> : null}
       {section.type === "list" ? (
         <ul className="jd-desc-list">
