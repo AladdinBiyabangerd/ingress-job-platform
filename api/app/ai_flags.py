@@ -80,8 +80,10 @@ class FlagError(Exception):
 
 
 def key_configured() -> bool:
+    from app.ai_gateway.gateway import _gemini_keys
+
     return bool(
-        os.environ.get("GEMINI_API_KEY", "").strip()
+        _gemini_keys()
         or os.environ.get("GROQ_API_KEY", "").strip()
         or os.environ.get("NVIDIA_API_KEY", "").strip()
         or os.environ.get("OPENROUTER_API_KEY", "").strip()

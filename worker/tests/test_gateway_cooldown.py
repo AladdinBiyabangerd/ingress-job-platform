@@ -6,8 +6,14 @@ from unittest import mock
 import worker.ai_gateway.gateway as gw
 
 
-def P(name):
-    return SimpleNamespace(name=name, model=name + "-m", key="k", base_url="u")
+def P(name, *, model=None, cooldown_id=""):
+    return SimpleNamespace(
+        name=name,
+        model=model or (name + "-m"),
+        key="k",
+        base_url="u",
+        cooldown_id=cooldown_id or name,
+    )
 
 
 class CooldownTest(unittest.TestCase):
@@ -49,6 +55,7 @@ class CooldownTest(unittest.TestCase):
 
     def test_auth_cooldown_is_long_transient_short(self):
         self.assertEqual(gw._cooldown_seconds(gw.ProviderHTTPError("x", 403)), gw.AUTH_COOLDOWN_S)
+        self.assertEqual(gw._cooldown_seconds(gw.ProviderHTTPError("x", 404)), gw.AUTH_COOLDOWN_S)
         self.assertEqual(gw._cooldown_seconds(gw.ProviderHTTPError("x", 429)), gw.TRANSIENT_COOLDOWN_S)
         self.assertEqual(gw._cooldown_seconds(gw.ProviderHTTPError("x", 503, 42.0)), 42.0)
         self.assertEqual(gw._cooldown_seconds(TimeoutError("timed out")), gw.TRANSIENT_COOLDOWN_S)
@@ -56,6 +63,13 @@ class CooldownTest(unittest.TestCase):
         self.assertEqual(gw._parse_retry_after("120"), 120.0)
         self.assertEqual(gw._parse_retry_after("999999"), gw.MAX_RETRY_AFTER_S)
         self.assertIsNone(gw._parse_retry_after("garbage"))
+
+    def test_gemini_slot_cooldown_is_per_model(self):
+        a = P("gemini", model="m1", cooldown_id="gemini:k0:m1")
+        b = P("gemini", model="m2", cooldown_id="gemini:k0:m2")
+        gw._cooldown_note("chat", a.cooldown_id, gw.ProviderHTTPError("x", 429))
+        kept = gw._cooldown_filter("chat", [a, b])
+        self.assertEqual([p.model for p in kept], ["m2"])
 
     def test_cooldown_expires(self):
         provs = [P("groq"), P("openai")]

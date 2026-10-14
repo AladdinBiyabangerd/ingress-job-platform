@@ -260,6 +260,7 @@ class GatewayTest(unittest.TestCase):
             "OPENROUTER_API_KEY": "",
             "AI_GATEWAY_ENABLED": "1",
             "AI_CHAT_PROVIDERS": "gemini,groq",
+            "GEMINI_MODELS": "gemini-3.8-flash",
             "AI_GATEWAY_DAILY_CALL_LIMIT": "100",
         }
         calls: list[str] = []
@@ -293,6 +294,14 @@ if __name__ == "__main__":
     unittest.main()
 
 
+def _unique_provider_names(providers) -> list[str]:
+    out: list[str] = []
+    for p in providers:
+        if p.name not in out:
+            out.append(p.name)
+    return out
+
+
 class ChatProviderOrderTest(unittest.TestCase):
     """Free providers first; OpenAI only as the very last resort."""
 
@@ -306,10 +315,19 @@ class ChatProviderOrderTest(unittest.TestCase):
             "AI_CHAT_PROVIDERS": "openai,gemini,groq,nvidia,openrouter",
             "GEMINI_API_KEY": "g", "GROQ_API_KEY": "q", "NVIDIA_API_KEY": "n",
             "OPENROUTER_API_KEY": "o", "OPENAI_API_KEY": "x",
+            "GEMINI_MODELS": "gemini-3.5-flash-lite,gemini-3.8-flash",
         }
         with mock.patch.dict(os.environ, env, clear=False):
-            names = [p.name for p in gw._chat_providers()]
+            for k in ("GEMINI_API_KEY_2", "GEMINI_API_KEYS", "GEMINI_MODEL"):
+                os.environ.pop(k, None)
+            providers = gw._chat_providers()
+            names = _unique_provider_names(providers)
+            gemini = [p for p in providers if p.name == "gemini"]
         self.assertEqual(names, ["gemini", "groq", "nvidia", "openrouter", "openai"])
+        self.assertEqual(
+            [p.model for p in gemini],
+            ["gemini-3.5-flash-lite", "gemini-3.8-flash"],
+        )
 
     def test_default_order_and_missing_keys_skip(self):
         import os
@@ -319,7 +337,78 @@ class ChatProviderOrderTest(unittest.TestCase):
 
         env = {"GROQ_API_KEY": "q", "OPENAI_API_KEY": "x"}
         with mock.patch.dict(os.environ, env, clear=False):
-            for k in ("AI_CHAT_PROVIDERS", "GEMINI_API_KEY", "NVIDIA_API_KEY", "OPENROUTER_API_KEY"):
+            for k in (
+                "AI_CHAT_PROVIDERS",
+                "GEMINI_API_KEY",
+                "GEMINI_API_KEY_2",
+                "GEMINI_API_KEYS",
+                "NVIDIA_API_KEY",
+                "OPENROUTER_API_KEY",
+            ):
                 os.environ.pop(k, None)
             names = [p.name for p in gw._chat_providers()]
         self.assertEqual(names, ["groq", "openai"])
+
+    def test_gemini_expands_models_and_keys(self):
+        import os
+        from unittest import mock
+
+        from worker.ai_gateway import gateway as gw
+
+        env = {
+            "AI_CHAT_PROVIDERS": "gemini",
+            "GEMINI_API_KEY": "k1",
+            "GEMINI_API_KEY_2": "k2",
+            "GEMINI_MODELS": "m-a,m-b",
+            "GROQ_API_KEY": "",
+            "OPENAI_API_KEY": "",
+            "NVIDIA_API_KEY": "",
+            "OPENROUTER_API_KEY": "",
+        }
+        with mock.patch.dict(os.environ, env, clear=False):
+            os.environ.pop("GEMINI_API_KEYS", None)
+            slots = gw._chat_providers()
+        self.assertEqual(
+            [(p.key, p.model, p.cooldown_id) for p in slots],
+            [
+                ("k1", "m-a", "gemini:k0:m-a"),
+                ("k1", "m-b", "gemini:k0:m-b"),
+                ("k2", "m-a", "gemini:k1:m-a"),
+                ("k2", "m-b", "gemini:k1:m-b"),
+            ],
+        )
+
+    def test_gemini_model_cascade_tries_next_before_other_providers(self):
+        import os
+        from unittest import mock
+
+        from worker.ai_gateway import gateway as gw
+
+        env = {
+            "AI_CHAT_PROVIDERS": "gemini,groq",
+            "GEMINI_API_KEY": "g",
+            "GEMINI_MODELS": "m1,m2",
+            "GROQ_API_KEY": "q",
+            "OPENAI_API_KEY": "",
+            "NVIDIA_API_KEY": "",
+            "OPENROUTER_API_KEY": "",
+        }
+        calls: list[tuple[str, str]] = []
+
+        def fake_chat(*, provider, **kw):
+            calls.append((provider.name, provider.model))
+            if provider.model != "m2":
+                raise gw.ProviderHTTPError("HTTP 429", 429)
+            return {"data": {"ok": True}, "usage": {}}
+
+        with mock.patch.dict(os.environ, env, clear=False):
+            os.environ.pop("GEMINI_API_KEY_2", None)
+            os.environ.pop("GEMINI_API_KEYS", None)
+            gw._cooldown_reset()
+            with mock.patch.object(gw, "_chat_json", side_effect=fake_chat):
+                out = gw._call_chat_json(
+                    system="s", user="u", schema={}, schema_name="x", timeout=1
+                )
+        self.assertEqual(calls, [("gemini", "m1"), ("gemini", "m2")])
+        self.assertEqual(out["model"], "m2")
+        self.assertEqual(out["provider"], "gemini")

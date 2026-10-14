@@ -99,7 +99,9 @@ that file is applied; set them yourself only if you use another bucket):
 | `OIDC_AUTHORIZE_URL` | Same name the API already uses. |
 | `OIDC_TOKEN_URL` | Same name the API already uses. |
 | `OIDC_REDIRECT_URIS` | Include the deployed web callback. |
-| `GEMINI_API_KEY` | Optional. Free-tier chat (primary). Enables `ai_gateway` when any provider key is set. |
+| `GEMINI_API_KEY` | Optional. Free-tier chat (primary). Enables `ai_gateway` when any provider key is set. Cascades all default Gemini text-out models on this key. |
+| `GEMINI_API_KEY_2` | Optional. Second Gemini key; same model cascade runs after key 1 slots are exhausted. |
+| `GEMINI_API_KEYS` | Optional. Comma-separated Gemini keys (overrides `GEMINI_API_KEY` / `_2` when set). |
 | `GROQ_API_KEY` | Optional. Free-tier chat fallback. |
 | `NVIDIA_API_KEY` | Optional. Free-tier chat + embeddings (`nemotron-3-embed-1b`, 2048-dim). |
 | `OPENROUTER_API_KEY` | Optional. Free-model chat fallback (`:free` models). |
@@ -107,7 +109,8 @@ that file is applied; set them yourself only if you use another bucket):
 | `AI_GATEWAY_ENABLED` | Optional. `0` forces AI off even when a key is set. Staff can also toggle flows in Moderasiya without changing env. |
 | `AI_CHAT_PROVIDERS` | Optional. Comma order, default `gemini,groq,nvidia,openrouter,openai`. |
 | `AI_EMBED_PROVIDERS` | Optional. Comma order, default `nvidia,openai`. |
-| `GEMINI_MODEL` | Optional. Default `gemini-3.8-flash`. |
+| `GEMINI_MODELS` | Optional. Comma list of Gemini chat models to try in order. Default: `3.5-flash-lite` → `3.1-flash-lite` → `2.5-flash-lite` → `2.5-flash` → `3.6-flash` → `3-flash-preview` → `3.8-flash`. |
+| `GEMINI_MODEL` | Optional. Legacy single-model override when `GEMINI_MODELS` is unset. |
 | `GROQ_MODEL` | Optional. Default `openai/gpt-oss-20b`. |
 | `NVIDIA_CHAT_MODEL` | Optional. Default `nvidia/nemotron-3-super-120b-a12b` (Meta Llama 3.x instruct IDs are EOL on NIM). |
 | `NVIDIA_EMBED_MODEL` | Optional. Default `nvidia/nemotron-3-embed-1b`. |

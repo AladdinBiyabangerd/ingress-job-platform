@@ -47,7 +47,7 @@ _FEATURE_LABELS = {
 }
 
 _PROVIDER_KEY_ENV = {
-    "gemini": "GEMINI_API_KEY",
+    "gemini": "GEMINI_API_KEY / GEMINI_API_KEY_2",
     "groq": "GROQ_API_KEY",
     "nvidia": "NVIDIA_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
@@ -167,10 +167,15 @@ def _provider_slots(kind: str) -> list[dict]:
 
     if kind == "chat":
         order = gw._provider_order("AI_CHAT_PROVIDERS", "gemini,groq,nvidia,openrouter,openai")
-        live = {p.name: p for p in gw._chat_providers()}
+        # First slot per provider (gemini may expand to many model/key slots).
+        live: dict[str, Any] = {}
+        for p in gw._chat_providers():
+            live.setdefault(p.name, p)
     else:
         order = gw._provider_order("AI_EMBED_PROVIDERS", "nvidia,openai")
-        live = {p.name: p for p in gw._embed_providers()}
+        live = {}
+        for p in gw._embed_providers():
+            live.setdefault(p.name, p)
 
     gateway_on = gw.enabled()
     out: list[dict] = []

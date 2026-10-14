@@ -51,7 +51,17 @@ CREATE TABLE IF NOT EXISTS ai_usage_daily (
 
 DEFAULT_MODEL = "gpt-4.1-nano"
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
-DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
+# Text-out free-tier cascade (high RPD/RPM first). Skip TTS/Live/Image/Pro.
+DEFAULT_GEMINI_MODELS = (
+    "gemini-3.5-flash-lite,"
+    "gemini-3.1-flash-lite,"
+    "gemini-2.5-flash-lite,"
+    "gemini-2.5-flash,"
+    "gemini-3.6-flash,"
+    "gemini-3-flash-preview,"
+    "gemini-3.8-flash"
+)
 DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b"
 DEFAULT_NVIDIA_CHAT_MODEL = "nvidia/nemotron-3-super-120b-a12b"
 DEFAULT_NVIDIA_EMBED_MODEL = "nvidia/nemotron-3-embed-1b"
@@ -105,6 +115,7 @@ class _ChatProvider:
     model: str
     json_mode: str  # schema | object | prompt
     extra_headers: tuple[tuple[str, str], ...] = ()
+    cooldown_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -113,6 +124,7 @@ class _EmbedProvider:
     key: str
     base_url: str
     model: str
+    cooldown_id: str = ""
 
 
 def enabled(conn: sqlite3.Connection | None = None) -> bool:
@@ -121,9 +133,42 @@ def enabled(conn: sqlite3.Connection | None = None) -> bool:
     return feature_on("gateway", conn)
 
 
+def _gemini_keys() -> list[str]:
+    """Configured Gemini API keys (optional second key / comma list)."""
+    multi = (os.environ.get("GEMINI_API_KEYS") or "").strip()
+    if multi:
+        keys = [k.strip() for k in multi.split(",") if k.strip()]
+    else:
+        keys = []
+        for env_name in ("GEMINI_API_KEY", "GEMINI_API_KEY_2"):
+            k = os.environ.get(env_name, "").strip()
+            if k:
+                keys.append(k)
+    seen: set[str] = set()
+    out: list[str] = []
+    for k in keys:
+        if k not in seen:
+            seen.add(k)
+            out.append(k)
+    return out
+
+
+def _gemini_models() -> list[str]:
+    """Gemini chat model cascade. GEMINI_MODELS > GEMINI_MODEL > default list."""
+    multi = (os.environ.get("GEMINI_MODELS") or "").strip()
+    if multi:
+        models = [m.strip() for m in multi.split(",") if m.strip()]
+        if models:
+            return models
+    single = (os.environ.get("GEMINI_MODEL") or "").strip()
+    if single:
+        return [single]
+    return [m.strip() for m in DEFAULT_GEMINI_MODELS.split(",") if m.strip()]
+
+
 def any_provider_key() -> bool:
     return bool(
-        os.environ.get("GEMINI_API_KEY", "").strip()
+        _gemini_keys()
         or os.environ.get("GROQ_API_KEY", "").strip()
         or os.environ.get("NVIDIA_API_KEY", "").strip()
         or os.environ.get("OPENROUTER_API_KEY", "").strip()
@@ -452,21 +497,25 @@ def _chat_providers() -> list[_ChatProvider]:
         _provider_order("AI_CHAT_PROVIDERS", "gemini,groq,nvidia,openrouter,openai")
     ):
         if name == "gemini":
-            key = os.environ.get("GEMINI_API_KEY", "").strip()
-            if not key:
+            keys = _gemini_keys()
+            if not keys:
                 continue
-            model = (
-                os.environ.get("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
-            ).strip() or DEFAULT_GEMINI_MODEL
-            out.append(
-                _ChatProvider(
-                    name="gemini",
-                    key=key,
-                    base_url="https://generativelanguage.googleapis.com/v1beta/openai",
-                    model=model,
-                    json_mode="schema",
-                )
-            )
+            models = _gemini_models()
+            for ki, key in enumerate(keys):
+                for model in models:
+                    out.append(
+                        _ChatProvider(
+                            name="gemini",
+                            key=key,
+                            base_url=(
+                                "https://generativelanguage.googleapis.com"
+                                "/v1beta/openai"
+                            ),
+                            model=model,
+                            json_mode="schema",
+                            cooldown_id=f"gemini:k{ki}:{model}",
+                        )
+                    )
         elif name == "groq":
             key = os.environ.get("GROQ_API_KEY", "").strip()
             if not key:
@@ -481,6 +530,7 @@ def _chat_providers() -> list[_ChatProvider]:
                     base_url="https://api.groq.com/openai/v1",
                     model=model,
                     json_mode="object",
+                    cooldown_id="groq",
                 )
             )
         elif name == "nvidia":
@@ -497,6 +547,7 @@ def _chat_providers() -> list[_ChatProvider]:
                     base_url="https://integrate.api.nvidia.com/v1",
                     model=model,
                     json_mode="prompt",
+                    cooldown_id="nvidia",
                 )
             )
         elif name == "openrouter":
@@ -523,6 +574,7 @@ def _chat_providers() -> list[_ChatProvider]:
                         ("HTTP-Referer", referer),
                         ("X-Title", title),
                     ),
+                    cooldown_id="openrouter",
                 )
             )
         elif name == "openai":
@@ -539,6 +591,7 @@ def _chat_providers() -> list[_ChatProvider]:
                     base_url="https://api.openai.com/v1",
                     model=model,
                     json_mode="schema",
+                    cooldown_id="openai",
                 )
             )
     return out
@@ -624,9 +677,15 @@ def _parse_retry_after(value: str | None) -> float | None:
         return None
 
 
+def _slot_id(provider: Any) -> str:
+    """Unique cooldown key (gemini multi-model/key slots need more than name)."""
+    cid = getattr(provider, "cooldown_id", None) or ""
+    return cid if cid else provider.name
+
+
 def _cooldown_seconds(exc: BaseException) -> float | None:
     status = getattr(exc, "status", None)
-    if status in (401, 403):
+    if status in (401, 403, 404):
         return AUTH_COOLDOWN_S
     if status in (429, 503):
         ra = getattr(exc, "retry_after", None)
@@ -639,11 +698,11 @@ def _cooldown_seconds(exc: BaseException) -> float | None:
     return None
 
 
-def _cooldown_note(kind: str, name: str, exc: BaseException) -> None:
+def _cooldown_note(kind: str, slot: str, exc: BaseException) -> None:
     secs = _cooldown_seconds(exc)
     if secs is None:
         return
-    key = f"{kind}:{name}"
+    key = f"{kind}:{slot}"
     now = time.monotonic()
     with _cooldown_lock:
         prev = _cooldowns.get(key)
@@ -652,13 +711,13 @@ def _cooldown_note(kind: str, name: str, exc: BaseException) -> None:
     if not already:
         log.warning(
             "ai_gateway %s provider %s cooling down for %ds (%s)",
-            kind, name, int(secs), type(exc).__name__,
+            kind, slot, int(secs), type(exc).__name__,
         )
 
 
-def _cooldown_clear(kind: str, name: str) -> None:
+def _cooldown_clear(kind: str, slot: str) -> None:
     with _cooldown_lock:
-        _cooldowns.pop(f"{kind}:{name}", None)
+        _cooldowns.pop(f"{kind}:{slot}", None)
 
 
 def _cooldown_reset() -> None:
@@ -667,14 +726,17 @@ def _cooldown_reset() -> None:
 
 
 def _cooldown_filter(kind: str, providers: list) -> list:
-    """Keep order; drop cooling providers. If all cool, keep least-recently-failed."""
+    """Keep order; drop cooling slots. If all cool, keep least-recently-failed."""
     now = time.monotonic()
     with _cooldown_lock:
-        state = {p.name: _cooldowns.get(f"{kind}:{p.name}") for p in providers}
-    active = [p for p in providers if not state[p.name] or state[p.name][0] <= now]
+        state = {_slot_id(p): _cooldowns.get(f"{kind}:{_slot_id(p)}") for p in providers}
+    active = [
+        p for p in providers
+        if not state[_slot_id(p)] or state[_slot_id(p)][0] <= now
+    ]
     if active or not providers:
         return active
-    return [min(providers, key=lambda p: state[p.name][1])]
+    return [min(providers, key=lambda p: state[_slot_id(p)][1])]
 
 
 def _call_chat_json(
@@ -691,6 +753,8 @@ def _call_chat_json(
     errors: list[str] = []
     failed_names: list[str] = []
     for provider in _cooldown_filter("chat", providers):
+        slot = _slot_id(provider)
+        label = f"{provider.name}/{provider.model}"
         try:
             raw = _chat_json(
                 provider=provider,
@@ -700,7 +764,7 @@ def _call_chat_json(
                 schema_name=schema_name,
                 timeout=timeout,
             )
-            _cooldown_clear("chat", provider.name)
+            _cooldown_clear("chat", slot)
             raw["provider"] = provider.name
             raw["model"] = provider.model
             if failed_names:
@@ -718,10 +782,10 @@ def _call_chat_json(
                 )
             return raw
         except Exception as exc:
-            msg = f"{provider.name}:{type(exc).__name__}:{exc}"
+            msg = f"{label}:{type(exc).__name__}:{exc}"
             errors.append(msg[:180])
-            failed_names.append(provider.name)
-            _cooldown_note("chat", provider.name, exc)
+            failed_names.append(label)
+            _cooldown_note("chat", slot, exc)
             log.warning("ai_gateway chat provider failed: %s", msg)
     raise RuntimeError("; ".join(errors[:4]) or "all_chat_providers_failed")
 
@@ -733,6 +797,7 @@ def _call_embed(*, texts: list[str], timeout: float) -> dict[str, Any]:
     errors: list[str] = []
     failed_names: list[str] = []
     for provider in _cooldown_filter("embed", providers):
+        slot = _slot_id(provider)
         try:
             raw = _openai_compat_embed(
                 key=provider.key,
@@ -741,7 +806,7 @@ def _call_embed(*, texts: list[str], timeout: float) -> dict[str, Any]:
                 texts=texts,
                 timeout=timeout,
             )
-            _cooldown_clear("embed", provider.name)
+            _cooldown_clear("embed", slot)
             raw["provider"] = provider.name
             raw["model"] = provider.model
             if failed_names:
@@ -762,7 +827,7 @@ def _call_embed(*, texts: list[str], timeout: float) -> dict[str, Any]:
             msg = f"{provider.name}:{type(exc).__name__}:{exc}"
             errors.append(msg[:180])
             failed_names.append(provider.name)
-            _cooldown_note("embed", provider.name, exc)
+            _cooldown_note("embed", slot, exc)
             log.warning("ai_gateway embed provider failed: %s", msg)
     raise RuntimeError("; ".join(errors[:4]) or "all_embed_providers_failed")
 

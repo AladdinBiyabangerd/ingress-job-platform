@@ -1,23 +1,26 @@
 # Current task
 
 ## Completed
-- Graded `rule_confidence` (not flat 100/0): `rule_fit_confidence` in `worker/worker/market_fit.py`
-- Wired into `acceptance.finish_item` + admin `backfill_moderation_confidence` (also re-grades legacy rule=100)
-- Tests updated; business-rules note updated
+- Gemini multi-model + multi-key failover in `ai_gateway` (API + worker)
+- Per-slot cooldown (`gemini:k0:model`); 404 long cooldown
+- Optional `GEMINI_API_KEY_2` / `GEMINI_API_KEYS`; default model cascade
+- Docs + tests updated
 
 ## Current state
-- Rule % reflects signal strength (board default ~64 → open worldwide/EMEA ~84–95 → AZ/CIS up to 100)
-- AI path unchanged (`ai_confidence`)
+- Single `GEMINI_API_KEY` alone works (all default text-out models for-loop)
+- Second key optional; expands same cascade after key1
 
 ## Decisions
-- Strongest evidence wins + small multi-signal bonus; non-AZ capped at 95
-- Backfill refreshes pending rows with `rule_confidence IS NULL OR = 100` and no AI score
+- Default models: 3.5-flash-lite → 3.1-flash-lite → 2.5-flash-lite → 2.5-flash → 3.6-flash → 3-flash-preview → 3.8-flash
+- Skip 3.7 (routes to 3.8); skip Image/TTS/Live/Pro
+- `GEMINI_MODELS` > `GEMINI_MODEL` > default list; key-major × model-minor
 
 ## Remaining work
-- Deploy; on admin click “Köhnə faizləri doldur” to re-grade flat 100s
+- Deploy: set `GEMINI_API_KEY` (and optional `_2`); unset legacy `GEMINI_MODEL` if you want the full cascade
 - Commit when asked
 
 ## Relevant files
-- `worker/worker/market_fit.py`, `worker/worker/acceptance.py`, `worker/worker/techstack.py`
-- `api/app/cabinet_store.py`
-- `worker/tests/test_market_fit.py`, `api/tests/test_admin.py`
+- `api/app/ai_gateway/gateway.py`, `worker/worker/ai_gateway/gateway.py`
+- `api/app/ai_flags.py`, `worker/worker/ai_flags.py`, `api/app/ops_status.py`
+- `worker/tests/test_ai_gateway.py`, `worker/tests/test_gateway_cooldown.py`
+- `.env.example`, `docs/railway.md`
