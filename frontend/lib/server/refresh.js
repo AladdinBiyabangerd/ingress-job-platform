@@ -272,6 +272,50 @@ export async function adminPollRecheckMarketFit(jobId) {
   }
 }
 
+export async function adminCancelRecheckMarketFit(jobId) {
+  const id = String(jobId || "").trim();
+  if (!id) return { ok: false, status: 404, data: {} };
+  return mutate(`/api/v1/admin/jobs/recheck-market-fit/${encodeURIComponent(id)}/cancel`, {
+    method: "POST",
+    timeoutMs: 15_000,
+  });
+}
+
+export async function refreshJobTidy() {
+  return itemsOf(await loadJson("/api/v1/admin/job-tidy"));
+}
+
+export async function adminStartJobTidy(ids) {
+  const list = Array.isArray(ids)
+    ? ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
+    : [];
+  if (!list.length) return { ok: false, status: 422, data: {} };
+  return mutate("/api/v1/admin/job-tidy/run", {
+    body: { ids: list.slice(0, 2000) },
+    timeoutMs: 30_000,
+  });
+}
+
+export async function adminPollJobTidy(jobId) {
+  const id = String(jobId || "").trim();
+  if (!id) return { ok: false, status: 404, data: {} };
+  try {
+    const data = await loadJson(`/api/v1/admin/job-tidy/run/${encodeURIComponent(id)}`, 15_000);
+    return { ok: true, status: 200, data };
+  } catch {
+    return { ok: false, status: 401, data: {} };
+  }
+}
+
+export async function adminCancelJobTidy(jobId) {
+  const id = String(jobId || "").trim();
+  if (!id) return { ok: false, status: 404, data: {} };
+  return mutate(`/api/v1/admin/job-tidy/run/${encodeURIComponent(id)}/cancel`, {
+    method: "POST",
+    timeoutMs: 15_000,
+  });
+}
+
 export async function adminBackfillConfidence({ aiLimit = 40 } = {}) {
   return mutate("/api/v1/admin/jobs/backfill-confidence", {
     body: { ai_limit: Math.max(0, Math.min(50, Number(aiLimit) || 0)) },

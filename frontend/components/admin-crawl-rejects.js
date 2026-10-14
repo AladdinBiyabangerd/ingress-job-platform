@@ -17,12 +17,14 @@ import {
   storedRecheckJob,
 } from "../lib/recheck-market-fit";
 import {
+  adminCancelRecheckMarketFit,
   adminClearCrawlRejects,
   adminPublishCrawlRejectsThreshold,
   adminStartRecheckMarketFit,
   refreshCrawlRejects,
 } from "../lib/server/refresh";
 import { AdminListFilterBar } from "./admin-list-filter-bar";
+import { AdminRecheckProgress } from "./admin-recheck-progress";
 import { Pager } from "./pager";
 
 const SCOPE = "crawl_rejects";
@@ -103,11 +105,13 @@ export function AdminCrawlRejects({ locale }) {
   const [scoreOp, setScoreOp] = useState("gte");
   const [scoreThreshold, setScoreThreshold] = useState("70");
   const [recheckProgress, setRecheckProgress] = useState(null);
+  const [recheckJobId, setRecheckJobId] = useState("");
+  const [recheckStopping, setRecheckStopping] = useState(false);
   const [selected, setSelected] = useState(() => new Set());
   const [listFilter, setListFilter] = useState(emptyAdminListFilter);
 
   const viewItems = useMemo(() => filterAdminList(items, listFilter), [items, listFilter]);
-  const { page, pageSize, total, totalPages, pageItems, goToPage, resetPage } = usePagination(
+  const { currentPage, pageSize, total, totalPages, pageItems, goToPage, resetPage } = usePagination(
     viewItems,
     LIST_PAGE_SIZE,
   );
@@ -148,6 +152,8 @@ export function AdminCrawlRejects({ locale }) {
     if (!jobId) return undefined;
     let alive = true;
     setBusy(true);
+    setRecheckJobId(jobId);
+    setRecheckStopping(false);
     pollRecheckJob(jobId, {
       isActive: () => alive,
       onProgress: (p) => {
@@ -158,12 +164,22 @@ export function AdminCrawlRejects({ locale }) {
         if (!alive || cancelled) return;
         forgetRecheckJob(SCOPE);
         setRecheckProgress(null);
+        setRecheckJobId("");
+        setRecheckStopping(false);
         if (!ok) {
           setError(t.adminError);
           return;
         }
         if (last.status === "failed") {
           setError(last.error || t.adminError);
+        } else if (last.status === "cancelled") {
+          setNote(
+            t.adminRecheckStoppedNote(
+              Number(last.checked) || 0,
+              Number(last.rejected) || 0,
+              Number(last.failed) || 0,
+            ),
+          );
         } else {
           setNote(
             t.adminRecheckNote(
@@ -176,7 +192,11 @@ export function AdminCrawlRejects({ locale }) {
         await load();
       })
       .finally(() => {
-        if (alive) setBusy(false);
+        if (alive) {
+          setBusy(false);
+          setRecheckJobId("");
+          setRecheckStopping(false);
+        }
       });
     return () => {
       alive = false;
@@ -210,6 +230,12 @@ export function AdminCrawlRejects({ locale }) {
     await load();
   }
 
+  async function stopRecheck() {
+    if (!recheckJobId || recheckStopping) return;
+    setRecheckStopping(true);
+    await adminCancelRecheckMarketFit(recheckJobId);
+  }
+
   async function recheckMissingAi() {
     const ids = missingAiScoreIds(items);
     if (!ids.length) {
@@ -220,6 +246,7 @@ export function AdminCrawlRejects({ locale }) {
     setBusy(true);
     setError("");
     setNote("");
+    setRecheckStopping(false);
     setRecheckProgress({ total: ids.length, done: 0, remaining: ids.length });
     const started = await adminStartRecheckMarketFit(ids, { scope: SCOPE });
     if (!started.ok || !started.data?.job_id) {
@@ -228,20 +255,32 @@ export function AdminCrawlRejects({ locale }) {
       setError(t.adminError);
       return;
     }
-    rememberRecheckJob(SCOPE, started.data.job_id);
-    const { ok, last } = await pollRecheckJob(started.data.job_id, {
+    const jobId = started.data.job_id;
+    setRecheckJobId(jobId);
+    rememberRecheckJob(SCOPE, jobId);
+    const { ok, last } = await pollRecheckJob(jobId, {
       fallbackTotal: ids.length,
       onProgress: setRecheckProgress,
     });
     forgetRecheckJob(SCOPE);
     setRecheckProgress(null);
     setBusy(false);
+    setRecheckJobId("");
+    setRecheckStopping(false);
     if (!ok) {
       setError(t.adminError);
       return;
     }
     if (last.status === "failed") {
       setError(last.error || t.adminError);
+    } else if (last.status === "cancelled") {
+      setNote(
+        t.adminRecheckStoppedNote(
+          Number(last.checked) || 0,
+          Number(last.rejected) || 0,
+          Number(last.failed) || 0,
+        ),
+      );
     } else {
       setNote(
         t.adminRecheckNote(
@@ -290,29 +329,12 @@ export function AdminCrawlRejects({ locale }) {
       <div className="h2-panel h2-employer-list">
         {error ? <p className="note">{error}</p> : null}
         {note ? <p className="note">{note}</p> : null}
-        {recheckProgress ? (
-          <div className="admin-mod-progress" role="status" aria-live="polite">
-            <div className="admin-mod-progress-label">
-              {t.adminRecheckProgress(
-                recheckProgress.total,
-                recheckProgress.done,
-                recheckProgress.remaining,
-              )}
-            </div>
-            <div className="admin-mod-progress-track">
-              <div
-                className="admin-mod-progress-bar"
-                style={{
-                  width: `${
-                    recheckProgress.total
-                      ? Math.min(100, Math.round((100 * recheckProgress.done) / recheckProgress.total))
-                      : 0
-                  }%`,
-                }}
-              />
-            </div>
-          </div>
-        ) : null}
+        <AdminRecheckProgress
+          t={t}
+          progress={recheckProgress}
+          onStop={stopRecheck}
+          stopping={recheckStopping}
+        />
         {items.length === 0 ? <p className="empty-line">{t.crawlRejectsEmpty}</p> : null}
         {items.length ? (
           <div className="admin-mod-table-wrap">
@@ -494,7 +516,8 @@ export function AdminCrawlRejects({ locale }) {
               </tbody>
             </table>
             <Pager
-              page={page}
+              locale={locale}
+              currentPage={currentPage}
               totalPages={totalPages}
               total={total}
               pageSize={pageSize}

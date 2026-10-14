@@ -10724,9 +10724,24 @@ a.saved-preview-company:hover {
   background: color-mix(in srgb, var(--panel, #fff) 92%, var(--muted) 8%);
 }
 
+.admin-mod-progress-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 .admin-mod-progress-label {
   font-size: 13px;
-  margin-bottom: 8px;
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.admin-mod-progress-stop {
+  flex: 0 0 auto;
 }
 
 .admin-mod-progress-track {

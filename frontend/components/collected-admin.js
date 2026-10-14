@@ -17,6 +17,7 @@ import {
   storedRecheckJob,
 } from "../lib/recheck-market-fit";
 import {
+  adminCancelRecheckMarketFit,
   adminStartRecheckMarketFit,
   crawledMerge,
   crawledPatchJob,
@@ -25,6 +26,7 @@ import {
   refreshCrawled,
 } from "../lib/server/refresh";
 import { AdminListFilterBar } from "./admin-list-filter-bar";
+import { AdminRecheckProgress } from "./admin-recheck-progress";
 import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
@@ -142,6 +144,8 @@ export function CollectedAdmin({ locale, initialItems = null }) {
   const [scoreOp, setScoreOp] = useState("gte");
   const [scoreThreshold, setScoreThreshold] = useState("70");
   const [recheckProgress, setRecheckProgress] = useState(null);
+  const [recheckJobId, setRecheckJobId] = useState("");
+  const [recheckStopping, setRecheckStopping] = useState(false);
   const [listFilter, setListFilter] = useState(emptyAdminListFilter);
 
   async function load() {
@@ -167,6 +171,8 @@ export function CollectedAdmin({ locale, initialItems = null }) {
       setBusy(true);
       setError("");
       setNote("");
+      setRecheckJobId(jobId);
+      setRecheckStopping(false);
       const { ok, last, cancelled: stopped } = await pollRecheckJob(jobId, {
         onProgress: (progress) => {
           if (!cancelled) setRecheckProgress(progress);
@@ -176,6 +182,8 @@ export function CollectedAdmin({ locale, initialItems = null }) {
       if (cancelled || stopped) return;
       forgetRecheckJob("crawled");
       setBusy(false);
+      setRecheckJobId("");
+      setRecheckStopping(false);
       if (!ok) {
         setRecheckProgress(null);
         setError(t.adminError);
@@ -283,6 +291,8 @@ export function CollectedAdmin({ locale, initialItems = null }) {
     const failed = Number(last?.failed) || 0;
     if (last?.status === "failed") {
       setError(t.adminError);
+    } else if (last?.status === "cancelled") {
+      setNote(t.adminRecheckCrawledStoppedNote(checked, rejected, hiddenCount, failed));
     } else if (checked === 0 && rejected === 0 && hiddenCount === 0 && failed > 0) {
       const why = String(last?.error || "").trim();
       setNote(why ? `${t.adminRecheckBudgetStop} [${why}]` : t.adminRecheckBudgetStop);
@@ -295,6 +305,14 @@ export function CollectedAdmin({ locale, initialItems = null }) {
       setError(t.loadError);
     }
     setRecheckProgress(null);
+    setRecheckJobId("");
+    setRecheckStopping(false);
+  }
+
+  async function stopRecheck() {
+    if (!recheckJobId || recheckStopping) return;
+    setRecheckStopping(true);
+    await adminCancelRecheckMarketFit(recheckJobId);
   }
 
   async function recheckByThreshold() {
@@ -306,6 +324,7 @@ export function CollectedAdmin({ locale, initialItems = null }) {
     setError("");
     setNote("");
     setBusy(true);
+    setRecheckStopping(false);
     setRecheckProgress({ total: ids.length, done: 0, remaining: ids.length });
     const started = await adminStartRecheckMarketFit(ids, { scope: "crawled" });
     if (!started.ok || !started.data?.job_id) {
@@ -315,6 +334,7 @@ export function CollectedAdmin({ locale, initialItems = null }) {
       return;
     }
     const jobId = started.data.job_id;
+    setRecheckJobId(jobId);
     rememberRecheckJob("crawled", jobId);
     setRecheckProgress(progressFromRecheck(started.data, ids.length));
     const { ok, last } = await pollRecheckJob(jobId, {
@@ -323,6 +343,8 @@ export function CollectedAdmin({ locale, initialItems = null }) {
     });
     forgetRecheckJob("crawled");
     setBusy(false);
+    setRecheckJobId("");
+    setRecheckStopping(false);
     if (!ok) {
       setRecheckProgress(null);
       setError(t.adminError);
@@ -337,29 +359,12 @@ export function CollectedAdmin({ locale, initialItems = null }) {
       {error ? <p className="note">{error}</p> : null}
       {note ? <p className="note">{note}</p> : null}
       <div className="h2-panel h2-employer-list">
-        {recheckProgress ? (
-          <div className="admin-mod-progress" role="status" aria-live="polite">
-            <div className="admin-mod-progress-label">
-              {t.adminRecheckProgress(
-                recheckProgress.total,
-                recheckProgress.done,
-                recheckProgress.remaining,
-              )}
-            </div>
-            <div className="admin-mod-progress-track">
-              <div
-                className="admin-mod-progress-bar"
-                style={{
-                  width: `${
-                    recheckProgress.total
-                      ? Math.min(100, Math.round((100 * recheckProgress.done) / recheckProgress.total))
-                      : 0
-                  }%`,
-                }}
-              />
-            </div>
-          </div>
-        ) : null}
+        <AdminRecheckProgress
+          t={t}
+          progress={recheckProgress}
+          onStop={stopRecheck}
+          stopping={recheckStopping}
+        />
         {items.length === 0 ? <p className="empty-line">{t.collectedEmpty}</p> : null}
         {items.length ? (
           <div className="admin-mod-table-wrap">

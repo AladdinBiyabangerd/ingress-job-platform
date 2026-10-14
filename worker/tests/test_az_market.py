@@ -56,6 +56,23 @@ class AzMarketRemoteTest(unittest.TestCase):
                 relocation=False,
             )
         )
+        # Benefits boilerplate must not trip the onsite/travel lock.
+        self.assertFalse(
+            foreign_locked_remote(
+                "Linux Engineer",
+                "Remote",
+                "Remote work; no travel required for most positions. Employee stock options.",
+            )
+        )
+        self.assertTrue(
+            az_market_relevant(
+                "Linux Engineer",
+                "Remote",
+                "Remote work; no travel required for most positions.",
+                remote=True,
+                relocation=False,
+            )
+        )
 
     def test_azerbaijan_signal_keeps_ad(self):
         self.assertTrue(

@@ -599,6 +599,76 @@ class AdminTests(unittest.TestCase):
             self.assertEqual(conf, 22)
             self.assertIsNone(rule_val)
 
+    def test_recheck_market_fit_cancel_keeps_done_stops_rest(self):
+        """Stop cancels remaining ads only; already-checked results stay written."""
+        import threading
+        import time
+
+        ids = []
+        conn = sqlite3.connect(self.db)
+        for i in range(5):
+            cur = conn.execute(
+                """
+                INSERT INTO jobs (
+                    title, company, city, text, status, created_at, norm_key, owner_subject,
+                    rule_confidence, ai_confidence, market_fit_reason
+                ) VALUES (?, 'Co', 'Baki', 'Role text.', 'pending', ?, ?, '', 80, NULL, '')
+                """,
+                (f"Cancel me {i}", "2026-10-14T16:00:00+04:00", f"cancel-recheck-{i}"),
+            )
+            ids.append(int(cur.lastrowid))
+        conn.commit()
+        conn.close()
+
+        started = threading.Event()
+        calls = {"n": 0}
+
+        def slow_recheck(ad_id, scope="queue"):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                started.set()
+            time.sleep(0.15)
+            return "checked"
+
+        with self._auth("job:staff", "admin-staff"):
+            with patch("app.market_fit_recheck_jobs.recheck_one", side_effect=slow_recheck):
+                started_res = self.client.post(
+                    "/api/v1/admin/jobs/recheck-market-fit",
+                    headers={"Authorization": "Bearer test"},
+                    json={"ids": ids},
+                )
+                self.assertEqual(started_res.status_code, 200, started_res.text)
+                job_key = started_res.json()["job_id"]
+                self.assertTrue(started.wait(timeout=2))
+                cancelled = self.client.post(
+                    f"/api/v1/admin/jobs/recheck-market-fit/{job_key}/cancel",
+                    headers={"Authorization": "Bearer test"},
+                )
+                self.assertEqual(cancelled.status_code, 200, cancelled.text)
+                self.assertIn(
+                    cancelled.json().get("status"),
+                    ("cancelling", "cancelled", "running", "queued"),
+                )
+
+                status_body = None
+                for _ in range(80):
+                    polled = self.client.get(
+                        f"/api/v1/admin/jobs/recheck-market-fit/{job_key}",
+                        headers={"Authorization": "Bearer test"},
+                    )
+                    self.assertEqual(polled.status_code, 200, polled.text)
+                    status_body = polled.json()
+                    if status_body.get("status") == "cancelled":
+                        break
+                    time.sleep(0.05)
+
+        self.assertIsNotNone(status_body)
+        self.assertEqual(status_body["status"], "cancelled")
+        self.assertLess(calls["n"], 5)
+        self.assertGreaterEqual(calls["n"], 1)
+        self.assertGreaterEqual(int(status_body.get("done") or 0), 1)
+        self.assertGreater(int(status_body.get("remaining") or 0), 0)
+
     def test_crawled_recheck_rejects_published_unsuitable(self):
         """Published scraped ads AI marks unfit become rejected (Rejected tab), not only hidden."""
         from app.cabinet_store import recheck_market_fit

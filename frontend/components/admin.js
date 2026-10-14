@@ -22,6 +22,7 @@ import {
   adminApproveBulk,
   adminApproveThreshold,
   adminBackfillConfidence,
+  adminCancelRecheckMarketFit,
   adminPatchJob,
   adminStartRecheckMarketFit,
   adminRejectJob,
@@ -31,8 +32,10 @@ import {
 } from "../lib/server/refresh";
 import { AdminAiFlags } from "./admin-ai-flags";
 import { AdminCrawlRejects } from "./admin-crawl-rejects";
+import { AdminJobTidy } from "./admin-job-tidy";
 import { AdminListFilterBar } from "./admin-list-filter-bar";
 import { AdminOpsStatus } from "./admin-ops-status";
+import { AdminRecheckProgress } from "./admin-recheck-progress";
 import { ApplyFormFields } from "./apply-form-fields";
 import { CollectedAdmin } from "./collected-admin";
 import { ManualAd } from "./manual-ad";
@@ -40,7 +43,16 @@ import { PageChrome } from "./page-chrome";
 import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
-const ADMIN_TABS = new Set(["queue", "rejected", "collected", "manual", "crawl_rejects", "ai", "ops"]);
+const ADMIN_TABS = new Set([
+  "queue",
+  "collected",
+  "rejected",
+  "manual",
+  "crawl_rejects",
+  "tidy",
+  "ai",
+  "ops",
+]);
 
 function normalizeAdminTab(value) {
   const tab = String(value || "").trim();
@@ -192,6 +204,8 @@ export function Admin({
   const [scoreOp, setScoreOp] = useState("gte");
   const [scoreThreshold, setScoreThreshold] = useState("70");
   const [recheckProgress, setRecheckProgress] = useState(null);
+  const [recheckJobId, setRecheckJobId] = useState("");
+  const [recheckStopping, setRecheckStopping] = useState(false);
   const [listFilter, setListFilter] = useState(emptyAdminListFilter);
 
   async function load() {
@@ -273,6 +287,8 @@ export function Admin({
       setBusy(true);
       setError("");
       setNote("");
+      setRecheckJobId(jobId);
+      setRecheckStopping(false);
       const { ok, last, cancelled: stopped } = await pollRecheckJob(jobId, {
         onProgress: (progress) => {
           if (!cancelled) setRecheckProgress(progress);
@@ -282,6 +298,8 @@ export function Admin({
       if (cancelled || stopped) return;
       forgetRecheckJob("queue");
       setBusy(false);
+      setRecheckJobId("");
+      setRecheckStopping(false);
       if (!ok) {
         setRecheckProgress(null);
         setError(t.adminError);
@@ -475,6 +493,8 @@ export function Admin({
     const failed = Number(last?.failed) || 0;
     if (last?.status === "failed") {
       setError(t.adminError);
+    } else if (last?.status === "cancelled") {
+      setNote(t.adminRecheckStoppedNote(checked, rejected, failed));
     } else if (checked === 0 && rejected === 0 && failed > 0) {
       const why = String(last?.error || "").trim();
       setNote(why ? `${t.adminRecheckBudgetStop} [${why}]` : t.adminRecheckBudgetStop);
@@ -487,6 +507,14 @@ export function Admin({
       setError(t.loadError);
     }
     setRecheckProgress(null);
+    setRecheckJobId("");
+    setRecheckStopping(false);
+  }
+
+  async function stopRecheck() {
+    if (!recheckJobId || recheckStopping) return;
+    setRecheckStopping(true);
+    await adminCancelRecheckMarketFit(recheckJobId);
   }
 
   async function recheckByThreshold() {
@@ -498,6 +526,7 @@ export function Admin({
     setError("");
     setNote("");
     setBusy(true);
+    setRecheckStopping(false);
     setRecheckProgress({ total: ids.length, done: 0, remaining: ids.length });
     const started = await adminStartRecheckMarketFit(ids, { scope: "queue" });
     if (!started.ok || !started.data?.job_id) {
@@ -507,6 +536,7 @@ export function Admin({
       return;
     }
     const jobId = started.data.job_id;
+    setRecheckJobId(jobId);
     rememberRecheckJob("queue", jobId);
     setRecheckProgress(progressFromRecheck(started.data, ids.length));
     const { ok, last } = await pollRecheckJob(jobId, {
@@ -515,6 +545,8 @@ export function Admin({
     });
     forgetRecheckJob("queue");
     setBusy(false);
+    setRecheckJobId("");
+    setRecheckStopping(false);
     if (!ok) {
       setRecheckProgress(null);
       setError(t.adminError);
@@ -575,6 +607,15 @@ export function Admin({
         <button
           type="button"
           role="tab"
+          aria-selected={tab === "collected"}
+          className={tab === "collected" ? "on" : ""}
+          onClick={() => selectTab("collected")}
+        >
+          {t.collectedTitle}
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={tab === "rejected"}
           className={tab === "rejected" ? "on" : ""}
           onClick={() => selectTab("rejected")}
@@ -585,29 +626,20 @@ export function Admin({
         <button
           type="button"
           role="tab"
-          aria-selected={tab === "collected"}
-          className={tab === "collected" ? "on" : ""}
-          onClick={() => selectTab("collected")}
-        >
-          {t.collectedTitle}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "manual"}
-          className={tab === "manual" ? "on" : ""}
-          onClick={() => selectTab("manual")}
-        >
-          {t.manualTitle}
-        </button>
-        <button
-          type="button"
-          role="tab"
           aria-selected={tab === "crawl_rejects"}
           className={tab === "crawl_rejects" ? "on" : ""}
           onClick={() => selectTab("crawl_rejects")}
         >
           {t.crawlRejectsTab}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "tidy"}
+          className={tab === "tidy" ? "on" : ""}
+          onClick={() => selectTab("tidy")}
+        >
+          {t.adminTidyTab}
         </button>
         <button
           type="button"
@@ -627,6 +659,15 @@ export function Admin({
         >
           {t.opsTab}
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "manual"}
+          className={tab === "manual" ? "on" : ""}
+          onClick={() => selectTab("manual")}
+        >
+          {t.manualTitle}
+        </button>
       </div>
       {error ? <p className="note">{error}</p> : null}
       {note ? <p className="note">{note}</p> : null}
@@ -634,28 +675,13 @@ export function Admin({
       {tab === "queue" || tab === "rejected" ? (
         <section className="h2-employer-queue">
           <div className="h2-panel h2-employer-list">
-            {tab === "queue" && recheckProgress ? (
-              <div className="admin-mod-progress" role="status" aria-live="polite">
-                <div className="admin-mod-progress-label">
-                  {t.adminRecheckProgress(
-                    recheckProgress.total,
-                    recheckProgress.done,
-                    recheckProgress.remaining,
-                  )}
-                </div>
-                <div className="admin-mod-progress-track">
-                  <div
-                    className="admin-mod-progress-bar"
-                    style={{
-                      width: `${
-                        recheckProgress.total
-                          ? Math.min(100, Math.round((100 * recheckProgress.done) / recheckProgress.total))
-                          : 0
-                      }%`,
-                    }}
-                  />
-                </div>
-              </div>
+            {tab === "queue" ? (
+              <AdminRecheckProgress
+                t={t}
+                progress={recheckProgress}
+                onStop={stopRecheck}
+                stopping={recheckStopping}
+              />
             ) : null}
             {listItems.length === 0 ? (
               <p className="empty-line">{tab === "rejected" ? t.adminRejectedEmpty : t.adminEmpty}</p>
@@ -1064,8 +1090,9 @@ export function Admin({
           <CollectedAdmin locale={locale} initialItems={initialCrawled} />
         </div>
       ) : null}
-      {tab === "manual" ? <ManualAd locale={locale} onSaved={load} /> : null}
       {tab === "crawl_rejects" ? <AdminCrawlRejects locale={locale} /> : null}
+      {tab === "tidy" ? <AdminJobTidy locale={locale} /> : null}
+      {tab === "manual" ? <ManualAd locale={locale} onSaved={load} /> : null}
       {tab === "ai" || seenAi ? (
         <div hidden={tab !== "ai"}>
           <AdminAiFlags locale={locale} initial={initialAiFlags} />

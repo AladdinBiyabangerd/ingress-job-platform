@@ -30,7 +30,9 @@ from app.crawl_rejects_admin import (
     list_crawl_rejects,
     publish_crawl_rejects_by_threshold,
 )
-from app.market_fit_recheck_jobs import get_recheck_job, start_recheck_job
+from app.job_tidy_admin import list_untidy_jobs
+from app.job_tidy_jobs import cancel_tidy_job, get_tidy_job, start_tidy_job
+from app.market_fit_recheck_jobs import cancel_recheck_job, get_recheck_job, start_recheck_job
 from app.crawled_admin import get_crawled, list_crawled, merge_crawled, set_crawled_hidden, update_crawled
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
@@ -99,6 +101,12 @@ class RecheckMarketFitIn(BaseModel):
 
     ids: list[int] = Field(default_factory=list, max_length=2000)
     scope: str = Field(default="queue", pattern="^(queue|crawled|crawl_rejects)$")
+
+
+class JobTidyRunIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ids: list[int] = Field(default_factory=list, max_length=2000)
 
 
 class CrawlRejectThresholdIn(BaseModel):
@@ -268,6 +276,34 @@ def recheck_fit(body: RecheckMarketFitIn, user: VerifiedAccess = Depends(require
 @router.get("/jobs/recheck-market-fit/{job_id}")
 def recheck_fit_status(job_id: str, _user: VerifiedAccess = Depends(require_staff)) -> dict:
     return _run(lambda: get_recheck_job(job_id))
+
+
+@router.post("/jobs/recheck-market-fit/{job_id}/cancel")
+def recheck_fit_cancel(job_id: str, _user: VerifiedAccess = Depends(require_staff)) -> dict:
+    """Stop remaining AI checks; already-written results are kept."""
+    return _run(lambda: cancel_recheck_job(job_id))
+
+
+@router.get("/job-tidy")
+def read_untidy(_user: VerifiedAccess = Depends(require_staff)) -> dict:
+    return {"items": list_untidy_jobs()}
+
+
+@router.post("/job-tidy/run")
+def tidy_run(body: JobTidyRunIn, user: VerifiedAccess = Depends(require_staff)) -> dict:
+    """Start async job_tidy; poll GET .../job-tidy/run/{job_id} for progress."""
+    return _run(lambda: start_tidy_job(body.ids, created_by=user.subject))
+
+
+@router.get("/job-tidy/run/{job_id}")
+def tidy_run_status(job_id: str, _user: VerifiedAccess = Depends(require_staff)) -> dict:
+    return _run(lambda: get_tidy_job(job_id))
+
+
+@router.post("/job-tidy/run/{job_id}/cancel")
+def tidy_run_cancel(job_id: str, _user: VerifiedAccess = Depends(require_staff)) -> dict:
+    """Stop remaining tidy work; already-saved cleaned_text is kept."""
+    return _run(lambda: cancel_tidy_job(job_id))
 
 
 @router.post("/jobs/backfill-confidence")

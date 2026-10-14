@@ -1251,7 +1251,8 @@ _ONSITE_HEAVY = re.compile(
     r"physical\s+installation|"
     r"\bwiring\b|"
     r"(?:must|required|willingness)\s+to\s+travel|"
-    r"travel\s+(?:required|expectations)|"
+    # Do not match "no travel required" / "without travel expectations".
+    r"(?<!\bno\s)(?<!\bwithout\s)travel\s+(?:required|expectations)|"
     r"remote\s*/\s*office|"
     r"office\s+phases?"
     r")"

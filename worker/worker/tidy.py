@@ -264,10 +264,68 @@ def _pending_rows(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     ).fetchall()
 
 
+def tidy_one(conn: sqlite3.Connection, job_id: int) -> str:
+    """Tidy a single published ad. Returns saved|skipped|failed|disabled|missing."""
+    from worker.ai_flags import feature_on
+    from worker.ai_gateway import any_provider_key, complete_json
+
+    if not feature_on("job_tidy", conn) or not feature_on("gateway", conn) or not any_provider_key():
+        return "disabled"
+
+    row = conn.execute(
+        """
+        SELECT id, text, cleaned_text, status
+        FROM jobs
+        WHERE id = ? AND COALESCE(merged_into, 0) = 0
+        """,
+        (int(job_id),),
+    ).fetchone()
+    if row is None:
+        return "missing"
+    if (row["status"] or "") != "published":
+        return "skipped"
+    if (row["cleaned_text"] or "").strip():
+        return "skipped"
+    body = row["text"] or ""
+    if not messy(body):
+        return "skipped"
+
+    snippet = body[:INPUT_CHARS]
+    lang = _lang(snippet)
+    heads = _HEADINGS[lang]
+    user = (
+        f"Language hint: {lang}\n"
+        f"Prefer these section titles when filling fields: "
+        f"{heads['why']}; {heads['about']}; {heads['do']}; "
+        f"{heads['need']}; {heads['nice']}; {heads['offer']}.\n\n"
+        f"Job ad:\n{snippet}"
+    )
+    result = complete_json(
+        purpose=PURPOSE,
+        prompt_version=PROMPT_VERSION,
+        system=_SYSTEM,
+        user=user,
+        schema=_JSON_SCHEMA,
+        schema_name="job_tidy",
+        conn=conn,
+        timeout=90.0,
+    )
+    if not result.ok or not isinstance(result.data, dict):
+        log.info("job_tidy sync miss id=%s: %s", row["id"], result.error or "failed")
+        return "failed"
+    cleaned = format_structured(result.data, lang=lang)
+    if _untouched(snippet, cleaned):
+        log.info("job_tidy sync rejected id=%s: thin output", row["id"])
+        return "failed"
+    conn.execute("UPDATE jobs SET cleaned_text = ? WHERE id = ?", (cleaned, row["id"]))
+    conn.commit()
+    return "saved"
+
+
 def _sync_tidy(conn: sqlite3.Connection, limit: int = SYNC_PER_RUN) -> int:
     """Immediate structured tidy through the multi-provider gateway."""
     from worker.ai_flags import feature_on
-    from worker.ai_gateway import any_provider_key, complete_json
+    from worker.ai_gateway import any_provider_key
 
     if not feature_on("gateway", conn) or not any_provider_key():
         return 0
@@ -275,37 +333,11 @@ def _sync_tidy(conn: sqlite3.Connection, limit: int = SYNC_PER_RUN) -> int:
     targets = [row for row in _pending_rows(conn) if messy(row["text"])][:limit]
     saved = 0
     for row in targets:
-        snippet = (row["text"] or "")[:INPUT_CHARS]
-        lang = _lang(snippet)
-        heads = _HEADINGS[lang]
-        user = (
-            f"Language hint: {lang}\n"
-            f"Prefer these section titles when filling fields: "
-            f"{heads['why']}; {heads['about']}; {heads['do']}; "
-            f"{heads['need']}; {heads['nice']}; {heads['offer']}.\n\n"
-            f"Job ad:\n{snippet}"
-        )
-        result = complete_json(
-            purpose=PURPOSE,
-            prompt_version=PROMPT_VERSION,
-            system=_SYSTEM,
-            user=user,
-            schema=_JSON_SCHEMA,
-            schema_name="job_tidy",
-            conn=conn,
-            timeout=90.0,
-        )
-        if not result.ok or not isinstance(result.data, dict):
-            log.info("job_tidy sync miss id=%s: %s", row["id"], result.error or "failed")
-            continue
-        cleaned = format_structured(result.data, lang=lang)
-        if _untouched(snippet, cleaned):
-            log.info("job_tidy sync rejected id=%s: thin output", row["id"])
-            continue
-        conn.execute("UPDATE jobs SET cleaned_text = ? WHERE id = ?", (cleaned, row["id"]))
-        saved += 1
-    if saved:
-        conn.commit()
+        outcome = tidy_one(conn, int(row["id"]))
+        if outcome == "saved":
+            saved += 1
+        elif outcome == "disabled":
+            break
     return saved
 
 

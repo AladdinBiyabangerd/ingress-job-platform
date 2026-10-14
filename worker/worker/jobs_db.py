@@ -147,6 +147,7 @@ _NO_ID_TABLES = {
     "role_skill_weight",
     "skill_pair_daily",
     "skill_trend_daily",
+    "job_tidy_jobs",
     "tidy_batch_jobs",
 }
 

@@ -27,20 +27,39 @@ CREATE TABLE IF NOT EXISTS crawl_runs (
 );
 """
 
-# Human labels for AI flows (same product language as Job admin UI).
+# Human labels for AI flows (keep in sync with frontend admin AI tab copy).
 _FEATURE_LABELS = {
     "gateway": "Ümumi AI gateway (LLM və embed)",
-    "cv_fallback": "CV parse ehtiyatı",
+    "cv_fallback": "CV parse ehtiyatı (AI #1)",
     "job_tidy": "Elan mətnini təmizləmə",
-    "market_fit": "Crawl bazar uyğunluğu",
+    "market_fit": "Crawl bazar uyğunluğu (default açıq; pulsuz AI → OpenAI)",
     "embeddings": "Vakansiya və profil embed-ləri",
-    "rerank": "Uyğunluq rerank",
-    "llm_rerank": "LLM uyğunluq re-rank",
+    "rerank": "Uyğunluq rerank (AI #2)",
+    "llm_rerank": "LLM uyğunluq re-rank (top-10)",
     "match_why": "Uyğunluq «niyə» cümləsi",
     "role_coach": "Rol bacarıq koçu",
-    "learning_roadmap": "Öyrənmə roadmap",
+    "learning_roadmap": "Öyrənmə roadmap (Academy + AI)",
     "job_analyze": "Elan «Analiz et» hesabatı",
     "job_apply_draft": "Elan «Müraciət mətni» qaralama",
+    "job_tailored_cv": "Elan «Elana uyğun CV»",
+    "digest_intro": "Digest giriş mətni (AI #4)",
+    "engagement_copy": "Engagement bildiriş mətni",
+}
+
+# ai_usage_daily.purpose → staff-facing label (ops AI panel).
+_PURPOSE_LABELS = {
+    "cv_parse": "CV parse ehtiyatı",
+    "job_tidy": "Elan mətnini təmizləmə",
+    "market_fit": "Crawl bazar uyğunluğu",
+    "embed_job": "Vakansiya embed",
+    "embed_profile": "Profil embed",
+    "rerank": "Uyğunluq rerank",
+    "llm_rerank": "LLM uyğunluq re-rank",
+    "match_why": "Uyğunluq «niyə»",
+    "role_coach": "Rol bacarıq koçu",
+    "learning_roadmap": "Öyrənmə roadmap",
+    "job_analyze": "Elan «Analiz et»",
+    "job_apply_draft": "Elan «Müraciət mətni»",
     "job_tailored_cv": "Elan «Elana uyğun CV»",
     "digest_intro": "Digest giriş mətni",
     "engagement_copy": "Engagement bildiriş mətni",
@@ -167,23 +186,32 @@ def _provider_slots(kind: str) -> list[dict]:
 
     if kind == "chat":
         order = gw._provider_order("AI_CHAT_PROVIDERS", "gemini,groq,nvidia,openrouter,openai")
-        # First slot per provider (gemini may expand to many model/key slots).
-        live: dict[str, Any] = {}
+        # Full cascade: gemini/groq expand to key × model slots.
+        slots_by_name: dict[str, list[Any]] = {}
         for p in gw._chat_providers():
-            live.setdefault(p.name, p)
+            slots_by_name.setdefault(p.name, []).append(p)
     else:
         order = gw._provider_order("AI_EMBED_PROVIDERS", "nvidia,openai")
-        live = {}
+        slots_by_name = {}
         for p in gw._embed_providers():
-            live.setdefault(p.name, p)
+            slots_by_name.setdefault(p.name, []).append(p)
 
     gateway_on = gw.enabled()
     out: list[dict] = []
     for index, name in enumerate(order):
         key_env = _PROVIDER_KEY_ENV.get(name, "")
         label = _PROVIDER_LABELS.get(name, name)
-        configured = name in live
-        model = live[name].model if configured else ""
+        slots = slots_by_name.get(name) or []
+        configured = bool(slots)
+        # Unique models in cascade order (multi-key repeats the same model list).
+        models: list[str] = []
+        for slot in slots:
+            model = (getattr(slot, "model", None) or "").strip()
+            if model and model not in models:
+                models.append(model)
+        model = models[0] if models else ""
+        model_display = " → ".join(models) if models else ""
+        slot_count = len(slots)
         if not configured:
             out.append(
                 {
@@ -191,6 +219,8 @@ def _provider_slots(kind: str) -> list[dict]:
                     "label": label,
                     "kind": kind,
                     "model": "",
+                    "models": [],
+                    "slot_count": 0,
                     "order": index + 1,
                     "status": "stopped",
                     "reason": (
@@ -208,21 +238,28 @@ def _provider_slots(kind: str) -> list[dict]:
                     "label": label,
                     "kind": kind,
                     "model": model,
+                    "models": models,
+                    "slot_count": slot_count,
                     "order": index + 1,
                     "status": "stopped",
                     "reason": "AI gateway sönülüdür; provayder çağırılmır.",
                 }
             )
             continue
+        reason = "Açar var; failover sırasındadır."
+        if slot_count > 1:
+            reason = f"Açar var; {slot_count} cascade slot failover sırasındadır."
         out.append(
             {
                 "id": name,
                 "label": label,
                 "kind": kind,
-                "model": model,
+                "model": model_display or model,
+                "models": models,
+                "slot_count": slot_count,
                 "order": index + 1,
                 "status": "running",
-                "reason": "Açar var; failover sırasındadır.",
+                "reason": reason,
             }
         )
     return out
@@ -267,9 +304,11 @@ def _usage_today(conn: sqlite3.Connection | None) -> tuple[int, list[dict]]:
     for row in rows:
         calls = int(_cell(row, "calls", 1) or 0)
         total += calls
+        purpose = str(_cell(row, "purpose", 0) or "")
         usage.append(
             {
-                "purpose": str(_cell(row, "purpose", 0) or ""),
+                "purpose": purpose,
+                "label": _PURPOSE_LABELS.get(purpose, purpose or "—"),
                 "calls": calls,
                 "prompt_tokens": int(_cell(row, "prompt_tokens", 2) or 0),
                 "completion_tokens": int(_cell(row, "completion_tokens", 3) or 0),

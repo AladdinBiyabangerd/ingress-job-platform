@@ -489,6 +489,19 @@ export const copy = {
     adminQueue: "Elan növbəsi",
     adminRejectedTab: "Ləğv edilmişlər",
     crawlRejectsTab: "Crawl rəddləri",
+    adminTidyTab: "Səliqə növbəsi",
+    adminTidyEmpty: "Səliqəyə salınmalı elan yoxdur.",
+    adminTidyStartAll: "Hamısını səliqəyə sal",
+    adminTidyStartSelected: "Seçilənləri səliqəyə sal",
+    adminTidyNone: "Səliqəyə salınacaq elan yoxdur.",
+    adminTidySelectPage: "Bu səhifəni seç",
+    adminTidyColChars: "Simvol",
+    adminTidyProgress: (total, done, left) =>
+      `Səliqə: ${total} plan, ${done} edildi, ${left} qaldı`,
+    adminTidyNote: (saved, failed, skipped) =>
+      `Səliqə: ${saved} saxlanıldı, ${failed} uğursuz, ${skipped} keçildi.`,
+    adminTidyStoppedNote: (saved, failed, skipped) =>
+      `Dayandırıldı (edilənlər saxlanıldı): ${saved} saxlanıldı, ${failed} uğursuz, ${skipped} keçildi.`,
     crawlRejectsEmpty: "Crawl rədd siyahısı boşdur.",
     crawlRejectsColReason: "Səbəb",
     crawlRejectsClear: "Yenidən crawl et",
@@ -546,6 +559,12 @@ export const copy = {
       `AI yoxlama: ${checked} yoxlandı, ${rejected} rədd, ${hidden} gizlədildi, ${failed} uğursuz.`,
     adminRecheckProgress: (total, done, left) =>
       `AI yoxlama: ${total} plan, ${done} edildi, ${left} qaldı`,
+    adminRecheckStop: "Dayandır",
+    adminRecheckStopping: "Dayandırılır…",
+    adminRecheckStoppedNote: (checked, rejected, failed) =>
+      `Dayandırıldı (edilənlər saxlanıldı): ${checked} yoxlandı, ${rejected} rədd, ${failed} uğursuz.`,
+    adminRecheckCrawledStoppedNote: (checked, rejected, hidden, failed) =>
+      `Dayandırıldı (edilənlər saxlanıldı): ${checked} yoxlandı, ${rejected} rədd, ${hidden} gizlədildi, ${failed} uğursuz.`,
     adminRecheckBudgetStop: "AI cavab vermədi (limit/off). Qalanlar sonra davam edə bilər.",
     adminBackfillConfidence: "Köhnə faizləri doldur",
     adminBackfillNote: (rule, checked, rejected, failed, left) =>
@@ -673,6 +692,11 @@ export const copy = {
     opsAiFlows: "AI axınları",
     opsAiFlowSummary: (r, s) => `${r} işləyir, ${s} dayanıb`,
     opsAiEmpty: "AI axın məlumatı yoxdur.",
+    opsAiUsage: "Bu günkü çağırışlar",
+    opsAiUsageHint: "Gündəlik limitə daxil olan real purpose cəmi — AI tabındakı axınlarla eyni mənbə.",
+    opsAiUsageEmpty: "Bu gün hələ AI çağırışı yoxdur.",
+    opsColPurpose: "Məqsəd",
+    opsColCalls: "Çağırış",
     opsChatProviders: "Chat provayderləri",
     opsEmbedProviders: "Embed provayderləri",
     opsChatEmpty: "Failover sırasında chat provayderi yoxdur.",
@@ -1598,6 +1622,19 @@ export const copy = {
     adminQueue: "Ad queue",
     adminRejectedTab: "Rejected",
     crawlRejectsTab: "Crawl rejects",
+    adminTidyTab: "Tidy queue",
+    adminTidyEmpty: "No ads waiting for tidy.",
+    adminTidyStartAll: "Tidy all",
+    adminTidyStartSelected: "Tidy selected",
+    adminTidyNone: "No ads to tidy.",
+    adminTidySelectPage: "Select this page",
+    adminTidyColChars: "Chars",
+    adminTidyProgress: (total, done, left) =>
+      `Tidy: ${total} planned, ${done} done, ${left} left`,
+    adminTidyNote: (saved, failed, skipped) =>
+      `Tidy: ${saved} saved, ${failed} failed, ${skipped} skipped.`,
+    adminTidyStoppedNote: (saved, failed, skipped) =>
+      `Stopped (kept finished work): ${saved} saved, ${failed} failed, ${skipped} skipped.`,
     crawlRejectsEmpty: "The crawl reject list is empty.",
     crawlRejectsColReason: "Reason",
     crawlRejectsClear: "Allow re-crawl",
@@ -1655,6 +1692,12 @@ export const copy = {
       `AI recheck: ${checked} checked, ${rejected} rejected, ${hidden} hidden, ${failed} failed.`,
     adminRecheckProgress: (total, done, left) =>
       `AI recheck: ${total} planned, ${done} done, ${left} left`,
+    adminRecheckStop: "Stop",
+    adminRecheckStopping: "Stopping…",
+    adminRecheckStoppedNote: (checked, rejected, failed) =>
+      `Stopped (kept what finished): ${checked} checked, ${rejected} rejected, ${failed} failed.`,
+    adminRecheckCrawledStoppedNote: (checked, rejected, hidden, failed) =>
+      `Stopped (kept what finished): ${checked} checked, ${rejected} rejected, ${hidden} hidden, ${failed} failed.`,
     adminRecheckBudgetStop: "AI did not respond (budget/off). Remaining can continue later.",
     adminBackfillConfidence: "Fill missing percents",
     adminBackfillNote: (rule, checked, rejected, failed, left) =>
@@ -1782,6 +1825,11 @@ export const copy = {
     opsAiFlows: "AI flows",
     opsAiFlowSummary: (r, s) => `${r} running, ${s} stopped`,
     opsAiEmpty: "No AI flow data.",
+    opsAiUsage: "Calls today",
+    opsAiUsageHint: "Real purpose totals that count toward the daily limit — same source as the AI tab flows.",
+    opsAiUsageEmpty: "No AI calls yet today.",
+    opsColPurpose: "Purpose",
+    opsColCalls: "Calls",
     opsChatProviders: "Chat providers",
     opsEmbedProviders: "Embed providers",
     opsChatEmpty: "No chat providers in failover order.",
@@ -2708,6 +2756,19 @@ export const copy = {
     adminQueue: "Очередь объявлений",
     adminRejectedTab: "Отклонённые",
     crawlRejectsTab: "Crawl отказы",
+    adminTidyTab: "Очередь очистки",
+    adminTidyEmpty: "Нет объявлений для очистки текста.",
+    adminTidyStartAll: "Очистить все",
+    adminTidyStartSelected: "Очистить выбранные",
+    adminTidyNone: "Нет объявлений для очистки.",
+    adminTidySelectPage: "Выбрать эту страницу",
+    adminTidyColChars: "Символы",
+    adminTidyProgress: (total, done, left) =>
+      `Очистка: ${total} план, ${done} сделано, ${left} осталось`,
+    adminTidyNote: (saved, failed, skipped) =>
+      `Очистка: ${saved} сохранено, ${failed} сбой, ${skipped} пропущено.`,
+    adminTidyStoppedNote: (saved, failed, skipped) =>
+      `Остановлено (готовое сохранено): ${saved} сохранено, ${failed} сбой, ${skipped} пропущено.`,
     crawlRejectsEmpty: "Список crawl-отказов пуст.",
     crawlRejectsColReason: "Причина",
     crawlRejectsClear: "Разрешить повторный crawl",
@@ -2765,6 +2826,12 @@ export const copy = {
       `AI: проверено ${checked}, отклонено ${rejected}, скрыто ${hidden}, ошибка ${failed}.`,
     adminRecheckProgress: (total, done, left) =>
       `AI: ${total} в плане, ${done} сделано, ${left} осталось`,
+    adminRecheckStop: "Стоп",
+    adminRecheckStopping: "Останавливается…",
+    adminRecheckStoppedNote: (checked, rejected, failed) =>
+      `Остановлено (сделанное сохранено): проверено ${checked}, отклонено ${rejected}, ошибка ${failed}.`,
+    adminRecheckCrawledStoppedNote: (checked, rejected, hidden, failed) =>
+      `Остановлено (сделанное сохранено): проверено ${checked}, отклонено ${rejected}, скрыто ${hidden}, ошибка ${failed}.`,
     adminRecheckBudgetStop: "AI не ответил (лимит/выкл). Остальное можно продолжить позже.",
     adminBackfillConfidence: "Заполнить старые %",
     adminBackfillNote: (rule, checked, rejected, failed, left) =>
@@ -2892,6 +2959,11 @@ export const copy = {
     opsAiFlows: "Потоки ИИ",
     opsAiFlowSummary: (r, s) => `${r} работают, ${s} остановлены`,
     opsAiEmpty: "Нет данных по потокам ИИ.",
+    opsAiUsage: "Вызовы сегодня",
+    opsAiUsageHint: "Реальные суммы по purpose в дневном лимите — тот же источник, что и вкладка AI.",
+    opsAiUsageEmpty: "Сегодня вызовов ИИ ещё нет.",
+    opsColPurpose: "Назначение",
+    opsColCalls: "Вызовы",
     opsChatProviders: "Chat-провайдеры",
     opsEmbedProviders: "Embed-провайдеры",
     opsChatEmpty: "Нет chat-провайдеров в порядке failover.",

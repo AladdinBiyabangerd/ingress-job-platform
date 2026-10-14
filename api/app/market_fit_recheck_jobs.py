@@ -145,6 +145,54 @@ def get_recheck_job(job_id: str) -> dict[str, Any]:
     return _row_public(row)
 
 
+def cancel_recheck_job(job_id: str) -> dict[str, Any]:
+    """Request stop of remaining work; already-checked ads stay (no undo).
+
+    Sets status to ``cancelling`` so polls keep reading until the worker
+    finishes the in-flight ad and writes final ``cancelled`` counts.
+    """
+    key = (job_id or "").strip()
+    if not key:
+        raise CabinetError(404, "Job tapılmadı")
+    with _LOCK:
+        conn = _connect()
+        try:
+            _ensure(conn)
+            row = conn.execute(
+                "SELECT status FROM market_fit_recheck_jobs WHERE id = ?",
+                (key,),
+            ).fetchone()
+            if row is None:
+                raise CabinetError(404, "Job tapılmadı")
+            status = row["status"] or ""
+            if status in ("queued", "running"):
+                conn.execute(
+                    """
+                    UPDATE market_fit_recheck_jobs
+                    SET status = 'cancelling', updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (_now(), key),
+                )
+                conn.commit()
+        finally:
+            conn.close()
+    return get_recheck_job(key)
+
+
+def _should_stop(job_id: str) -> bool:
+    with _LOCK:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT status FROM market_fit_recheck_jobs WHERE id = ?",
+                (job_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+    return bool(row) and (row["status"] or "") in ("cancelling", "cancelled")
+
+
 def _bump(job_id: str, *, fields: list[str] | None = None, done_inc: int = 1) -> None:
     allowed = {"checked", "rejected", "hidden", "failed", "skipped"}
     sets = ["updated_at = ?", "done = done + ?"]
@@ -217,6 +265,9 @@ def _run_job(job_id: str) -> None:
             ids = []
         first_fail = ""
         for raw in ids:
+            if _should_stop(job_id):
+                _finish(job_id, status="cancelled", error=first_fail)
+                return
             try:
                 ad_id = int(raw)
             except (TypeError, ValueError):
@@ -247,7 +298,10 @@ def _run_job(job_id: str) -> None:
             else:
                 _bump(job_id, fields=["skipped"])
 
-        _finish(job_id, status="done", error=first_fail)
+        if _should_stop(job_id):
+            _finish(job_id, status="cancelled", error=first_fail)
+        else:
+            _finish(job_id, status="done", error=first_fail)
     except Exception as exc:
         log.exception("market_fit recheck job %s failed", job_id)
         _finish(job_id, status="failed", error=str(exc)[:300])

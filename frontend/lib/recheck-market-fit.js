@@ -71,7 +71,12 @@ export async function pollRecheckJob(
     if (!polled.ok) return { ok: false, last };
     last = polled.data || {};
     onProgress?.(progressFromRecheck(last, fallbackTotal));
-    if (last.status !== "queued" && last.status !== "running") {
+    // cancelling: stop requested; keep polling until worker finishes in-flight ad
+    if (
+      last.status !== "queued" &&
+      last.status !== "running" &&
+      last.status !== "cancelling"
+    ) {
       return { ok: true, last };
     }
     await sleep(RECHECK_POLL_MS);

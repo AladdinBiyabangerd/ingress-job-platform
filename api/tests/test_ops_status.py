@@ -103,10 +103,15 @@ class OpsStatusTests(unittest.TestCase):
         self.assertEqual(chat["gemini"]["status"], "running")
         self.assertEqual(chat["openai"]["status"], "stopped")
         self.assertIn("açar", chat["openai"]["reason"].lower())
+        self.assertIsInstance(chat["gemini"].get("models"), list)
+        self.assertGreaterEqual(int(chat["gemini"].get("slot_count") or 0), 1)
+        self.assertIn("usage_today", body["ai"])
 
         features = {f["id"]: f for f in body["ai"]["features"]}
         self.assertEqual(features["gateway"]["status"], "running")
         self.assertTrue(features["gateway"]["label"])
+        self.assertIn("AI #1", features["cv_fallback"]["label"])
+        self.assertIn("default açıq", features["market_fit"]["label"])
 
         sources = {s["name"]: s for s in body["crawl"]["sources"]}
         self.assertIn("Remote OK", sources)

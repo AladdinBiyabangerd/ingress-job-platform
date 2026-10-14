@@ -1,31 +1,29 @@
 # Current task
 
 ## Completed
-- Admin **Kateqoriyalar** → **Crawl rəddləri** (`crawl_rejects`)
-- Collected tab excludes `status=rejected`
-- **List filter bar** on queue, rejected, collected, crawl_rejects:
-  - AI score ≥/≤ + number (empty score = no match when filter active)
-  - Rule score ≥/≤ + number (same)
-  - Source name substring (`source_name`, case-insensitive)
-  - Client-side only; threshold publish/recheck still use full tab dataset
+- Admin **Səliqə növbəsi** tab (`job_tidy`):
+  - Lists published messy ads without `cleaned_text`
+  - Start all / start selected + Stop (async job like market-fit recheck)
+  - Tab order: queue → collected → rejected → crawl_rejects → tidy → AI → status (+ manual last)
+- API: `GET /admin/job-tidy`, `POST/GET/cancel /admin/job-tidy/run…`
+- Worker: `tidy_one()` shared by hourly sync + staff run
 
 ## Current state
-Filter UI shipped in working tree (uncommitted). Viewing is filtered; bulk/% actions are not.
+- Ready for local QA on `/admin?tab=tidy`
+- Academy ops-status `usage_today` parity still pending (prior chat)
 
 ## Decisions
-- Shared helpers: `frontend/lib/admin-list-filter.js`
-- Shared bar: `frontend/components/admin-list-filter-bar.js`
-- Filter for viewing only; publish-by-% / recheck stay on full list
+- Queue = published + empty `cleaned_text` + `messy()` (same gate as worker)
+- Stop keeps already-saved `cleaned_text`
+- Manual tab kept after Status (not in the user’s named order)
 
 ## Remaining
-- Manual QA on the four tabs
-- Commit when asked
+1. Local QA: open tidy tab, start/stop, confirm detail UI uses `cleaned_text`
+2. Commit when asked
+3. (Other) Academy `job-ops-status` usage table parity — new chat
 
 ## Relevant files
-- `frontend/lib/admin-list-filter.js`
-- `frontend/components/admin-list-filter-bar.js`
-- `frontend/components/admin.js`
-- `frontend/components/collected-admin.js`
-- `frontend/components/admin-crawl-rejects.js`
-- `frontend/lib/copy.js`
-- `frontend/app/globals.css`
+- `frontend/components/admin-job-tidy.js`, `admin.js`, `lib/copy.js`, `lib/job-tidy-run.js`, `lib/server/refresh.js`
+- `api/app/job_tidy_admin.py`, `job_tidy_jobs.py`, `routers/admin.py`
+- `worker/worker/tidy.py` (`tidy_one`)
+- Tests: `api/tests/test_job_tidy_admin.py`

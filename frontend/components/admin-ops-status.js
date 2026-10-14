@@ -11,6 +11,27 @@ const PERIODS = [
   ["30", "opsPeriod30"],
 ];
 
+/** Same flow ids as admin AI tab — locale labels win over API AZ defaults. */
+const AI_FLOW_COPY = [
+  ["gateway", "adminAiGateway"],
+  ["cv_fallback", "adminAiCv"],
+  ["job_tidy", "adminAiTidy"],
+  ["market_fit", "adminAiMarketFit"],
+  ["embeddings", "adminAiEmbeddings"],
+  ["rerank", "adminAiRerank"],
+  ["llm_rerank", "adminAiLlmRerank"],
+  ["match_why", "adminAiWhy"],
+  ["role_coach", "adminAiRoleCoach"],
+  ["learning_roadmap", "adminAiLearningRoadmap"],
+  ["job_analyze", "adminAiJobAnalyze"],
+  ["job_apply_draft", "adminAiJobApplyDraft"],
+  ["job_tailored_cv", "adminAiJobTailoredCv"],
+  ["digest_intro", "adminAiDigest"],
+  ["engagement_copy", "adminAiEngagement"],
+];
+
+const AI_FLOW_LABEL_KEYS = Object.fromEntries(AI_FLOW_COPY);
+
 function todayIso() {
   const d = new Date();
   const y = d.getFullYear();
@@ -114,11 +135,24 @@ export function AdminOpsStatus({ locale }) {
   const features = Array.isArray(ai.features) ? ai.features : [];
   const chatProviders = Array.isArray(ai.chat_providers) ? ai.chat_providers : [];
   const embedProviders = Array.isArray(ai.embed_providers) ? ai.embed_providers : [];
+  const usageToday = Array.isArray(ai.usage_today) ? ai.usage_today : [];
   const rejects = Array.isArray(crawl.rejects_by_reason) ? crawl.rejects_by_reason : [];
   const rejectTotal = rejects.reduce((sum, row) => sum + (Number(row.count) || 0), 0);
   const li = crawl.linkedin_extension || {};
   const featStopped = features.filter((row) => row.status !== "running");
   const featRunning = features.filter((row) => row.status === "running");
+
+  function featureLabel(row) {
+    const key = AI_FLOW_LABEL_KEYS[row?.id];
+    return (key && t[key]) || row?.label || row?.id || "—";
+  }
+
+  function providerModel(row) {
+    if (Array.isArray(row?.models) && row.models.length) {
+      return row.models.join(" → ");
+    }
+    return row?.model || "";
+  }
 
   const {
     pageItems: sourcesPage,
@@ -360,6 +394,39 @@ export function AdminOpsStatus({ locale }) {
           {panel === "ai" ? (
             <section className="ops-detail ops-ai-detail">
               <div>
+                <h2 className="ops-section-title">{t.opsAiUsage}</h2>
+                <p className="ops-section-hint">{t.opsAiUsageHint}</p>
+                <div className="ops-table-wrap">
+                  <table className="ops-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">{t.opsColPurpose}</th>
+                        <th className="num" scope="col">
+                          {t.opsColCalls}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {usageToday.length === 0 ? (
+                        <tr>
+                          <td colSpan={2} className="ops-empty">
+                            {t.opsAiUsageEmpty}
+                          </td>
+                        </tr>
+                      ) : (
+                        usageToday.map((row) => (
+                          <tr key={row.purpose || row.label}>
+                            <td className="ops-name">{row.label || row.purpose || "—"}</td>
+                            <td className="num ops-num-strong">{Number(row.calls) || 0}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div>
                 <h2 className="ops-section-title">{t.opsAiFlows}</h2>
                 <p className="ops-section-hint">
                   {t.opsAiFlowSummary(featRunning.length, featStopped.length)}
@@ -385,7 +452,7 @@ export function AdminOpsStatus({ locale }) {
                           const running = row.status === "running";
                           return (
                             <tr key={row.id || row.label}>
-                              <td className="ops-name">{row.label}</td>
+                              <td className="ops-name">{featureLabel(row)}</td>
                               <td>
                                 <StatusPill
                                   running={running}
@@ -425,11 +492,12 @@ export function AdminOpsStatus({ locale }) {
                         ) : (
                           chatProviders.map((row) => {
                             const running = row.status === "running";
+                            const model = providerModel(row);
                             return (
                               <tr key={`chat-${row.id || row.label}`}>
                                 <td>
                                   <span className="ops-name">{row.label}</span>
-                                  {row.model ? <span className="ops-model">{row.model}</span> : null}
+                                  {model ? <span className="ops-model">{model}</span> : null}
                                 </td>
                                 <td>
                                   <StatusPill
@@ -438,7 +506,7 @@ export function AdminOpsStatus({ locale }) {
                                     stoppedLabel={t.opsStopped}
                                   />
                                 </td>
-                                <td className="ops-note-cell">{running ? "—" : row.reason || "—"}</td>
+                                <td className="ops-note-cell">{row.reason || "—"}</td>
                               </tr>
                             );
                           })
@@ -468,11 +536,12 @@ export function AdminOpsStatus({ locale }) {
                         ) : (
                           embedProviders.map((row) => {
                             const running = row.status === "running";
+                            const model = providerModel(row);
                             return (
                               <tr key={`embed-${row.id || row.label}`}>
                                 <td>
                                   <span className="ops-name">{row.label}</span>
-                                  {row.model ? <span className="ops-model">{row.model}</span> : null}
+                                  {model ? <span className="ops-model">{model}</span> : null}
                                 </td>
                                 <td>
                                   <StatusPill
@@ -481,7 +550,7 @@ export function AdminOpsStatus({ locale }) {
                                     stoppedLabel={t.opsStopped}
                                   />
                                 </td>
-                                <td className="ops-note-cell">{running ? "—" : row.reason || "—"}</td>
+                                <td className="ops-note-cell">{row.reason || "—"}</td>
                               </tr>
                             );
                           })
