@@ -1,12 +1,17 @@
-"""Unique candidates who opened the original / external listing URL."""
+"""Unique candidates who opened the original / external listing URL.
+
+Count is per person (user_id), not per click — gir/çıx spam does not inflate it.
+"""
 
 from __future__ import annotations
+
+import sqlite3
 
 from app.cabinet_store import _LOCK, _connect, _now
 
 
 def record_original_open(*, user_id: str, job_id: int) -> bool:
-    """Record one open per user+job. Returns True when a new row was inserted."""
+    """Record at most one open per user+job. Returns True when a new row was inserted."""
     who = (user_id or "").strip()
     if not who:
         return False
@@ -33,15 +38,19 @@ def record_original_open(*, user_id: str, job_id: int) -> bool:
             ).fetchone()
             if existing is not None:
                 return False
-            conn.execute(
-                """
-                INSERT INTO job_original_opens (user_id, job_id, created_at)
-                VALUES (?, ?, ?)
-                """,
-                (who, jid, _now()),
-            )
-            conn.commit()
-            return True
+            try:
+                cur = conn.execute(
+                    """
+                    INSERT INTO job_original_opens (user_id, job_id, created_at)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT (user_id, job_id) DO NOTHING
+                    """,
+                    (who, jid, _now()),
+                )
+                conn.commit()
+            except sqlite3.IntegrityError:
+                return False
+            return int(getattr(cur, "rowcount", 0) or 0) > 0
         finally:
             conn.close()
 

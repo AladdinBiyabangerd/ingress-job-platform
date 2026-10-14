@@ -87,16 +87,20 @@ class ViewedAndOpensTests(unittest.TestCase):
     def test_original_open_counted_once_per_user(self):
         with self._auth("job:candidate", "opener-1"):
             headers = {"Authorization": "Bearer test"}
-            first = self.client.get(
-                f"/api/v1/jobs/{self.job_id}/original", headers=headers
+            for _ in range(5):
+                res = self.client.get(
+                    f"/api/v1/jobs/{self.job_id}/original", headers=headers
+                )
+                self.assertEqual(res.status_code, 200, res.text)
+                self.assertTrue(res.json()["url"])
+            # Same person also hits apply → still one opener.
+            apply_again = self.client.post(
+                f"/api/v1/jobs/{self.job_id}/apply", headers=headers
             )
-            self.assertEqual(first.status_code, 200, first.text)
-            self.assertTrue(first.json()["url"])
+            self.assertEqual(apply_again.status_code, 200, apply_again.text)
 
-            second = self.client.get(
-                f"/api/v1/jobs/{self.job_id}/original", headers=headers
-            )
-            self.assertEqual(second.status_code, 200)
+        mid = self.client.get(f"/api/v1/jobs/{self.job_id}")
+        self.assertEqual(mid.json()["original_opens"], 1)
 
         with self._auth("job:candidate", "opener-2"):
             headers = {"Authorization": "Bearer test"}
