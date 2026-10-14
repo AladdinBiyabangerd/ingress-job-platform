@@ -1,24 +1,26 @@
 # Current task
 
 ## Completed
-- HTML notification email templates (all kinds)
-- Plaintext without raw URLs; production `app_base_url` (no localhost when DEBUG=False)
-- One-shot sample send to `aladdin19.11.21@gmail.com` (5 emails, once-flag in `.tmp/`)
+- For You: CV vs öz filterləri (sidebar radio)
+- Filter persistensiya **əsas board `/` + For You**: localStorage + URL
+- Logo / Elanlar / bottom+side nav → `PersistedBrowseLink` (saved query saxlayır)
 
 ## Current state
-- Samples sent with subject prefix `[test]`; APP_URL was production web
-- Script: `api/scripts/send_notification_email_samples.py`
-- Once-flag: `.tmp/notification-email-samples.sent` (blocks re-run with same flag)
+- Key: `ingress.job.board.v1`; Clear silənə qədər qalır
+- Hydrate: `useLayoutEffect`; URL sync `persistReady` sonra
 
 ## Decisions
-- SMTP taken from Academy `.env` for the one-shot only (not written into Job `.env`)
+- Browse linkləri LS filterlərini `?` ilə aparır ki, SSR də eyni qalsın
 
 ## Remaining work
-- Commit email template + URL fixes when asked
-- Ensure live API has `APP_URL` / `WEB_PUBLIC_DOMAIN` = public web origin
+- Deploy + production QA
+- Commit when asked
 
 ## Relevant files
-- `api/app/email_templates.py`
-- `api/app/email_prefs.py`
-- `api/app/digests.py` / `api/app/engagement.py`
-- `api/scripts/send_notification_email_samples.py`
+- `frontend/lib/board-persist.js`
+- `frontend/components/persisted-browse-link.js`
+- `frontend/components/home.js`
+- `frontend/components/shell.js`
+- `frontend/components/board-side-nav.js`
+- `frontend/components/command-palette.js`
+- `frontend/components/job-detail/job-detail-header.js`

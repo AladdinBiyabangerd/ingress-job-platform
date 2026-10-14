@@ -1,6 +1,7 @@
 import { hrefFor, text } from "../lib/copy";
 import { ingressUrl } from "../lib/ingress";
 import { employerPostingEnabled } from "../lib/product-features";
+import { PersistedBrowseLink } from "./persisted-browse-link";
 
 function SideNavIconBrowse() {
   return (
@@ -64,14 +65,14 @@ export function BoardSideNav({ locale, active = null }) {
   return (
     <aside className="home-board-nav" aria-label={t.browse}>
       <nav className="home-board-nav-list">
-        <a
-          href={hrefFor(locale)}
+        <PersistedBrowseLink
+          locale={locale}
           className={navItemClass(active, "browse")}
           aria-current={active === "browse" ? "page" : undefined}
         >
           <SideNavIconBrowse />
           <span>{t.navBrowseJobs}</span>
-        </a>
+        </PersistedBrowseLink>
         <a
           href={hrefFor(locale, { mode: "saved" })}
           className={navItemClass(active, "saved")}

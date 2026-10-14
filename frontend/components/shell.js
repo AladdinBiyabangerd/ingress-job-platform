@@ -16,6 +16,7 @@ import { AccountBar } from "./account-bar";
 import { CommandPalette, useCommandPaletteHotkey } from "./command-palette";
 import { LoginLink } from "./login-link";
 import { useInitialMe } from "./me-seed";
+import { PersistedBrowseLink } from "./persisted-browse-link";
 
 const LOCALES = ["az", "en", "ru"];
 
@@ -121,6 +122,18 @@ function PrimaryNav({ locale, mode, jobId, className, me }) {
           );
         }
         const on = primaryNavActive(mode, item.key, jobId);
+        if (item.mode === "browse") {
+          return (
+            <PersistedBrowseLink
+              key={item.key}
+              locale={locale}
+              className={on ? "on" : ""}
+              aria-current={on ? "page" : undefined}
+            >
+              {label}
+            </PersistedBrowseLink>
+          );
+        }
         return (
           <a
             key={item.key}
@@ -336,14 +349,14 @@ function BoardBottomNav({ locale, mode }) {
   const t = text(locale);
   return (
     <nav className="board-bottom-nav" aria-label={t.menuLabel}>
-      <a
-        href={hrefFor(locale)}
+      <PersistedBrowseLink
+        locale={locale}
         className={mode === "browse" ? "on" : ""}
         aria-current={mode === "browse" ? "page" : undefined}
       >
         <BoardNavIconJobs />
         <span>{t.navJobs}</span>
-      </a>
+      </PersistedBrowseLink>
       <a
         href={hrefFor(locale, { mode: "saved" })}
         className={mode === "saved" ? "on" : ""}
@@ -470,10 +483,10 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
       <header className={`top${isBoard ? " top-board" : ""}`}>
         <div className="top-inner">
           <div className="top-left">
-            <a className="brand" href={hrefFor(locale)}>
+            <PersistedBrowseLink locale={locale} className="brand">
               <img className="mark" src="/ingress-mark.svg" alt="" aria-hidden="true" />
               <span className="brand-text">Ingress Job</span>
-            </a>
+            </PersistedBrowseLink>
             <PrimaryNav
               locale={locale}
               mode={mode}

@@ -25,8 +25,9 @@ export function emptyJobsPayload() {
 
 export async function loadHomeJobs(board = {}) {
   const forYouMode = Boolean(board.forYouMode);
+  const forYouCv = forYouMode && String(board.forYouSource || "cv") !== "filters";
   const fetchParams = {
-    page: forYouMode ? 1 : Math.max(1, Number(board.page) || 1),
+    page: forYouCv ? 1 : Math.max(1, Number(board.page) || 1),
     perPage: 20,
     q: board.q || "",
     company: board.company || "",
@@ -44,8 +45,8 @@ export async function loadHomeJobs(board = {}) {
   };
   try {
     const data = await getJobs(JSON.stringify(fetchParams));
-    if (forYouMode) {
-      // Matches load client-side; keep facets from catalogue fetch.
+    if (forYouCv) {
+      // CV matches load client-side; keep facets from catalogue fetch.
       return {
         data: { ...data, items: [], total: 0, pages: 1, page: 1 },
         error: false,

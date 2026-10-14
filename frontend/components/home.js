@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  boardEqualsDefault,
+  boardsDiffer,
+  clearPersistedBoard,
+  mergeBoardWithPersist,
+  readPersistedBoard,
+  writePersistedBoard,
+} from "../lib/board-persist";
 import { readBoardReturn, saveBoardReturn } from "../lib/board-return";
 import { categoryLabel, categoryRank, setCategoryCatalog, hrefFor, languageLabel, text } from "../lib/copy";
 import { boardUrlSearchParams, DEFAULT_BOARD_FILTERS, jobsListParams } from "../lib/jobs-params";
@@ -91,13 +99,62 @@ function ResetIcon() {
   );
 }
 
+const COUNTRY_FILTER_PREVIEW = 5;
+const LANGUAGE_FILTER_PREVIEW = 3;
+const CATEGORY_FILTER_PREVIEW = 8;
+
+function collapsibleVisible(items, limit, expanded, isSelected) {
+  if (expanded || items.length <= limit) return items;
+  const head = items.slice(0, limit);
+  const selectedTail = items.slice(limit).filter(isSelected);
+  if (!selectedTail.length) return head;
+  const seen = new Set(head);
+  return [...head, ...selectedTail.filter((item) => !seen.has(item))];
+}
+
+function CollapsibleFilterList({
+  items,
+  limit,
+  expanded,
+  onToggle,
+  readMoreLabel,
+  showLessLabel,
+  isSelected,
+  hideToggle = false,
+  children,
+}) {
+  const needsCollapse = items.length > limit;
+  const visible = collapsibleVisible(items, limit, expanded, isSelected || (() => false));
+  const showToggle = !hideToggle && needsCollapse && (expanded || visible.length < items.length);
+  return (
+    <div className="home-board-checks">
+      {children(visible)}
+      {showToggle ? (
+        <button
+          type="button"
+          className="home-board-filter-more-link"
+          onClick={onToggle}
+          aria-expanded={expanded}
+        >
+          {expanded ? showLessLabel : readMoreLabel}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function FilterPanelBody({
   t,
   locale,
+  forYouMode,
+  forYouSource,
+  setForYouSource,
   cityOptions,
   remoteTotal,
   languageOptions,
   categoryOptions,
+  categoryQuery,
+  setCategoryQuery,
   techOptions,
   techQuery,
   setTechQuery,
@@ -124,110 +181,207 @@ function FilterPanelBody({
   toggle,
   clear,
 }) {
+  const filtersLocked = Boolean(forYouMode && forYouSource === "cv");
+  const sourceGroupName = useId();
+  const [countriesExpanded, setCountriesExpanded] = useState(false);
+  const [languagesExpanded, setLanguagesExpanded] = useState(false);
+  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
+
   return (
     <>
-      <fieldset className="home-board-filter-group">
-        <legend>{t.locationFilter}</legend>
-        <div className="home-board-checks">
-          {cityOptions.map(({ name, total: count }) => (
-            <label key={name} className="home-board-check">
-              <input
-                type="checkbox"
-                checked={city.toLowerCase() === String(name).toLowerCase()}
-                onChange={() =>
-                  setCity(city.toLowerCase() === String(name).toLowerCase() ? "" : name)
-                }
-              />
-              <span className="home-board-check-label">{name}</span>
-              <span className="home-board-check-count">{count}</span>
-            </label>
-          ))}
-          <label className="home-board-check">
-            <input type="checkbox" checked={remote} onChange={(e) => setRemote(e.target.checked)} />
-            <span className="home-board-check-label">{t.placeRemote}</span>
-            {remoteTotal ? <span className="home-board-check-count">{remoteTotal}</span> : null}
-          </label>
-        </div>
-      </fieldset>
-
-      <fieldset className="home-board-filter-group">
-        <legend>{t.language}</legend>
-        <div className="home-board-checks">
-          {languageOptions.map((code) => (
-            <label key={code} className="home-board-check">
-              <input
-                type="checkbox"
-                checked={languages.includes(code)}
-                onChange={() => toggle(languages, setLanguages, code)}
-              />
-              <span className="home-board-check-label">{languageLabel(locale, code)}</span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      <fieldset className="home-board-filter-group">
-        <legend>{t.jobTypeFilter}</legend>
-        <div className="home-board-checks">
-          <label className="home-board-check">
-            <input type="checkbox" checked={remote} onChange={(e) => setRemote(e.target.checked)} />
-            <span className="home-board-check-label">{t.remoteFilter}</span>
-          </label>
-          <label className="home-board-check">
-            <input
-              type="checkbox"
-              checked={relocation}
-              onChange={(e) => setRelocation(e.target.checked)}
-            />
-            <span className="home-board-check-label">{t.relocationFilter}</span>
-          </label>
-        </div>
-      </fieldset>
-
-      {categoryOptions.length ? (
+      {forYouMode ? (
         <fieldset className="home-board-filter-group">
-          <legend>{t.categoryFilter}</legend>
-          <div className="home-board-checks home-board-checks-scroll">
-            {categoryOptions.map(({ name, total: count }) => (
-              <label key={name} className="home-board-check">
-                <input
-                  type="checkbox"
-                  checked={categories.includes(name)}
-                  onChange={() => toggle(categories, setCategories, name)}
-                />
-                <span className="home-board-check-label">{categoryLabel(locale, name)}</span>
-                <span className="home-board-check-count">{count}</span>
-              </label>
-            ))}
+          <legend>{t.forYouSourceLegend}</legend>
+          <div className="home-board-checks home-board-for-you-source" role="radiogroup" aria-label={t.forYouSourceLegend}>
+            <label className="home-board-check home-board-check-block">
+              <input
+                type="radio"
+                name={sourceGroupName}
+                checked={forYouSource === "cv"}
+                onChange={() => setForYouSource("cv")}
+              />
+              <span className="home-board-check-label">
+                <span className="home-board-check-title">{t.forYouSourceCv}</span>
+                <span className="home-board-check-hint">{t.forYouSourceCvHint}</span>
+              </span>
+            </label>
+            <label className="home-board-check home-board-check-block">
+              <input
+                type="radio"
+                name={sourceGroupName}
+                checked={forYouSource === "filters"}
+                onChange={() => setForYouSource("filters")}
+              />
+              <span className="home-board-check-label">
+                <span className="home-board-check-title">{t.forYouSourceFilters}</span>
+                <span className="home-board-check-hint">{t.forYouSourceFiltersHint}</span>
+              </span>
+            </label>
           </div>
         </fieldset>
       ) : null}
 
-      <div className="home-board-filter-group">
-        <p className="home-board-filter-legend">{t.techStack}</p>
+      <fieldset
+        className={`home-board-filters-body${filtersLocked ? " is-locked" : ""}`}
+        disabled={filtersLocked}
+        aria-label={t.filters}
+      >
+      <fieldset className="home-board-filter-group">
+        <legend>{t.locationFilter}</legend>
+        <CollapsibleFilterList
+          items={cityOptions}
+          limit={COUNTRY_FILTER_PREVIEW}
+          expanded={countriesExpanded}
+          onToggle={() => setCountriesExpanded((v) => !v)}
+          readMoreLabel={t.filterReadMore}
+          showLessLabel={t.filterShowLess}
+          isSelected={(item) => city.toLowerCase() === String(item.name || "").toLowerCase()}
+        >
+          {(visible) =>
+            visible.map(({ name, total: count }) => {
+              const selected = city.toLowerCase() === String(name).toLowerCase();
+              return (
+                <label key={name} className={`home-board-check${selected ? " is-active" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={() => setCity(selected ? "" : name)}
+                  />
+                  <span className="home-board-check-label">{name}</span>
+                  {count ? <span className="home-board-check-count">{count}</span> : null}
+                </label>
+              );
+            })
+          }
+        </CollapsibleFilterList>
+      </fieldset>
+
+      <fieldset className="home-board-filter-group">
+        <legend>{t.language}</legend>
+        <CollapsibleFilterList
+          items={languageOptions}
+          limit={LANGUAGE_FILTER_PREVIEW}
+          expanded={languagesExpanded}
+          onToggle={() => setLanguagesExpanded((v) => !v)}
+          readMoreLabel={t.filterReadMore}
+          showLessLabel={t.filterShowLess}
+          isSelected={(item) => languages.includes(item.code)}
+        >
+          {(visible) =>
+            visible.map(({ code, total: count }) => {
+              const selected = languages.includes(code);
+              return (
+                <label key={code} className={`home-board-check${selected ? " is-active" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={() => toggle(languages, setLanguages, code)}
+                  />
+                  <span className="home-board-check-label">{languageLabel(locale, code)}</span>
+                  {count ? <span className="home-board-check-count">{count}</span> : null}
+                </label>
+              );
+            })
+          }
+        </CollapsibleFilterList>
+      </fieldset>
+
+      <fieldset className="home-board-filter-group">
+        <legend>{t.jobTypeFilter}</legend>
+        <div className="home-board-filter-chips" role="group" aria-label={t.jobTypeFilter}>
+          <button
+            type="button"
+            className={`home-board-filter-chip${remote ? " is-active" : ""}`}
+            aria-pressed={remote}
+            onClick={() => setRemote(!remote)}
+          >
+            {t.remoteFilter}
+            {remoteTotal ? <span className="home-board-filter-chip-count">{remoteTotal}</span> : null}
+          </button>
+          <button
+            type="button"
+            className={`home-board-filter-chip${relocation ? " is-active" : ""}`}
+            aria-pressed={relocation}
+            onClick={() => setRelocation(!relocation)}
+          >
+            {t.relocationFilter}
+          </button>
+        </div>
+      </fieldset>
+
+      <fieldset className="home-board-filter-group">
+        <legend>{t.categoryFilter}</legend>
+        <input
+          type="search"
+          className="home-board-filter-search"
+          value={categoryQuery}
+          placeholder={t.categoryPlaceholder}
+          onChange={(e) => setCategoryQuery(e.target.value)}
+          aria-label={t.categoryPlaceholder}
+        />
+        {categoryOptions.length ? (
+          <CollapsibleFilterList
+            items={categoryOptions}
+            limit={CATEGORY_FILTER_PREVIEW}
+            expanded={categoriesExpanded || Boolean(String(categoryQuery || "").trim())}
+            onToggle={() => {
+              if (String(categoryQuery || "").trim()) return;
+              setCategoriesExpanded((v) => !v);
+            }}
+            readMoreLabel={t.filterReadMore}
+            showLessLabel={t.filterShowLess}
+            isSelected={(item) => categories.includes(item.name)}
+            hideToggle={Boolean(String(categoryQuery || "").trim())}
+          >
+            {(visible) =>
+              visible.map(({ name, total: count }) => {
+                const selected = categories.includes(name);
+                return (
+                  <label key={name} className={`home-board-check${selected ? " is-active" : ""}`}>
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => toggle(categories, setCategories, name)}
+                    />
+                    <span className="home-board-check-label">{categoryLabel(locale, name)}</span>
+                    {count ? <span className="home-board-check-count">{count}</span> : null}
+                  </label>
+                );
+              })
+            }
+          </CollapsibleFilterList>
+        ) : null}
+      </fieldset>
+
+      <fieldset className="home-board-filter-group">
+        <legend>{t.techStack}</legend>
         <input
           type="search"
           className="home-board-filter-search"
           value={techQuery}
           placeholder={t.techPlaceholder}
           onChange={(e) => setTechQuery(e.target.value)}
+          aria-label={t.techPlaceholder}
         />
         {techOptions.length ? (
           <div className="home-board-checks home-board-checks-scroll">
-            {techOptions.map(({ name, total: count }) => (
-              <label key={name} className="home-board-check">
-                <input
-                  type="checkbox"
-                  checked={stacks.includes(name)}
-                  onChange={() => toggle(stacks, setStacks, name)}
-                />
-                <span className="home-board-check-label">{name}</span>
-                <span className="home-board-check-count">{count}</span>
-              </label>
-            ))}
+            {techOptions.map(({ name, total: count }) => {
+              const selected = stacks.includes(name);
+              return (
+                <label key={name} className={`home-board-check${selected ? " is-active" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={() => toggle(stacks, setStacks, name)}
+                  />
+                  <span className="home-board-check-label">{name}</span>
+                  {count ? <span className="home-board-check-count">{count}</span> : null}
+                </label>
+              );
+            })}
           </div>
         ) : null}
-      </div>
+      </fieldset>
 
       <div className="home-board-filter-group">
         <p className="home-board-filter-legend">{t.salaryMonthlyAz}</p>
@@ -284,6 +438,7 @@ function FilterPanelBody({
         <ResetIcon />
         {t.resetFilters}
       </button>
+      </fieldset>
     </>
   );
 }
@@ -330,13 +485,18 @@ export function Home({
   const [relocation, setRelocation] = useState(() => Boolean(board0.relocation));
   const [onsite, setOnsite] = useState(() => Boolean(board0.onsite));
   const [forYouMode, setForYouMode] = useState(() => Boolean(board0.forYouMode));
+  const [forYouSource, setForYouSource] = useState(() =>
+    String(board0.forYouSource || "cv") === "filters" ? "filters" : "cv",
+  );
   const [matchesPayload, setMatchesPayload] = useState(null);
   const [matchJobs, setMatchJobs] = useState([]);
+  const [persistReady, setPersistReady] = useState(false);
   const [stacks, setStacks] = useState(() => (Array.isArray(board0.stacks) ? board0.stacks : []));
   const [categories, setCategories] = useState(() =>
     Array.isArray(board0.categories) ? board0.categories : [],
   );
   const [techQuery, setTechQuery] = useState("");
+  const [categoryQuery, setCategoryQuery] = useState("");
   const [when, setWhen] = useState(() => board0.when || "any");
   const [sort, setSort] = useState(() => board0.sort || "newest");
   const [salaryMin, setSalaryMin] = useState(() => String(board0.salaryMin || ""));
@@ -409,6 +569,75 @@ export function Home({
   );
 
   const showForYouTab = Boolean(me?.authenticated && (me.candidate || me.staff));
+  const forYouCvActive = Boolean(forYouMode && forYouSource === "cv");
+  const forYouFiltersActive = Boolean(forYouMode && forYouSource === "filters");
+
+  const boardSnapshot = useMemo(
+    () => ({
+      q,
+      company,
+      city,
+      languages,
+      remote,
+      relocation,
+      onsite,
+      stacks,
+      categories,
+      when,
+      sort,
+      salaryMin,
+      salaryMax,
+      page,
+      forYouMode,
+      forYouSource,
+    }),
+    [
+      q,
+      company,
+      city,
+      languages,
+      remote,
+      relocation,
+      onsite,
+      stacks,
+      categories,
+      when,
+      sort,
+      salaryMin,
+      salaryMax,
+      page,
+      forYouMode,
+      forYouSource,
+    ],
+  );
+
+  function applyBoardState(next, { resetLoading = false } = {}) {
+    const board = next && typeof next === "object" ? next : DEFAULT_BOARD_FILTERS;
+    setQ(String(board.q || ""));
+    setDraftQ(String(board.q || ""));
+    setCompany(String(board.company || ""));
+    setCity(String(board.city || ""));
+    setLanguages(Array.isArray(board.languages) ? board.languages : []);
+    setRemote(Boolean(board.remote));
+    setRelocation(Boolean(board.relocation));
+    setOnsite(Boolean(board.onsite));
+    setForYouMode(Boolean(board.forYouMode));
+    setForYouSource(String(board.forYouSource || "cv") === "filters" ? "filters" : "cv");
+    setStacks(Array.isArray(board.stacks) ? board.stacks : []);
+    setCategories(Array.isArray(board.categories) ? board.categories : []);
+    setTechQuery("");
+    setCategoryQuery("");
+    setWhen(board.when || "any");
+    setSort(board.sort || "newest");
+    setSalaryMin(String(board.salaryMin || ""));
+    setSalaryMax(String(board.salaryMax || ""));
+    setPage(Math.max(1, Number(board.page) || 1));
+    if (resetLoading) {
+      setLoading(true);
+      setItems([]);
+      setResultTotal(0);
+    }
+  }
 
   const boardTab = useMemo(() => {
     if (forYouMode) return "foryou";
@@ -425,9 +654,11 @@ export function Home({
       setRelocation(false);
       setOnsite(false);
       setPage(1);
-      setLoading(true);
-      setItems([]);
-      setResultTotal(0);
+      if (forYouSource === "cv") {
+        setLoading(true);
+        setItems([]);
+        setResultTotal(0);
+      }
       return;
     }
     setForYouMode(false);
@@ -454,6 +685,11 @@ export function Home({
     setOnsite(false);
   }
 
+  /** Keep For-you tab when editing sidebar filters; switch source to manual filters. */
+  function keepForYouOnFilterEdit() {
+    if (forYouMode && forYouSource !== "filters") setForYouSource("filters");
+  }
+
   useEffect(() => {
     if (initialMe && typeof initialMe === "object") {
       setMe(initialMe);
@@ -476,30 +712,63 @@ export function Home({
     if (!showForYouTab && forYouMode) setForYouMode(false);
   }, [showForYouTab, forYouMode]);
 
+  // Restore / merge last filters from localStorage before paint (main board + For you).
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = readPersistedBoard();
+    const merged = mergeBoardWithPersist(board0, saved, window.location.search);
+    if (boardsDiffer(merged, board0)) {
+      applyBoardState(merged, { resetLoading: true });
+      skipFirstFetch.current = false;
+    }
+    setPersistReady(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot hydrate
+  }, []);
+
+  useEffect(() => {
+    if (!persistReady) return;
+    if (boardEqualsDefault(boardSnapshot)) {
+      clearPersistedBoard();
+      return;
+    }
+    writePersistedBoard(boardSnapshot);
+  }, [boardSnapshot, persistReady]);
+
   const languageOptions = useMemo(
-    () => (Array.isArray(facetData.languages) ? facetData.languages : []).map((item) => item.code).filter(Boolean),
+    () =>
+      (Array.isArray(facetData.languages) ? facetData.languages : []).filter((item) =>
+        Boolean(item?.code),
+      ),
     [facetData],
   );
-  const categoryOptions = useMemo(() => {
+  const allCategoryOptions = useMemo(() => {
     const list = Array.isArray(facetData.categories) ? facetData.categories : [];
     setCategoryCatalog(list);
     return [...list].sort((a, b) => categoryRank(a.name) - categoryRank(b.name));
   }, [facetData]);
+  const categoryOptions = useMemo(() => {
+    const query = categoryQuery.trim().toLowerCase();
+    if (!query) return allCategoryOptions;
+    return allCategoryOptions.filter((item) => {
+      const name = String(item?.name || "").toLowerCase();
+      const label = String(categoryLabel(locale, item?.name) || "").toLowerCase();
+      return name.includes(query) || label.includes(query);
+    });
+  }, [allCategoryOptions, categoryQuery, locale]);
   const cityOptions = useMemo(() => {
     // Country-only filter. API may still mirror the list under `cities`.
     const countries = Array.isArray(facetData.countries) ? facetData.countries : [];
     const mirrored = Array.isArray(facetData.cities) ? facetData.cities : [];
     const list = countries.length ? countries : mirrored;
     // Drop leftover city-shaped labels if an old API build is still live.
-    return list
-      .filter((item) => {
-        const name = String(item?.name || "").trim();
-        if (!name) return false;
-        if (/,\s*/.test(name)) return false; // "Tokyo, Japan" / "Herndon, VA"
-        if (/\b(office|hq|headquarters)\b/i.test(name)) return false;
-        return true;
-      })
-      .slice(0, 16);
+    // Preview truncates to top 5 in the sidebar; "Read more" reveals the rest.
+    return list.filter((item) => {
+      const name = String(item?.name || "").trim();
+      if (!name) return false;
+      if (/,\s*/.test(name)) return false; // "Tokyo, Japan" / "Herndon, VA"
+      if (/\b(office|hq|headquarters)\b/i.test(name)) return false;
+      return true;
+    });
   }, [facetData]);
   const remoteTotal = Number(facetData.remote_total) || 0;
   const techOptions = useMemo(() => {
@@ -513,58 +782,26 @@ export function Home({
   }
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const next = boardUrlSearchParams({
-        q,
-        company,
-        city,
-        languages,
-        remote,
-        relocation,
-        onsite,
-        stacks,
-        categories,
-        when,
-        sort,
-        salaryMin,
-        salaryMax,
-        page,
-        forYouMode,
-      }).toString();
-      const url = new URL(window.location.href);
-      const desired = url.pathname + (next ? `?${next}` : "");
-      const current = url.pathname + url.search;
-      if (desired !== current) {
-        window.history.replaceState(window.history.state, "", desired);
-      }
-      saveBoardReturn(desired, window.scrollY);
+    if (!persistReady || typeof window === "undefined") return;
+    const next = boardUrlSearchParams(boardSnapshot).toString();
+    const url = new URL(window.location.href);
+    const desired = url.pathname + (next ? `?${next}` : "");
+    const current = url.pathname + url.search;
+    if (desired !== current) {
+      window.history.replaceState(window.history.state, "", desired);
     }
-  }, [
-    q,
-    company,
-    city,
-    languages,
-    remote,
-    relocation,
-    onsite,
-    stacks,
-    categories,
-    when,
-    sort,
-    salaryMin,
-    salaryMax,
-    page,
-    forYouMode,
-  ]);
+    saveBoardReturn(desired, window.scrollY);
+  }, [boardSnapshot, persistReady]);
 
   useEffect(() => {
-    if (forYouMode) return undefined;
+    if (forYouCvActive) return undefined;
+    if (!persistReady) return undefined;
     if (skipFirstFetch.current) {
       skipFirstFetch.current = false;
       prevFilterKey.current = filterKey;
       prevTextKey.current = `${q}|${company}|${city}|${salaryMin}|${salaryMax}`;
-      // Trust SSR catalogue paint; if we landed on For-you, refetch when leaving it.
-      if (!error && reloadToken === 0 && !landedOnForYou) return undefined;
+      // Trust SSR catalogue paint; if we landed on CV For-you, refetch when leaving it.
+      if (!error && reloadToken === 0 && !landedOnForYou && !forYouFiltersActive) return undefined;
     }
     if (prevFilterKey.current !== filterKey) {
       prevFilterKey.current = filterKey;
@@ -630,7 +867,9 @@ export function Home({
       controller.abort();
     };
   }, [
-    forYouMode,
+    forYouCvActive,
+    forYouFiltersActive,
+    persistReady,
     page,
     error,
     jobs.length,
@@ -652,7 +891,7 @@ export function Home({
   ]);
 
   useEffect(() => {
-    if (!forYouMode || !showForYouTab) return undefined;
+    if (!forYouCvActive || !showForYouTab) return undefined;
     const controller = new AbortController();
     setLoading(true);
     setLoadError(false);
@@ -678,10 +917,10 @@ export function Home({
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [forYouMode, showForYouTab, lang, reloadToken]);
+  }, [forYouCvActive, showForYouTab, lang, reloadToken]);
 
   useEffect(() => {
-    if (!forYouMode) return;
+    if (!forYouCvActive) return;
     const totalMatches = matchJobs.length;
     const pagesCount = Math.max(1, Math.ceil(totalMatches / PAGE_SIZE) || 1);
     const pageIndex = Math.min(Math.max(1, page), pagesCount);
@@ -693,7 +932,7 @@ export function Home({
     setItems(matchJobs.slice(start, start + PAGE_SIZE));
     setResultTotal(totalMatches);
     setResultPages(pagesCount);
-  }, [forYouMode, matchJobs, page]);
+  }, [forYouCvActive, matchJobs, page]);
 
   useEffect(() => {
     return () => {
@@ -737,6 +976,7 @@ export function Home({
 
   function clear() {
     setLoading(true);
+    clearPersistedBoard();
     setQ("");
     setDraftQ("");
     setCompany("");
@@ -746,9 +986,11 @@ export function Home({
     setRelocation(false);
     setOnsite(false);
     setForYouMode(false);
+    setForYouSource("cv");
     setStacks([]);
     setCategories([]);
     setTechQuery("");
+    setCategoryQuery("");
     setWhen("any");
     setSort("newest");
     setSalaryMin("");
@@ -756,6 +998,17 @@ export function Home({
     setPage(1);
     if (typeof window !== "undefined" && window.location.search) {
       window.history.replaceState(window.history.state, "", window.location.pathname);
+    }
+  }
+
+  function chooseForYouSource(next) {
+    const source = next === "filters" ? "filters" : "cv";
+    setForYouSource(source);
+    setPage(1);
+    if (source === "cv") {
+      setLoading(true);
+      setItems([]);
+      setResultTotal(0);
     }
   }
 
@@ -852,7 +1105,8 @@ export function Home({
 
   function submitSearch(event) {
     event?.preventDefault?.();
-    setForYouMode(false);
+    if (forYouMode) setForYouSource("filters");
+    else setForYouMode(false);
     setQ(draftQ);
     const top = resultsRef.current?.getBoundingClientRect().top;
     if (typeof top === "number") {
@@ -872,65 +1126,80 @@ export function Home({
   const filterProps = {
     t,
     locale,
+    forYouMode,
+    forYouSource,
+    setForYouSource: chooseForYouSource,
     cityOptions,
     remoteTotal,
     languageOptions,
     categoryOptions,
+    categoryQuery,
+    setCategoryQuery,
     techOptions,
     techQuery,
     setTechQuery,
     city,
     setCity: (value) => {
-      setForYouMode(false);
+      if (forYouMode) keepForYouOnFilterEdit();
+      else setForYouMode(false);
       setCity(value);
     },
     languages,
     setLanguages: (value) => {
-      setForYouMode(false);
+      if (forYouMode) keepForYouOnFilterEdit();
+      else setForYouMode(false);
       setLanguages(value);
     },
     remote,
     setRemote: (value) => {
       const next = typeof value === "boolean" ? value : Boolean(value);
-      setForYouMode(false);
+      if (forYouMode) keepForYouOnFilterEdit();
+      else setForYouMode(false);
       setRemote(next);
       if (next) setOnsite(false);
     },
     relocation,
     setRelocation: (value) => {
       const next = typeof value === "boolean" ? value : Boolean(value);
-      setForYouMode(false);
+      if (forYouMode) keepForYouOnFilterEdit();
+      else setForYouMode(false);
       setRelocation(next);
       if (next) setOnsite(false);
     },
     categories,
     setCategories: (value) => {
-      setForYouMode(false);
+      if (forYouMode) keepForYouOnFilterEdit();
+      else setForYouMode(false);
       setCategories(value);
     },
     stacks,
     setStacks: (value) => {
-      setForYouMode(false);
+      if (forYouMode) keepForYouOnFilterEdit();
+      else setForYouMode(false);
       setStacks(value);
     },
     salaryMin,
     setSalaryMin: (value) => {
-      setForYouMode(false);
+      if (forYouMode) keepForYouOnFilterEdit();
+      else setForYouMode(false);
       setSalaryMin(value);
     },
     salaryMax,
     setSalaryMax: (value) => {
-      setForYouMode(false);
+      if (forYouMode) keepForYouOnFilterEdit();
+      else setForYouMode(false);
       setSalaryMax(value);
     },
     company,
     setCompany: (value) => {
-      setForYouMode(false);
+      if (forYouMode) keepForYouOnFilterEdit();
+      else setForYouMode(false);
       setCompany(value);
     },
     when,
     setWhen: (value) => {
-      setForYouMode(false);
+      if (forYouMode) keepForYouOnFilterEdit();
+      else setForYouMode(false);
       setWhen(value);
     },
     toggle,
@@ -976,7 +1245,8 @@ export function Home({
                   <select
                     value={city}
                     onChange={(e) => {
-                      setForYouMode(false);
+                      if (forYouMode) keepForYouOnFilterEdit();
+                      else setForYouMode(false);
                       setCity(e.target.value);
                     }}
                     aria-label={t.searchLocationPlaceholder}
@@ -995,13 +1265,14 @@ export function Home({
                   <select
                     value={languages[0] || ""}
                     onChange={(e) => {
-                      setForYouMode(false);
+                      if (forYouMode) keepForYouOnFilterEdit();
+                      else setForYouMode(false);
                       setLanguages(e.target.value ? [e.target.value] : []);
                     }}
                     aria-label={t.searchLanguagePlaceholder}
                   >
                     <option value="">{t.searchLanguagePlaceholder}</option>
-                    {languageOptions.map((code) => (
+                    {languageOptions.map(({ code }) => (
                       <option key={code} value={code}>
                         {languageLabel(locale, code)}
                       </option>
@@ -1013,11 +1284,14 @@ export function Home({
                   <span className="visually-hidden">{t.searchCategoryPlaceholder}</span>
                   <select
                     value={categories[0] || ""}
-                    onChange={(e) => setCategories(e.target.value ? [e.target.value] : [])}
+                    onChange={(e) => {
+                      if (forYouMode) keepForYouOnFilterEdit();
+                      setCategories(e.target.value ? [e.target.value] : []);
+                    }}
                     aria-label={t.searchCategoryPlaceholder}
                   >
                     <option value="">{t.searchCategoryPlaceholder}</option>
-                    {categoryOptions.map(({ name }) => (
+                    {allCategoryOptions.map(({ name }) => (
                       <option key={name} value={name}>
                         {categoryLabel(locale, name)}
                       </option>
@@ -1043,7 +1317,7 @@ export function Home({
               </form>
             </div>
 
-            {activeChips.length ? (
+            {activeChips.length && !forYouCvActive ? (
               <div className="home-board-chips" role="list" aria-label={t.filters}>
                 {activeChips.map((chip) => (
                   <button
@@ -1051,7 +1325,10 @@ export function Home({
                     type="button"
                     className="home-board-chip"
                     role="listitem"
-                    onClick={chip.onRemove}
+                    onClick={() => {
+                      if (forYouMode) keepForYouOnFilterEdit();
+                      chip.onRemove();
+                    }}
                   >
                     {chip.label}
                     <span aria-hidden="true"> ×</span>
@@ -1099,7 +1376,7 @@ export function Home({
                     {t.resultsCount(resultTotal)}
                   </h2>
                 </div>
-                {!forYouMode ? (
+                {!forYouCvActive ? (
                   <label className="home-board-sort">
                     <span className="visually-hidden">{t.sort}</span>
                     <select value={sort} onChange={(e) => setSort(e.target.value)}>
@@ -1117,7 +1394,7 @@ export function Home({
 
               {!loading && resultTotal === 0 && !loadError ? (
                 <div className="job-empty">
-                  {forYouMode ? (
+                  {forYouCvActive ? (
                     matchesPayload?.matching_consent === false ? (
                       <>
                         <p className="job-empty-copy">{t.forYouEmptyConsent}</p>

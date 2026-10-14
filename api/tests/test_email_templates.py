@@ -70,18 +70,43 @@ class EmailTemplatesTests(unittest.TestCase):
                 {
                     "job_id": 7,
                     "title": "Backend",
-                    "company": "X",
+                    "company": "Acme",
                     "score": 0.8,
                     "remote": True,
-                }
+                    "explanation": "Python və Docker uyğundur.",
+                },
+                {
+                    "job_id": 8,
+                    "title": "Platform Engineer",
+                    "company": "Beta",
+                    "score": 0.72,
+                    "city": "Bakı",
+                    "explanation": "Kubernetes yaxındır.",
+                },
+                {
+                    "job_id": 9,
+                    "title": "Data Engineer",
+                    "company": "Cadence",
+                    "score": 0.65,
+                    "remote": True,
+                },
             ],
-            job_urls={7: "https://example.com/7"},
+            job_urls={
+                7: "https://example.com/7",
+                8: "https://example.com/8",
+                9: "https://example.com/9",
+            },
             trends=["Python · 12%"],
             gap="Docker öyrən",
             unsubscribe_url="https://example.com/u",
-            intro="Salam",
+            intro="",
         )
         self.assertIn("Backend", digest)
+        self.assertIn("Platform Engineer", digest)
+        self.assertIn("Data Engineer", digest)
+        self.assertIn("Acme", digest)
+        self.assertIn("3", digest)
+        self.assertIn("Daha çox oxu", digest)
         self.assertIn("Python · 12%", digest)
         self.assertIn("Docker öyrən", digest)
 

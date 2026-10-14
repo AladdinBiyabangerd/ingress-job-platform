@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { browseHrefFromPersist } from "../../lib/board-persist";
 import { boardReturnHref, readBoardReturn } from "../../lib/board-return";
 import { hrefFor, text } from "../../lib/copy";
 import { JobDetailActions } from "./job-detail-actions";
@@ -23,8 +24,9 @@ export function JobDetailHeader({
   const boardHref = hrefFor(locale) || "/";
   const [backHref, setBackHref] = useState(boardHref);
   useEffect(() => {
-    setBackHref(boardReturnHref(readBoardReturn(), boardHref));
-  }, [boardHref]);
+    const persisted = browseHrefFromPersist(locale);
+    setBackHref(boardReturnHref(readBoardReturn(), persisted || boardHref));
+  }, [boardHref, locale]);
   const external = model.listingType === "external";
 
   return (

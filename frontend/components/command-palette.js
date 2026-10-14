@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { browseHrefFromPersist } from "../lib/board-persist";
 import { hrefFor, text } from "../lib/copy";
 import { lockBodyScroll, trapTab } from "../lib/focus-trap";
 import {
@@ -17,7 +18,7 @@ function isModK(event) {
 function buildItems(locale, me, t) {
   const postingOn = employerPostingEnabled();
   const items = [
-    { id: "browse", label: t.browse, href: hrefFor(locale), group: "nav" },
+    { id: "browse", label: t.browse, href: browseHrefFromPersist(locale), group: "nav" },
     { id: "companies", label: t.navCompanies, href: hrefFor(locale, { mode: "companies" }), group: "nav" },
     { id: "trends", label: t.navTrends, href: hrefFor(locale, { mode: "trends" }), group: "nav" },
   ];

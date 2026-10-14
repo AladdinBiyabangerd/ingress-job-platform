@@ -30,7 +30,17 @@ from app.email_prefs import (
 logger = logging.getLogger("ingress-job.digests")
 
 HIGH_MATCH_MIN_SCORE = float(os.environ.get("HIGH_MATCH_MIN_SCORE") or "0.75")
-DIGEST_MATCH_LIMIT = 5
+
+
+def _digest_match_limit() -> int:
+    """Multi-job digest size (Djinni-style list). Env DIGEST_MATCH_LIMIT, 1..20."""
+    try:
+        return max(1, min(int(os.environ.get("DIGEST_MATCH_LIMIT") or "12"), 20))
+    except ValueError:
+        return 12
+
+
+DIGEST_MATCH_LIMIT = _digest_match_limit()
 HIGH_MATCH_LOOKBACK_HOURS = int(os.environ.get("HIGH_MATCH_LOOKBACK_HOURS") or "26")
 BATCH_PAUSE_EVERY = int(os.environ.get("DIGEST_BATCH_SIZE") or "30")
 ACADEMY_COURSE_BASE = (
@@ -336,7 +346,28 @@ def send_digest_for_user(conn, *, user_id: str, when: datetime | None = None) ->
         return result
     lang = prefs["language"]
     since = _since_for_frequency(frequency, when=moment)
-    matches = _matches_since(conn, user_id=user_id, since=since, limit=DIGEST_MATCH_LIMIT, lang=lang)
+    limit = _digest_match_limit()
+    matches = _matches_since(conn, user_id=user_id, since=since, limit=limit, lang=lang)
+    # Prefer period-fresh ads; backfill from current top matches so the mail
+    # is a multi-job list (not a single card) when the window is thin.
+    if len(matches) < limit:
+        seen: set[int] = set()
+        for item in matches:
+            try:
+                seen.add(int(item["job_id"]))
+            except (KeyError, TypeError, ValueError):
+                continue
+        for item in _top_matches(conn, user_id=user_id, limit=limit * 2, lang=lang):
+            try:
+                jid = int(item["job_id"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if jid in seen:
+                continue
+            matches.append(item)
+            seen.add(jid)
+            if len(matches) >= limit:
+                break
     if not matches:
         result["reason"] = "empty"
         return result

@@ -91,10 +91,44 @@ def main() -> int:
     coach_pack = COACH_EMAIL_COPY[lang]
 
     digest_matches = [
-        {**high, "job_id": 1, "score": 0.88},
-        {**near, "job_id": 2, "score": 0.56, "title": "Platform Engineer"},
+        {**high, "job_id": 1, "score": 0.88, "salary": ""},
+        {
+            **near,
+            "job_id": 2,
+            "score": 0.72,
+            "title": "Platform Engineer",
+            "company": "Northwind Labs",
+            "explanation": "Kubernetes və AWS bilikləriniz platform komandasına uyğundur.",
+        },
+        {
+            **high,
+            "job_id": 3,
+            "score": 0.81,
+            "title": "Backend Engineer",
+            "company": "PulseRise",
+            "remote": True,
+            "explanation": "Python və PostgreSQL overlap yüksəkdir.",
+        },
+        {
+            **near,
+            "job_id": 4,
+            "score": 0.64,
+            "title": "Data Engineer",
+            "company": "OKKO Soft",
+            "city": "Bakı",
+            "remote": False,
+            "explanation": "SQL güclüdür; Spark əlavə etsəniz skor artar.",
+        },
+        {
+            **high,
+            "job_id": 5,
+            "score": 0.79,
+            "title": "Senior Software Engineer",
+            "company": "Adaptiq",
+            "explanation": "Full-stack bacarıqlarınız product komandasına uyğundur.",
+        },
     ]
-    digest_urls = {1: f"{base}/jobs/1", 2: f"{base}/jobs/2"}
+    digest_urls = {i: f"{base}/jobs/{i}" for i in range(1, 6)}
 
     sends: list[tuple[str, str, str, str]] = []
 

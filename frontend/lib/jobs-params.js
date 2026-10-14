@@ -83,6 +83,8 @@ export const DEFAULT_BOARD_FILTERS = {
   salaryMax: "",
   page: 1,
   forYouMode: false,
+  /** For-you tab only: CV matches vs manual sidebar filters. */
+  forYouSource: "cv",
 };
 
 /** Parse home-board filters from Next.js `searchParams` or a plain query object. */
@@ -91,6 +93,8 @@ export function boardFiltersFromSearchParams(query = {}) {
   const sortRaw = String(_firstParam(query, "sort") || "newest").trim().toLowerCase();
   const page = Math.max(1, Number(_firstParam(query, "page")) || 1);
   const tab = String(_firstParam(query, "tab") || "").trim().toLowerCase();
+  const fyRaw = String(_firstParam(query, "fy") || "").trim().toLowerCase();
+  const forYouMode = tab === "foryou";
   return {
     q: String(_firstParam(query, "q") || "").trim(),
     company: String(_firstParam(query, "company") || "").trim(),
@@ -106,14 +110,18 @@ export function boardFiltersFromSearchParams(query = {}) {
     salaryMin: String(_firstParam(query, "salary_min") || "").trim(),
     salaryMax: String(_firstParam(query, "salary_max") || "").trim(),
     page,
-    forYouMode: tab === "foryou",
+    forYouMode,
+    forYouSource: forYouMode && fyRaw === "filters" ? "filters" : "cv",
   };
 }
 
 /** Browser URL query for the home board (no per_page; omit defaults). */
 export function boardUrlSearchParams(board = {}) {
   const params = new URLSearchParams();
-  if (board.forYouMode) params.set("tab", "foryou");
+  if (board.forYouMode) {
+    params.set("tab", "foryou");
+    if (String(board.forYouSource || "cv") === "filters") params.set("fy", "filters");
+  }
   const query = String(board.q || "").trim();
   if (query) params.set("q", query);
   const companyQ = String(board.company || "").trim();

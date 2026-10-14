@@ -24,10 +24,11 @@ _UI = {
         "skills_match": "{have}/{total} bacarıq uyğundur",
         "skills_none": "Bacarıq uyğunluğu hesablanır",
         "cta_job": "Elanı görüntülə və müraciət et &nbsp; →",
-        "cta_digest_job": "Bax &nbsp; →",
+        "cta_digest_job": "Daha çox oxu &nbsp; →",
         "cta_profile": "Profili tamamla &nbsp; →",
         "cta_coach": "Həftəlik plana bax &nbsp; →",
         "remote": "Uzaqdan",
+        "match_score": "{score}% uyğun",
         "near_badge_header": "Yaxın elan",
         "near_pill": "◉ &nbsp; Yaxın elan — skill artır",
         "near_lead": "Profilinizə uyğun bir vakansiya tapdıq.<br>Bu elan sizin bacarıqlarınıza və təcrübənizə yaxındır.",
@@ -38,6 +39,7 @@ _UI = {
         "digest_pill": "▣ &nbsp; Bu dövrün uyğun elanları",
         "digest_title": "Sizin üçün seçilmiş elanlar",
         "digest_lead_fallback": "Profilinizə uyğun yeni elanlar:",
+        "digest_lead_count": "Bu dəfə sizin üçün <strong>{count}</strong> uyğun elan seçdik.",
         "digest_trends": "Bacarıq trendləri",
         "digest_gap": "Öyrənmə tövsiyəsi",
         "nudge_badge_header": "Profil",
@@ -65,10 +67,11 @@ _UI = {
         "skills_match": "{have}/{total} skills match",
         "skills_none": "Skill overlap pending",
         "cta_job": "View job and apply &nbsp; →",
-        "cta_digest_job": "View &nbsp; →",
+        "cta_digest_job": "Read more &nbsp; →",
         "cta_profile": "Complete profile &nbsp; →",
         "cta_coach": "Open weekly plan &nbsp; →",
         "remote": "Remote",
+        "match_score": "{score}% match",
         "near_badge_header": "Near miss",
         "near_pill": "◉ &nbsp; Near miss — grow a skill",
         "near_lead": "We found a job close to your profile.<br>A small skill boost could make it a strong match.",
@@ -79,6 +82,7 @@ _UI = {
         "digest_pill": "▣ &nbsp; Matches for this period",
         "digest_title": "Jobs picked for you",
         "digest_lead_fallback": "New jobs that fit your profile:",
+        "digest_lead_count": "We picked <strong>{count}</strong> matching jobs for you this period.",
         "digest_trends": "Skill trends",
         "digest_gap": "Learning tip",
         "nudge_badge_header": "Profile",
@@ -106,10 +110,11 @@ _UI = {
         "skills_match": "{have}/{total} навыков совпадают",
         "skills_none": "Совпадение навыков считается",
         "cta_job": "Смотреть вакансию и откликнуться &nbsp; →",
-        "cta_digest_job": "Смотреть &nbsp; →",
+        "cta_digest_job": "Читать дальше &nbsp; →",
         "cta_profile": "Заполнить профиль &nbsp; →",
         "cta_coach": "Открыть план недели &nbsp; →",
         "remote": "Удалённо",
+        "match_score": "{score}% совпадение",
         "near_badge_header": "Почти совпадение",
         "near_pill": "◉ &nbsp; Почти совпадение — подтяните навык",
         "near_lead": "Нашли вакансию близко к вашему профилю.<br>Небольшой рост навыка может сделать её сильным совпадением.",
@@ -120,6 +125,7 @@ _UI = {
         "digest_pill": "▣ &nbsp; Подходящие вакансии за период",
         "digest_title": "Вакансии для вас",
         "digest_lead_fallback": "Новые вакансии под ваш профиль:",
+        "digest_lead_count": "В этот раз мы выбрали для вас <strong>{count}</strong> подходящих вакансий.",
         "digest_trends": "Тренды навыков",
         "digest_gap": "Совет по обучению",
         "nudge_badge_header": "Профиль",
@@ -420,6 +426,31 @@ def render_match_job_html(
     )
 
 
+def _digest_snippet(item: dict[str, Any], *, limit: int = 180) -> str:
+    text = str(item.get("explanation") or "").strip()
+    if not text:
+        return ""
+    if len(text) <= limit:
+        return text
+    cut = text[: limit - 1].rsplit(" ", 1)[0].rstrip(".,;:")
+    return f"{cut}…"
+
+
+def _digest_meta_line(item: dict[str, Any], *, lang: str) -> str:
+    pack = _ui(lang)
+    bits: list[str] = []
+    score = item.get("score")
+    if isinstance(score, (int, float)):
+        bits.append(pack["match_score"].format(score=round(float(score) * 100)))
+    location = _location_label(item, lang=lang)
+    if location and location != "—":
+        bits.append(location)
+    salary = str(item.get("salary") or "").strip()
+    if salary:
+        bits.append(salary)
+    return " · ".join(bits)
+
+
 def render_digest_html(
     *,
     lang: str,
@@ -430,9 +461,9 @@ def render_digest_html(
     unsubscribe_url: str,
     intro: str = "",
 ) -> str:
+    """Multi-job digest list (Djinni-style feed) inside the shared Ingress shell."""
     pack = _ui(lang)
-    lead = _e((intro or "").strip() or pack["digest_lead_fallback"])
-    rows: list[str] = []
+    job_rows: list[dict[str, Any]] = []
     for item in matches:
         try:
             job_id = int(item.get("job_id") or 0)
@@ -440,18 +471,45 @@ def render_digest_html(
             continue
         if job_id <= 0:
             continue
+        job_rows.append(item)
+    count = len(job_rows)
+    custom = (intro or "").strip()
+    if custom:
+        lead = _e(custom)
+    elif count > 1:
+        lead = pack["digest_lead_count"].format(count=count)
+    else:
+        lead = _e(pack["digest_lead_fallback"])
+    rows: list[str] = []
+    for i, item in enumerate(job_rows):
+        try:
+            job_id = int(item.get("job_id") or 0)
+        except (TypeError, ValueError):
+            continue
         title = str(item.get("title") or "").strip() or "—"
         company = str(item.get("company") or "").strip() or "—"
-        score = item.get("score")
-        score_txt = f"{round(float(score) * 100)}%" if isinstance(score, (int, float)) else ""
         url = job_urls.get(job_id) or ""
-        location = _location_label(item, lang=lang)
+        meta = _digest_meta_line(item, lang=lang)
+        snippet = _digest_snippet(item)
+        top_pad = "0" if i == 0 else "14px"
+        snippet_html = (
+            f'<p style="margin:12px 0 0;font-size:14px;line-height:1.65;color:#405a7c;">{_e(snippet)}</p>'
+            if snippet
+            else ""
+        )
+        meta_html = (
+            f'<div style="margin-top:8px;font-size:13px;line-height:1.5;color:#5b7194;">{_e(meta)}</div>'
+            if meta
+            else ""
+        )
         rows.append(
             f"""
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:14px;border:1px solid #eaf0f7;border-radius:14px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:{top_pad};border:1px solid #eaf0f7;border-radius:14px;">
                 <tr><td style="padding:18px 18px 16px;">
-                  <div style="font-size:18px;font-weight:800;color:#101a3a;">{_e(title)}</div>
-                  <div style="margin-top:8px;font-size:14px;color:#5b7194;">{_e(company)} · {_e(location)}{(' · ' + _e(score_txt)) if score_txt else ''}</div>
+                  <div style="font-size:13px;font-weight:700;letter-spacing:.02em;color:#7283a3;">{_e(company)}</div>
+                  <div style="margin-top:6px;font-size:18px;line-height:1.3;font-weight:800;color:#101a3a;">{_e(title)}</div>
+                  {meta_html}
+                  {snippet_html}
                   <div style="margin-top:14px;"><a href="{_e(url)}" target="_blank" style="font-size:14px;font-weight:700;color:#0eaa96;text-decoration:none;">{pack["cta_digest_job"]}</a></div>
                 </td></tr>
               </table>"""
@@ -475,6 +533,11 @@ def render_digest_html(
             </td></tr>
           </table>
         </td></tr>"""
+    preheader = custom or (
+        pack["digest_lead_count"].format(count=count).replace("<strong>", "").replace("</strong>", "")
+        if count > 1
+        else pack["digest_lead_fallback"]
+    )
     inner = (
         _hero(
             pill=pack["digest_pill"],
@@ -486,7 +549,7 @@ def render_digest_html(
     return _shell(
         lang=lang,
         title=f"Ingress Job — {pack['digest_badge_header']}",
-        preheader=str(intro or pack["digest_lead_fallback"]),
+        preheader=preheader,
         badge_header=pack["digest_badge_header"],
         inner=inner,
         unsubscribe_url=unsubscribe_url,
