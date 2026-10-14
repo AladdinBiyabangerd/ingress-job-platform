@@ -57,7 +57,7 @@
 - Unsuitable → do not upsert; store URL in `crawl_rejects` so the next pass skips without AI.
 - Flag: `market_fit` / `AI_MARKET_FIT_ENABLED=0` to hard-off.
 - Module: `worker/worker/market_fit.py`.
-- Confidence on accepted ads: clear rule signal → `rule_confidence=100`; AI path → `ai_confidence` 0–100 (+ `market_fit_reason`). Company/manual ads leave both NULL.
+- Confidence % = AI-nin **bu elanın dərc üçün qaydalara uyğun olduğuna** nə qədər əmin olması (30 ≈ bilmir; 90 ≈ əmin uyğundur). Clear rule signal → `rule_confidence=100`; AI → `ai_confidence` 0–100. Uyğunsuz/reject heç vaxt yüksək % göstərmir (köhnə “100% sure unsuitable” invert edilir) və `rule_confidence` silinir. Company/manual → NULL.
 
 ## Scraped ad moderation (2026-10-13)
 - New scraped/crawled jobs are inserted as **`pending`**, not auto-published.

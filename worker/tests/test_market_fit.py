@@ -7,6 +7,7 @@ from worker.ai_gateway.gateway import GatewayResult
 from worker.db import Store
 from worker.market_fit import (
     clarify_market_fit,
+    fit_score,
     has_clear_market_signal,
     is_rejected,
     mark_rejected,
@@ -149,8 +150,14 @@ class MarketFitTest(unittest.TestCase):
         self.assertEqual(out["rule_confidence"], 100)
         self.assertIsNone(out["ai_confidence"])
 
+    def test_fit_score_unsuitable_never_looks_like_full_match(self):
+        # Model "100% sure unsuitable" must not display as 100% rule-fit.
+        self.assertEqual(fit_score(suitable=False, confidence=100), 0)
+        self.assertLessEqual(fit_score(suitable=False, confidence=88), 35)
+        self.assertEqual(fit_score(suitable=True, confidence=91), 91)
+
     def test_clarify_uses_complete_json(self):
-        result = GatewayResult(ok=True, prompt_version="market-fit-v2", model="x")
+        result = GatewayResult(ok=True, prompt_version="market-fit-v4", model="x")
         result.data = {
             "suitable": True,
             "remote": True,
@@ -172,6 +179,28 @@ class MarketFitTest(unittest.TestCase):
         self.assertTrue(out["suitable"])
         self.assertTrue(out["remote"])
         self.assertEqual(out["confidence"], 91)
+
+    def test_clarify_unsuitable_stores_low_fit(self):
+        result = GatewayResult(ok=True, prompt_version="market-fit-v4", model="x")
+        result.data = {
+            "suitable": False,
+            "remote": True,
+            "relocation": False,
+            "visa_support": False,
+            "reason": "US residency required",
+            "confidence": 100,
+        }
+        with patch("worker.market_fit.feature_on", return_value=True):
+            with patch("worker.market_fit.complete_json", return_value=result):
+                out = clarify_market_fit(
+                    title="Senior Test Engineer",
+                    company="GDIT",
+                    place="Remote",
+                    text="US residency 3 of 5 years. No visa sponsorship.",
+                    conn=self.store.conn,
+                )
+        self.assertFalse(out["suitable"])
+        self.assertEqual(out["confidence"], 0)
 
 
 if __name__ == "__main__":

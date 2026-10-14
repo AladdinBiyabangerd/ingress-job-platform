@@ -717,8 +717,8 @@ export function Admin({
                     ) : null}
                     <th className="admin-mod-date" scope="col">{t.adminColIngested}</th>
                     <th scope="col">{t.adminColTitle}</th>
-                    <th className="admin-mod-pct-col" scope="col">{t.adminColRulePct}</th>
-                    <th className="admin-mod-pct-col" scope="col">{t.adminColAiPct}</th>
+                    <th className="admin-mod-pct-col" scope="col" title={t.adminColRulePctTitle}>{t.adminColRulePct}</th>
+                    <th className="admin-mod-pct-col" scope="col" title={t.adminColAiPctTitle}>{t.adminColAiPct}</th>
                     <th className="admin-mod-source" scope="col">{t.adminColSource}</th>
                     <th className="admin-mod-actions" scope="col">{t.adminColActions}</th>
                   </tr>

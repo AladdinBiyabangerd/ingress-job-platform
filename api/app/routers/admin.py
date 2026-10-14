@@ -92,6 +92,7 @@ class RecheckMarketFitIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     ids: list[int] = Field(default_factory=list, max_length=25)
+    scope: str = Field(default="queue", pattern="^(queue|crawled)$")
 
 
 class BackfillConfidenceIn(BaseModel):
@@ -233,7 +234,7 @@ def approve_threshold(body: ThresholdApproveIn, _user: VerifiedAccess = Depends(
 
 @router.post("/jobs/recheck-market-fit")
 def recheck_fit(body: RecheckMarketFitIn, _user: VerifiedAccess = Depends(require_staff)) -> dict:
-    return _run(lambda: recheck_market_fit(body.ids))
+    return _run(lambda: recheck_market_fit(body.ids, scope=body.scope))
 
 
 @router.post("/jobs/backfill-confidence")

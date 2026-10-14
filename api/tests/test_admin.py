@@ -541,8 +541,11 @@ class AdminTests(unittest.TestCase):
                 """
                 INSERT INTO jobs (
                     title, company, city, text, status, created_at, norm_key, owner_subject,
-                    ai_confidence, market_fit_reason
-                ) VALUES ('Recheck me', 'Co', 'Tokyo', 'Office only.', 'pending', ?, ?, '', 55, '')
+                    rule_confidence, ai_confidence, market_fit_reason
+                ) VALUES (
+                    'Recheck me', 'Co', 'Tokyo', 'Office only.', 'pending', ?, ?, '',
+                    100, 55, ''
+                )
                 """,
                 ("2026-10-14T13:00:00+04:00", "thresh-recheck"),
             )
@@ -560,14 +563,18 @@ class AdminTests(unittest.TestCase):
             self.assertEqual(again.json()["rejected"], 1)
             self.assertEqual(again.json()["failed"], 0)
             conn = sqlite3.connect(self.db)
-            status, reason, conf = conn.execute(
-                "SELECT status, reject_reason, ai_confidence FROM jobs WHERE id = ?",
+            status, reason, conf, rule_val = conn.execute(
+                """
+                SELECT status, reject_reason, ai_confidence, rule_confidence
+                FROM jobs WHERE id = ?
+                """,
                 (recheck_id,),
             ).fetchone()
             conn.close()
             self.assertEqual(status, "rejected")
             self.assertEqual(reason, "not az market")
             self.assertEqual(conf, 22)
+            self.assertIsNone(rule_val)
 
     def test_manual_source_publishes_without_showing_the_url(self):
         body = self._ad(company="Manual MMC", text="LinkedIn-de gorulen rol")

@@ -5,6 +5,7 @@ import { text } from "../lib/copy";
 import { calendarDate } from "../lib/dates";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
 import {
+  adminRecheckMarketFit,
   crawledMerge,
   crawledPatchJob,
   crawledVisibility,
@@ -14,6 +15,46 @@ import {
 import { Pager } from "./pager";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
+const RECHECK_BATCH = 15;
+
+function confidenceCell(value, reason) {
+  if (value == null || value === "") {
+    return <span className="admin-mod-pct-empty">—</span>;
+  }
+  const label = `${value}%`;
+  if (reason) {
+    return (
+      <span className="admin-mod-pct" title={reason}>
+        {label}
+      </span>
+    );
+  }
+  return <span className="admin-mod-pct">{label}</span>;
+}
+
+function jobScore(job, score) {
+  const raw = score === "rule" ? job.rule_confidence : job.ai_confidence;
+  if (raw == null || raw === "") return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function thresholdMatchIds(items, score, op, threshold) {
+  const cut = Number(threshold);
+  if (!Number.isFinite(cut)) return [];
+  return items
+    .filter((job) => {
+      if (job.hidden || job.merged_into) return false;
+      if (job.status !== "pending" && job.status !== "published" && job.status !== "rejected") {
+        return false;
+      }
+      const value = jobScore(job, score);
+      // Unscored collected ads: include when asking ≥ 0 so staff can fill AI %.
+      if (value == null) return op === "gte" && cut <= 0;
+      return op === "lte" ? value <= cut : value >= cut;
+    })
+    .map((job) => job.id);
+}
 
 function typeLabel(t, value) {
   if (value === "ofis") return t.jobOffice;
@@ -88,6 +129,10 @@ export function CollectedAdmin({ locale, initialItems = null }) {
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [scoreKind, setScoreKind] = useState("ai");
+  const [scoreOp, setScoreOp] = useState("gte");
+  const [scoreThreshold, setScoreThreshold] = useState("70");
+  const [recheckProgress, setRecheckProgress] = useState(null);
 
   async function load() {
     setItems(await refreshCrawled());
@@ -183,15 +228,135 @@ export function CollectedAdmin({ locale, initialItems = null }) {
     }
   }
 
+  async function recheckByThreshold() {
+    const ids = thresholdMatchIds(items, scoreKind, scoreOp, scoreThreshold);
+    if (!ids.length) {
+      setNote(t.adminThresholdNone);
+      return;
+    }
+    setError("");
+    setNote("");
+    setBusy(true);
+    const total = ids.length;
+    let done = 0;
+    let checked = 0;
+    let rejected = 0;
+    let hiddenCount = 0;
+    let failed = 0;
+    setRecheckProgress({ total, done: 0, remaining: total });
+    let stoppedEarly = false;
+    for (let i = 0; i < ids.length; i += RECHECK_BATCH) {
+      const chunk = ids.slice(i, i + RECHECK_BATCH);
+      const res = await adminRecheckMarketFit(chunk, { scope: "crawled" });
+      if (!res.ok) {
+        setError(t.adminError);
+        stoppedEarly = true;
+        break;
+      }
+      const batchChecked = Number(res.data?.checked) || 0;
+      const batchRejected = Number(res.data?.rejected) || 0;
+      const batchHidden = Number(res.data?.hidden) || 0;
+      const batchFailed = Number(res.data?.failed) || 0;
+      checked += batchChecked;
+      rejected += batchRejected;
+      hiddenCount += batchHidden;
+      failed += batchFailed;
+      done = Math.min(i + chunk.length, total);
+      setRecheckProgress({ total, done, remaining: total - done });
+      if (batchChecked === 0 && batchRejected === 0 && batchHidden === 0 && batchFailed > 0) {
+        setNote(t.adminRecheckBudgetStop);
+        stoppedEarly = true;
+        break;
+      }
+    }
+    setBusy(false);
+    if (!stoppedEarly || checked + rejected + hiddenCount > 0) {
+      setNote(t.adminRecheckCrawledNote(checked, rejected, hiddenCount, failed));
+    }
+    try {
+      await load();
+    } catch {
+      setError(t.loadError);
+    }
+    setRecheckProgress(null);
+  }
+
   return (
     <section className="h2-employer-queue">
       <p className="hint h2-employer-hint" title={t.collectedLede}>{t.collectedLede}</p>
       {error ? <p className="note">{error}</p> : null}
       {note ? <p className="note">{note}</p> : null}
       <div className="h2-panel h2-employer-list">
+        {recheckProgress ? (
+          <div className="admin-mod-progress" role="status" aria-live="polite">
+            <div className="admin-mod-progress-label">
+              {t.adminRecheckProgress(
+                recheckProgress.total,
+                recheckProgress.done,
+                recheckProgress.remaining,
+              )}
+            </div>
+            <div className="admin-mod-progress-track">
+              <div
+                className="admin-mod-progress-bar"
+                style={{
+                  width: `${
+                    recheckProgress.total
+                      ? Math.min(100, Math.round((100 * recheckProgress.done) / recheckProgress.total))
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
+          </div>
+        ) : null}
         {items.length === 0 ? <p className="empty-line">{t.collectedEmpty}</p> : null}
         {items.length ? (
           <div className="admin-mod-table-wrap">
+            <div className="admin-mod-threshold">
+              <label className="admin-mod-threshold-field">
+                <span className="visually-hidden">{t.adminScoreAi}</span>
+                <select
+                  value={scoreKind}
+                  disabled={busy}
+                  onChange={(event) => setScoreKind(event.target.value === "rule" ? "rule" : "ai")}
+                >
+                  <option value="ai">{t.adminScoreAi}</option>
+                  <option value="rule">{t.adminScoreRule}</option>
+                </select>
+              </label>
+              <label className="admin-mod-threshold-field">
+                <span className="visually-hidden">{t.adminOpGte}</span>
+                <select
+                  value={scoreOp}
+                  disabled={busy}
+                  onChange={(event) => setScoreOp(event.target.value === "lte" ? "lte" : "gte")}
+                >
+                  <option value="gte">{t.adminOpGte}</option>
+                  <option value="lte">{t.adminOpLte}</option>
+                </select>
+              </label>
+              <label className="admin-mod-threshold-field">
+                <span className="visually-hidden">{t.adminThresholdLabel}</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={scoreThreshold}
+                  disabled={busy}
+                  onChange={(event) => setScoreThreshold(event.target.value)}
+                  aria-label={t.adminThresholdLabel}
+                />
+              </label>
+              <button
+                type="button"
+                className="btn small"
+                disabled={busy}
+                onClick={recheckByThreshold}
+              >
+                {t.adminThresholdRecheck}
+              </button>
+            </div>
             <table className="admin-mod-table">
               <thead>
                 <tr>
@@ -200,6 +365,8 @@ export function CollectedAdmin({ locale, initialItems = null }) {
                   </th>
                   <th className="admin-mod-date" scope="col">{t.adminColIngested}</th>
                   <th scope="col">{t.adminColTitle}</th>
+                  <th className="admin-mod-pct-col" scope="col" title={t.adminColRulePctTitle}>{t.adminColRulePct}</th>
+                  <th className="admin-mod-pct-col" scope="col" title={t.adminColAiPctTitle}>{t.adminColAiPct}</th>
                   <th className="admin-mod-source" scope="col">{t.adminColSource}</th>
                   <th className="admin-mod-actions" scope="col">{t.adminColActions}</th>
                 </tr>
@@ -267,6 +434,12 @@ export function CollectedAdmin({ locale, initialItems = null }) {
                           </div>
                           {job.company ? <span className="admin-mod-sub">{job.company}</span> : null}
                         </td>
+                        <td className="admin-mod-pct-col">
+                          {confidenceCell(job.rule_confidence, job.market_fit_reason)}
+                        </td>
+                        <td className="admin-mod-pct-col">
+                          {confidenceCell(job.ai_confidence, job.market_fit_reason)}
+                        </td>
                         <td className="admin-mod-source">{sourceCell(t, job)}</td>
                         <td className="admin-mod-actions">
                           <div className="admin-mod-action-row">
@@ -290,7 +463,7 @@ export function CollectedAdmin({ locale, initialItems = null }) {
                       </tr>
                       {isOpen ? (
                         <tr className="admin-mod-edit-row">
-                          <td colSpan={5}>
+                          <td colSpan={7}>
                             {form ? (
                               <form className="admin-mod-edit-form cabinet-form staff-compose-form" onSubmit={save}>
                                 <div className="staff-compose-layout">

@@ -33,6 +33,9 @@ SELECT
     COALESCE(j.updated_at, '') AS updated_at,
     COALESCE(j.hidden, 0) AS hidden,
     j.merged_into,
+    j.rule_confidence,
+    j.ai_confidence,
+    COALESCE(j.market_fit_reason, '') AS market_fit_reason,
     COALESCE(js.source_name, '') AS source_name
 FROM jobs j
 {_SOURCE_JOIN}
@@ -55,12 +58,27 @@ SELECT
     COALESCE(j.updated_at, '') AS updated_at,
     COALESCE(j.hidden, 0) AS hidden,
     j.merged_into,
+    j.rule_confidence,
+    j.ai_confidence,
+    COALESCE(j.market_fit_reason, '') AS market_fit_reason,
     COALESCE(js.source_name, '') AS source_name,
     COALESCE(js.source_url, '') AS source_url
 FROM jobs j
 {_SOURCE_JOIN}
 WHERE COALESCE(j.owner_subject, '') = ''
 """
+
+
+def _score_or_none(row: sqlite3.Row, key: str) -> int | None:
+    if key not in set(row.keys()):
+        return None
+    raw = row[key]
+    if raw is None:
+        return None
+    try:
+        return max(0, min(100, int(raw)))
+    except (TypeError, ValueError):
+        return None
 
 
 def _public(row: sqlite3.Row) -> dict:
@@ -86,6 +104,12 @@ def _public(row: sqlite3.Row) -> dict:
     # Staff list only — detail/edit/merge responses omit source_url.
     if "source_url" in keys:
         payload["source_url"] = row["source_url"] or ""
+    if "rule_confidence" in keys:
+        payload["rule_confidence"] = _score_or_none(row, "rule_confidence")
+    if "ai_confidence" in keys:
+        payload["ai_confidence"] = _score_or_none(row, "ai_confidence")
+    if "market_fit_reason" in keys:
+        payload["market_fit_reason"] = row["market_fit_reason"] or ""
     return payload
 
 

@@ -215,13 +215,16 @@ export async function adminApproveThreshold({ score, op, threshold }) {
   return mutate("/api/v1/admin/jobs/approve-threshold", { body });
 }
 
-export async function adminRecheckMarketFit(ids) {
+export async function adminRecheckMarketFit(ids, { scope = "queue" } = {}) {
   const list = Array.isArray(ids)
     ? ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
     : [];
   if (!list.length) return { ok: false, status: 422, data: {} };
   return mutate("/api/v1/admin/jobs/recheck-market-fit", {
-    body: { ids: list.slice(0, 25) },
+    body: {
+      ids: list.slice(0, 25),
+      scope: scope === "crawled" ? "crawled" : "queue",
+    },
   });
 }
 

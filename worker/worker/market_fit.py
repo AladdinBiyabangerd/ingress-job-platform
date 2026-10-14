@@ -19,7 +19,7 @@ from worker.techstack import relocation_flag, remote_flag
 log = logging.getLogger("ingress-job.worker.market_fit")
 
 PURPOSE = "market_fit"
-PROMPT_VERSION = "market-fit-v2"
+PROMPT_VERSION = "market-fit-v4"
 ENV_FLAG = "AI_MARKET_FIT_ENABLED"
 RULE_CONFIDENCE = 100
 
@@ -45,8 +45,16 @@ _SYSTEM = (
     "Set remote/relocation/visa_support from the ad. visa_support that only helps "
     "relocation counts as relocation=true.\n"
     "Be strict. If unclear, suitable=false.\n"
-    "confidence is an integer 0-100: how sure you are that suitable is correct "
-    "for an Azerbaijan-based candidate (remote worldwide / reloc / visa).\n"
+    "confidence is an integer 0-100: how sure you are that this ad IS suitable "
+    "to publish under those Azerbaijan-market rules "
+    "(not how sure you are that suitable=false).\n"
+    "- 80–100: you are confident it should be published (worldwide/EMEA remote "
+    "or real reloc/visa) → suitable=true;\n"
+    "- around 30–50: you are unsure whether it qualifies for publish → "
+    "suitable=false;\n"
+    "- 0–25: you are confident it must NOT be published (US-only, residency "
+    "lock, no visa, foreign onsite) → suitable=false.\n"
+    "Never return high confidence with suitable=false.\n"
     "Reply with JSON only matching the schema."
 )
 
@@ -79,6 +87,19 @@ def clamp_confidence(raw: Any) -> int:
     except (TypeError, ValueError):
         return 0
     return max(0, min(100, value))
+
+
+def fit_score(*, suitable: bool, confidence: int) -> int:
+    """Staff-facing % = how sure AI is the ad is OK to publish under our rules.
+
+    Example: 30 ≈ unsure; 90 ≈ sure it qualifies; rejected/unsuitable must
+    never show as 100. Older models sometimes returned suitable=false + 100
+    ("sure of the reject") — invert that into a low publish-confidence.
+    """
+    raw = clamp_confidence(confidence)
+    if suitable:
+        return raw
+    return min(raw, 100 - raw, 35)
 
 
 def ensure_rejects_table(conn: sqlite3.Connection | None) -> None:
@@ -184,12 +205,16 @@ def clarify_market_fit(
     suitable = bool(data.get("suitable"))
     if suitable and not (remote or relocation):
         suitable = False
+    confidence = fit_score(
+        suitable=suitable,
+        confidence=clamp_confidence(data.get("confidence")),
+    )
     return {
         "suitable": suitable,
         "remote": remote,
         "relocation": relocation,
         "visa_support": bool(data.get("visa_support")),
         "reason": str(data.get("reason") or "")[:300],
-        "confidence": clamp_confidence(data.get("confidence")),
+        "confidence": confidence,
         "cached": result.cached,
     }

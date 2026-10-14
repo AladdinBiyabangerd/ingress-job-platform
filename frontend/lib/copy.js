@@ -508,6 +508,8 @@ export const copy = {
     adminColSource: "Mənbə",
     adminColRulePct: "Qayda %",
     adminColAiPct: "AI %",
+    adminColRulePctTitle: "Qayda bu elanın dərc üçün uyğun olduğuna nə qədər əmindir",
+    adminColAiPctTitle: "AI bu elanın dərc üçün qaydalara uyğun olduğuna nə qədər əmindir (aşağı = bilmir)",
     adminColCandidate: "Namizəd",
     adminColActions: "Əməliyyat",
     adminDateUnknown: "—",
@@ -523,6 +525,8 @@ export const copy = {
     adminThresholdNone: "Bu faizə uyğun gözləyən elan yoxdur.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI yoxlama: ${checked} yoxlandı, ${rejected} rədd, ${failed} uğursuz.`,
+    adminRecheckCrawledNote: (checked, rejected, hidden, failed) =>
+      `AI yoxlama: ${checked} yoxlandı, ${rejected} rədd, ${hidden} gizlədildi, ${failed} uğursuz.`,
     adminRecheckProgress: (total, done, left) =>
       `AI yoxlama: ${total} plan, ${done} edildi, ${left} qaldı`,
     adminRecheckBudgetStop: "AI cavab vermədi (limit/off). Qalanlar sonra davam edə bilər.",
@@ -1596,6 +1600,8 @@ export const copy = {
     adminColSource: "Source",
     adminColRulePct: "Rule %",
     adminColAiPct: "AI %",
+    adminColRulePctTitle: "How sure the rules are that this ad is OK to publish",
+    adminColAiPctTitle: "How sure AI is that this ad matches publish rules (low = unsure)",
     adminColCandidate: "Candidate",
     adminColActions: "Actions",
     adminDateUnknown: "—",
@@ -1611,6 +1617,8 @@ export const copy = {
     adminThresholdNone: "No pending ads match this percent.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI recheck: ${checked} checked, ${rejected} rejected, ${failed} failed.`,
+    adminRecheckCrawledNote: (checked, rejected, hidden, failed) =>
+      `AI recheck: ${checked} checked, ${rejected} rejected, ${hidden} hidden, ${failed} failed.`,
     adminRecheckProgress: (total, done, left) =>
       `AI recheck: ${total} planned, ${done} done, ${left} left`,
     adminRecheckBudgetStop: "AI did not respond (budget/off). Remaining can continue later.",
@@ -2685,6 +2693,8 @@ export const copy = {
     adminColSource: "Источник",
     adminColRulePct: "Правило %",
     adminColAiPct: "AI %",
+    adminColRulePctTitle: "Насколько правила уверены, что объявление можно публиковать",
+    adminColAiPctTitle: "Насколько AI уверен, что объявление подходит под правила публикации (низкий = неясно)",
     adminColCandidate: "Кандидат",
     adminColActions: "Действия",
     adminDateUnknown: "—",
@@ -2700,6 +2710,8 @@ export const copy = {
     adminThresholdNone: "Нет ожидающих объявлений с таким процентом.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI: проверено ${checked}, отклонено ${rejected}, ошибка ${failed}.`,
+    adminRecheckCrawledNote: (checked, rejected, hidden, failed) =>
+      `AI: проверено ${checked}, отклонено ${rejected}, скрыто ${hidden}, ошибка ${failed}.`,
     adminRecheckProgress: (total, done, left) =>
       `AI: ${total} в плане, ${done} сделано, ${left} осталось`,
     adminRecheckBudgetStop: "AI не ответил (лимит/выкл). Остальное можно продолжить позже.",
