@@ -71,6 +71,13 @@ class CooldownTest(unittest.TestCase):
         kept = gw._cooldown_filter("chat", [a, b])
         self.assertEqual([p.model for p in kept], ["m2"])
 
+    def test_nvidia_slot_cooldown_is_per_model(self):
+        a = P("nvidia", model="n1", cooldown_id="nvidia:n1")
+        b = P("nvidia", model="n2", cooldown_id="nvidia:n2")
+        gw._cooldown_note("chat", a.cooldown_id, gw.ProviderHTTPError("x", 429))
+        kept = gw._cooldown_filter("chat", [a, b])
+        self.assertEqual([p.model for p in kept], ["n2"])
+
     def test_cooldown_expires(self):
         provs = [P("groq"), P("openai")]
         t = [1000.0]

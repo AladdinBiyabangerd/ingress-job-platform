@@ -112,7 +112,8 @@ that file is applied; set them yourself only if you use another bucket):
 | `GEMINI_MODELS` | Optional. Comma list of Gemini chat models to try in order. Default: `3.5-flash-lite` → `3.1-flash-lite` → `2.5-flash-lite` → `2.5-flash` → `3.6-flash` → `3-flash-preview` → `3.8-flash`. |
 | `GEMINI_MODEL` | Optional. Legacy single-model override when `GEMINI_MODELS` is unset. |
 | `GROQ_MODEL` | Optional. Default `openai/gpt-oss-20b`. |
-| `NVIDIA_CHAT_MODEL` | Optional. Default `nvidia/nemotron-3-super-120b-a12b` (Meta Llama 3.x instruct IDs are EOL on NIM). |
+| `NVIDIA_MODELS` | Optional. Comma list of NVIDIA Free Endpoint chat models. Default: lightning → gpt-oss-20b → gemma-4-31b → glm-5.3 → nemotron-3-super. |
+| `NVIDIA_CHAT_MODEL` | Optional. Legacy single-model override when `NVIDIA_MODELS` is unset. |
 | `NVIDIA_EMBED_MODEL` | Optional. Default `nvidia/nemotron-3-embed-1b`. |
 | `OPENROUTER_MODEL` | Optional. Default `openrouter/free` (routes across live `:free` models; single-model free tiers often 429). |
 | `AI_EMBEDDING_MODEL` | Optional. Overrides embed model id. With NVIDIA key defaults to `nvidia/nemotron-3-embed-1b`. |

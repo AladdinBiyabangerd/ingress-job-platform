@@ -378,6 +378,66 @@ class ChatProviderOrderTest(unittest.TestCase):
             ],
         )
 
+    def test_nvidia_expands_models(self):
+        import os
+        from unittest import mock
+
+        from worker.ai_gateway import gateway as gw
+
+        env = {
+            "AI_CHAT_PROVIDERS": "nvidia",
+            "NVIDIA_API_KEY": "n",
+            "NVIDIA_MODELS": "n-a,n-b",
+            "GEMINI_API_KEY": "",
+            "GROQ_API_KEY": "",
+            "OPENAI_API_KEY": "",
+            "OPENROUTER_API_KEY": "",
+        }
+        with mock.patch.dict(os.environ, env, clear=False):
+            os.environ.pop("NVIDIA_CHAT_MODEL", None)
+            slots = gw._chat_providers()
+        self.assertEqual(
+            [(p.name, p.model, p.cooldown_id) for p in slots],
+            [
+                ("nvidia", "n-a", "nvidia:n-a"),
+                ("nvidia", "n-b", "nvidia:n-b"),
+            ],
+        )
+
+    def test_nvidia_model_cascade_tries_next(self):
+        import os
+        from unittest import mock
+
+        from worker.ai_gateway import gateway as gw
+
+        env = {
+            "AI_CHAT_PROVIDERS": "nvidia,groq",
+            "NVIDIA_API_KEY": "n",
+            "NVIDIA_MODELS": "n1,n2",
+            "GROQ_API_KEY": "q",
+            "GEMINI_API_KEY": "",
+            "OPENAI_API_KEY": "",
+            "OPENROUTER_API_KEY": "",
+        }
+        calls: list[tuple[str, str]] = []
+
+        def fake_chat(*, provider, **kw):
+            calls.append((provider.name, provider.model))
+            if provider.model != "n2":
+                raise gw.ProviderHTTPError("HTTP 429", 429)
+            return {"data": {"ok": True}, "usage": {}}
+
+        with mock.patch.dict(os.environ, env, clear=False):
+            os.environ.pop("NVIDIA_CHAT_MODEL", None)
+            gw._cooldown_reset()
+            with mock.patch.object(gw, "_chat_json", side_effect=fake_chat):
+                out = gw._call_chat_json(
+                    system="s", user="u", schema={}, schema_name="x", timeout=1
+                )
+        self.assertEqual(calls, [("nvidia", "n1"), ("nvidia", "n2")])
+        self.assertEqual(out["model"], "n2")
+        self.assertEqual(out["provider"], "nvidia")
+
     def test_gemini_model_cascade_tries_next_before_other_providers(self):
         import os
         from unittest import mock

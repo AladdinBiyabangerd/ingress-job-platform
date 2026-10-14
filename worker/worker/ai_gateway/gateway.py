@@ -63,7 +63,15 @@ DEFAULT_GEMINI_MODELS = (
     "gemini-3.8-flash"
 )
 DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b"
-DEFAULT_NVIDIA_CHAT_MODEL = "nvidia/nemotron-3-super-120b-a12b"
+DEFAULT_NVIDIA_CHAT_MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b"
+# Free Endpoint text chat cascade (no vision/TTS/embed). Skip thinking extras.
+DEFAULT_NVIDIA_MODELS = (
+    "nvidia/nemotron-3.5-lightning-30b-a3b,"
+    "openai/gpt-oss-20b,"
+    "google/gemma-4-31b-it,"
+    "z-ai/glm-5.3,"
+    "nvidia/nemotron-3-super-120b-a12b"
+)
 DEFAULT_NVIDIA_EMBED_MODEL = "nvidia/nemotron-3-embed-1b"
 # Auto-router across currently available :free models (single-model free tiers rate-limit hard).
 DEFAULT_OPENROUTER_MODEL = "openrouter/free"
@@ -158,6 +166,19 @@ def _gemini_models() -> list[str]:
     if single:
         return [single]
     return [m.strip() for m in DEFAULT_GEMINI_MODELS.split(",") if m.strip()]
+
+
+def _nvidia_models() -> list[str]:
+    """NVIDIA chat model cascade. NVIDIA_MODELS > NVIDIA_CHAT_MODEL > default list."""
+    multi = (os.environ.get("NVIDIA_MODELS") or "").strip()
+    if multi:
+        models = [m.strip() for m in multi.split(",") if m.strip()]
+        if models:
+            return models
+    single = (os.environ.get("NVIDIA_CHAT_MODEL") or "").strip()
+    if single:
+        return [single]
+    return [m.strip() for m in DEFAULT_NVIDIA_MODELS.split(",") if m.strip()]
 
 
 def any_provider_key() -> bool:
@@ -526,19 +547,17 @@ def _chat_providers() -> list[_ChatProvider]:
             key = os.environ.get("NVIDIA_API_KEY", "").strip()
             if not key:
                 continue
-            model = (
-                os.environ.get("NVIDIA_CHAT_MODEL") or DEFAULT_NVIDIA_CHAT_MODEL
-            ).strip() or DEFAULT_NVIDIA_CHAT_MODEL
-            out.append(
-                _ChatProvider(
-                    name="nvidia",
-                    key=key,
-                    base_url="https://integrate.api.nvidia.com/v1",
-                    model=model,
-                    json_mode="prompt",
-                    cooldown_id="nvidia",
+            for model in _nvidia_models():
+                out.append(
+                    _ChatProvider(
+                        name="nvidia",
+                        key=key,
+                        base_url="https://integrate.api.nvidia.com/v1",
+                        model=model,
+                        json_mode="prompt",
+                        cooldown_id=f"nvidia:{model}",
+                    )
                 )
-            )
         elif name == "openrouter":
             key = os.environ.get("OPENROUTER_API_KEY", "").strip()
             if not key:

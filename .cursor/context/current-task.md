@@ -1,26 +1,23 @@
 # Current task
 
 ## Completed
-- Gemini multi-model + multi-key failover in `ai_gateway` (API + worker)
-- Per-slot cooldown (`gemini:k0:model`); 404 long cooldown
-- Optional `GEMINI_API_KEY_2` / `GEMINI_API_KEYS`; default model cascade
-- Docs + tests updated
+- Gemini multi-model + multi-key failover (pushed `9bd4f24`)
+- NVIDIA Free Endpoint chat model cascade (same for-loop pattern)
 
 ## Current state
-- Single `GEMINI_API_KEY` alone works (all default text-out models for-loop)
-- Second key optional; expands same cascade after key1
+- NVIDIA expands to: lightning → gpt-oss-20b → gemma-4-31b-it → glm-5.3 → nemotron-3-super
+- Per-model cooldown `nvidia:{model}`; embed stays `nemotron-3-embed-1b`
+- Override: `NVIDIA_MODELS` > `NVIDIA_CHAT_MODEL` > default list
 
 ## Decisions
-- Default models: 3.5-flash-lite → 3.1-flash-lite → 2.5-flash-lite → 2.5-flash → 3.6-flash → 3-flash-preview → 3.8-flash
-- Skip 3.7 (routes to 3.8); skip Image/TTS/Live/Pro
-- `GEMINI_MODELS` > `GEMINI_MODEL` > default list; key-major × model-minor
+- Skip vision/omni/TTS; no thinking/reasoning_budget extras on NVIDIA calls
+- One `NVIDIA_API_KEY` covers all Free Endpoint models
 
 ## Remaining work
-- Deploy: set `GEMINI_API_KEY` (and optional `_2`); unset legacy `GEMINI_MODEL` if you want the full cascade
-- Commit when asked
+- Commit/push when asked
+- Deploy: unset legacy `NVIDIA_CHAT_MODEL` if full cascade wanted
 
 ## Relevant files
 - `api/app/ai_gateway/gateway.py`, `worker/worker/ai_gateway/gateway.py`
-- `api/app/ai_flags.py`, `worker/worker/ai_flags.py`, `api/app/ops_status.py`
 - `worker/tests/test_ai_gateway.py`, `worker/tests/test_gateway_cooldown.py`
 - `.env.example`, `docs/railway.md`
