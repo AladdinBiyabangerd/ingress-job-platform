@@ -103,6 +103,14 @@ class WantsReturningTest(unittest.TestCase):
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (slug) DO NOTHING"
             )
         )
+        self.assertFalse(
+            _wants_returning(
+                "INSERT INTO market_fit_recheck_jobs ("
+                "id, scope, status, total, done, checked, rejected, hidden, "
+                "failed, skipped, error, job_ids, created_by, created_at, updated_at"
+                ") VALUES (?, ?, 'queued', ?, 0, 0, 0, 0, 0, 0, '', ?, ?, ?, ?)"
+            )
+        )
 
 
 class CursorRowcountTests(unittest.TestCase):

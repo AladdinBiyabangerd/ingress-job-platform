@@ -187,6 +187,7 @@ _NO_ID_TABLES = {
     "job_categories",
     "job_skill",
     "maintenance_steps",
+    "market_fit_recheck_jobs",
     "match_feedback",
     "oidc_transactions",
     "role_skill_weight",
