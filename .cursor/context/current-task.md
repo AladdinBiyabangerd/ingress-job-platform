@@ -1,26 +1,27 @@
 # Current task
 
 ## Completed
-- Auto AI score after crawl (earlier this session)
-- Collected **Gizlət** → Rejected tab (2026-10-15):
-  - `POST /api/v1/admin/crawled/{id}/hide` now sets `status=rejected`, `hidden=0`, reason `Staff gizlətdi (toplananlar)`
-  - Leaves Collected list; appears on Rejected / Ləğv edilmişlər
-  - **Göstər** unchanged for soft-hidden / merge rows still on Collected
-  - Test + AZ/EN/RU copy notes updated
+- Trends **list** Pulse implementasiya
+- Trends **detail** Pulse implementasiya (`trend-detail.js` + copy + CSS)
+- Detail CTA map: jobs, login, companions, academy
 
 ## Current state
-Uncommitted: auto-score worker + crawled hide→reject + prior crawl_rejects admin fixes.
+Pulse list + detail lokalda işləyir (`localhost:3010/trends`, `/trends/1`).
+Uncommitted: prior admin/worker + trends Pulse (list+detail).
 
 ## Decisions
-- Hide is reject, not soft-hide (staff asked explicitly)
-- Merge still uses `hidden=1` + `merged_into`
+- List + detail = Pulse vizual ailə
+- Companion kartları → `/trends/{skill_id}`
+- Jobs CTA / KPI → `/trends/{id}/jobs`
+- Compare/login → OIDC `job_candidate` + returnTo detail
 
 ## Remaining work
-- Deploy API (+ frontend for copy) on Railway
-- Deploy worker for auto-score if not done
+- Visual QA (mobile) + deploy frontend Railway
+- Prior admin/worker deploy if needed
 
 ## Relevant files
-- `api/app/crawled_admin.py`
-- `api/tests/test_admin.py`
+- `frontend/components/trends.js`
+- `frontend/components/trend-detail.js`
 - `frontend/lib/copy.js`
-- `.cursor/context/business-rules.md`
+- `frontend/app/globals.css`
+- `.design/trends-detail/CTA-MAP.md`

@@ -97,9 +97,6 @@ export function JobBoardCard({
             <h3 className="job-board-card-title">
               <a href={jobHref}>{job.title}</a>
             </h3>
-            {viewed ? (
-              <span className="job-board-card-viewed">{t.viewedJobBadge || t.viewedFilter}</span>
-            ) : null}
           </div>
           {stack.length ? (
             <ul className="job-board-card-tags">
@@ -132,6 +129,12 @@ export function JobBoardCard({
         </div>
         <div className="job-board-card-aside">
           <div className="job-board-card-actions">
+            {viewed ? (
+              <span className="job-board-card-viewed">
+                <ViewedMark />
+                {t.viewedJobBadge || t.viewedFilter}
+              </span>
+            ) : null}
             <SaveJobButton
               locale={locale}
               jobId={jobId}
@@ -159,6 +162,15 @@ export function JobBoardCard({
         </div>
       </div>
     </article>
+  );
+}
+
+function ViewedMark() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" aria-hidden="true">
+      <path d="M1.5 12s3.5-7 10.5-7 10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
   );
 }
 

@@ -1232,8 +1232,9 @@ _LOCAL_OK_PLACE = re.compile(
 )
 
 _PLACE_OPEN_WORDS = re.compile(
-    r"(?i)\b(?:remote|anywhere|worldwide|world[\s-]?wide|global|emea|cis|"
-    r"caucasus|central\s+asia|home\s*based|homebased)\b"
+    r"(?i)\b(?:remote|anywhere|worldwide|world[\s-]?wide|global(?:ly)?|emea|cis|"
+    r"open\s+globally|caucasus|central\s+asia|home\s*based|homebased|"
+    r"timezones?)\b"
 )
 
 # "Americas" / AMER-only remote is not AZ-reachable (EMEA alone is OK).

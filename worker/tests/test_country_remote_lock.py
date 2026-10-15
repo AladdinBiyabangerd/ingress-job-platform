@@ -24,7 +24,10 @@ class CountryRemoteLockTest(unittest.TestCase):
             "Bulgaria Cyprus Greece Hungary Malta"))
 
     def test_worldwide_remote_stays_open(self):
-        for place in ("Remote", "Worldwide", "Remote - Worldwide", "Anywhere", "Remote EMEA"):
+        for place in (
+            "Remote", "Worldwide", "Remote - Worldwide", "Anywhere", "Remote EMEA",
+            "Anywhere (Open Globally)", "Global",
+        ):
             self.assertFalse(foreign_locked_remote("Backend Engineer", place, "Join us."), place)
         self.assertFalse(foreign_locked_remote(
             "Backend Engineer", "Remote",

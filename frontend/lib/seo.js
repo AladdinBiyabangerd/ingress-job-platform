@@ -293,7 +293,7 @@ const TRENDS_COPY = {
   az: {
     title: "Bacarıq trendləri",
     description:
-      "Ingress Job-un izlədiyi elanlarda bacarıq tələbinin payı və həftəlik dəyişimi. Bütün bazarı əks etdirmir.",
+      "Bu dövrdə hansı bacarıqlar önə çıxır? Ingress Job-un izlədiyi elanlarda tələb payı və həftəlik dəyişim — bütün bazarı əks etdirmir.",
     breadcrumb: "Trendlər",
     skillTitle: (name) => `${name} — bacarıq trendi`,
     skillDescription: (name) =>
@@ -306,7 +306,7 @@ const TRENDS_COPY = {
   en: {
     title: "Skill trends",
     description:
-      "Skill demand share and week-over-week change in listings Ingress Job tracks — not the whole market.",
+      "Who is ahead this period? Skill demand share and week-over-week change in listings Ingress Job tracks — not the whole market.",
     breadcrumb: "Trends",
     skillTitle: (name) => `${name} — skill trend`,
     skillDescription: (name) =>
@@ -319,7 +319,7 @@ const TRENDS_COPY = {
   ru: {
     title: "Тренды навыков",
     description:
-      "Доля спроса на навыки и недельное изменение в вакансиях, которые отслеживает Ingress Job — не весь рынок.",
+      "Кто впереди в этом периоде? Доля спроса на навыки и недельное изменение в вакансиях Ingress Job — не весь рынок.",
     breadcrumb: "Тренды",
     skillTitle: (name) => `${name} — тренд навыка`,
     skillDescription: (name) =>

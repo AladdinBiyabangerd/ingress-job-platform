@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import {
   academyCareerPathUrl,
   academyCourseLabel,
@@ -33,13 +36,17 @@ export function CareerPathLink({ t, pathId }) {
   );
 }
 
-export function AcademyCourseLinks({ item }) {
+export function AcademyCourseLinks({ item, limit = MAX_COURSE_LINKS }) {
+  const [expanded, setExpanded] = useState(false);
   const courses = Array.isArray(item?.academy_courses)
     ? item.academy_courses.map((id) => String(id || "").trim()).filter(Boolean)
     : [];
   if (!courses.length) return null;
-  const visible = courses.slice(0, MAX_COURSE_LINKS);
-  const extra = courses.length - visible.length;
+  const cap = typeof limit === "number" && limit > 0 ? limit : MAX_COURSE_LINKS;
+  const extra = Math.max(0, courses.length - cap);
+  const visible = expanded || extra === 0 ? courses : courses.slice(0, cap);
+  const hiddenLabels = courses.slice(cap).map(academyCourseLabel).filter(Boolean);
+
   return (
     <span className="skills-course-links">
       {visible.map((courseId) => {
@@ -60,9 +67,15 @@ export function AcademyCourseLinks({ item }) {
         );
       })}
       {extra > 0 ? (
-        <span className="skills-course-more" title={courses.slice(MAX_COURSE_LINKS).map(academyCourseLabel).join(", ")}>
-          +{extra}
-        </span>
+        <button
+          type="button"
+          className={`skills-course-more${expanded ? " is-expanded" : ""}`}
+          aria-expanded={expanded}
+          title={expanded ? undefined : hiddenLabels.join(", ")}
+          onClick={() => setExpanded((current) => !current)}
+        >
+          {expanded ? "−" : `+${extra}`}
+        </button>
       ) : null}
     </span>
   );
