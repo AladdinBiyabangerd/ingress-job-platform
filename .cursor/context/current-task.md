@@ -1,27 +1,23 @@
 # Current task
 
 ## Completed
-- Trends **list** Pulse implementasiya
-- Trends **detail** Pulse implementasiya (`trend-detail.js` + copy + CSS)
-- Detail CTA map: jobs, login, companions, academy
+- Diagnosed email `/r/<token>` HTTP 500 on production
+- Fixed frontend click redirect + unsubscribe `await params`
 
 ## Current state
-Pulse list + detail lokalda işləyir (`localhost:3010/trends`, `/trends/1`).
-Uncommitted: prior admin/worker + trends Pulse (list+detail).
+Root cause: `noStore(Response.redirect(...))` — `Response.redirect` headers are immutable → TypeError → empty 500.
+Fix uses `NextResponse.redirect` + `await params` + same-origin `/jobs/{id}` only.
+Uncommitted; needs **frontend deploy** to Railway for the email link to work.
 
 ## Decisions
-- List + detail = Pulse vizual ailə
-- Companion kartları → `/trends/{skill_id}`
-- Jobs CTA / KPI → `/trends/{id}/jobs`
-- Compare/login → OIDC `job_candidate` + returnTo detail
+- Email clicks must 302 only to on-site `/{az|en|ru}/jobs/{id}`
+- Empty API `APP_URL` → 503 `app_url_unconfigured` (not blank Location)
 
 ## Remaining work
-- Visual QA (mobile) + deploy frontend Railway
-- Prior admin/worker deploy if needed
+- Deploy frontend (and API if email_prefs change desired)
+- Smoke: open email `/r/...` → lands on job detail
 
 ## Relevant files
-- `frontend/components/trends.js`
-- `frontend/components/trend-detail.js`
-- `frontend/lib/copy.js`
-- `frontend/app/globals.css`
-- `.design/trends-detail/CTA-MAP.md`
+- `frontend/app/r/[token]/route.js`
+- `frontend/app/api/unsubscribe/[token]/route.js`
+- `api/app/routers/email_prefs.py`

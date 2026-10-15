@@ -6,7 +6,8 @@ export const runtime = "nodejs";
 
 export async function GET(request, { params }) {
   return withRateLimit(request, "click_unsub", async () => {
-    const token = params?.token || "";
+    const resolved = (await params) || {};
+    const token = String(resolved.token || "");
     const res = await fetch(`${apiBase()}/api/v1/unsubscribe/${encodeURIComponent(token)}`, {
       cache: "no-store",
     });
@@ -17,7 +18,8 @@ export async function GET(request, { params }) {
 
 export async function POST(request, { params }) {
   return withRateLimit(request, "click_unsub", async () => {
-    const token = params?.token || "";
+    const resolved = (await params) || {};
+    const token = String(resolved.token || "");
     const res = await fetch(`${apiBase()}/api/v1/unsubscribe/${encodeURIComponent(token)}`, {
       method: "POST",
       cache: "no-store",

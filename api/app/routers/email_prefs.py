@@ -145,7 +145,10 @@ def email_click_redirect(token: str, _rl=dep_ip("click_unsub")) -> RedirectRespo
             conn.close()
     if not resolved:
         raise HTTPException(status_code=404, detail="invalid_token")
-    return RedirectResponse(url=resolved["redirect"], status_code=302)
+    target = (resolved.get("redirect") or "").strip()
+    if not target:
+        raise HTTPException(status_code=503, detail="app_url_unconfigured")
+    return RedirectResponse(url=target, status_code=302)
 
 
 def _require_internal_token(x_internal_token: str | None) -> None:
