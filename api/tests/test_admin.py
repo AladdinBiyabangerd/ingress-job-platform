@@ -332,6 +332,42 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(status_hidden[1], 0)
         self.assertIn("gizlətdi", (status_hidden[2] or "").lower())
 
+    def test_crawled_list_only_published_scraped(self):
+        """Collected tab is published scraped only — pending stays on the queue."""
+        conn = sqlite3.connect(self.db)
+        cur = conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key, owner_subject
+            ) VALUES ('Pending scrape', 'Co', 'Baki', 'Body', 'pending', ?, ?, '')
+            """,
+            ("2026-10-16T12:00:00+04:00", "crawled-pending-only"),
+        )
+        pending_id = int(cur.lastrowid)
+        cur = conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key, owner_subject
+            ) VALUES ('Live scrape', 'Co', 'Baki', 'Body', 'published', ?, ?, '')
+            """,
+            ("2026-10-16T12:00:00+04:00", "crawled-published-only"),
+        )
+        published_id = int(cur.lastrowid)
+        conn.commit()
+        conn.close()
+
+        with self._auth("job:staff", "admin-staff"):
+            headers = {"Authorization": "Bearer test"}
+            crawled = self.client.get("/api/v1/admin/crawled", headers=headers)
+            self.assertEqual(crawled.status_code, 200, crawled.text)
+            ids = {item["id"] for item in crawled.json()["items"]}
+            self.assertIn(published_id, ids)
+            self.assertNotIn(pending_id, ids)
+            queue = self.client.get("/api/v1/admin/jobs", headers=headers)
+            self.assertEqual(queue.status_code, 200, queue.text)
+            queue_ids = {item["id"] for item in queue.json()["items"]}
+            self.assertIn(pending_id, queue_ids)
+
     def test_scraped_pending_appears_in_queue_and_bulk_approve_publishes(self):
         conn = sqlite3.connect(self.db)
         ids = []

@@ -53,14 +53,12 @@ function jobScore(job, score) {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Recheck: only ads with no AI score; oldest first. */
+/** Recheck: only published ads with no AI score; oldest first. */
 function missingAiScoreIds(items) {
   return items
     .filter((job) => {
       if (job.hidden || job.merged_into) return false;
-      if (job.status !== "pending" && job.status !== "published") {
-        return false;
-      }
+      if (job.status !== "published") return false;
       return jobScore(job, "ai") == null;
     })
     .map((job) => job.id)

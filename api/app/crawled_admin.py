@@ -44,7 +44,7 @@ SELECT
 FROM jobs j
 {_SOURCE_JOIN}
 WHERE COALESCE(j.owner_subject, '') = ''
-  AND j.status != 'rejected'
+  AND j.status = 'published'
 """
 
 _LIST_PREVIEW = f"""
@@ -71,7 +71,7 @@ SELECT
 FROM jobs j
 {_SOURCE_JOIN}
 WHERE COALESCE(j.owner_subject, '') = ''
-  AND j.status != 'rejected'
+  AND j.status = 'published'
 """
 
 
@@ -129,7 +129,6 @@ def list_crawled() -> list[dict]:
         rows = conn.execute(
             f"""{_LIST_PREVIEW}
             ORDER BY
-                CASE j.status WHEN 'pending' THEN 0 ELSE 1 END,
                 COALESCE(j.hidden, 0),
                 j.id DESC
             """

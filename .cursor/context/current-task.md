@@ -1,23 +1,19 @@
 # Current task
 
 ## Completed
-- Diagnosed email `/r/<token>` HTTP 500 on production
-- Fixed frontend click redirect + unsubscribe `await params`
+- Collected (`/admin?tab=collected`) now lists only scraped `status=published`
 
 ## Current state
-Root cause: `noStore(Response.redirect(...))` — `Response.redirect` headers are immutable → TypeError → empty 500.
-Fix uses `NextResponse.redirect` + `await params` + same-origin `/jobs/{id}` only.
-Uncommitted; needs **frontend deploy** to Railway for the email link to work.
+`GET /api/v1/admin/crawled` filters `owner_subject='' AND status='published'`. Pending stays on moderation queue; rejected on Rejected.
 
 ## Decisions
-- Email clicks must 302 only to on-site `/{az|en|ru}/jobs/{id}`
-- Empty API `APP_URL` → 503 `app_url_unconfigured` (not blank Location)
+- Collected ≠ “all scraped”; it is the live/published scraped inventory only
 
 ## Remaining work
-- Deploy frontend (and API if email_prefs change desired)
-- Smoke: open email `/r/...` → lands on job detail
+- Deploy API + frontend when ready
 
 ## Relevant files
-- `frontend/app/r/[token]/route.js`
-- `frontend/app/api/unsubscribe/[token]/route.js`
-- `api/app/routers/email_prefs.py`
+- `api/app/crawled_admin.py`
+- `frontend/components/collected-admin.js`
+- `api/tests/test_admin.py`
+- `.cursor/context/business-rules.md`
