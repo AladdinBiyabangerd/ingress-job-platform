@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from urllib.parse import urlparse
 
 from app.cabinet_store import (
     PUBLISHED,
@@ -20,6 +21,19 @@ def _ensure_table(conn: sqlite3.Connection) -> None:
     ensure_rejects_table(conn)
 
 
+def _host_label(url: str) -> str:
+    raw = str(url or "").strip()
+    if not raw:
+        return ""
+    try:
+        host = (urlparse(raw).hostname or "").strip().lower()
+    except Exception:
+        return ""
+    if host.startswith("www."):
+        host = host[4:]
+    return host
+
+
 def _public(row: sqlite3.Row) -> dict:
     keys = set(row.keys())
     job_id = None
@@ -28,8 +42,11 @@ def _public(row: sqlite3.Row) -> dict:
             job_id = int(row["job_id"])
         except (TypeError, ValueError):
             job_id = None
+    source_url = row["source_url"] or ""
+    source_name = (row["source_name"] or "") if "source_name" in keys else ""
+    source_name = str(source_name).strip() or _host_label(source_url)
     return {
-        "source_url": row["source_url"] or "",
+        "source_url": source_url,
         "reason": row["reason"] or "",
         "decided_at": row["decided_at"] or "",
         "via_ai": bool(int(row["via_ai"] or 0)),
@@ -41,7 +58,7 @@ def _public(row: sqlite3.Row) -> dict:
         "rule_confidence": _score_or_none(row, "rule_confidence") if "rule_confidence" in keys else None,
         "ai_confidence": _score_or_none(row, "ai_confidence") if "ai_confidence" in keys else None,
         "market_fit_reason": (row["market_fit_reason"] or "") if "market_fit_reason" in keys else "",
-        "source_name": (row["source_name"] or "") if "source_name" in keys else "",
+        "source_name": source_name,
     }
 
 

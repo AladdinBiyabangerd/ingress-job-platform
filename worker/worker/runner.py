@@ -64,9 +64,9 @@ from worker.connectors.weworkremotely import WeWorkRemotelyConnector
 from worker.cv_queue import drain_parse_cv_queue
 from worker.db import Store
 from worker.market_fit import (
-    clarify_market_fit,
+    auto_score_limit,
     is_rejected,
-    mark_rejected,
+    score_pending_without_ai,
 )
 from worker.acceptance import finish_item  # noqa: F401  (re-exported)
 from worker.market_purge import purge_off_market
@@ -393,6 +393,19 @@ def _run_pass(store: Store) -> int:
     saved, queued = tidy_pending(store.conn)
     if saved or queued:
         print(f"tidy: saved={saved} queued={queued}", flush=True)
+    try:
+        ai_stats = score_pending_without_ai(store.conn, limit=auto_score_limit())
+        if ai_stats.get("planned"):
+            print(
+                "market_fit_auto: "
+                f"planned={ai_stats.get('planned', 0)} "
+                f"checked={ai_stats.get('checked', 0)} "
+                f"rejected={ai_stats.get('rejected', 0)} "
+                f"failed={ai_stats.get('failed', 0)}",
+                flush=True,
+            )
+    except Exception:
+        capture_exception()
     try:
         _drain_cvs(store, label="parse_cv.end")
     except Exception:

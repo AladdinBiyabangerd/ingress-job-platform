@@ -6,12 +6,14 @@ from unittest.mock import patch
 from worker.ai_gateway.gateway import GatewayResult
 from worker.db import Store
 from worker.market_fit import (
+    auto_score_limit,
     clarify_market_fit,
     fit_score,
     has_clear_market_signal,
     is_rejected,
     mark_rejected,
     rule_fit_confidence,
+    score_pending_without_ai,
 )
 from worker.runner import finish_item
 
@@ -254,6 +256,99 @@ class MarketFitTest(unittest.TestCase):
                 )
         self.assertFalse(out["suitable"])
         self.assertEqual(out["confidence"], 0)
+
+    def _pending_rule_only(self, *, url: str, title: str = "Remote Backend"):
+        self.store.upsert(
+            {
+                "title": title,
+                "company": "Acme",
+                "city": "Worldwide",
+                "text": "Fully remote. Work from anywhere.",
+                "source_url": url,
+                "source_name": "test",
+                "remote": True,
+                "rule_confidence": 90,
+                "ai_confidence": None,
+                "market_fit_reason": "open place",
+            }
+        )
+        return int(self.store.conn.execute("SELECT id FROM jobs WHERE id = (SELECT MAX(id) FROM jobs)").fetchone()["id"])
+
+    def test_score_pending_without_ai_fills_and_rejects(self):
+        ok_id = self._pending_rule_only(url="https://example.com/ok")
+        bad_id = self._pending_rule_only(url="https://example.com/bad", title="Remote US only")
+        # Already scored — must be skipped.
+        self.store.upsert(
+            {
+                "title": "Remote Backend",
+                "company": "Acme",
+                "city": "Worldwide",
+                "text": "Fully remote.",
+                "source_url": "https://example.com/scored",
+                "source_name": "test",
+                "remote": True,
+                "rule_confidence": 90,
+                "ai_confidence": 88,
+                "market_fit_reason": "prior ai",
+            }
+        )
+
+        def fake_clarify(*, title, company, place, text, conn):
+            if "US only" in title:
+                return {
+                    "suitable": False,
+                    "remote": True,
+                    "relocation": False,
+                    "visa_support": False,
+                    "reason": "US locked",
+                    "confidence": 10,
+                }
+            return {
+                "suitable": True,
+                "remote": True,
+                "relocation": False,
+                "visa_support": False,
+                "reason": "worldwide remote",
+                "confidence": 91,
+            }
+
+        with patch("worker.market_fit.feature_on", return_value=True):
+            with patch("worker.market_fit.clarify_market_fit", side_effect=fake_clarify):
+                stats = score_pending_without_ai(self.store.conn, limit=10)
+
+        self.assertEqual(stats["planned"], 2)
+        self.assertEqual(stats["checked"], 2)
+        self.assertEqual(stats["rejected"], 1)
+        ok = self.store.conn.execute(
+            "SELECT status, ai_confidence, rule_confidence FROM jobs WHERE id = ?",
+            (ok_id,),
+        ).fetchone()
+        bad = self.store.conn.execute(
+            "SELECT status, ai_confidence, rule_confidence FROM jobs WHERE id = ?",
+            (bad_id,),
+        ).fetchone()
+        self.assertEqual(ok["status"], "pending")
+        self.assertEqual(ok["ai_confidence"], 91)
+        self.assertEqual(ok["rule_confidence"], 90)
+        self.assertEqual(bad["status"], "rejected")
+        self.assertEqual(bad["ai_confidence"], 10)
+        self.assertIsNone(bad["rule_confidence"])
+
+    def test_score_pending_without_ai_noop_when_off(self):
+        self._pending_rule_only(url="https://example.com/off")
+        with patch("worker.market_fit.feature_on", return_value=False):
+            stats = score_pending_without_ai(self.store.conn, limit=10)
+        self.assertEqual(stats["planned"], 0)
+        row = self.store.conn.execute(
+            "SELECT ai_confidence FROM jobs WHERE status = 'pending'"
+        ).fetchone()
+        self.assertIsNone(row["ai_confidence"])
+
+    def test_auto_score_limit_env(self):
+        with patch.dict("os.environ", {"AI_MARKET_FIT_AUTO_SCORE_LIMIT": "7"}):
+            self.assertEqual(auto_score_limit(), 7)
+        with patch.dict("os.environ", {"AI_MARKET_FIT_AUTO_SCORE_LIMIT": "999"}):
+            self.assertEqual(auto_score_limit(), 200)
 
 
 if __name__ == "__main__":

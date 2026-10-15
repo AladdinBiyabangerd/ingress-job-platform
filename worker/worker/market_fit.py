@@ -8,6 +8,7 @@ stored in ``crawl_rejects`` so the next crawl skips them without another call.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import sqlite3
 from datetime import datetime, timezone
@@ -300,6 +301,127 @@ def rule_fit_confidence(
 
 # Last clarify miss reason (for recheck job / ops; not a public API).
 last_miss_error: str = ""
+
+# After each crawl pass: AI-score pending scraped ads that still lack ai_confidence
+# (rule-passed rows show AI% empty until staff used to click recheck). Leftover
+# rows wait for the next hourly pass. Override with AI_MARKET_FIT_AUTO_SCORE_LIMIT.
+AUTO_SCORE_PER_RUN = 40
+
+
+def auto_score_limit() -> int:
+    raw = (os.environ.get("AI_MARKET_FIT_AUTO_SCORE_LIMIT") or "").strip()
+    if not raw:
+        return AUTO_SCORE_PER_RUN
+    try:
+        return max(0, min(200, int(raw)))
+    except ValueError:
+        return AUTO_SCORE_PER_RUN
+
+
+def score_pending_without_ai(
+    conn: sqlite3.Connection,
+    *,
+    limit: int | None = None,
+) -> dict[str, int]:
+    """Fill AI % on pending scraped ads missing ``ai_confidence``.
+
+    Same outcomes as staff queue recheck: suitable → write ``ai_confidence``;
+    unsuitable → ``status=rejected``. Company/manual ads (owner_subject) skipped.
+    Oldest id first. Soft-no-op when market_fit / gateway is off.
+    """
+    cap = AUTO_SCORE_PER_RUN if limit is None else max(0, int(limit))
+    stats = {"planned": 0, "checked": 0, "rejected": 0, "failed": 0, "skipped": 0}
+    if cap <= 0:
+        return stats
+    if not feature_on("market_fit", conn) or not feature_on("gateway", conn):
+        return stats
+
+    rows = conn.execute(
+        """
+        SELECT id, title, company, city, text
+        FROM jobs
+        WHERE status = 'pending'
+          AND COALESCE(owner_subject, '') = ''
+          AND ai_confidence IS NULL
+          AND COALESCE(merged_into, 0) = 0
+        ORDER BY id ASC
+        LIMIT ?
+        """,
+        (cap,),
+    ).fetchall()
+    stats["planned"] = len(rows)
+    if not rows:
+        return stats
+
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    for row in rows:
+        job_id = int(row["id"])
+        live = conn.execute(
+            """
+            SELECT status, ai_confidence, COALESCE(owner_subject, '') AS owner_subject
+            FROM jobs WHERE id = ?
+            """,
+            (job_id,),
+        ).fetchone()
+        if (
+            live is None
+            or (live["status"] or "") != "pending"
+            or live["ai_confidence"] is not None
+            or (live["owner_subject"] or "") != ""
+        ):
+            stats["skipped"] += 1
+            continue
+
+        verdict = clarify_market_fit(
+            title=row["title"] or "",
+            company=row["company"] or "",
+            place=row["city"] or "",
+            text=row["text"] or "",
+            conn=conn,
+        )
+        if verdict is None:
+            stats["failed"] += 1
+            # Feature flipped off mid-batch — stop burning attempts.
+            if last_miss_error in {"market_fit_off", "ai_disabled"}:
+                break
+            continue
+
+        reason = str(verdict.get("reason") or "")[:300]
+        confidence = int(verdict.get("confidence") or 0)
+        if not verdict.get("suitable"):
+            conn.execute(
+                """
+                UPDATE jobs
+                SET status = 'rejected',
+                    reject_reason = ?,
+                    rule_confidence = NULL,
+                    ai_confidence = ?,
+                    market_fit_reason = ?,
+                    updated_at = ?
+                WHERE id = ? AND status = 'pending' AND ai_confidence IS NULL
+                """,
+                (reason or "unsuitable", confidence, reason, now, job_id),
+            )
+            stats["checked"] += 1
+            stats["rejected"] += 1
+        else:
+            remote = 1 if verdict.get("remote") else 0
+            relocation = 1 if verdict.get("relocation") else 0
+            conn.execute(
+                """
+                UPDATE jobs
+                SET remote = ?,
+                    relocation = ?,
+                    ai_confidence = ?,
+                    market_fit_reason = ?,
+                    updated_at = ?
+                WHERE id = ? AND status = 'pending' AND ai_confidence IS NULL
+                """,
+                (remote, relocation, confidence, reason, now, job_id),
+            )
+            stats["checked"] += 1
+        conn.commit()
+    return stats
 
 
 def clarify_market_fit(

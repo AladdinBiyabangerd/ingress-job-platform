@@ -53,7 +53,8 @@ export function matchesAdminListFilter(item, filter) {
   const q = String(filter.source || "").trim().toLowerCase();
   if (q) {
     const name = String(item.source_name || "").toLowerCase();
-    if (!name.includes(q)) return false;
+    const url = String(item.source_url || "").toLowerCase();
+    if (!name.includes(q) && !url.includes(q)) return false;
   }
 
   return true;

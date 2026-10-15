@@ -1,26 +1,26 @@
 # Current task
 
 ## Completed
-- Job tidy prompt → `job-tidy-v3`: shorter bullets, drop CTA fluff, plain text only (no emoji/markdown/HTML)
-- Output sanitizer strips emoji + light markdown decor from tidy JSON
-- Job detail description UI polish: section hierarchy, why tint, left accent on key lists, custom bullets
-- Test: `test_strips_emoji_and_markdown`
+- Auto AI score after crawl (earlier this session)
+- Collected **Gizlət** → Rejected tab (2026-10-15):
+  - `POST /api/v1/admin/crawled/{id}/hide` now sets `status=rejected`, `hidden=0`, reason `Staff gizlətdi (toplananlar)`
+  - Leaves Collected list; appears on Rejected / Ləğv edilmişlər
+  - **Göstər** unchanged for soft-hidden / merge rows still on Collected
+  - Test + AZ/EN/RU copy notes updated
 
 ## Current state
-- Ready for local QA on a tidied job detail page
-- Prior admin tidy-queue work still pending commit/QA if not committed yet
+Uncommitted: auto-score worker + crawled hide→reject + prior crawl_rejects admin fixes.
 
 ## Decisions
-- Visual polish stays in frontend CSS; AI must not add emoji/icons/colors
-- Cache key changes via `PROMPT_VERSION=job-tidy-v3`
+- Hide is reject, not soft-hide (staff asked explicitly)
+- Merge still uses `hidden=1` + `merged_into`
 
-## Remaining
-1. Local QA: open a published messy ad after tidy / re-tidy and check detail layout
-2. Commit when asked
-3. (Other) Academy `job-ops-status` usage table parity — new chat
+## Remaining work
+- Deploy API (+ frontend for copy) on Railway
+- Deploy worker for auto-score if not done
 
 ## Relevant files
-- `worker/worker/tidy.py`, `worker/tests/test_tidy_format.py`
-- `frontend/components/job-detail/job-detail-description.js`
-- `frontend/app/globals.css` (`.jd-desc-*`)
-- `.cursor/context/architecture.md`
+- `api/app/crawled_admin.py`
+- `api/tests/test_admin.py`
+- `frontend/lib/copy.js`
+- `.cursor/context/business-rules.md`

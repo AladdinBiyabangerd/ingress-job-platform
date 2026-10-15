@@ -9,6 +9,10 @@ from app.cabinet_store import CabinetError, _LOCK, _connect, _now
 # List rows omit body text; edit loads the full row via get_crawled.
 # Staff list may include source_url; detail/edit/merge responses omit it.
 
+# Collected "Gizlət" → Rejected tab (not soft-hide). Show stays for
+# legacy hidden=1 / merge duplicates that are still on Collected.
+STAFF_HIDE_REASON = "Staff gizlətdi (toplananlar)"
+
 _SOURCE_JOIN = """
 LEFT JOIN (
     SELECT job_id, source_name, source_url
@@ -181,21 +185,70 @@ def update_crawled(job_id: int, fields: dict) -> dict:
     return _public(saved)
 
 
+def _crawled_row(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
+    """Any scraped job by id (including rejected) — for hide→reject response."""
+    return conn.execute(
+        f"""
+        SELECT
+            j.id, j.title, j.company, j.city,
+            COALESCE(j.remote, 0) AS remote, j.text,
+            COALESCE(j.language, '') AS language,
+            COALESCE(j.salary, '') AS salary,
+            COALESCE(j.job_type, '') AS job_type,
+            j.status, j.created_at,
+            COALESCE(j.updated_at, '') AS updated_at,
+            COALESCE(j.hidden, 0) AS hidden,
+            j.merged_into,
+            j.rule_confidence, j.ai_confidence,
+            COALESCE(j.market_fit_reason, '') AS market_fit_reason,
+            COALESCE(js.source_name, '') AS source_name
+        FROM jobs j
+        {_SOURCE_JOIN}
+        WHERE j.id = ? AND COALESCE(j.owner_subject, '') = ''
+        """,
+        (job_id,),
+    ).fetchone()
+
+
 def set_crawled_hidden(job_id: int, hidden: bool) -> dict:
     with _LOCK:
         conn = _connect()
         try:
-            row = _one(conn, job_id)
-            if row is None:
-                raise CabinetError(404, "Elan tapılmadı")
-            if row["merged_into"] and not hidden:
-                raise CabinetError(409, "Birləşdirilmiş dublikat açıla bilməz")
-            conn.execute(
-                "UPDATE jobs SET hidden = ?, updated_at = ? WHERE id = ?",
-                (1 if hidden else 0, _now(), job_id),
-            )
-            conn.commit()
-            saved = _one(conn, job_id)
+            if hidden:
+                row = _crawled_row(conn, job_id)
+                if row is None:
+                    raise CabinetError(404, "Elan tapılmadı")
+                if (row["status"] or "") == "rejected":
+                    raise CabinetError(409, "Elan artıq rədd edilib")
+                if row["merged_into"]:
+                    raise CabinetError(409, "Birləşdirilmiş dublikat rədd edilə bilməz")
+                # Soft-hide used to leave the row on Collected; staff want it on
+                # the Rejected tab instead (same as queue reject).
+                conn.execute(
+                    """
+                    UPDATE jobs
+                    SET status = 'rejected',
+                        hidden = 0,
+                        reject_reason = ?,
+                        updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (STAFF_HIDE_REASON, _now(), job_id),
+                )
+                conn.commit()
+                saved = _crawled_row(conn, job_id)
+            else:
+                row = _one(conn, job_id)
+                if row is None:
+                    raise CabinetError(404, "Elan tapılmadı")
+                if row["merged_into"]:
+                    raise CabinetError(409, "Birləşdirilmiş dublikat açıla bilməz")
+                conn.execute(
+                    "UPDATE jobs SET hidden = 0, updated_at = ? WHERE id = ?",
+                    (_now(), job_id),
+                )
+                conn.commit()
+                saved = _one(conn, job_id)
         finally:
             conn.close()
     return _public(saved)

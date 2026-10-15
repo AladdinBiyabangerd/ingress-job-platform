@@ -82,17 +82,42 @@ function dateCell(value, locale, fallback) {
   return <time dateTime={String(value).slice(0, 10)}>{label}</time>;
 }
 
+function clipLabel(text, max = 72) {
+  const s = String(text || "").trim();
+  if (!s) return "";
+  if (s.length <= max) return s;
+  return `${s.slice(0, Math.max(1, max - 1))}…`;
+}
+
+function hostFromUrl(url) {
+  try {
+    const host = new URL(url).hostname || "";
+    return host.startsWith("www.") ? host.slice(4) : host;
+  } catch {
+    return "";
+  }
+}
+
 function titleCell(item) {
   const title = String(item.title || "").trim();
-  if (title) return title;
+  if (title) return clipLabel(title, 80);
   const url = String(item.source_url || "").trim();
   if (!url) return "—";
   try {
     const u = new URL(url);
-    return u.pathname.length > 1 ? `${u.hostname}${u.pathname}` : u.hostname;
+    const host = u.hostname.startsWith("www.") ? u.hostname.slice(4) : u.hostname;
+    const path = u.pathname.length > 1 ? u.pathname : "";
+    return clipLabel(`${host}${path}`, 64);
   } catch {
-    return url.length > 60 ? `${url.slice(0, 57)}…` : url;
+    return clipLabel(url, 64);
   }
+}
+
+function sourceLabel(item, fallback) {
+  const name = String(item.source_name || "").trim();
+  if (name) return name;
+  const host = hostFromUrl(item.source_url || "");
+  return host || fallback;
 }
 
 export function AdminCrawlRejects({ locale }) {
@@ -347,7 +372,8 @@ export function AdminCrawlRejects({ locale }) {
             {adminListFilterActive(listFilter) && viewItems.length === 0 ? (
               <p className="empty-line">{t.adminListFilterEmpty}</p>
             ) : null}
-            <div className="admin-mod-threshold">
+            <div className="admin-mod-threshold" title={t.crawlRejectsThresholdHintTitle}>
+              <span className="admin-mod-filter-label">{t.crawlRejectsThresholdHint}</span>
               <label className="admin-mod-threshold-field">
                 <span className="visually-hidden">{t.adminScoreAi}</span>
                 <select
@@ -463,9 +489,10 @@ export function AdminCrawlRejects({ locale }) {
               <tbody>
                 {pageItems.map((item) => {
                   const url = item.source_url;
-                  const name = String(item.source_name || "").trim();
+                  const linked = Boolean(item.job_id);
+                  const name = sourceLabel(item, t.adminColSource);
                   return (
-                    <tr key={url} className={!item.job_id ? "is-muted" : undefined}>
+                    <tr key={url} className={!linked ? "is-muted" : undefined}>
                       <td className="admin-mod-check">
                         <label className="inline admin-select">
                           <input
@@ -479,20 +506,32 @@ export function AdminCrawlRejects({ locale }) {
                         {dateCell(item.decided_at, locale, t.adminDateUnknown)}
                       </td>
                       <td className="admin-mod-title">
-                        <span className="admin-mod-name" title={url}>
-                          {titleCell(item)}
-                        </span>
-                        {item.via_ai ? (
-                          <span className="source-pill" title="AI">
-                            AI
+                        <div className="admin-mod-title-row">
+                          <span className="admin-mod-name" title={url || titleCell(item)}>
+                            {titleCell(item)}
                           </span>
-                        ) : null}
+                          {item.via_ai ? (
+                            <span className="source-pill" title="AI">
+                              AI
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="admin-mod-pct-col">
-                        {confidenceCell(item.rule_confidence, "")}
+                        {linked ? confidenceCell(item.rule_confidence, "") : (
+                          <span className="admin-mod-pct-empty" title={t.crawlRejectsUrlOnly}>
+                            —
+                          </span>
+                        )}
                       </td>
                       <td className="admin-mod-pct-col">
-                        {confidenceCell(item.ai_confidence, item.market_fit_reason)}
+                        {linked ? (
+                          confidenceCell(item.ai_confidence, item.market_fit_reason)
+                        ) : (
+                          <span className="admin-mod-pct-empty" title={t.crawlRejectsUrlOnly}>
+                            —
+                          </span>
+                        )}
                       </td>
                       <td className="admin-mod-source">
                         {url ? (
@@ -503,13 +542,15 @@ export function AdminCrawlRejects({ locale }) {
                             rel="noopener noreferrer"
                             title={url}
                           >
-                            {name || t.adminColSource}
+                            {name}
                           </a>
                         ) : (
                           <span className="admin-mod-source-empty">{t.adminDateUnknown}</span>
                         )}
                       </td>
-                      <td title={item.reason || ""}>{item.reason || t.adminDateUnknown}</td>
+                      <td className="admin-mod-reason" title={item.reason || ""}>
+                        {item.reason || t.adminDateUnknown}
+                      </td>
                     </tr>
                   );
                 })}

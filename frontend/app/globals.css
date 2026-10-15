@@ -10911,17 +10911,20 @@ a.saved-preview-company:hover {
 
 .admin-mod-title {
   min-width: 0;
+  overflow: hidden;
 }
 
 .admin-mod-title-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 6px 8px;
   min-width: 0;
+  max-width: 100%;
 }
 
 .admin-mod-name {
+  display: block;
   margin: 0;
   min-width: 0;
   max-width: 100%;
@@ -10932,6 +10935,10 @@ a.saved-preview-company:hover {
   font-weight: var(--fw-semibold);
   color: var(--ink);
   letter-spacing: -0.01em;
+}
+
+.admin-mod-title-row .admin-mod-name {
+  flex: 1 1 auto;
 }
 
 a.admin-mod-name {
@@ -10976,11 +10983,19 @@ button.admin-mod-name.linkish {
 }
 
 .admin-mod-source {
-  width: 15rem;
+  width: 9rem;
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.admin-mod-reason {
+  width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
 }
 
 .admin-mod-source-link {
@@ -11435,19 +11450,16 @@ button.admin-mod-name.linkish {
 
 @media (max-width: 860px) {
   .admin-mod-table {
-    table-layout: auto;
+    table-layout: fixed;
+    min-width: 640px;
   }
 
-  .admin-mod-date,
-  .admin-mod-source,
-  .admin-mod-candidate,
-  .admin-mod-actions,
-  .admin-mod-actions-wide {
-    width: auto;
+  .admin-mod-source {
+    width: 7rem;
   }
 
-  .admin-mod-name {
-    white-space: normal;
+  .admin-mod-reason {
+    width: 8rem;
   }
 }
 

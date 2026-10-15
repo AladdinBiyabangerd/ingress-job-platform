@@ -46,6 +46,7 @@
 - Company blurb “organizations worldwide” does **not** open a US/CA-locked remote.
 - ATS boards (`require_remote_or_relocation`): only remote or relocation.
 - **Keep** true work-from-anywhere / remote-worldwide / EMEA / CIS / Azerbaijan-open remote.
+- Body “no travel required” / “without travel expectations” must **not** trip the onsite/travel lock (`_ONSITE_HEAVY`).
 - DB sweep: `python -m worker purge-market` (also runs at start of each crawl pass).
 - **Keep** relocation (including to Canada/US/EU) — moving abroad is intentional.
 - Implemented in `worker/worker/techstack.py` (`az_market_relevant`) and applied in `finish_item` (`worker/worker/runner.py`).
@@ -63,9 +64,10 @@
 - New scraped/crawled jobs are inserted as **`pending`**, not auto-published.
 - They appear in staff **moderation queue** (with company pending ads) until approve/reject.
 - Staff may approve one-by-one or bulk-select (`POST /api/v1/admin/jobs/approve-bulk`).
-- Queue shows rule % and AI %; staff may threshold-publish **all** matching pending ads (`POST /api/v1/admin/jobs/approve-threshold`, no batch cap). Rejected tab has the same publish-by-% controls with `status=rejected` (pending default). AI recheck is async: `POST /api/v1/admin/jobs/recheck-market-fit` starts a background job; UI polls `GET .../recheck-market-fit/{job_id}` (~1.5s) for planned/done/left. Collected tab lists scraped ads except `status=rejected` (those live only on Rejected); recheck `scope=crawled` still turns published unfit → `rejected`. Approve always means `published` (pending or rejected → published). Checkbox bulk approve stays capped at 200.
+- Queue shows rule % and AI %; staff may threshold-publish **all** matching pending ads (`POST /api/v1/admin/jobs/approve-threshold`, no batch cap). Rejected tab has the same publish-by-% controls with `status=rejected` (pending default). AI recheck is async: `POST /api/v1/admin/jobs/recheck-market-fit` starts a background job; UI polls `GET .../recheck-market-fit/{job_id}` (~1.5s) for planned/done/left. Collected tab lists scraped ads except `status=rejected` (those live only on Rejected); recheck `scope=crawled` still turns published unfit → `rejected`. Collected **Gizlət** (`POST .../crawled/{id}/hide`) → `status=rejected` + `hidden=0` + reason `Staff gizlətdi (toplananlar)` (not soft-hide). **Göstər** remains for legacy `hidden=1` / merge duplicates still on Collected. Approve always means `published` (pending or rejected → published). Checkbox bulk approve stays capped at 200.
 - Legacy pending without scores: `POST /api/v1/admin/jobs/backfill-confidence` (UI: Köhnə faizləri doldur) — rule pass for clear signals, then up to 40 AI/call (**oldest id first**); click again until `still_unscored=0`.
 - “AI ilə yenidən yoxla” targets only ads with **empty AI %** (`ai_confidence` null), **oldest → newest**. Publish-by-% still uses the threshold filters and requires an existing score.
+- After each worker crawl pass, pending scraped ads still missing AI % are auto-scored (`score_pending_without_ai`, default **40**/pass, `AI_MARKET_FIT_AUTO_SCORE_LIMIT`); same reject/fill outcomes as staff recheck so moderators need not start the batch manually.
 - Legacy rows from the short-lived path that only set `hidden=1` on published unfit ads are one-shot swept to `status=rejected` + `hidden=0` (`sweep-published-ai-hidden-to-rejected-2026-10-14` on API/worker schema setup).
 - Re-scrape of an existing row does **not** force `published` (pending stays pending; already live stays live).
 - Already-published scraped ads are left alone (no mass unpublish).

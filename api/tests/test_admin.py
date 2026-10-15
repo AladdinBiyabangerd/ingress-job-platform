@@ -271,23 +271,6 @@ class AdminTests(unittest.TestCase):
             self.assertEqual(edited.status_code, 200, edited.text)
             self.assertEqual(edited.json()["title"], "Toplanan duzelis")
             self.assertNotIn("source_url", edited.text)
-            hidden = self.client.post(
-                f"/api/v1/admin/crawled/{ids[0]}/hide",
-                headers={"Authorization": "Bearer test"},
-            )
-            self.assertEqual(hidden.status_code, 200, hidden.text)
-            self.assertTrue(hidden.json()["hidden"])
-            merged = self.client.post(
-                "/api/v1/admin/crawled/merge",
-                headers={"Authorization": "Bearer test"},
-                json={"keep_id": ids[0], "hide_id": ids[1]},
-            )
-            self.assertEqual(merged.status_code, 409)
-            shown = self.client.post(
-                f"/api/v1/admin/crawled/{ids[0]}/show",
-                headers={"Authorization": "Bearer test"},
-            )
-            self.assertEqual(shown.status_code, 200, shown.text)
             merged = self.client.post(
                 "/api/v1/admin/crawled/merge",
                 headers={"Authorization": "Bearer test"},
@@ -299,9 +282,34 @@ class AdminTests(unittest.TestCase):
             self.assertEqual(merged.json()["hidden"]["merged_into"], ids[0])
             self.assertNotIn("secret.example", merged.text)
 
+            # Collected "Gizlət" rejects → Rejected tab (leaves Collected).
+            rejected = self.client.post(
+                f"/api/v1/admin/crawled/{ids[0]}/hide",
+                headers={"Authorization": "Bearer test"},
+            )
+            self.assertEqual(rejected.status_code, 200, rejected.text)
+            self.assertEqual(rejected.json()["status"], "rejected")
+            self.assertFalse(rejected.json()["hidden"])
+            after_hide = self.client.get(
+                "/api/v1/admin/crawled",
+                headers={"Authorization": "Bearer test"},
+            )
+            self.assertNotIn(ids[0], {item["id"] for item in after_hide.json()["items"]})
+            moderation = self.client.get(
+                "/api/v1/admin/jobs",
+                headers={"Authorization": "Bearer test"},
+            )
+            rejected_items = {
+                item["id"]: item
+                for item in moderation.json()["items"]
+                if item.get("status") == "rejected"
+            }
+            self.assertIn(ids[0], rejected_items)
+            self.assertIn("gizlətdi", (rejected_items[ids[0]].get("reject_reason") or "").lower())
+
         public = self.client.get("/api/v1/jobs")
         public_ids = {item["id"] for item in public.json()["items"]}
-        self.assertIn(ids[0], public_ids)
+        self.assertNotIn(ids[0], public_ids)
         self.assertNotIn(ids[1], public_ids)
         self.assertNotIn("secret.example", public.text)
         self.assertEqual(self.client.get(f"/api/v1/jobs/{ids[1]}").status_code, 404)
@@ -313,9 +321,16 @@ class AdminTests(unittest.TestCase):
             "SELECT content_locked FROM jobs WHERE id = ?",
             (ids[0],),
         ).fetchone()[0]
+        status_hidden = conn.execute(
+            "SELECT status, COALESCE(hidden, 0), reject_reason FROM jobs WHERE id = ?",
+            (ids[0],),
+        ).fetchone()
         conn.close()
         self.assertEqual(tuple(remembered), (ids[0], ids[1]))
         self.assertEqual(locked, 1)
+        self.assertEqual(status_hidden[0], "rejected")
+        self.assertEqual(status_hidden[1], 0)
+        self.assertIn("gizlətdi", (status_hidden[2] or "").lower())
 
     def test_scraped_pending_appears_in_queue_and_bulk_approve_publishes(self):
         conn = sqlite3.connect(self.db)
@@ -960,7 +975,9 @@ class AdminTests(unittest.TestCase):
             by_url = {item["source_url"]: item for item in items}
             self.assertEqual(by_url["https://example.com/jobs/1"]["job_id"], job_id)
             self.assertEqual(by_url["https://example.com/jobs/1"]["ai_confidence"], 88)
+            self.assertEqual(by_url["https://example.com/jobs/1"]["source_name"], "Example")
             self.assertIsNone(by_url["https://example.com/jobs/orphan"]["job_id"])
+            self.assertEqual(by_url["https://example.com/jobs/orphan"]["source_name"], "example.com")
 
             published = self.client.post(
                 "/api/v1/admin/crawl-rejects/publish-threshold",
