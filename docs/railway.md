@@ -131,7 +131,7 @@ that file is applied; set them yourself only if you use another bucket):
 | `VAPID_SUBJECT` | `mailto:` contact for VAPID claims (e.g. `mailto:ops@example.com`). |
 | `ENGAGEMENT_LOOKBACK_HOURS` | Optional. Fresh-ad window for match_new/near (default 72). Older strong matches still notify via catalog fallback (in-app + push). |
 
-Postgres for AI #2 must support `CREATE EXTENSION vector` (pgvector). Local compose uses `pgvector/pgvector:pg16`. Stock Railway Postgres may need a pgvector-capable image/plugin; without it matches stay structured-only.
+Postgres for AI #2 must support `CREATE EXTENSION vector` (pgvector). Local compose uses `pgvector/pgvector:pg16`. Stock Railway Postgres may need a pgvector-capable image/plugin; without it matches stay structured-only. The worker creates the cosine HNSW index once per process after the table exists: `embeddings_hnsw` (`vector_cosine_ops`) for ≤2,000 dims, or `embeddings_hnsw_halfvec` (`(embedding::halfvec(N)) halfvec_cosine_ops`, needs pgvector with `halfvec`) for 2,001–4,000 dims such as NVIDIA 2048. A failed index is logged as a warning and never drops or alters the table.
 
 Set on the web service if the private-host wiring is not applied:
 

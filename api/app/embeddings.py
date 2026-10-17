@@ -274,7 +274,11 @@ def dims_match(conn, vector: list[float], *, entity: str = "") -> bool:
 
 
 def ensure_embedding_tables(conn) -> bool:
-    """Create pgvector extension + embeddings table. False on SQLite / failure."""
+    """Create pgvector extension + embeddings table. False on SQLite / failure.
+
+    The HNSW index is created by the worker (``worker.embeddings.ensure_vector_index``)
+    so an index build never blocks an API request.
+    """
     global _pgvector_ready
     if conn is None or not _is_postgres():
         _pgvector_ready = False
@@ -297,26 +301,7 @@ def ensure_embedding_tables(conn) -> bool:
             )
             """
         )
-        # Commit before optional HNSW index. PostgresConnection rolls back the
-        # whole txn on any execute() error — index failure must not undo DDL.
         conn.commit()
-        try:
-            conn.execute(
-                """
-                CREATE INDEX IF NOT EXISTS embeddings_hnsw
-                ON embeddings USING hnsw (embedding vector_cosine_ops)
-                """
-            )
-            conn.commit()
-        except Exception as idx_exc:
-            # Index is optional for MVP (top-N cosine is computed in Python).
-            log.info("embeddings HNSW index skipped: %s", idx_exc)
-            try:
-                conn.rollback()
-            except Exception:
-                pass
-        _pgvector_ready = True
-        return True
     except Exception as exc:
         log.warning("pgvector embeddings unavailable: %s", exc)
         try:
@@ -325,6 +310,8 @@ def ensure_embedding_tables(conn) -> bool:
             pass
         _pgvector_ready = False
         return False
+    _pgvector_ready = True
+    return True
 
 
 def pgvector_available(conn) -> bool:

@@ -280,6 +280,7 @@ def dims_match(conn, vector: list[float], *, entity: str = "") -> bool:
 
 
 def ensure_embedding_tables(conn) -> bool:
+    """Extension + table, committed on their own (index comes after, separately)."""
     global _pgvector_ready
     if conn is None or not _is_postgres():
         _pgvector_ready = False
@@ -302,18 +303,9 @@ def ensure_embedding_tables(conn) -> bool:
             )
             """
         )
-        try:
-            conn.execute(
-                """
-                CREATE INDEX IF NOT EXISTS embeddings_hnsw
-                ON embeddings USING hnsw (embedding vector_cosine_ops)
-                """
-            )
-        except Exception as idx_exc:
-            log.info("embeddings HNSW index skipped: %s", idx_exc)
+        # Commit before the optional index: the Postgres adapter rolls back the
+        # whole transaction on any error, so a failed index must not undo the table.
         conn.commit()
-        _pgvector_ready = True
-        return True
     except Exception as exc:
         log.warning("pgvector embeddings unavailable: %s", exc)
         try:
@@ -322,6 +314,73 @@ def ensure_embedding_tables(conn) -> bool:
             pass
         _pgvector_ready = False
         return False
+    _pgvector_ready = True
+    return True
+
+
+# pgvector HNSW indexes `vector` up to 2,000 dims and `halfvec` up to 4,000
+# (github.com/pgvector/pgvector#hnsw, #half-precision-indexing).
+HNSW_VECTOR_MAX_DIMS = 2000
+HNSW_HALFVEC_MAX_DIMS = 4000
+_index_checked = False
+
+
+def vector_index_sql(dims: int) -> tuple[str, str] | None:
+    """(index_name, CREATE INDEX sql) for the column size, or None if unsupported."""
+    if dims <= 0:
+        return None
+    if dims <= HNSW_VECTOR_MAX_DIMS:
+        return (
+            "embeddings_hnsw",
+            "CREATE INDEX IF NOT EXISTS embeddings_hnsw "
+            "ON embeddings USING hnsw (embedding vector_cosine_ops)",
+        )
+    if dims <= HNSW_HALFVEC_MAX_DIMS:
+        return (
+            "embeddings_hnsw_halfvec",
+            "CREATE INDEX IF NOT EXISTS embeddings_hnsw_halfvec "
+            f"ON embeddings USING hnsw ((embedding::halfvec({int(dims)})) halfvec_cosine_ops)",
+        )
+    return None
+
+
+def ensure_vector_index(conn) -> str | None:
+    """Create the cosine HNSW index once per process (idempotent, non-destructive).
+
+    Runs after the table is committed, so a failed index never undoes the table.
+    Failures are logged as warnings, never swallowed silently.
+    """
+    global _index_checked
+    if _index_checked:
+        return None
+    if conn is None or not _is_postgres():
+        return None
+    dims = column_dims(conn)
+    if not dims:
+        log.warning("embeddings HNSW index skipped: column size unknown")
+        return None
+    plan = vector_index_sql(dims)
+    if plan is None:
+        _index_checked = True
+        log.warning(
+            "embeddings HNSW index skipped: %s dims exceeds pgvector halfvec limit %s",
+            dims,
+            HNSW_HALFVEC_MAX_DIMS,
+        )
+        return None
+    name, sql = plan
+    try:
+        conn.execute(sql)
+        conn.commit()
+    except Exception as exc:
+        log.warning("embeddings HNSW index %s not created: %s", name, exc)
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return None
+    _index_checked = True
+    return name
 
 
 def _skill_names_for_job(conn, job_id: int) -> list[str]:
@@ -486,6 +545,7 @@ def embed_stale_jobs(conn, *, limit: int | None = None) -> dict[str, Any]:
     if not ensure_embedding_tables(conn):
         return stats
     stats["ready"] = True
+    ensure_vector_index(conn)
     limit = stale_embed_limit() if limit is None else max(1, min(int(limit), 500))
     model = embedding_model()
     # Candidates: published, not hidden, not merged. Prefer newest first.
