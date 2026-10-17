@@ -121,6 +121,8 @@ that file is applied; set them yourself only if you use another bucket):
 | `OPENROUTER_MODEL` | Optional. Default `openrouter/free` (routes across live `:free` models; single-model free tiers often 429). |
 | `AI_EMBEDDING_MODEL` | Optional. Overrides embed model id. `nvidia/...` pins NVIDIA, `text-embedding...` pins OpenAI. With an NVIDIA key it defaults to `nvidia/nemotron-3-embed-1b`. Vectors are stored and read under this exact model id. |
 | `AI_EMBEDDING_DIMS` | Optional. Vector size for pgvector column. NVIDIA embed = `2048`; OpenAI small = `1536`. Set explicitly when switching. If the `embeddings` table already exists with the old size, drop/recreate it once. |
+| `AI_GATEWAY_DAILY_CALL_LIMIT` | Optional. Daily cap for **chat/LLM** calls (CV parsing, match rerank/why, digests…), default `200`. Embedding calls are **not** counted here. |
+| `AI_EMBED_DAILY_CALL_LIMIT` | Optional. Separate daily cap for **embedding** calls (`embed_*` purposes), default `500` (≈8,000 texts at the worker chunk size of 16). A backfill can no longer starve CV parsing or matching. |
 | `EMBED_STALE_LIMIT` | Optional. Max jobs to embed per worker pass (default `250`, max `500`). ~13–16 NVIDIA API calls at chunk size 16 — well under typical hosted NIM RPM. |
 | `AI_RERANK_ENABLED` | Optional. Default follows gateway; `0` keeps structured-only matches. |
 | `AI_MATCH_WHY_ENABLED` | Optional. Default follows gateway; `0` skips LLM why sentences. |

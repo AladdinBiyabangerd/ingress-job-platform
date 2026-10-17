@@ -591,13 +591,18 @@ def build_ops_status(conn: sqlite3.Connection | None, *, days: int = 7) -> dict:
     from app.ai_gateway import gateway as gw
 
     days = max(1, min(90, int(days or 7)))
-    daily_calls, usage = _usage_today(conn)
+    _total_calls, usage = _usage_today(conn)
+    # Chat and embedding calls have separate daily pools (see ai_gateway._over_budget).
+    daily_calls = sum(u["calls"] for u in usage if not gw.is_embed_purpose(u["purpose"]))
+    embed_calls = sum(u["calls"] for u in usage if gw.is_embed_purpose(u["purpose"]))
     limit = gw.daily_call_limit()
+    embed_limit = gw.embed_daily_call_limit()
     budget_hit = bool(limit > 0 and daily_calls >= limit)
+    embed_budget_hit = bool(embed_limit > 0 and embed_calls >= embed_limit)
 
     features = [_feature_detail(name, conn, budget_hit=budget_hit) for name in FEATURES]
     chat = _apply_budget_to_providers(_provider_slots("chat"), budget_hit=budget_hit)
-    embed = _apply_budget_to_providers(_provider_slots("embed"), budget_hit=budget_hit)
+    embed = _apply_budget_to_providers(_provider_slots("embed"), budget_hit=embed_budget_hit)
 
     # Re-check feature stopped reasons after budget (gateway detail already covers it).
     if budget_hit:
@@ -611,6 +616,9 @@ def build_ops_status(conn: sqlite3.Connection | None, *, days: int = 7) -> dict:
             "daily_calls": daily_calls,
             "daily_limit": limit,
             "budget_ok": not budget_hit,
+            "embed_daily_calls": embed_calls,
+            "embed_daily_limit": embed_limit,
+            "embed_budget_ok": not embed_budget_hit,
             "features": features,
             "chat_providers": chat,
             "embed_providers": embed,

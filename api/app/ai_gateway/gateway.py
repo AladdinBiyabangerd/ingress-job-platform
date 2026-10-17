@@ -258,11 +258,34 @@ def embedding_model_name() -> str:
 
 
 def daily_call_limit() -> int:
+    """Daily cap for chat/LLM calls (CV parsing, rerank, why, digests...)."""
     raw = os.environ.get("AI_GATEWAY_DAILY_CALL_LIMIT", "200").strip()
     try:
         return max(0, int(raw))
     except ValueError:
         return 200
+
+
+EMBED_PURPOSE_PREFIX = "embed"
+DEFAULT_EMBED_DAILY_CALL_LIMIT = 500
+
+
+def is_embed_purpose(purpose: str) -> bool:
+    return str(purpose or "").startswith(EMBED_PURPOSE_PREFIX)
+
+
+def embed_daily_call_limit() -> int:
+    """Separate daily cap for embedding calls so backfills cannot starve chat flows.
+
+    500 calls ≈ 8,000 texts at the worker chunk size of 16.
+    """
+    raw = os.environ.get(
+        "AI_EMBED_DAILY_CALL_LIMIT", str(DEFAULT_EMBED_DAILY_CALL_LIMIT)
+    ).strip()
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return DEFAULT_EMBED_DAILY_CALL_LIMIT
 
 
 def ensure_ai_tables(conn: sqlite3.Connection | None) -> None:
@@ -434,18 +457,27 @@ def _cache_put(
 
 
 def _over_budget(conn: sqlite3.Connection | None, purpose: str) -> bool:
-    limit = daily_call_limit()
+    """Embedding and chat calls have separate daily pools (ai_usage_daily.purpose)."""
+    embed_kind = is_embed_purpose(purpose)
+    limit = embed_daily_call_limit() if embed_kind else daily_call_limit()
     if limit <= 0:
         return True
     if conn is None:
         return False
+    return daily_calls(conn, embed=embed_kind) >= limit
+
+
+def daily_calls(conn: sqlite3.Connection | None, *, embed: bool) -> int:
+    """Today's calls in the embedding pool (embed=True) or the chat pool."""
+    if conn is None:
+        return 0
     day = date.today().isoformat()
+    op = "LIKE" if embed else "NOT LIKE"
     row = conn.execute(
-        "SELECT COALESCE(SUM(calls), 0) FROM ai_usage_daily WHERE day = ?",
-        (day,),
+        f"SELECT COALESCE(SUM(calls), 0) FROM ai_usage_daily WHERE day = ? AND purpose {op} ?",
+        (day, EMBED_PURPOSE_PREFIX + "%"),
     ).fetchone()
-    total = int(row[0] if row is not None else 0)
-    return total >= limit
+    return int(row[0] if row is not None else 0)
 
 
 def _usage_add(
