@@ -184,6 +184,9 @@ export function AdminCrawlRejects({ locale }) {
       onProgress: (p) => {
         if (alive) setRecheckProgress(p);
       },
+      onStatus: (status) => {
+        if (alive && status === "cancelling") setRecheckStopping(true);
+      },
     })
       .then(async ({ ok, last, cancelled }) => {
         if (!alive || cancelled) return;
@@ -258,7 +261,8 @@ export function AdminCrawlRejects({ locale }) {
   async function stopRecheck() {
     if (!recheckJobId || recheckStopping) return;
     setRecheckStopping(true);
-    await adminCancelRecheckMarketFit(recheckJobId);
+    const res = await adminCancelRecheckMarketFit(recheckJobId);
+    if (!res.ok) setRecheckStopping(false);
   }
 
   async function recheckMissingAi() {
@@ -286,6 +290,9 @@ export function AdminCrawlRejects({ locale }) {
     const { ok, last } = await pollRecheckJob(jobId, {
       fallbackTotal: ids.length,
       onProgress: setRecheckProgress,
+      onStatus: (status) => {
+        if (status === "cancelling") setRecheckStopping(true);
+      },
     });
     forgetRecheckJob(SCOPE);
     setRecheckProgress(null);

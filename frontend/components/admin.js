@@ -293,6 +293,9 @@ export function Admin({
         onProgress: (progress) => {
           if (!cancelled) setRecheckProgress(progress);
         },
+        onStatus: (status) => {
+          if (!cancelled && status === "cancelling") setRecheckStopping(true);
+        },
         isActive: () => !cancelled,
       });
       if (cancelled || stopped) return;
@@ -514,7 +517,8 @@ export function Admin({
   async function stopRecheck() {
     if (!recheckJobId || recheckStopping) return;
     setRecheckStopping(true);
-    await adminCancelRecheckMarketFit(recheckJobId);
+    const res = await adminCancelRecheckMarketFit(recheckJobId);
+    if (!res.ok) setRecheckStopping(false);
   }
 
   async function recheckByThreshold() {
@@ -541,6 +545,9 @@ export function Admin({
     setRecheckProgress(progressFromRecheck(started.data, ids.length));
     const { ok, last } = await pollRecheckJob(jobId, {
       onProgress: setRecheckProgress,
+      onStatus: (status) => {
+        if (status === "cancelling") setRecheckStopping(true);
+      },
       fallbackTotal: ids.length,
     });
     forgetRecheckJob("queue");

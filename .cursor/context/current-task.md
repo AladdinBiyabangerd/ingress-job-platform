@@ -1,18 +1,24 @@
 # Current task
 
 ## Completed
-- Login always redirects to Academy `/portal/job-account/` (no skip to authorize on live Job session)
+- Fix AI market-fit recheck stuck on «Dayandırılır…» (orphaned cancelling jobs)
 
 ## Current state
-`buildLoginRedirectUrl` always uses `buildJobAccountLoginUrl`. Live sessions may still set `existing_account=1` on the authorize query inside `next=`.
+- Backend: stale jobs (`queued`/`running`/`cancelling` with no progress >90s) finalize on GET poll
+- Backend: cancel-while-queued no longer overwritten by `running`
+- Frontend: client stale timeout (~105s) + cancel failure resets stopping UI
 
 ## Decisions
-- Never auto-authorize from Job when a portal/Job session exists; always land on job-account
+- Stop waits for in-flight AI ad; dead worker is healed via stale finalize → `cancelled`/`failed`
 
 ## Remaining work
-- Deploy frontend; if Academy job-account itself auto-continues without confirm, that is Academy-side
+- Deploy API + frontend
+- Unstick live UI now: hard refresh, or clear `sessionStorage` key `ij:marketFitRecheck:crawled`
 
 ## Relevant files
-- `frontend/lib/oidc-authorize.js`
-- `frontend/app/api/auth/login/route.js`
-- `frontend/lib/oidc-authorize.test.mjs`
+- `api/app/market_fit_recheck_jobs.py`
+- `frontend/lib/recheck-market-fit.js`
+- `frontend/components/collected-admin.js`
+- `frontend/components/admin.js`
+- `frontend/components/admin-crawl-rejects.js`
+- `api/tests/test_admin.py`

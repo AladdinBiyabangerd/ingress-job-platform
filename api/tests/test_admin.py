@@ -720,6 +720,45 @@ class AdminTests(unittest.TestCase):
         self.assertGreaterEqual(int(status_body.get("done") or 0), 1)
         self.assertGreater(int(status_body.get("remaining") or 0), 0)
 
+    def test_recheck_market_fit_stale_cancelling_finalizes(self):
+        """GET poll closes orphaned cancelling jobs so UI cannot stick on stop."""
+        from datetime import datetime, timedelta, timezone
+
+        from app import market_fit_recheck_jobs as jobs
+        from app.cabinet_store import _LOCK, _connect
+
+        stale_at = (datetime.now(timezone.utc) - timedelta(seconds=120)).astimezone().isoformat(
+            timespec="seconds"
+        )
+        with _LOCK:
+            conn = _connect()
+            try:
+                jobs._ensure(conn)
+                conn.execute(
+                    """
+                    INSERT INTO market_fit_recheck_jobs (
+                        id, scope, status, total, done, checked, rejected, hidden,
+                        failed, skipped, error, job_ids, created_by, created_at, updated_at
+                    ) VALUES (?, 'crawled', 'cancelling', 18, 6, 6, 0, 0, 0, 0, '', '[]', '', ?, ?)
+                    """,
+                    ("stale-cancel-job", stale_at, stale_at),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+        with self._auth("job:staff", "admin-staff"):
+            with patch.object(jobs, "_STALE_SECONDS", 90):
+                polled = self.client.get(
+                    "/api/v1/admin/jobs/recheck-market-fit/stale-cancel-job",
+                    headers={"Authorization": "Bearer test"},
+                )
+        self.assertEqual(polled.status_code, 200, polled.text)
+        body = polled.json()
+        self.assertEqual(body["status"], "cancelled")
+        self.assertEqual(int(body["done"]), 6)
+        self.assertEqual(int(body["remaining"]), 12)
+
     def test_crawled_recheck_rejects_published_unsuitable(self):
         """Published scraped ads AI marks unfit become rejected (Rejected tab), not only hidden."""
         from app.cabinet_store import recheck_market_fit

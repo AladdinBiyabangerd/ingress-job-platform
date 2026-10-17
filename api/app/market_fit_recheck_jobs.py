@@ -10,6 +10,7 @@ import json
 import logging
 import threading
 import uuid
+from datetime import datetime
 from typing import Any
 
 from app.cabinet_store import CabinetError, _LOCK, _connect, _now, recheck_one
@@ -39,10 +40,23 @@ CREATE TABLE IF NOT EXISTS market_fit_recheck_jobs (
 _inflight = set()
 _inflight_lock = threading.Lock()
 _MAX_IDS = 2000
+# AI call timeout is 45s; no progress past this means the worker thread died
+# (API restart / replica) and the UI would stick on «Dayandırılır…».
+_STALE_SECONDS = 90
 
 
 def _ensure(conn) -> None:
     conn.execute(_SCHEMA)
+
+
+def _parse_ts(raw: str | None) -> datetime | None:
+    text = (raw or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        return None
 
 
 def _row_public(row) -> dict[str, Any]:
@@ -62,6 +76,47 @@ def _row_public(row) -> dict[str, Any]:
         "skipped": int(row["skipped"] or 0),
         "error": row["error"] or "",
     }
+
+
+def _finalize_stale_row(conn, row) -> Any:
+    """If an active job has no progress for too long, close it so polls end."""
+    status = row["status"] or ""
+    if status not in ("queued", "running", "cancelling"):
+        return row
+    updated = _parse_ts(row["updated_at"] if "updated_at" in row.keys() else "")
+    if updated is None:
+        return row
+    age = (datetime.now().astimezone() - updated).total_seconds()
+    if age < _STALE_SECONDS:
+        return row
+    final = "cancelled" if status == "cancelling" else "failed"
+    err = (row["error"] or "").strip() if "error" in row.keys() else ""
+    if not err:
+        err = "stale_worker"
+    now = _now()
+    conn.execute(
+        """
+        UPDATE market_fit_recheck_jobs
+        SET status = ?, error = ?, updated_at = ?
+        WHERE id = ? AND status IN ('queued', 'running', 'cancelling')
+        """,
+        (final, err[:300], now, row["id"]),
+    )
+    conn.commit()
+    log.warning(
+        "market_fit recheck stale job=%s was=%s age=%.0fs → %s",
+        str(row["id"])[:8],
+        status,
+        age,
+        final,
+    )
+    refreshed = conn.execute(
+        "SELECT * FROM market_fit_recheck_jobs WHERE id = ?",
+        (row["id"],),
+    ).fetchone()
+    with _inflight_lock:
+        _inflight.discard(row["id"])
+    return refreshed or row
 
 
 def _normalize_ids(job_ids: list[int]) -> list[int]:
@@ -138,6 +193,8 @@ def get_recheck_job(job_id: str) -> dict[str, Any]:
                 "SELECT * FROM market_fit_recheck_jobs WHERE id = ?",
                 (key,),
             ).fetchone()
+            if row is not None:
+                row = _finalize_stale_row(conn, row)
         finally:
             conn.close()
     if row is None:
@@ -239,16 +296,35 @@ def _run_job(job_id: str) -> None:
             conn = _connect()
             try:
                 row = conn.execute(
-                    "SELECT scope, job_ids FROM market_fit_recheck_jobs WHERE id = ?",
+                    "SELECT scope, job_ids, status FROM market_fit_recheck_jobs WHERE id = ?",
                     (job_id,),
                 ).fetchone()
                 if row is None:
+                    return
+                status = row["status"] or ""
+                # Cancel may land while still queued — do not wipe «cancelling».
+                if status in ("cancelling", "cancelled"):
+                    conn.execute(
+                        """
+                        UPDATE market_fit_recheck_jobs
+                        SET status = 'cancelled', updated_at = ?
+                        WHERE id = ?
+                        """,
+                        (_now(), job_id),
+                    )
+                    conn.commit()
+                    with _inflight_lock:
+                        _inflight.discard(job_id)
+                    return
+                if status != "queued":
+                    with _inflight_lock:
+                        _inflight.discard(job_id)
                     return
                 conn.execute(
                     """
                     UPDATE market_fit_recheck_jobs
                     SET status = 'running', updated_at = ?
-                    WHERE id = ?
+                    WHERE id = ? AND status = 'queued'
                     """,
                     (_now(), job_id),
                 )
