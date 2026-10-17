@@ -237,14 +237,17 @@ def model_name() -> str:
 
 
 def embedding_model_name() -> str:
+    """Model id of the single active embedding provider (writer == reader key).
+
+    Embeddings never fall back across providers: vectors from different models
+    live in different spaces and usually have different sizes (OpenAI
+    text-embedding-3-small = 1536, NVIDIA nemotron-3-embed-1b = 2048 only).
+    """
+    provider = _active_embed_provider()
+    if provider is not None:
+        return provider.model
     explicit = (os.environ.get("AI_EMBEDDING_MODEL") or "").strip()
-    if explicit:
-        return explicit
-    if os.environ.get("NVIDIA_API_KEY", "").strip():
-        return (
-            os.environ.get("NVIDIA_EMBED_MODEL") or DEFAULT_NVIDIA_EMBED_MODEL
-        ).strip() or DEFAULT_NVIDIA_EMBED_MODEL
-    return DEFAULT_EMBEDDING_MODEL
+    return explicit or DEFAULT_EMBEDDING_MODEL
 
 
 def daily_call_limit() -> int:
@@ -481,11 +484,20 @@ def embed(
     purpose: str = "embed",
     conn: sqlite3.Connection | None = None,
     timeout: float = 60.0,
+    input_type: str | None = None,
 ) -> EmbedResult:
-    """Budget → embedding providers (fallback) → cost log. Soft-fails."""
+    """Budget → the one active embedding provider → cost log. Soft-fails.
+
+    ``input_type`` is "query" (searcher side, e.g. candidate profile) or
+    "passage" (indexed documents, e.g. jobs). It is sent only to NVIDIA, whose
+    retrieval embedders require it; OpenAI embeddings take no such parameter.
+    """
     purpose = (purpose or "embed")[:80]
     model = embedding_model_name()
     result = EmbedResult(ok=False, model=model)
+    if input_type is not None and input_type not in EMBED_INPUT_TYPES:
+        result.error = "ai_bad_input_type"
+        return result
     cleaned = [str(t or "").strip() for t in texts]
     cleaned = [t for t in cleaned if t]
     if not cleaned:
@@ -505,7 +517,7 @@ def embed(
             return result
         started = time.monotonic()
         try:
-            raw = _call_embed(texts=cleaned, timeout=timeout)
+            raw = _call_embed(texts=cleaned, timeout=timeout, input_type=input_type)
         except Exception as exc:
             result.error = f"ai_provider_error:{type(exc).__name__}"
             log.warning("ai_gateway embed %s failed: %s", purpose, exc)
@@ -643,44 +655,57 @@ def _chat_providers() -> list[_ChatProvider]:
     return out
 
 
-def _embed_providers() -> list[_EmbedProvider]:
-    out: list[_EmbedProvider] = []
-    for name in _provider_order("AI_EMBED_PROVIDERS", "nvidia,openai"):
-        if name == "nvidia":
-            key = os.environ.get("NVIDIA_API_KEY", "").strip()
-            if not key:
-                continue
-            model = embedding_model_name()
-            if model.startswith("text-embedding"):
-                model = (
-                    os.environ.get("NVIDIA_EMBED_MODEL") or DEFAULT_NVIDIA_EMBED_MODEL
-                ).strip() or DEFAULT_NVIDIA_EMBED_MODEL
-            out.append(
-                _EmbedProvider(
-                    name="nvidia",
-                    key=key,
-                    base_url="https://integrate.api.nvidia.com/v1",
-                    model=model,
-                )
-            )
-        elif name == "openai":
-            key = os.environ.get("OPENAI_API_KEY", "").strip()
-            if not key:
-                continue
+# NVIDIA retrieval embedders run in "query" or "passage" mode and require
+# input_type (docs.api.nvidia.com/nim/reference/nvidia-nemotron-3-embed-1b-infer).
+EMBED_INPUT_TYPES = ("query", "passage")
+
+_EMBED_BASE_URLS = {
+    "nvidia": "https://integrate.api.nvidia.com/v1",
+    "openai": "https://api.openai.com/v1",
+}
+_EMBED_KEY_ENV = {"nvidia": "NVIDIA_API_KEY", "openai": "OPENAI_API_KEY"}
+
+
+def _active_embed_provider() -> _EmbedProvider | None:
+    """First configured provider in AI_EMBED_PROVIDERS order (default nvidia,openai).
+
+    AI_EMBEDDING_MODEL pins the provider when it names a known family
+    (``nvidia/...`` -> nvidia, ``text-embedding...`` -> openai).
+    """
+    explicit = (os.environ.get("AI_EMBEDDING_MODEL") or "").strip()
+    if explicit.startswith("nvidia/"):
+        order = ["nvidia"]
+    elif explicit.startswith("text-embedding"):
+        order = ["openai"]
+    else:
+        order = _provider_order("AI_EMBED_PROVIDERS", "nvidia,openai")
+    for name in order:
+        if name not in _EMBED_KEY_ENV:
+            continue
+        key = os.environ.get(_EMBED_KEY_ENV[name], "").strip()
+        if not key:
+            continue
+        if explicit:
+            model = explicit
+        elif name == "nvidia":
             model = (
-                os.environ.get("AI_EMBEDDING_MODEL") or DEFAULT_EMBEDDING_MODEL
-            ).strip() or DEFAULT_EMBEDDING_MODEL
-            if model.startswith("nvidia/"):
-                model = DEFAULT_EMBEDDING_MODEL
-            out.append(
-                _EmbedProvider(
-                    name="openai",
-                    key=key,
-                    base_url="https://api.openai.com/v1",
-                    model=model,
-                )
-            )
-    return out
+                os.environ.get("NVIDIA_EMBED_MODEL") or DEFAULT_NVIDIA_EMBED_MODEL
+            ).strip() or DEFAULT_NVIDIA_EMBED_MODEL
+        else:
+            model = DEFAULT_EMBEDDING_MODEL
+        return _EmbedProvider(
+            name=name,
+            key=key,
+            base_url=_EMBED_BASE_URLS[name],
+            model=model,
+        )
+    return None
+
+
+def _embed_providers() -> list[_EmbedProvider]:
+    """Exactly one embedding provider (or none). No cross-provider fallback."""
+    provider = _active_embed_provider()
+    return [provider] if provider is not None else []
 
 
 # ---------------------------------------------------------------------------
@@ -836,7 +861,9 @@ def _call_chat_json(
     raise RuntimeError("; ".join(errors[:4]) or "all_chat_providers_failed")
 
 
-def _call_embed(*, texts: list[str], timeout: float) -> dict[str, Any]:
+def _call_embed(
+    *, texts: list[str], timeout: float, input_type: str | None = None
+) -> dict[str, Any]:
     providers = _embed_providers()
     if not providers:
         raise RuntimeError("no_embed_provider")
@@ -851,6 +878,7 @@ def _call_embed(*, texts: list[str], timeout: float) -> dict[str, Any]:
                 model=provider.model,
                 texts=texts,
                 timeout=timeout,
+                input_type=input_type if provider.name == "nvidia" else None,
             )
             _cooldown_clear("embed", slot)
             raw["provider"] = provider.name
@@ -948,8 +976,11 @@ def _openai_compat_embed(
     model: str,
     texts: list[str],
     timeout: float,
+    input_type: str | None = None,
 ) -> dict[str, Any]:
-    body = {"model": model, "input": texts}
+    body: dict[str, Any] = {"model": model, "input": texts}
+    if input_type:
+        body["input_type"] = input_type
     url = base_url.rstrip("/") + "/embeddings"
     payload = _http_json(
         url,

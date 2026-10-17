@@ -26,14 +26,10 @@ _pgvector_ready: bool | None = None
 
 
 def embedding_model() -> str:
-    explicit = (os.environ.get("AI_EMBEDDING_MODEL") or "").strip()
-    if explicit:
-        return explicit
-    if os.environ.get("NVIDIA_API_KEY", "").strip():
-        return (
-            os.environ.get("NVIDIA_EMBED_MODEL") or "nvidia/nemotron-3-embed-1b"
-        ).strip() or "nvidia/nemotron-3-embed-1b"
-    return "text-embedding-3-small"
+    """Same key the gateway writes under (single active embedding provider)."""
+    from app.ai_gateway.gateway import embedding_model_name
+
+    return embedding_model_name()
 
 
 def embedding_dims() -> int:
@@ -52,7 +48,10 @@ def embedding_dims() -> int:
 
 
 def content_hash(model: str, text: str) -> str:
-    blob = f"{model}\n{text}".encode("utf-8")
+    if model.startswith("nvidia/"):
+        blob = f"{model}\n{_NVIDIA_HASH_TAG}\n{text}".encode("utf-8")
+    else:
+        blob = f"{model}\n{text}".encode("utf-8")
     return hashlib.sha256(blob).hexdigest()
 
 
@@ -214,6 +213,64 @@ def _is_postgres() -> bool:
 def _mark_pgvector_unavailable() -> None:
     global _pgvector_ready
     _pgvector_ready = False
+
+
+# Bumped when the provider request changes while the text stays the same, so
+# stale vectors are re-embedded. input_type-v1: NVIDIA query/passage modes.
+_NVIDIA_HASH_TAG = "input_type-v1"
+INPUT_QUERY = "query"
+INPUT_PASSAGE = "passage"
+_COLUMN_DIMS_RE = re.compile(r"\((\d+)\)")
+_column_dims_cache: int | None = None
+
+
+def column_dims(conn) -> int | None:
+    """Declared size of embeddings.embedding (e.g. vector(2048) -> 2048)."""
+    global _column_dims_cache
+    if _column_dims_cache:
+        return _column_dims_cache
+    if conn is None or not _is_postgres():
+        return None
+    try:
+        row = conn.execute(
+            """
+            SELECT format_type(a.atttypid, a.atttypmod)
+            FROM pg_attribute a
+            WHERE a.attrelid = to_regclass('embeddings')
+              AND a.attname = 'embedding'
+              AND NOT a.attisdropped
+            """
+        ).fetchone()
+    except Exception as exc:
+        log.warning("embeddings column size lookup failed: %s", exc)
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return None
+    if row is None:
+        return None
+    match = _COLUMN_DIMS_RE.search(str(row[0] or ""))
+    if not match:
+        return None
+    _column_dims_cache = int(match.group(1))
+    return _column_dims_cache
+
+
+def dims_match(conn, vector: list[float], *, entity: str = "") -> bool:
+    """False (with a warning) when the vector does not fit the column size."""
+    expected = column_dims(conn) or embedding_dims()
+    if len(vector) == expected:
+        return True
+    log.warning(
+        "embedding skipped for %s: %s dims from model %s, column expects %s "
+        "(set AI_EMBEDDING_DIMS to the model size and recreate the embeddings table once)",
+        entity or "?",
+        len(vector),
+        embedding_model(),
+        expected,
+    )
+    return False
 
 
 def ensure_embedding_tables(conn) -> bool:
@@ -407,9 +464,8 @@ def upsert_embedding(
         return False
     chosen = model or embedding_model()
     dims = len(vector)
-    expected = embedding_dims()
-    if dims != expected:
-        log.warning("embedding dims %s != %s for %s/%s", dims, expected, entity_type, entity_id)
+    if not dims_match(conn, vector, entity=f"{entity_type}/{entity_id}"):
+        return False
     ch = content_hash(chosen, text)
     lit = vector_literal(vector)
     conn.execute(
@@ -467,9 +523,24 @@ def embed_and_store(
 
     from app.ai_gateway import embed
 
-    result = embed(texts=[text_s], purpose=f"embed_{entity_type}", conn=conn)
+    input_type = INPUT_QUERY if entity_type == ENTITY_PROFILE else INPUT_PASSAGE
+    result = embed(
+        texts=[text_s],
+        purpose=f"embed_{entity_type}",
+        conn=conn,
+        input_type=input_type,
+    )
     if not result.ok or not result.vectors:
         log.info("embed skip %s/%s: %s", entity_type, entity_id, result.error)
+        return False
+    if result.model and result.model != model:
+        log.warning(
+            "embed skip %s/%s: provider model %s != stored model key %s",
+            entity_type,
+            entity_id,
+            result.model,
+            model,
+        )
         return False
     ok = upsert_embedding(
         conn,
@@ -477,7 +548,7 @@ def embed_and_store(
         entity_id=str(entity_id),
         text=text_s,
         vector=result.vectors[0],
-        model=result.model or model,
+        model=model,
     )
     if ok:
         try:

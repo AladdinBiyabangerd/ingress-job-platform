@@ -24,14 +24,10 @@ _pgvector_ready: bool | None = None
 
 
 def embedding_model() -> str:
-    explicit = (os.environ.get("AI_EMBEDDING_MODEL") or "").strip()
-    if explicit:
-        return explicit
-    if os.environ.get("NVIDIA_API_KEY", "").strip():
-        return (
-            os.environ.get("NVIDIA_EMBED_MODEL") or "nvidia/nemotron-3-embed-1b"
-        ).strip() or "nvidia/nemotron-3-embed-1b"
-    return "text-embedding-3-small"
+    """Same key the gateway writes under (single active embedding provider)."""
+    from worker.ai_gateway.gateway import embedding_model_name
+
+    return embedding_model_name()
 
 
 def embedding_dims() -> int:
@@ -50,7 +46,11 @@ def embedding_dims() -> int:
 
 
 def content_hash(model: str, text: str) -> str:
-    return hashlib.sha256(f"{model}\n{text}".encode("utf-8")).hexdigest()
+    if model.startswith("nvidia/"):
+        blob = f"{model}\n{_NVIDIA_HASH_TAG}\n{text}"
+    else:
+        blob = f"{model}\n{text}"
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
 def vector_literal(values: list[float]) -> str:
@@ -178,10 +178,17 @@ def embed_profile(conn, *, user_id: str, profile: dict) -> bool:
     model = embedding_model()
     from worker.ai_gateway import embed
 
-    result = embed(texts=[text], purpose="embed_profile", conn=conn)
+    result = embed(
+        texts=[text], purpose="embed_profile", conn=conn, input_type=INPUT_QUERY
+    )
     if not result.ok or not result.vectors:
         return False
-    chosen = result.model or model
+    if result.model and result.model != model:
+        log.warning("embed_profile skip: provider model %s != %s", result.model, model)
+        return False
+    if not dims_match(conn, result.vectors[0], entity=f"profile/{subject}"):
+        return False
+    chosen = model
     lit = vector_literal(result.vectors[0])
     ch = content_hash(chosen, text)
     conn.execute(
@@ -212,6 +219,64 @@ def _is_postgres() -> bool:
     except Exception:
         url = (os.environ.get("DATABASE_URL") or "").strip().lower()
         return url.startswith(("postgresql://", "postgres://", "postgresql+", "postgres+"))
+
+
+# Bumped when the provider request changes while the text stays the same, so
+# stale vectors are re-embedded. input_type-v1: NVIDIA query/passage modes.
+_NVIDIA_HASH_TAG = "input_type-v1"
+INPUT_QUERY = "query"
+INPUT_PASSAGE = "passage"
+_COLUMN_DIMS_RE = re.compile(r"\((\d+)\)")
+_column_dims_cache: int | None = None
+
+
+def column_dims(conn) -> int | None:
+    """Declared size of embeddings.embedding (e.g. vector(2048) -> 2048)."""
+    global _column_dims_cache
+    if _column_dims_cache:
+        return _column_dims_cache
+    if conn is None or not _is_postgres():
+        return None
+    try:
+        row = conn.execute(
+            """
+            SELECT format_type(a.atttypid, a.atttypmod)
+            FROM pg_attribute a
+            WHERE a.attrelid = to_regclass('embeddings')
+              AND a.attname = 'embedding'
+              AND NOT a.attisdropped
+            """
+        ).fetchone()
+    except Exception as exc:
+        log.warning("embeddings column size lookup failed: %s", exc)
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return None
+    if row is None:
+        return None
+    match = _COLUMN_DIMS_RE.search(str(row[0] or ""))
+    if not match:
+        return None
+    _column_dims_cache = int(match.group(1))
+    return _column_dims_cache
+
+
+def dims_match(conn, vector: list[float], *, entity: str = "") -> bool:
+    """False (with a warning) when the vector does not fit the column size."""
+    expected = column_dims(conn) or embedding_dims()
+    if len(vector) == expected:
+        return True
+    log.warning(
+        "embedding skipped for %s: %s dims from model %s, column expects %s "
+        "(set AI_EMBEDDING_DIMS to the model size and recreate the embeddings table once)",
+        entity or "?",
+        len(vector),
+        embedding_model(),
+        expected,
+    )
+    return False
 
 
 def ensure_embedding_tables(conn) -> bool:
@@ -314,6 +379,8 @@ def upsert_job_embedding(
 ) -> bool:
     if not ensure_embedding_tables(conn):
         return False
+    if not dims_match(conn, vector, entity=f"job/{job_id}"):
+        return False
     chosen = model or embedding_model()
     ch = content_hash(chosen, text)
     lit = vector_literal(vector)
@@ -379,15 +446,20 @@ def embed_job(conn, job_id: int) -> bool:
     if not feature_on("embeddings", conn):
         return False
 
-    result = embed(texts=[embed_text], purpose="embed_job", conn=conn)
+    result = embed(
+        texts=[embed_text], purpose="embed_job", conn=conn, input_type=INPUT_PASSAGE
+    )
     if not result.ok or not result.vectors:
+        return False
+    if result.model and result.model != model:
+        log.warning("embed_job skip: provider model %s != %s", result.model, model)
         return False
     ok = upsert_job_embedding(
         conn,
         job_id=int(job_id),
         text=embed_text,
         vector=result.vectors[0],
-        model=result.model or model,
+        model=model,
     )
     if ok:
         try:
@@ -478,9 +550,16 @@ def embed_stale_jobs(conn, *, limit: int | None = None) -> dict[str, Any]:
     for i in range(0, len(batch_ids), chunk):
         ids = batch_ids[i : i + chunk]
         texts = batch_texts[i : i + chunk]
-        result = embed(texts=texts, purpose="embed_job", conn=conn)
+        result = embed(
+            texts=texts, purpose="embed_job", conn=conn, input_type=INPUT_PASSAGE
+        )
         if not result.ok or len(result.vectors) != len(texts):
-            log.info("embed_stale_jobs batch failed: %s", result.error)
+            log.warning("embed_stale_jobs batch failed: %s", result.error)
+            break
+        if result.model and result.model != model:
+            log.warning(
+                "embed_stale_jobs stop: provider model %s != %s", result.model, model
+            )
             break
         for job_id, text, vector in zip(ids, texts, result.vectors):
             if upsert_job_embedding(
@@ -488,7 +567,7 @@ def embed_stale_jobs(conn, *, limit: int | None = None) -> dict[str, Any]:
                 job_id=job_id,
                 text=text,
                 vector=vector,
-                model=result.model or model,
+                model=model,
             ):
                 stats["embedded"] += 1
         try:

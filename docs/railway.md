@@ -110,7 +110,7 @@ that file is applied; set them yourself only if you use another bucket):
 | `OPENAI_API_KEY` | Optional. Last-resort chat/embed when you have credits. |
 | `AI_GATEWAY_ENABLED` | Optional. `0` forces AI off even when a key is set. Staff can also toggle flows in Moderasiya without changing env. |
 | `AI_CHAT_PROVIDERS` | Optional. Comma order, default `gemini,groq,nvidia,openrouter,openai`. |
-| `AI_EMBED_PROVIDERS` | Optional. Comma order, default `nvidia,openai`. |
+| `AI_EMBED_PROVIDERS` | Optional. Comma order, default `nvidia,openai`. Only the **first provider with a key** is used for embeddings; there is no cross-provider fallback (vectors from different models are not comparable and have different sizes). NVIDIA requests send `input_type` (`query` for profiles, `passage` for jobs) as the NVIDIA API requires. |
 | `GEMINI_MODELS` | Optional. Comma list of Gemini chat models to try in order. Default: `3.5-flash-lite` → `3.1-flash-lite` → `3.6-flash` → `3-flash-preview` → `3.8-flash` (retired 2.5-* omitted). |
 | `GEMINI_MODEL` | Optional. Legacy single-model override when `GEMINI_MODELS` is unset. |
 | `GROQ_MODELS` | Optional. Comma list of Groq chat models. Default: `gpt-oss-20b` → `gpt-oss-120b` → `qwen3.8-27b`. |
@@ -119,7 +119,7 @@ that file is applied; set them yourself only if you use another bucket):
 | `NVIDIA_CHAT_MODEL` | Optional. Legacy single-model override when `NVIDIA_MODELS` is unset. |
 | `NVIDIA_EMBED_MODEL` | Optional. Default `nvidia/nemotron-3-embed-1b`. |
 | `OPENROUTER_MODEL` | Optional. Default `openrouter/free` (routes across live `:free` models; single-model free tiers often 429). |
-| `AI_EMBEDDING_MODEL` | Optional. Overrides embed model id. With NVIDIA key defaults to `nvidia/nemotron-3-embed-1b`. |
+| `AI_EMBEDDING_MODEL` | Optional. Overrides embed model id. `nvidia/...` pins NVIDIA, `text-embedding...` pins OpenAI. With an NVIDIA key it defaults to `nvidia/nemotron-3-embed-1b`. Vectors are stored and read under this exact model id. |
 | `AI_EMBEDDING_DIMS` | Optional. Vector size for pgvector column. NVIDIA embed = `2048`; OpenAI small = `1536`. Set explicitly when switching. If the `embeddings` table already exists with the old size, drop/recreate it once. |
 | `EMBED_STALE_LIMIT` | Optional. Max jobs to embed per worker pass (default `250`, max `500`). ~13–16 NVIDIA API calls at chunk size 16 — well under typical hosted NIM RPM. |
 | `AI_RERANK_ENABLED` | Optional. Default follows gateway; `0` keeps structured-only matches. |
