@@ -440,16 +440,22 @@ class MatchWhyTests(unittest.TestCase):
         user = _build_user(
             lang="en",
             profile_version="2026-10-05",
-            match=matches[0],
+            matches=matches,
             candidate=candidate,
         )
-        self.assertEqual(PROMPT_VERSION, "match-why-v2")
+        self.assertEqual(PROMPT_VERSION, "match-why-v3")
         self.assertIn("CandidateSeniority: senior", user)
         self.assertIn("CandidateYears: 6", user)
-        self.assertIn("MissingSkillsTop3: Kafka, Redis, Kubernetes", user)
-        self.assertIn("LlmNote: Java Spring overlap", user)
+        self.assertIn('"missing_top3": ["Kafka", "Redis", "Kubernetes"]', user)
+        # Volatile AI scores stay out of the prompt so the cache key is stable.
+        self.assertNotIn("Java Spring overlap", user)
+        self.assertNotIn("semantic", user)
+        self.assertNotIn("llm_relevance", user)
 
-        fake = GatewayResult(ok=True, data={"why": "Strong overlap on Java and Spring for a senior backend role."})
+        fake = GatewayResult(
+            ok=True,
+            data={"items": [{"job_id": 9, "why": "Strong overlap on Java and Spring for a senior backend role."}]},
+        )
         with patch.dict(os.environ, {"AI_MATCH_WHY_ENABLED": "1"}, clear=False):
             with patch("app.match_why.complete_json", return_value=fake) as api:
                 append_why_sentences(
@@ -461,7 +467,56 @@ class MatchWhyTests(unittest.TestCase):
                 )
         self.assertTrue(matches[0].get("ai_why"))
         self.assertIn("Strong overlap", matches[0]["explanation"])
-        self.assertEqual(api.call_args.kwargs["prompt_version"], "match-why-v2")
+        self.assertEqual(api.call_args.kwargs["prompt_version"], "match-why-v3")
+
+    def test_append_why_single_batch_call(self):
+        from app.ai_gateway.gateway import GatewayResult
+        from app.match_why import _build_user, append_why_sentences
+
+        matches = [
+            {"job_id": j, "title": f"Job {j}", "have": ["Java"], "missing": [], "explanation": "", "components": {}}
+            for j in (5, 3, 8, 1, 2, 7)
+        ]
+        fake = GatewayResult(
+            ok=True,
+            data={
+                "items": [
+                    {"job_id": 3, "why": "Your Java work maps to this backend role."},
+                    {"job_id": 5, "why": "Java overlap with the core stack here."},
+                    {"job_id": 99, "why": "Unknown job id must be ignored entirely."},
+                    {"job_id": 1, "why": "short"},
+                ]
+            },
+        )
+        with patch.dict(os.environ, {"AI_MATCH_WHY_ENABLED": "1"}, clear=False):
+            with patch("app.match_why.complete_json", return_value=fake) as api:
+                deferred = append_why_sentences(
+                    None, matches=matches, lang="en", profile_version="v1"
+                )
+        self.assertFalse(deferred)
+        api.assert_called_once()
+        self.assertTrue(matches[0]["ai_why"])  # job 5
+        self.assertTrue(matches[1]["ai_why"])  # job 3
+        self.assertNotIn("ai_why", matches[3])  # job 1: too short
+        self.assertNotIn("ai_why", matches[5])  # job 7: outside top 5
+        # Same top-5 set in another order → identical prompt (cache hit).
+        a = _build_user(lang="en", profile_version="v1", matches=matches[:5])
+        b = _build_user(lang="en", profile_version="v1", matches=list(reversed(matches[:5])))
+        self.assertEqual(a, b)
+
+    def test_append_why_pending(self):
+        from app.ai_gateway.gateway import GatewayResult
+        from app.match_why import append_why_sentences
+
+        matches = [{"job_id": 1, "have": ["Java"], "components": {}}]
+        with patch.dict(os.environ, {"AI_MATCH_WHY_ENABLED": "1"}, clear=False):
+            with patch(
+                "app.match_why.complete_json",
+                return_value=GatewayResult(ok=False, error="ai_pending"),
+            ):
+                self.assertTrue(
+                    append_why_sentences(None, matches=matches, lang="az", profile_version="v1")
+                )
 
 
 if __name__ == "__main__":
