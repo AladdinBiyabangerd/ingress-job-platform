@@ -1,4 +1,4 @@
-"""AI #2 helpers: cosine blend, embed gateway, SQLite stays ai_rerank=false."""
+"""AI #2 helpers: semantic/LLM signals, RRF fusion, embed gateway, SQLite stays ai_rerank=false."""
 
 from __future__ import annotations
 
@@ -14,14 +14,15 @@ from app.embeddings import (
     profile_embed_text,
     vector_literal,
 )
-from app.match_llm_rerank import W_BLENDED, W_RELEVANCE, apply_llm_rerank
+from app.match_llm_rerank import apply_llm_rerank
 from app.matching import (
     FEEDBACK_DOWN_FACTOR,
-    W_SEMANTIC,
-    W_STRUCT,
+    RRF_K,
     _apply_feedback_demotion,
+    _apply_role_scope,
     _apply_semantic_rerank,
     rerank_enabled,
+    rrf_fuse,
 )
 
 
@@ -114,11 +115,66 @@ class CosineBlendTests(unittest.TestCase):
         # summary truncated to 120 chars per role
         self.assertNotIn("y" * 121, profile)
 
-    def test_blend_weights(self):
-        struct = 0.8
-        semantic = 0.5
-        blended = round(W_STRUCT * struct + W_SEMANTIC * semantic, 4)
-        self.assertEqual(blended, 0.71)
+    def test_rrf_constant(self):
+        self.assertEqual(RRF_K, 60)
+
+
+def _item(jid, score, **comps):
+    return {"job_id": jid, "score": score, "score_pct": int(round(score * 100)), "components": dict(comps)}
+
+
+class RrfFuseTests(unittest.TestCase):
+    def test_rule_only_keeps_order_and_scores(self):
+        pool = [_item(1, 0.9), _item(2, 0.8), _item(3, 0.7)]
+        out = rrf_fuse(pool, rule_order=[1, 2, 3])
+        self.assertEqual([i["job_id"] for i in out], [1, 2, 3])
+        self.assertEqual([i["score"] for i in out], [0.9, 0.8, 0.7])
+        self.assertAlmostEqual(out[0]["rank_score"], round(1 / 61, 6))
+        self.assertEqual(out[0]["components"]["rrf"], out[0]["rank_score"])
+
+    def test_semantic_can_reorder_but_not_change_score(self):
+        pool = [_item(1, 0.9, semantic=0.1), _item(2, 0.8, semantic=0.9), _item(3, 0.7, semantic=0.5)]
+        out = rrf_fuse(pool, rule_order=[1, 2, 3])
+        # job1: 1/61+1/63, job2: 1/62+1/61, job3: 1/63+1/62 → 2, 1, 3
+        self.assertEqual([i["job_id"] for i in out], [2, 1, 3])
+        self.assertEqual({i["job_id"]: i["score"] for i in out}, {1: 0.9, 2: 0.8, 3: 0.7})
+
+    def test_missing_vector_gets_neutral_rank(self):
+        pool = [_item(1, 0.9), _item(2, 0.8, semantic=0.9), _item(3, 0.7, semantic=0.1)]
+        out = rrf_fuse(pool, rule_order=[1, 2, 3])
+        by_id = {i["job_id"]: i["rank_score"] for i in out}
+        # two vectors → neutral rank 1.5 for job 1
+        self.assertAlmostEqual(by_id[1], round(1 / 61 + 1 / 61.5, 6))
+        self.assertAlmostEqual(by_id[2], round(1 / 62 + 1 / 61, 6))
+
+    def test_llm_rank_only_for_seen_jobs(self):
+        pool = [_item(1, 0.9, llm_relevance=2), _item(2, 0.8, llm_relevance=5), _item(3, 0.7)]
+        pool[0]["ai_llm_rerank"] = True
+        pool[1]["ai_llm_rerank"] = True
+        out = rrf_fuse(pool, rule_order=[1, 2, 3], llm_order=[1, 2])
+        by_id = {i["job_id"]: i["rank_score"] for i in out}
+        self.assertAlmostEqual(by_id[2], round(1 / 62 + 1 / 61, 6))
+        self.assertAlmostEqual(by_id[1], round(1 / 61 + 1 / 62, 6))
+        self.assertAlmostEqual(by_id[3], round(1 / 63, 6))  # outside LLM top-N
+        self.assertEqual(out[-1]["job_id"], 3)
+
+    def test_role_boost_survives_semantic_signal(self):
+        """Regression: semantic used hunt_score and erased the role-signature boost."""
+        item = {"job_id": 7, "score": 0.5, "hunt_score": 0.5, "components": {}}
+        item = _apply_role_scope(item, job_skills=[(1, "Java"), (2, "Kafka")], role_skill_ids={1, 2})
+        boosted = item["score"]
+        self.assertGreater(boosted, 0.5)
+        with patch.dict(os.environ, {"AI_RERANK_ENABLED": "1"}, clear=False):
+            with patch("app.jobs_db.postgres_enabled", return_value=True), patch(
+                "app.embeddings.pgvector_available", return_value=True
+            ), patch("app.embeddings.ensure_embedding_tables", return_value=True), patch(
+                "app.embeddings.embedding_model", return_value="text-embedding-3-small"
+            ), patch("app.embeddings.get_embedding", return_value=([1.0, 0.0], "h")), patch(
+                "app.embeddings.load_embeddings", return_value={"7": [0.0, 1.0]}
+            ):
+                self.assertTrue(_apply_semantic_rerank(object(), user_id="u", pool=[item]))
+        self.assertEqual(item["score"], boosted)
+        self.assertEqual(item["components"]["role_hits"], 2)
 
 
 class RerankFlagTests(unittest.TestCase):
@@ -186,11 +242,12 @@ class RerankFlagTests(unittest.TestCase):
                                     pool=pool,
                                 )
         self.assertTrue(ok)
-        # job1: 0.7*0.5 + 0.3*1.0 = 0.65; job2: 0.7*0.9 + 0.3*0.0 = 0.63
-        self.assertEqual(pool[0]["score"], 0.65)
-        self.assertEqual(pool[1]["score"], 0.63)
+        # Rule score is never rewritten; cosine is only a ranking signal.
+        self.assertEqual(pool[0]["score"], 0.5)
+        self.assertEqual(pool[1]["score"], 0.9)
         self.assertTrue(pool[0]["ai_rerank"])
         self.assertEqual(pool[0]["components"]["semantic"], 1.0)
+        self.assertEqual(pool[1]["components"]["semantic"], 0.0)
 
 
 class EmbedGatewayTests(unittest.TestCase):
@@ -246,7 +303,7 @@ class LlmRerankTests(unittest.TestCase):
         self.assertEqual(pool[0]["score"], 0.8)
         self.assertNotIn("ai_llm_rerank", pool[0])
 
-    def test_blend_formula(self):
+    def test_relevance_attached_score_untouched(self):
         from app.ai_gateway.gateway import GatewayResult
 
         pool = [
@@ -288,16 +345,12 @@ class LlmRerankTests(unittest.TestCase):
                 )
         self.assertTrue(ok)
         self.assertFalse(deferred)
-        # 0.55*0.8 + 0.45*(5/5) = 0.44 + 0.45 = 0.89
-        expected0 = round(W_BLENDED * 0.8 + W_RELEVANCE * 1.0, 4)
-        self.assertEqual(pool[0]["score"], expected0)
-        self.assertEqual(pool[0]["score_pct"], int(round(expected0 * 100)))
+        self.assertEqual(pool[0]["score"], 0.8)
         self.assertEqual(pool[0]["components"]["llm_relevance"], 5)
+        self.assertEqual(pool[0]["components"]["llm_note"], "Strong Java overlap")
         self.assertTrue(pool[0]["ai_llm_rerank"])
-        # 0.55*0.6 + 0.45*(1/5) = 0.33 + 0.09 = 0.42
-        expected1 = round(W_BLENDED * 0.6 + W_RELEVANCE * 0.2, 4)
-        self.assertEqual(pool[1]["score"], expected1)
-        self.assertEqual(pool[1]["score_pct"], int(round(expected1 * 100)))
+        self.assertEqual(pool[1]["score"], 0.6)
+        self.assertEqual(pool[1]["components"]["llm_relevance"], 1)
 
     def test_soft_fail_keeps_scores(self):
         from app.ai_gateway.gateway import GatewayResult

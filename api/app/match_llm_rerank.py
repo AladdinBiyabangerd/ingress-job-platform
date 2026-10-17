@@ -1,7 +1,8 @@
-"""AI #2: LLM relevance re-rank for top match pool (batch).
+"""AI #2: LLM relevance signal for the top of the match pool (one batch call).
 
-Soft-fails to the pre-LLM (struct / semantic-blended) scores.
-final = 0.55·blended + 0.45·(relevance/5) when the model returns a score.
+Attaches ``components.llm_relevance`` (1–5) and ``llm_note``; it never changes
+``score``. The caller fuses rule / semantic / LLM rankings with RRF
+(``app.matching.rrf_fuse``). Soft-fails to the pre-LLM order.
 """
 
 from __future__ import annotations
@@ -15,9 +16,6 @@ from app.ai_gateway import complete_json
 PURPOSE = "match_llm_rerank"
 PROMPT_VERSION = "match-llm-rerank-v1"
 DEFAULT_TOP = 10
-
-W_BLENDED = 0.55
-W_RELEVANCE = 0.45
 
 _SYSTEM = (
     "You score how relevant each job is for the candidate using ONLY the facts "
@@ -126,7 +124,7 @@ def apply_llm_rerank(
     top_n: int = DEFAULT_TOP,
     allow_provider: bool = True,
 ) -> tuple[bool, bool]:
-    """Mutate top-N match scores with LLM relevance.
+    """Attach LLM relevance to the top-N matches (score is left untouched).
 
     Returns ``(applied, deferred)``. ``deferred`` is True on cache miss when
     ``allow_provider`` is False (``ai_pending``).
@@ -190,16 +188,12 @@ def apply_llm_rerank(
         if not scored:
             continue
         rel = scored["relevance"]
-        blended = float(item.get("score") or 0.0)
-        final = round(W_BLENDED * blended + W_RELEVANCE * (rel / 5.0), 4)
         comps = item.get("components") if isinstance(item.get("components"), dict) else {}
         comps = dict(comps)
         comps["llm_relevance"] = rel
         if scored["note"]:
             comps["llm_note"] = scored["note"]
         item["components"] = comps
-        item["score"] = final
-        item["score_pct"] = int(round(final * 100))
         item["ai_llm_rerank"] = True
         applied = True
     return applied, False

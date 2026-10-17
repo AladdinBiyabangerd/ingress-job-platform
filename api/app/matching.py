@@ -1,11 +1,16 @@
 """Job ↔ candidate matching (plan §6.2 / §6.3).
 
-Hunt struct score + confidence (unknown dims do not invent fit). Optional
-AI #2 cosine blend: 0.7·hunt + 0.3·cosine. Optional LLM re-rank on top-10:
-0.55·blended + 0.45·(relevance/5). Down-voted jobs are demoted (×0.4).
-Soft-skip skill overlap < 0.5; single matched skill is half-weighted.
-For-you / matches list drops score < 0.33 or confidence < 0.35.
-SQLite / missing vectors → Hunt only (ai_rerank false); LLM may still run.
+Hunt struct score + confidence (unknown dims do not invent fit). Down-voted
+jobs are demoted (×0.4). Soft-skip skill overlap < 0.5; single matched skill
+is half-weighted. For-you / matches list drops score < 0.33 or confidence
+< 0.35 — the gate and the displayed ``score`` are always the rule-based score.
+
+AI never rewrites ``score``. For the top RERANK_POOL gated jobs it only adds
+signals (``components.semantic`` cosine, ``components.llm_relevance`` 1–5) and
+the head is re-ordered with Reciprocal Rank Fusion (Cormack, Clarke & Büttcher,
+SIGIR 2009; k=60) over the rule / semantic / LLM rankings. ``rank_score`` and
+``components.rrf`` hold the fused value. SQLite / missing vectors → rule order
+only (ai_rerank false); LLM may still run.
 """
 
 from __future__ import annotations
@@ -73,9 +78,11 @@ W_LOCATION = 0.20
 W_LANGUAGE = 0.10
 W_FRESHNESS = 0.05
 
-W_STRUCT = 0.7
-W_SEMANTIC = 0.3
 FEEDBACK_DOWN_FACTOR = 0.4
+# Reciprocal Rank Fusion constant (Cormack et al., SIGIR 2009).
+RRF_K = 60
+# LLM relevance is requested for the top-N of the (semantic-fused) head.
+LLM_RERANK_TOP = 10
 
 FEEDBACK_VOTES = ("up", "down")
 FEEDBACK_REASONS = ("", "location", "seniority", "technology", "salary")
@@ -716,39 +723,7 @@ def matches_payload(
         item["feedback"] = fb
         scored.append(item)
 
-    scored.sort(key=lambda row: (-row["score"], -row["job_id"]))
-    # AI rerank only the head; Hunt list below keeps honest scores.
-    rerank_head = scored[:RERANK_POOL]
-    used_rerank = _apply_semantic_rerank(
-        conn,
-        user_id=user_id,
-        pool=rerank_head,
-    )
-    if used_rerank:
-        scored.sort(key=lambda row: (-row["score"], -row["job_id"]))
-        base["ai_rerank"] = True
-        rerank_head = scored[:RERANK_POOL]
-
-    profile_version = str(profile_payload.get("updated_at") or "")[:80] or "v0"
-    used_llm = False
-    llm_deferred = False
-    try:
-        from app.match_llm_rerank import apply_llm_rerank
-
-        used_llm, llm_deferred = apply_llm_rerank(
-            conn,
-            matches=rerank_head,
-            profile=profile,
-            profile_version=profile_version,
-            allow_provider=allow_ai_provider,
-        )
-    except Exception:
-        used_llm = False
-        llm_deferred = False
-    if used_llm:
-        scored.sort(key=lambda row: (-row["score"], -row["job_id"]))
-        base["ai_llm_rerank"] = True
-
+    # Rule score (hunt + role boost, × feedback demotion) drives the gate and display.
     _apply_feedback_demotion(scored)
     gated = [
         item
@@ -759,7 +734,45 @@ def matches_payload(
         )
     ]
     gated.sort(key=lambda row: (-row["score"], -row["job_id"]))
-    matches = gated[:chosen_limit]
+    # AI only re-orders the head; the tail keeps rule order and honest scores.
+    rerank_head = gated[:RERANK_POOL]
+    tail = gated[RERANK_POOL:]
+    rule_order = [int(item["job_id"]) for item in rerank_head]
+    used_rerank = _apply_semantic_rerank(
+        conn,
+        user_id=user_id,
+        pool=rerank_head,
+    )
+    if used_rerank:
+        base["ai_rerank"] = True
+        rerank_head = rrf_fuse(rerank_head, rule_order=rule_order)
+
+    profile_version = str(profile_payload.get("updated_at") or "")[:80] or "v0"
+    used_llm = False
+    llm_deferred = False
+    llm_order = [int(item["job_id"]) for item in rerank_head[:LLM_RERANK_TOP]]
+    try:
+        from app.match_llm_rerank import apply_llm_rerank
+
+        used_llm, llm_deferred = apply_llm_rerank(
+            conn,
+            matches=rerank_head,
+            top_n=LLM_RERANK_TOP,
+            profile=profile,
+            profile_version=profile_version,
+            allow_provider=allow_ai_provider,
+        )
+    except Exception:
+        used_llm = False
+        llm_deferred = False
+    if used_llm:
+        base["ai_llm_rerank"] = True
+        rerank_head = rrf_fuse(
+            rerank_head,
+            rule_order=rule_order,
+            llm_order=llm_order,
+        )
+    matches = (rerank_head + tail)[:chosen_limit]
     base["scoring_version"] = SCORING_VERSION
     base["min_score"] = MIN_SCORE
     base["min_confidence"] = MIN_CONFIDENCE
@@ -827,15 +840,87 @@ def _apply_feedback_demotion(pool: list[dict]) -> None:
         item["components"] = comps
 
 
+def _signal_ranks(
+    items: list[dict],
+    key: str,
+    tie_order: dict[int, int],
+) -> dict[int, float]:
+    """1-based ranks by components[key] desc (ties → tie_order); absent keys skipped."""
+    present: list[tuple[float, int]] = []
+    for item in items:
+        comps = item.get("components") if isinstance(item.get("components"), dict) else {}
+        val = comps.get(key)
+        if isinstance(val, (int, float)) and not isinstance(val, bool):
+            present.append((float(val), int(item["job_id"])))
+    present.sort(key=lambda row: (-row[0], tie_order.get(row[1], 10**9)))
+    ranks = {jid: float(i + 1) for i, (_v, jid) in enumerate(present)}
+    return ranks
+
+
+def rrf_fuse(
+    pool: list[dict],
+    *,
+    rule_order: list[int],
+    llm_order: list[int] | None = None,
+    k: int = RRF_K,
+) -> list[dict]:
+    """Reciprocal Rank Fusion of rule / semantic / LLM rankings (score untouched).
+
+    - rule: position in the gated rule-score order (always present);
+    - semantic: by cosine; jobs without a vector get the mean rank of those with one;
+    - LLM: by relevance among the jobs the model scored (ties → ``llm_order``, the
+      order the model saw); jobs it scored no relevance for get the mean rank, jobs
+      outside the LLM top-N contribute nothing (standard RRF for absent items).
+    Returns a new list sorted by fused value desc, ties by rule order.
+    """
+    rule_rank = {jid: i + 1 for i, jid in enumerate(rule_order)}
+    sem = _signal_ranks(pool, "semantic", rule_rank)
+    sem_neutral = (len(sem) + 1) / 2.0 if sem else None
+    llm: dict[int, float] = {}
+    llm_neutral = None
+    llm_seen = set(int(j) for j in (llm_order or []))
+    if llm_seen:
+        llm_tie = {int(jid): i for i, jid in enumerate(llm_order or [])}
+        llm = _signal_ranks(
+            [
+                item
+                for item in pool
+                if int(item["job_id"]) in llm_seen and bool(item.get("ai_llm_rerank"))
+            ],
+            "llm_relevance",
+            llm_tie,
+        )
+        llm_neutral = (len(llm) + 1) / 2.0 if llm else None
+    fused: list[tuple[float, int, dict]] = []
+    for item in pool:
+        jid = int(item["job_id"])
+        r_rule = rule_rank.get(jid, len(rule_rank) + 1)
+        total = 1.0 / (k + r_rule)
+        if sem_neutral is not None:
+            total += 1.0 / (k + sem.get(jid, sem_neutral))
+        if llm_neutral is not None and jid in llm_seen:
+            total += 1.0 / (k + llm.get(jid, llm_neutral))
+        total = round(total, 6)
+        comps = item.get("components") if isinstance(item.get("components"), dict) else {}
+        comps = dict(comps)
+        comps["rrf"] = total
+        item["components"] = comps
+        item["rank_score"] = total
+        fused.append((total, r_rule, item))
+    fused.sort(key=lambda row: (-row[0], row[1]))
+    return [row[2] for row in fused]
+
+
 def _apply_semantic_rerank(
     conn,
     *,
     user_id: str,
     pool: list[dict],
 ) -> bool:
-    """Blend cosine similarity into scores for pool items with job embeddings.
+    """Attach cosine similarity (components.semantic) to pool items with vectors.
 
-    Returns True when at least one item was re-ranked.
+    Never changes ``score`` (rule score). Returns True when at least one item got
+    a semantic signal; the caller fuses rankings with :func:`rrf_fuse`.
     Missing pgvector / embeddings table never fails the matches request.
     """
     if not pool or not rerank_enabled(conn):
@@ -889,17 +974,10 @@ def _apply_semantic_rerank(
                 item["ai_rerank"] = False
                 continue
             semantic = cosine_similarity(profile_vec, job_vec)
-            # Blend against Hunt struct; do not erase hunt_score / confidence.
-            struct = float(item.get("hunt_score") or item.get("score") or 0.0)
-            blended = round(W_STRUCT * struct + W_SEMANTIC * semantic, 4)
             comps = item.get("components") if isinstance(item.get("components"), dict) else {}
             comps = dict(comps)
             comps["semantic"] = round(semantic, 4)
-            comps["struct"] = round(struct, 4)
-            comps["hunt_score"] = round(struct, 4)
             item["components"] = comps
-            item["score"] = blended
-            item["score_pct"] = int(round(blended * 100))
             item["ai_rerank"] = True
             applied = True
         return applied
