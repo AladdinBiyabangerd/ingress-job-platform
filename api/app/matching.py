@@ -742,6 +742,8 @@ def matches_payload(
         conn,
         user_id=user_id,
         pool=rerank_head,
+        profile=profile,
+        allow_provider=allow_ai_provider,
     )
     if used_rerank:
         base["ai_rerank"] = True
@@ -916,8 +918,16 @@ def _apply_semantic_rerank(
     *,
     user_id: str,
     pool: list[dict],
+    profile: dict | None = None,
+    allow_provider: bool = False,
 ) -> bool:
     """Attach cosine similarity (components.semantic) to pool items with vectors.
+
+    When ``profile`` is given, a stored profile vector whose content hash no longer
+    matches the current profile text is not used: it is re-embedded inline when
+    ``allow_provider`` (warm thread), else in a background thread, and this
+    request falls back to rule order. Cosine runs in SQL (``<=>``) with a Python
+    fallback.
 
     Never changes ``score`` (rule score). Returns True when at least one item got
     a semantic signal; the caller fuses rankings with :func:`rrf_fuse`.
@@ -929,12 +939,17 @@ def _apply_semantic_rerank(
         from app.embeddings import (
             ENTITY_JOB,
             ENTITY_PROFILE,
+            content_hash,
             cosine_similarity,
+            embed_and_store,
             embedding_model,
             ensure_embedding_tables,
             get_embedding,
             load_embeddings,
             pgvector_available,
+            profile_embed_text,
+            schedule_profile_reembed,
+            semantic_scores,
         )
         from app.jobs_db import postgres_enabled
     except Exception:
@@ -953,27 +968,48 @@ def _apply_semantic_rerank(
             entity_id=user_id,
             model=model,
         )
+        if profile is not None:
+            text = profile_embed_text(profile)
+            expected = content_hash(model, text) if text.strip() else ""
+            if expected and (profile_row is None or profile_row[1] != expected):
+                if not allow_provider:
+                    if profile_row is not None:
+                        schedule_profile_reembed(user_id)
+                    return False
+                if not embed_and_store(
+                    conn, entity_type=ENTITY_PROFILE, entity_id=user_id, text=text
+                ):
+                    return False
+                profile_row = get_embedding(
+                    conn, entity_type=ENTITY_PROFILE, entity_id=user_id, model=model
+                )
+                if profile_row is None or profile_row[1] != expected:
+                    return False
         if profile_row is None:
             return False
-        profile_vec = profile_row[0]
         job_ids = [str(item["job_id"]) for item in pool]
-        job_vecs = load_embeddings(
-            conn,
-            entity_type=ENTITY_JOB,
-            entity_ids=job_ids,
-            model=model,
-        )
-        if not job_vecs:
+        sims = semantic_scores(conn, profile_id=user_id, job_ids=job_ids, model=model)
+        if sims is None:
+            profile_vec = profile_row[0]
+            job_vecs = load_embeddings(
+                conn,
+                entity_type=ENTITY_JOB,
+                entity_ids=job_ids,
+                model=model,
+            )
+            sims = {
+                jid: cosine_similarity(profile_vec, vec) for jid, vec in job_vecs.items() if vec
+            }
+        if not sims:
             return False
 
         applied = False
         for item in pool:
             jid = str(item["job_id"])
-            job_vec = job_vecs.get(jid)
-            if not job_vec:
+            semantic = sims.get(jid)
+            if semantic is None:
                 item["ai_rerank"] = False
                 continue
-            semantic = cosine_similarity(profile_vec, job_vec)
             comps = item.get("components") if isinstance(item.get("components"), dict) else {}
             comps = dict(comps)
             comps["semantic"] = round(semantic, 4)

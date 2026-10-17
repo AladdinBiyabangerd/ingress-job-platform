@@ -11,6 +11,8 @@ import logging
 import math
 import os
 import re
+import threading
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -434,6 +436,82 @@ def load_embeddings(
             if vec:
                 out[eid] = vec
     return out
+
+
+def semantic_scores(
+    conn,
+    *,
+    profile_id: str,
+    job_ids: list[str],
+    model: str | None = None,
+) -> dict[str, float] | None:
+    """Cosine similarity profile↔jobs computed in Postgres with pgvector ``<=>``.
+
+    ``<=>`` is cosine *distance*, so similarity = 1 - distance (clamped to [0, 1]
+    like :func:`cosine_similarity`). Returns None when the query cannot run, so
+    callers fall back to the Python path (SQLite / tests / older pgvector).
+    """
+    if not job_ids or not _is_postgres() or not pgvector_available(conn):
+        return None
+    chosen = model or embedding_model()
+    out: dict[str, float] = {}
+    chunk = 100
+    try:
+        for i in range(0, len(job_ids), chunk):
+            part = [str(x) for x in job_ids[i : i + chunk]]
+            placeholders = ",".join("?" for _ in part)
+            rows = conn.execute(
+                f"""
+                SELECT j.entity_id, 1 - (j.embedding <=> p.embedding) AS similarity
+                FROM embeddings j
+                JOIN embeddings p
+                  ON p.entity_type = ? AND p.entity_id = ? AND p.model = j.model
+                WHERE j.entity_type = ? AND j.model = ? AND j.entity_id IN ({placeholders})
+                """,
+                (ENTITY_PROFILE, str(profile_id), ENTITY_JOB, chosen, *part),
+            ).fetchall()
+            for row in rows:
+                eid = str(row[0] if not hasattr(row, "keys") else row["entity_id"])
+                raw = row[1] if not hasattr(row, "keys") else row["similarity"]
+                if raw is None:
+                    continue
+                out[eid] = max(0.0, min(1.0, float(raw)))
+    except Exception as exc:
+        log.warning("semantic_scores SQL failed, using Python cosine: %s", exc)
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return None
+    return out
+
+
+_REEMBED_COOLDOWN_S = 600.0
+_reembed_lock = threading.Lock()
+_reembed_last: dict[str, float] = {}
+
+
+def schedule_profile_reembed(user_id: str) -> bool:
+    """Re-embed a stale profile vector in a daemon thread (deduped, 10 min cooldown).
+
+    Used from the matches request path, which must not call a provider inline.
+    """
+    subject = (user_id or "").strip()
+    if not subject:
+        return False
+    now = time.monotonic()
+    with _reembed_lock:
+        last = _reembed_last.get(subject)
+        if last is not None and now - last < _REEMBED_COOLDOWN_S:
+            return False
+        _reembed_last[subject] = now
+    threading.Thread(
+        target=embed_profile_for_user,
+        kwargs={"user_id": subject},
+        daemon=True,
+        name="embed-profile-stale",
+    ).start()
+    return True
 
 
 def upsert_embedding(
