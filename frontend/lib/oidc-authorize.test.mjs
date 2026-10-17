@@ -73,7 +73,7 @@ describe("buildLoginRedirectUrl", () => {
   const authorizeUrl = "https://ingress.academy/portal/oauth/authorize";
   const jobAccountUrl = "https://ingress.academy/portal/job-account/";
 
-  it("sends a live Job account straight to authorize when adding a role", () => {
+  it("always sends live Job accounts to job-account (never auto-authorize)", () => {
     const authorizeParams = params({
       intent: "job_employer",
       alreadySignedIn: true,
@@ -88,10 +88,11 @@ describe("buildLoginRedirectUrl", () => {
       alreadySignedIn: true,
     });
     const url = new URL(href);
-    assert.equal(url.pathname, "/portal/oauth/authorize");
+    assert.equal(url.pathname, "/portal/job-account/");
     assert.equal(url.searchParams.get("registration_intent"), "job_employer");
-    assert.equal(url.searchParams.get("existing_account"), "1");
-    assert.equal(url.searchParams.get("prompt"), null);
+    const next = url.searchParams.get("next");
+    assert.ok(next.startsWith("/portal/oauth/authorize?"));
+    assert.match(next, /existing_account=1/);
   });
 
   it("keeps guests on job-account choice", () => {

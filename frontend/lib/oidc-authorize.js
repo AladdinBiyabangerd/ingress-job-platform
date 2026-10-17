@@ -57,10 +57,10 @@ export function buildAuthorizeUrl(authorizeUrl, authorizeParams) {
 /**
  * Academy entry for Job login / role upgrade.
  *
- * - Already signed into Job and adding a role: go straight to authorize with
- *   `existing_account=1` so Academy grants the group on the live portal session
- *   (or sends them to sign-in — not the create-account choice).
- * - Guests: job-account choice (sign in vs create), then authorize.
+ * Always job-account (sign in / create / confirm), never skip straight to
+ * authorize — even with a live Job or portal session. `alreadySignedIn` is
+ * unused for the redirect target; callers may still set `existing_account` on
+ * the authorize query inside `next=`.
  */
 export function buildLoginRedirectUrl({
   jobAccountUrl,
@@ -68,11 +68,8 @@ export function buildLoginRedirectUrl({
   authorizeParams,
   intent = "",
   returnToAbsolute = "",
-  alreadySignedIn = false,
+  alreadySignedIn: _alreadySignedIn = false,
 }) {
-  if (alreadySignedIn && intent) {
-    return buildAuthorizeUrl(authorizeUrl, authorizeParams);
-  }
   return buildJobAccountLoginUrl({
     jobAccountUrl,
     authorizeUrl,

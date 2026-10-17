@@ -128,7 +128,7 @@ export async function GET(request) {
     alreadySignedIn,
   });
 
-  // Live Job session + role intent → authorize (existing_account). Guests → job-account.
+  // Always Academy job-account (never auto-authorize on a live portal/Job session).
   const loginUrl = buildLoginRedirectUrl({
     jobAccountUrl: config.jobAccountUrl,
     authorizeUrl: config.authorizeUrl,

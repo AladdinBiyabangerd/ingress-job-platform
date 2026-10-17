@@ -1,19 +1,18 @@
 # Current task
 
 ## Completed
-- Collected (`/admin?tab=collected`) now lists only scraped `status=published`
+- Login always redirects to Academy `/portal/job-account/` (no skip to authorize on live Job session)
 
 ## Current state
-`GET /api/v1/admin/crawled` filters `owner_subject='' AND status='published'`. Pending stays on moderation queue; rejected on Rejected.
+`buildLoginRedirectUrl` always uses `buildJobAccountLoginUrl`. Live sessions may still set `existing_account=1` on the authorize query inside `next=`.
 
 ## Decisions
-- Collected ≠ “all scraped”; it is the live/published scraped inventory only
+- Never auto-authorize from Job when a portal/Job session exists; always land on job-account
 
 ## Remaining work
-- Deploy API + frontend when ready
+- Deploy frontend; if Academy job-account itself auto-continues without confirm, that is Academy-side
 
 ## Relevant files
-- `api/app/crawled_admin.py`
-- `frontend/components/collected-admin.js`
-- `api/tests/test_admin.py`
-- `.cursor/context/business-rules.md`
+- `frontend/lib/oidc-authorize.js`
+- `frontend/app/api/auth/login/route.js`
+- `frontend/lib/oidc-authorize.test.mjs`
