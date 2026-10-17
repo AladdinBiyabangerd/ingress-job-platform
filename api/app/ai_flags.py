@@ -1,9 +1,11 @@
 """Staff-controlled AI flow flags in the shared jobs DB.
 
 Env still hard-offs a feature when set to 0/false/off. A DB row then wins.
-With no row: gateway / job_tidy / engagement_copy / market_fit default on when any
-AI provider key is set (Gemini/Groq/NVIDIA/OpenRouter/OpenAI); other flows follow
-gateway. Chat calls use free providers first, OpenAI last.
+With no row: gateway defaults on when any AI provider key is set
+(Gemini/Groq/NVIDIA/OpenRouter/OpenAI); core flows (cv_fallback, embeddings,
+rerank, llm_rerank, match_why, digest_intro) follow gateway; OPT_IN_FEATURES
+stay off unless their env var is true. Chat calls use free providers first,
+OpenAI last.
 """
 
 from __future__ import annotations
@@ -39,6 +41,7 @@ FEATURES = (
 FEATURE_ENV = {
     "gateway": "AI_GATEWAY_ENABLED",
     "cv_fallback": "CV_AI_FALLBACK_ENABLED",
+    "job_tidy": "AI_JOB_TIDY_ENABLED",
     "market_fit": "AI_MARKET_FIT_ENABLED",
     "rerank": "AI_RERANK_ENABLED",
     "llm_rerank": "AI_LLM_RERANK_ENABLED",
@@ -51,6 +54,21 @@ FEATURE_ENV = {
     "digest_intro": "DIGEST_AI_INTRO_ENABLED",
     "engagement_copy": "ENGAGEMENT_AI_COPY_ENABLED",
 }
+
+# Non-core flows are opt-in: OFF unless the env var is true or a staff DB row
+# turns them on. Core matching/CV flows keep following the gateway.
+OPT_IN_FEATURES = frozenset(
+    {
+        "job_tidy",
+        "market_fit",
+        "engagement_copy",
+        "role_coach",
+        "learning_roadmap",
+        "job_analyze",
+        "job_apply_draft",
+        "job_tailored_cv",
+    }
+)
 
 _FALSE = {"0", "false", "no", "off"}
 _TRUE = {"1", "true", "yes", "on"}
@@ -191,8 +209,9 @@ def feature_on(feature: str, conn=None) -> bool:
         return bool(stored[feature])
     if env is True:
         return True
-    # Notification engagement copy defaults on with the key (same as gateway).
-    if feature in {"gateway", "job_tidy", "engagement_copy", "market_fit"}:
+    if feature in OPT_IN_FEATURES:
+        return False
+    if feature == "gateway":
         return key_configured()
     return feature_on("gateway", conn)
 

@@ -1085,9 +1085,10 @@ class AdminAiFlagTests(unittest.TestCase):
                 self.assertIn("engagement_copy", body["flags"])
                 self.assertIn("market_fit", body["flags"])
                 self.assertTrue(body["flags"]["llm_rerank"])
-                self.assertTrue(body["flags"]["role_coach"])
-                self.assertTrue(body["flags"]["engagement_copy"])
-                self.assertTrue(body["flags"]["market_fit"])
+                # Non-core flows are opt-in (env true or staff row).
+                self.assertFalse(body["flags"]["role_coach"])
+                self.assertFalse(body["flags"]["engagement_copy"])
+                self.assertFalse(body["flags"]["market_fit"])
 
                 saved = self.client.put(
                     "/api/v1/admin/ai-flags",
