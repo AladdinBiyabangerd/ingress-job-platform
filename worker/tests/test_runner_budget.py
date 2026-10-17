@@ -95,7 +95,7 @@ class RunnerBudgetTests(unittest.TestCase):
     def test_budget_lookup(self):
         c = Conn([])
         for name, secs in (("Teamtailor boards (Nordics)", 300), ("Lever boards (X)", 300),
-                           ("Greenhouse boards (DACH)", 300), ("JobTech Platsbanken (Sweden)", 300),
+                           ("Greenhouse boards (DACH)", 600), ("JobTech Platsbanken (Sweden)", 300),
                            ("Crypto Jobs List", 300), ("Other", runner.DEFAULT_BUDGET)):
             c.name = name
             self.assertEqual(runner.source_budget(c), secs)
@@ -117,8 +117,8 @@ class RunnerBudgetTests(unittest.TestCase):
 
 class AtsCapTests(unittest.TestCase):
     def test_caps(self):
-        self.assertEqual(ats.PER_BOARD, 25)
-        self.assertEqual(ats.AtsConnector.candidates, 80)
+        self.assertEqual(ats.PER_BOARD, 50)
+        self.assertEqual(ats.AtsConnector.candidates, 200)
         self.assertEqual(ATS_MAX_BOARDS, 20)
 
     def test_ats_feed_stops_reading_boards_after_deadline(self):

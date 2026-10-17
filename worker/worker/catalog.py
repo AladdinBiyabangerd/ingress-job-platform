@@ -12,7 +12,22 @@ REMOTE_OK_CREDIT = (
 )
 
 
-from worker.ats_boards import ATS_MAX_BOARDS, GROUPS as ATS_GROUPS  # noqa: E402
+from worker.ats_boards import ATS_MAX_BOARDS  # noqa: E402
+from worker.ats_boards_extra import all_groups  # noqa: E402
+
+ATS_GROUPS = all_groups()
+
+# New ads saved per source per pass: see worker/limits.py. The tier comes from
+# the row's connector kind (official_api/json_api = api, rss = feed); these
+# sources read posting pages one by one and get the lower "html" tier.
+HTML_SOURCES = frozenset({"Djinni", "Wellfound", "Relocate.me", "Japan Dev"})
+# Per-source caps that win over the connector's own create_cap and the tier
+# default. Reed and Jooble stay at 30: their monthly request budgets
+# (REED_MONTHLY_BUDGET, JOOBLE_MONTHLY_BUDGET) are sized for that.
+MAX_NEW_OVERRIDES: dict[str, int] = {
+    "Reed.co.uk": 30,
+    "Jooble": 30,
+}
 
 
 def _row(
@@ -51,8 +66,10 @@ def _row(
 # them any more.
 # LinkedIn, Indeed, Tap.az, gloria.az and job.az are intentionally absent.
 # Every enabled row: robots.txt allows the exact URLs read, the source terms do
-# not forbid it, there is no login wall or bot challenge, and at most 30 new
-# ads are saved per source per pass.
+# not forbid it, there is no login wall or bot challenge. New ads saved per
+# source per pass are capped (worker/limits.py: 150 for APIs and ATS boards,
+# 100 for feeds, 50 for HTML pages, MAX_NEW_OVERRIDES below), and every host
+# gets at most one request per second.
 # One owner-approved exception: Reed's official keyed API path
 # (https://www.reed.co.uk/api/1.0/), see http.ROBOTS_EXCEPTIONS.
 SOURCES: list[dict] = [
@@ -63,7 +80,7 @@ SOURCES: list[dict] = [
         "https://weworkremotely.com/remote-jobs.rss",
         enabled=True,
         go="go",
-        note="Açıq RSS. Partnyor API çağırılmır. Yalnız IT elanları. Hər keçiddə ən çox 30 yeni elan.",
+        note="Açıq RSS. Partnyor API çağırılmır. Yalnız IT elanları. Hər keçiddə ən çox 100 yeni elan.",
     ),
     _row(
         "Remote OK",
@@ -82,7 +99,7 @@ SOURCES: list[dict] = [
         "https://djinni.co/jobs/rss/",
         enabled=True,
         go="go",
-        note="Açıq RSS. /jobs2, /q və bağlanmış elanlar yox. Hər keçiddə ən çox 30 yeni elan.",
+        note="Açıq RSS. /jobs2, /q və bağlanmış elanlar yox. Hər keçiddə ən çox 300 yeni elan (öz limiti, 1500 s vaxt büdcəsi).",
     ),
     _row(
         "Wellfound",
@@ -91,7 +108,7 @@ SOURCES: list[dict] = [
         "https://wellfound.com/jobs",
         enabled=True,
         go="go",
-        note="Açıq /jobs siyahısı. /search toplanmır. Hər keçiddə ən çox 30 yeni elan.",
+        note="Açıq /jobs siyahısı. /search toplanmır. Hər keçiddə ən çox 50 yeni elan (HTML səviyyəsi).",
     ),
     _row(
         "Arbeitnow",
@@ -537,7 +554,7 @@ _ATS_INFO = {
     ),
     "ashby": (
         "https://www.ashbyhq.com/", "official_api", "https://jobs.ashbyhq.com/",
-        "Ashby karyera saytlarının açıq səhifələri (jobs.ashbyhq.com; api.ashbyhq.com robots.txt-də 401 verdiyi üçün oxunmur).",
+        "Ashby karyera saytlarının açıq səhifələri (jobs.ashbyhq.com; lövhə səhifəsi elan siyahısını, elan səhifəsi tam mətni verir). Rəsmi posting-api (api.ashbyhq.com/posting-api/job-board) oxunmur: api.ashbyhq.com/robots.txt 2026-10-17-də də HTTP 401 qaytarır, bu isə \"hamısı qadağan\" sayılır.",
         "Employer's public Ashby job board (jobs.ashbyhq.com). The link opens the employer's original posting.",
     ),
     "workable": (
@@ -571,7 +588,8 @@ def _ats_rows() -> list[dict]:
         )
         note = (
             f"{region}: işəgötürən lövhələri ({', '.join(boards)}). {about} Ən çox 3 saatda bir "
-            f"oxunur, remote elanlar əvvəl, şirkətlər növbə ilə qarışdırılır.{rotate}"
+            f"oxunur, remote elanlar əvvəl, şirkətlər növbə ilə qarışdırılır; keçiddə ən çox 200 yeni "
+            f"namizəd (lövhə başına 50) və 150 yeni elan.{rotate}"
         )
         rows.append(_row(name, home, kind, entry, enabled=True, go="go", note=note, credit_note=credit))
     return rows

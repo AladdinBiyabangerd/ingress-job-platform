@@ -23,6 +23,21 @@ from worker.techstack import is_tech_job
 RSS_ACCEPT = "application/rss+xml,application/atom+xml,application/xml,text/xml,*/*"
 
 
+def _rejected(store, url: str) -> bool:
+    """URL already in crawl_rejects. Only a real Store is asked (test doubles are not)."""
+    if not isinstance(store, Store):
+        return False
+    conn = getattr(store, "conn", None)
+    if conn is None:
+        return False
+    try:
+        from worker.market_fit import is_rejected
+
+        return is_rejected(conn, url)
+    except Exception:
+        return False
+
+
 class FeedConnector:
     name = ""
     entry_url = ""
@@ -82,6 +97,11 @@ class FeedConnector:
             if not is_tech_job(title, item.get("category"), item.get("tags")):
                 continue
             if self.store.has_source_url(url):
+                continue
+            # Already rejected by the acceptance rules or AI: the runner would
+            # skip it anyway, so it must not take a candidate slot (a board
+            # full of old rejects otherwise hides its new ads).
+            if _rejected(self.store, url):
                 continue
             try:
                 if not self.client.allowed(url):

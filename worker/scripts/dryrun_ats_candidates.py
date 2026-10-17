@@ -23,7 +23,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 os.environ.setdefault("AI_MARKET_FIT_ENABLED", "0")
 
 from worker.acceptance import finish_item  # noqa: E402
-from worker.ats_boards import GROUPS  # noqa: E402
+from worker.ats_boards_extra import all_groups  # noqa: E402
+
+GROUPS = all_groups()
 from worker.connectors.ats import (  # noqa: E402
     GreenhouseConnector,
     LeverConnector,

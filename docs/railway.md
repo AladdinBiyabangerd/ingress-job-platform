@@ -187,6 +187,13 @@ connector (every 6 hours, soft monthly cap `REED_MONTHLY_BUDGET`, default
 narrow exception for the official keyed API path `https://www.reed.co.uk/api/1.0/`
 only (`ROBOTS_EXCEPTIONS` in `worker/worker/http.py`).
 
+New ads saved per source per pass default to 150 for official APIs and ATS
+boards, 100 for feeds and 50 for HTML pages (`MAX_NEW_PER_SOURCE`,
+`MAX_NEW_PER_SOURCE_FEED`, `MAX_NEW_PER_SOURCE_HTML`; Reed and Jooble stay at
+30, see `worker/worker/limits.py`). One pass stops starting sources after
+`PASS_TIME_BUDGET_SECONDS` (default 3000), so the hourly passes never overlap;
+every host still gets at most one request per second.
+
 CV upload uses the bucket only when `BUCKET_NAME`, `BUCKET_ACCESS_KEY`, and
 `BUCKET_SECRET_KEY` are all set. Otherwise files stay in `api/data/cvs/`.
 

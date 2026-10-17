@@ -17,14 +17,17 @@ import time
 from urllib.parse import urlparse
 from xml.etree import ElementTree as ET
 
-from worker.ats_boards import ATS_MAX_BOARDS, GROUPS
+from worker.ats_boards import ATS_MAX_BOARDS
+from worker.ats_boards_extra import all_groups
 from worker.connectors.feed import RSS_ACCEPT, FeedConnector, text_from_html
 from worker.http import Disallowed, NotFound, SourceBlocked, SourceFailed
 from worker.parsing import clean
 from worker.techstack import is_tech_job
 
 _REMOTE = re.compile(r"\b(remote|anywhere|distributed|work from home|wfh)\b", re.IGNORECASE)
-PER_BOARD = 25
+# Newest-first (remote first) ads read per board per pass. Rejected and known
+# URLs are skipped before this window is filled (FeedConnector.discover).
+PER_BOARD = 50
 
 
 def round_robin(groups: list[list[dict]]) -> list[dict]:
@@ -67,10 +70,12 @@ class AtsConnector(FeedConnector):
     # Employer boards mix onsite and remote; keep only remote / relocation.
     require_remote_or_relocation = True
     # Employer boards change slowly: read each group at most every 3 hours,
-    # look at no more than 80 new candidates, and rotate large groups so one
-    # pass reads at most ATS_MAX_BOARDS boards.
+    # look at no more than 200 new candidates (Greenhouse and Ashby read one
+    # posting per candidate; PoliteClient keeps 1 request/s per host and the
+    # runner's time budgets stop a group early), and rotate large groups so
+    # one pass reads at most ATS_MAX_BOARDS boards.
     min_interval_hours = 3
-    candidates = 80
+    candidates = 200
     max_boards = ATS_MAX_BOARDS
     # Board APIs return every open ad; a pass is complete only when it read
     # every board of the group in full (see listing_truncated in feed_items).
@@ -203,6 +208,9 @@ LEVER_NAMES = {
     "zoox": "Zoox", "wattpad": "Wattpad", "relay": "Relay", "mindtickle": "Mindtickle",
     "fampay": "FamPay", "crypto": "Crypto.com", "lalamove": "Lalamove", "nium": "Nium",
     "immutable": "Immutable",
+    "offchainlabs": "Offchain Labs", "includedhealth": "Included Health",
+    "vedatechlabs": "Veda Tech Labs", "happy-sleep": "Happy Sleep", "truetandem": "TrueTandem",
+    "truezerotech": "TrueZero Technologies",
 }
 
 
@@ -599,6 +607,16 @@ def _ashby_app_data(html: str) -> dict:
     return data if isinstance(data, dict) else {}
 
 
+def _ashby_pay(job: dict) -> str:
+    """Published compensation text (the same field the posting API's
+    includeCompensation=true returns), or "" when the employer shows none."""
+    for key in ("compensationTierSummary", "scrapeableCompensationSalarySummary"):
+        text = clean(job.get(key))
+        if text:
+            return text[:200]
+    return ""
+
+
 class AshbyConnector(AtsConnector):
     """Employer boards hosted on jobs.ashbyhq.com.
 
@@ -648,6 +666,8 @@ class AshbyConnector(AtsConnector):
                 "category": team,
                 "tags": team,
                 "remote": True if workplace == "remote" else _remote_hint(place),
+                # The employer's own pay text, kept exactly as published (no conversion).
+                "salary": _ashby_pay(job),
                 "_stamp": job.get("publishedDate") or job.get("publishedAt") or "",
             })
         return rows
@@ -667,6 +687,9 @@ class AshbyConnector(AtsConnector):
                 item["city"] = place[:200]
             if str(post.get("workplaceType") or "").lower() == "remote":
                 item["remote"] = True
+            pay = _ashby_pay(post)
+            if pay:
+                item["salary"] = pay
         return json.dumps(item, ensure_ascii=False)
 
 
@@ -699,5 +722,5 @@ def _group_class(name: str, ats: str, boards: tuple[str, ...]) -> type:
 
 # Source name -> connector class, one per region group in ats_boards.GROUPS.
 ATS_GROUP_CONNECTORS: dict[str, type] = {
-    name: _group_class(name, ats, boards) for name, ats, _region, boards in GROUPS
+    name: _group_class(name, ats, boards) for name, ats, _region, boards in all_groups()
 }

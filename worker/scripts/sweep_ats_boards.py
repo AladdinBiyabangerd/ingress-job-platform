@@ -27,7 +27,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from worker.ats_boards import GROUPS  # noqa: E402
+from worker.ats_boards_extra import all_groups  # noqa: E402
+
+GROUPS = all_groups()
 from worker.http import (  # noqa: E402
     Disallowed,
     NotFound,

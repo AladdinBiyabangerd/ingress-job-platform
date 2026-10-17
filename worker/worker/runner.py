@@ -78,8 +78,10 @@ from worker.techstack import (
 )
 from worker.tidy import tidy_pending
 from worker.http import Disallowed, NotFound, PoliteClient, SourceBlocked, SourceFailed
+from worker.limits import LEGACY_CAP, max_new, pass_budget
 
-CAP = 30
+# Kept for old imports; the per-source cap now comes from limits.max_new().
+CAP = LEGACY_CAP
 # Per-source wall-clock budget (seconds) so one cycle stays around an hour.
 # When a budget runs out the source stops gracefully: every row already
 # written stays (upserts are per item) and the run is recorded as ok.
@@ -92,7 +94,8 @@ SOURCE_BUDGETS: dict[str, int] = {
 PREFIX_BUDGETS: tuple[tuple[str, int], ...] = (
     ("Teamtailor", 300),
     ("Lever", 300),
-    ("Greenhouse", 300),
+    # One posting call per new candidate on the shared Greenhouse host (1 req/s).
+    ("Greenhouse", 600),
 )
 # A source whose pages keep failing in a row is stopped (not marked error).
 MAX_PAGE_FAILURES = 15
@@ -349,7 +352,11 @@ def _run_pass(store: Store) -> int:
             print(f"{name}: skipped, {key_env} not set", flush=True)
             continue
         picked.append((name, builder, int(row["id"])))
-    _run_sources_parallel(store, picked, wait_seconds=_PASS_WAIT)
+    budget = pass_budget()
+    print(f"pass budget: {budget}s for {len(picked)} sources", flush=True)
+    _run_sources_parallel(
+        store, picked, wait_seconds=_PASS_WAIT, deadline=time.monotonic() + budget,
+    )
     try:
         filled = store.backfill_derived()
         if filled:
@@ -504,13 +511,21 @@ def _shared():
     return _EXECUTOR, _CLIENT
 
 
-def _source_job(store: Store, client: PoliteClient, name: str, builder, source_id: int) -> None:
+def _source_job(store: Store, client: PoliteClient, name: str, builder, source_id: int,
+                deadline: float | None = None) -> None:
+    if deadline is not None and time.monotonic() >= deadline:
+        # Queued behind slower sources until the pass budget ran out: the next
+        # pass reads it, so a pass never runs into the next hour.
+        print(f"{name}: skipped, pass time budget reached", flush=True)
+        with _RUNNING_LOCK:
+            _RUNNING.discard(name)
+        return
     own = store.thread_store() if hasattr(store, "thread_store") else store
     try:
         connector = builder(client, own)
         if _too_soon(own, connector, source_id):
             return
-        _run_source(own, client, connector, source_id)
+        _run_source(own, client, connector, source_id, pass_deadline=deadline)
     except Exception as exc:
         capture_exception()
         print(f"{name}: failed {type(exc).__name__}", flush=True)
@@ -521,22 +536,49 @@ def _source_job(store: Store, client: PoliteClient, name: str, builder, source_i
             own.close()
 
 
+def _host_of(builder) -> str:
+    url = str(getattr(builder, "entry_url", "") or "")
+    return url.split("/")[2] if url.count("/") >= 2 else str(getattr(builder, "name", ""))
+
+
+def interleave_by_host(picked: list) -> list:
+    """Order sources so the same API host is not queued back to back.
+
+    Sources on one host (the Greenhouse groups share boards-api.greenhouse.io)
+    take turns on that host's 1 request/s lock; started together they would
+    fill every worker slot while the other hosts wait."""
+    buckets: dict[str, list] = {}
+    for entry in picked:
+        buckets.setdefault(_host_of(entry[1]), []).append(entry)
+    queues = list(buckets.values())
+    out: list = []
+    while any(queues):
+        for queue in queues:
+            if queue:
+                out.append(queue.pop(0))
+    return out
+
+
 def _run_sources_parallel(store: Store, picked, *, wait_seconds: float | None = None,
-                          executor=None, client=None) -> list:
+                          executor=None, client=None, deadline: float | None = None) -> list:
     """Submit each source once; a source still running from before is skipped."""
     if executor is None or client is None:
         shared_exec, shared_client = _shared()
         executor = executor or shared_exec
         client = client or shared_client
     futures = []
-    for name, builder, source_id in picked:
+    for name, builder, source_id in interleave_by_host(list(picked)):
         with _RUNNING_LOCK:
             if name in _RUNNING:
                 print(f"{name}: skipped, still running", flush=True)
                 continue
             _RUNNING.add(name)
         try:
-            futures.append(executor.submit(_source_job, store, client, name, builder, source_id))
+            if deadline is None:
+                futures.append(executor.submit(_source_job, store, client, name, builder, source_id))
+            else:
+                futures.append(executor.submit(
+                    _source_job, store, client, name, builder, source_id, deadline))
         except Exception:
             with _RUNNING_LOCK:
                 _RUNNING.discard(name)
@@ -569,7 +611,7 @@ def _too_soon(store: Store, connector, source_id: int) -> bool:
 
 
 def _run_source(store: Store, client: PoliteClient, connector, source_id: int,
-                *, clock=time.monotonic) -> None:
+                *, clock=time.monotonic, pass_deadline: float | None = None) -> None:
     del client
     run_id = store.start_run(source_id)
     found = created = updated = 0
@@ -577,6 +619,11 @@ def _run_source(store: Store, client: PoliteClient, connector, source_id: int,
     error = None
     budget = source_budget(connector)
     deadline = clock() + budget
+    if pass_deadline is not None and pass_deadline < deadline:
+        # The pass budget ends first; it is on the same monotonic clock.
+        deadline = pass_deadline
+        budget = max(0, int(deadline - clock()))
+    cap = max_new(connector)
     # Connectors that read many boards/feeds in discover() honour this too.
     try:
         connector.deadline = deadline
@@ -600,7 +647,7 @@ def _run_source(store: Store, client: PoliteClient, connector, source_id: int,
         except Exception:
             capture_exception()
         for url in urls:
-            if created >= getattr(connector, "create_cap", CAP):
+            if created >= cap:
                 capped = True
                 break
             if clock() >= deadline:
@@ -666,7 +713,7 @@ def _run_source(store: Store, client: PoliteClient, connector, source_id: int,
     )
     print(
         f"{connector.name}: status={status} found={found} created={created} "
-        f"updated={updated} error={error or '-'}",
+        f"updated={updated} cap={cap} error={error or '-'}",
         flush=True,
     )
 
