@@ -368,6 +368,10 @@ def exchange(body: ExchangeIn, _rl=dep_ip("auth_token")) -> dict:
         }
     )
     issued = _tokens_from(payload, require_refresh=False, expected_nonce=row["nonce"])
+    # Handed to the web app only as id_token_hint for Academy RP-initiated logout.
+    id_token = payload.get("id_token")
+    if isinstance(id_token, str) and id_token.count(".") == 2 and len(id_token) <= 4096:
+        issued["id_token"] = id_token
     issued["return_to"] = safe_return_to(row["return_to"])
     issued["intent"] = row["intent"]
     return issued

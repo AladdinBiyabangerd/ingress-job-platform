@@ -15,6 +15,15 @@ export function sessionEntriesFromTokens(data, { now = Math.floor(Date.now() / 1
     ["job_at", data.access_token, expiresIn],
     ["job_exp", String(now + expiresIn), expiresIn],
   ];
+  // Login exchange only: kept as id_token_hint for Academy end_session.
+  if (typeof data.id_token === "string" && data.id_token.split(".").length === 3
+      && data.id_token.length <= 4096) {
+    entries.push([
+      "job_idt",
+      data.id_token,
+      clampAge(data.refresh_expires_in, 3600, 30 * 24 * 60 * 60),
+    ]);
+  }
   if (data.refresh_token) {
     entries.push([
       "job_rt",

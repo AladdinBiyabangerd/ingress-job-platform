@@ -227,6 +227,8 @@ class AuthRefreshTests(unittest.TestCase):
         self.assertEqual(data["access_token"], "access-new")
         self.assertEqual(data["return_to"], "/profile")
         self.assertEqual(data["intent"], "job_candidate")
+        # Passed through for the web app's RP-initiated logout hint.
+        self.assertEqual(data["id_token"], "x.y.z")
         form = self._posted_form(mocked)
         self.assertEqual(form.get("client_secret"), ["test-job-oidc-secret"])
         self.assertEqual(form.get("grant_type"), ["authorization_code"])

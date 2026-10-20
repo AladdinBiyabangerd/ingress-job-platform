@@ -133,3 +133,16 @@ test("sessionEntriesFromTokens includes job_exp", () => {
   );
   assert.equal(entries.find(([n]) => n === "job_exp")[1], "1000900");
 });
+
+test("sessionEntriesFromTokens keeps the login id_token as a logout hint", () => {
+  const entries = sessionEntriesFromTokens(
+    { access_token: "a", expires_in: 900, refresh_token: "r", refresh_expires_in: 86400, id_token: "h.p.s" },
+    { now: 1_000_000, clampAge },
+  );
+  assert.deepEqual(entries.find(([name]) => name === "job_idt"), ["job_idt", "h.p.s", 86400]);
+  const refreshOnly = sessionEntriesFromTokens(
+    { access_token: "a", expires_in: 900, refresh_token: "r", id_token: "not-a-jwt" },
+    { now: 1_000_000, clampAge },
+  );
+  assert.equal(refreshOnly.some(([name]) => name === "job_idt"), false);
+});

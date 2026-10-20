@@ -10,6 +10,8 @@ export const REFRESH_COOKIE = "job_rt";
 export const EXP_COOKIE = "job_exp";
 export const STATE_COOKIE = "job_st";
 export const GUEST_COOKIE = "job_guest";
+/** Academy id_token, used only as id_token_hint on logout. */
+export const ID_TOKEN_COOKIE = "job_idt";
 
 const LEGACY_AUTH_COOKIES = [
   "job_access_token",
@@ -42,8 +44,16 @@ export function oidcConfig(request) {
     authorizeUrl: process.env.JOB_OIDC_AUTHORIZE_URL || new URL("portal/oauth/authorize", issuer).toString(),
     jobAccountUrl:
       process.env.JOB_OIDC_JOB_ACCOUNT_URL || new URL("portal/job-account/", issuer).toString(),
+    // OIDC RP-Initiated Logout. Set JOB_OIDC_END_SESSION_URL=off to stay on Job.
+    endSessionUrl: endSessionUrl(issuer),
     apiBase: apiBase(),
   };
+}
+
+function endSessionUrl(issuer) {
+  const configured = (process.env.JOB_OIDC_END_SESSION_URL || "").trim();
+  if (/^(off|0|false|none)$/i.test(configured)) return "";
+  return configured || new URL("portal/oauth/logout", issuer).toString();
 }
 
 export function publicOrigin(request) {
@@ -141,6 +151,7 @@ function allAuthCookieNames(request) {
     REFRESH_COOKIE,
     EXP_COOKIE,
     STATE_COOKIE,
+    ID_TOKEN_COOKIE,
     ...LEGACY_AUTH_COOKIES,
   ]);
   const header = request?.headers?.get("cookie") || "";

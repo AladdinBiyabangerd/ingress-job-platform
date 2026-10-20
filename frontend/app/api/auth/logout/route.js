@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { buildEndSessionUrl, postLogoutRedirectUri } from "../../../../lib/oidc-logout";
 import {
+  ID_TOKEN_COOKIE,
   REFRESH_COOKIE,
   clearAuthCookiesOn,
   noStore,
@@ -51,10 +53,19 @@ async function revokeRefreshIfConfigured(request, config) {
 export async function POST(request) {
   const url = new URL(request.url);
   const config = oidcConfig(request);
-  await revokeRefreshIfConfigured(request, config);
   const returnTo = safeReturnTo(url.searchParams.get("returnTo") || "/");
-  // Stay on the job site. Do not send the browser to Academy logout or authorize.
-  const location = new URL(returnTo, config.origin).toString();
+  const idTokenHint = readCookie(request, ID_TOKEN_COOKIE) || "";
+  await revokeRefreshIfConfigured(request, config);
+  // End the Academy session too (RP-Initiated Logout). Otherwise the next
+  // login reuses it and puts the same person straight back. Academy returns
+  // to the registered site root; JOB_OIDC_END_SESSION_URL=off stays on Job.
+  const location =
+    buildEndSessionUrl({
+      endSessionUrl: config.endSessionUrl,
+      clientId: config.clientId,
+      idTokenHint,
+      postLogoutRedirectUri: postLogoutRedirectUri(config.origin),
+    }) || new URL(returnTo, config.origin).toString();
   // 200 + client navigation applies Set-Cookie more reliably than a bare 303 in
   // some browsers/proxies; old Tofig tokens were surviving the redirect logout.
   const html = `<!doctype html><html lang="az"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=${escapeHtml(location)}"><title>Çıxış</title></head><body><p>Çıxış edildi.</p><script>location.replace(${JSON.stringify(location)})</script></body></html>`;
