@@ -501,6 +501,9 @@ export function CollectedAdmin({ locale, initialItems = null }) {
                             ) : null}
                           </div>
                           {job.company ? <span className="admin-mod-sub">{job.company}</span> : null}
+                          {job.market_fit_reason ? (
+                            <span className="admin-mod-sub admin-mod-fit">{job.market_fit_reason}</span>
+                          ) : null}
                         </td>
                         <td className="admin-mod-pct-col">
                           {confidenceCell(job.rule_confidence, job.market_fit_reason)}

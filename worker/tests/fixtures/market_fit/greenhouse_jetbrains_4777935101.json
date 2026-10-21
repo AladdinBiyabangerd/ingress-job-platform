@@ -1,0 +1,122 @@
+{
+ "_note": "Real public posting from https://boards-api.greenhouse.io/v1/boards/jetbrains/jobs/4777935101 (robots.txt only disallows /embed/), fetched 2026-10-21. Unmodified.",
+ "job": {
+  "absolute_url": "https://job-boards.eu.greenhouse.io/jetbrains/jobs/4777935101",
+  "data_compliance": [
+   {
+    "type": "gdpr",
+    "requires_consent": true,
+    "requires_processing_consent": false,
+    "requires_retention_consent": true,
+    "retention_period": 2190,
+    "demographic_data_consent_applies": false
+   }
+  ],
+  "internal_job_id": 4427801101,
+  "location": {
+   "name": "Belgrade, Serbia; Berlin, Germany; Limassol, Cyprus; Madrid, Spain; Munich, Germany; Paphos, Cyprus; Prague, Czech Republic; Warsaw, Poland; Yerevan, Armenia"
+  },
+  "metadata": [
+   {
+    "id": 11295787101,
+    "name": "Job Category",
+    "value": "QA",
+    "value_type": "single_select"
+   },
+   {
+    "id": 11295751101,
+    "name": "Team",
+    "value": "IntelliJ",
+    "value_type": "single_select"
+   }
+  ],
+  "id": 4777935101,
+  "updated_at": "2026-10-06T07:10:53-04:00",
+  "requisition_id": "P-5847425641",
+  "title": "QA Automation Engineer (IntelliJ IDEA Java Build Tools) ",
+  "company_name": "JetBrains",
+  "first_published": "2026-07-02T13:20:19-04:00",
+  "language": "en",
+  "application_deadline": null,
+  "content": "&lt;p&gt;At JetBrains, code is our passion. Ever since we started, back in 2000, we have been striving to make the strongest, most effective developer tools on earth. By automating routine checks and corrections, our tools speed up production, freeing developers and businesses to grow, discover, and create.&lt;/p&gt;\n&lt;p&gt;IntelliJ IDEA revolutionized the Java development tool market back in 2001, becoming the first IDE to offer automated code refactoring. It continues to drive innovation in software development, making thousands of programmers more productive every day. In addition to Java, IntelliJ IDEA includes various development tools for other prominent languages such as Ruby, Groovy, Scala, Python, JavaScript, Objective-C, PHP, and Kotlin.&lt;/p&gt;\n&lt;p&gt;We&#39;re now looking for a QA Automation Engineer to join the IntelliJ IDEA Java Build Tools QA team and help ensure the quality of a product that our customers and software engineers around the world rely on daily. Since most Java projects in IntelliJ IDEA are built with Maven or Gradle, Java Build Tools is a critical part of the IDE experience, and your work will affect how smoothly our users can open, sync, build, and run their projects. You&#39;ll work alongside QA engineers to design and set up our automation process for Gradle and Maven end-to-end tests, as well as implement and automate test scenarios that catch issues before they reach our users.&lt;/p&gt;\n&lt;h2&gt;&lt;strong&gt;What you&#39;ll do&lt;/strong&gt;&lt;/h2&gt;\n&lt;h3&gt;&lt;strong&gt;Core responsibilities:&lt;/strong&gt;&lt;/h3&gt;\n&lt;ul&gt;\n&lt;li&gt;Design, develop, and maintain multi-platform and environmental (Linux, Windows, MacOS, Docker, WSL) automated test scenarios.&amp;nbsp;&lt;/li&gt;\n&lt;li&gt;Expand test coverage for new and existing functionality.&lt;/li&gt;\n&lt;li&gt;Debug and troubleshoot test failures.&lt;/li&gt;\n&lt;li&gt;Improve existing automation based on team feedback and reduce test flakiness.&lt;/li&gt;\n&lt;li&gt;Track quality metrics, including testing coverage, failure rate, and flakiness.&lt;/li&gt;\n&lt;li&gt;Contribute to frameworks and tools with product-specific extensions as needed.&lt;/li&gt;\n&lt;li&gt;Help the team monitor test execution results and investigate failures.&lt;/li&gt;\n&lt;li&gt;Participate in release quality assessments.&lt;/li&gt;\n&lt;li&gt;Collaborate with QA and developers to define test strategies.&lt;/li&gt;\n&lt;li&gt;Do manual QA activities when needed.&lt;/li&gt;\n&lt;li&gt;Participate in the test documentation creation.&lt;/li&gt;\n&lt;li&gt;Improve domain-specific test infrastructure and CI/CD pipelines within your team&#39;s scope.&lt;/li&gt;\n&lt;li&gt;Share automation best practices with the team.&lt;/li&gt;\n&lt;li&gt;Work with the tooling team to adopt new frameworks and practices.&lt;/li&gt;\n&lt;/ul&gt;\n&lt;h2&gt;&lt;strong&gt;What we&#39;re looking for&lt;/strong&gt;&lt;/h2&gt;\n&lt;h3&gt;&lt;strong&gt;Required skills:&lt;/strong&gt;&lt;/h3&gt;\n&lt;ul&gt;\n&lt;li&gt;Proven experience in test automation.&lt;/li&gt;\n&lt;li&gt;Solid programming skills in Kotlin/Java.&lt;/li&gt;\n&lt;li&gt;Experience with test frameworks like JUnit or TestNG.&lt;/li&gt;\n&lt;li&gt;Familiarity with build tools, like Maven and Gradle.&lt;/li&gt;\n&lt;li&gt;An understanding of software testing principles and methodologies.&lt;/li&gt;\n&lt;li&gt;Familiarity with CI/CD tools (TeamCity or similar).&lt;/li&gt;\n&lt;li&gt;Experience with reporting tools (Allure or others).&lt;/li&gt;\n&lt;li&gt;Version control experience (Git).&lt;/li&gt;\n&lt;li&gt;Proficiency in spoken and written English.&lt;/li&gt;\n&lt;li&gt;Responsibility, self-discipline, and self-learning skills.&lt;/li&gt;\n&lt;li&gt;Strong teamwork skills.&lt;/li&gt;\n&lt;li&gt;The ability to work independently, creatively, and on your own initiative.&lt;/li&gt;\n&lt;/ul&gt;\n&lt;h3&gt;&lt;strong&gt;Nice to have:&lt;/strong&gt;&lt;/h3&gt;\n&lt;ul&gt;\n&lt;li&gt;Experience testing developer tools, IDEs, and desktop applications.&lt;/li&gt;\n&lt;li&gt;Familiarity with JVM Frameworks (Spring or Jakarta) and databases.&lt;/li&gt;\n&lt;/ul&gt;\n&lt;h3&gt;&lt;strong&gt;Why join JetBrains?&amp;nbsp;&lt;/strong&gt;&lt;/h3&gt;\n&lt;ul&gt;\n&lt;li&gt;Strong base salary. We offer competitive pay that reflects your skills and experience.&lt;/li&gt;\n&lt;li&gt;Flexible work location. Enjoy the freedom to work from home or from the office.&lt;/li&gt;\n&lt;li&gt;Remote work. Spend up to 30 days per year working remotely from abroad.&lt;/li&gt;\n&lt;li&gt;Extra time off. More days to relax, recharge, and do the things you love.&lt;/li&gt;\n&lt;li&gt;Medical insurance allowance. Enjoy peace of mind for you and your family.&lt;/li&gt;\n&lt;li&gt;Learning and development opportunities. Access to conferences, courses, and language classes.&lt;/li&gt;\n&lt;li&gt;Relocation support. We help make your move as smooth and stress-free as possible.&amp;nbsp;&lt;/li&gt;\n&lt;li&gt;Language classes. Pick up the local language or sharpen your English skills.&lt;/li&gt;\n&lt;li&gt;Fuel your day. Enjoy a hot meal or receive a lunch allowance on workdays.&lt;/li&gt;\n&lt;li&gt;Mental health support. To help you feel your best, we provide easy access to professional mental health services.&lt;/li&gt;\n&lt;li&gt;Sports benefit. Enjoy an on-site gym or sports club stipend.&lt;/li&gt;\n&lt;li&gt;Internal events. Join company-wide celebrations and team gatherings.&lt;/li&gt;\n&lt;/ul&gt;\n&lt;p&gt;*Some benefits may vary depending on location.&lt;span style=&quot;color: rgb(255, 255, 255);&quot;&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;&lt;span style=&quot;color: #ffffff;&quot;&gt;&lt;br&gt;&lt;br&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;&lt;span style=&quot;color: #ffffff;&quot;&gt;#LI-DNI&amp;nbsp;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/span&gt;&lt;/p&gt;&lt;div class=&quot;content-conclusion&quot;&gt;&lt;p&gt;&lt;strong&gt;We are an equal opportunity employer&lt;/strong&gt;&lt;br&gt;&lt;br&gt;We know great ideas can come from anyone, anywhere. That’s why we do our best to create an open and inclusive workplace – one that welcomes everyone regardless of their background, identity, religion, age, accessibility needs, or orientation.&lt;/p&gt;\n&lt;p&gt;&lt;em data-stringify-type=&quot;italic&quot;&gt;We process the data provided in your job application in accordance with the&amp;nbsp;&lt;a href=&quot;https://www.jetbrains.com/legal/docs/privacy/privacy-recruitment/&quot;&gt;Recruitment Privacy Policy.&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;&lt;/div&gt;",
+  "departments": [
+   {
+    "id": 4052717101,
+    "name": "Java Build Tools QA",
+    "child_ids": [],
+    "parent_id": 4052518101
+   }
+  ],
+  "offices": [
+   {
+    "id": 4029421101,
+    "name": "Armenia",
+    "location": null,
+    "child_ids": [
+     4029422101
+    ],
+    "parent_id": null
+   },
+   {
+    "id": 4029425101,
+    "name": "Cyprus",
+    "location": null,
+    "child_ids": [
+     4029426101,
+     4029427101
+    ],
+    "parent_id": null
+   },
+   {
+    "id": 4029428101,
+    "name": "Czech Republic",
+    "location": null,
+    "child_ids": [
+     4029429101
+    ],
+    "parent_id": null
+   },
+   {
+    "id": 4029430101,
+    "name": "Germany",
+    "location": null,
+    "child_ids": [
+     4029433101,
+     4029431101,
+     4029432101
+    ],
+    "parent_id": null
+   },
+   {
+    "id": 4025589101,
+    "name": "Poland",
+    "location": null,
+    "child_ids": [
+     4029437101
+    ],
+    "parent_id": null
+   },
+   {
+    "id": 4025591101,
+    "name": "Serbia",
+    "location": null,
+    "child_ids": [
+     4029438101
+    ],
+    "parent_id": null
+   },
+   {
+    "id": 4031590101,
+    "name": "Spain",
+    "location": null,
+    "child_ids": [
+     4031591101
+    ],
+    "parent_id": null
+   }
+  ],
+  "ai_disclaimer": null,
+  "include_ai_disclaimer": null,
+  "ai_opt_out_request_url": null
+ }
+}

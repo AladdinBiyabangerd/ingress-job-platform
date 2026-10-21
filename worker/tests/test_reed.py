@@ -45,7 +45,7 @@ DETAIL = {
         "yearlyMinimumSalary": 60000.0, "yearlyMaximumSalary": 75000.0, "currency": "GBP",
         "salaryType": "per annum", "contractType": "Permanent", "jobType": "Full Time",
         "jobDescription": "<p>Build APIs with <b>Python</b>, Django and PostgreSQL on AWS. "
-                          "Fully remote within the UK.</p>" * 3,
+                          "Fully remote, open to candidates worldwide.</p>" * 3,
         "externalUrl": "https://acme.example/jobs/1",
         "jobUrl": "https://www.reed.co.uk/jobs/senior-python-developer/101",
         "applicationCount": 12,
@@ -151,6 +151,15 @@ class ReedTest(unittest.TestCase):
         self.assertEqual(salary_text(45000, 55000), "45,000–55,000 GBP")
         self.assertEqual(salary_text(500, 500, "GBP", "per day"), "500 GBP per day")
         self.assertEqual(salary_text(None, None), "")
+
+    def test_uk_only_remote_is_rejected_by_eligibility(self):
+        client = FakeClient()
+        conn = ReedConnector(client, self.store)
+        urls = conn.discover()
+        raw = conn.fetch(urls[0])
+        item = conn.normalize(raw, urls[0])
+        item["text"] = "Build APIs with Python on AWS. Fully remote within the UK."
+        self.assertIsNone(finish_item(conn, item))
 
 
 if __name__ == "__main__":

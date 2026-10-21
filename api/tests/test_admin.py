@@ -460,7 +460,7 @@ class AdminTests(unittest.TestCase):
                     title, company, city, text, status, created_at, norm_key, owner_subject,
                     remote, relocation
                 ) VALUES (
-                    'Remote Engineer', 'Co', 'Worldwide', 'Fully remote role.',
+                    'Remote Engineer', 'Co', 'Worldwide', 'Fully remote role, open to candidates worldwide.',
                     'pending', '2026-10-14T12:00:00+04:00', 'bf-clear', '', 1, 0
                 )
                 """
@@ -473,7 +473,7 @@ class AdminTests(unittest.TestCase):
                     title, company, city, text, status, created_at, norm_key, owner_subject,
                     remote, relocation
                 ) VALUES (
-                    'Office Engineer', 'Co', 'Tokyo', 'Build products in Tokyo office.',
+                    'Office Engineer', 'Co', '', 'Build products with our team.',
                     'pending', '2026-10-14T12:00:00+04:00', 'bf-unclear', '', 0, 0
                 )
                 """
@@ -515,10 +515,11 @@ class AdminTests(unittest.TestCase):
         conn.close()
         self.assertIsNotNone(rule)
         self.assertGreaterEqual(int(rule), 70)
-        self.assertLessEqual(int(rule), 95)
+        self.assertLessEqual(int(rule), 80)  # rules alone never reach the 85 band
         self.assertIsNone(ai_clear)
         self.assertIsNone(rule2)
-        self.assertEqual(ai_unclear, 81)
+        # AI said 81 but nothing in the ad confirms working from AZ: eligibility cap 40.
+        self.assertEqual(ai_unclear, 40)
 
     def test_threshold_approve_and_recheck_market_fit(self):
         conn = sqlite3.connect(self.db)
@@ -600,7 +601,7 @@ class AdminTests(unittest.TestCase):
                     title, company, city, text, status, created_at, norm_key, owner_subject,
                     rule_confidence, ai_confidence, market_fit_reason
                 ) VALUES (
-                    'Recheck me', 'Co', 'Tokyo', 'Office only.', 'pending', ?, ?, '',
+                    'Recheck me', 'Co', '', 'Backend role.', 'pending', ?, ?, '',
                     100, 55, ''
                 )
                 """,
@@ -646,9 +647,42 @@ class AdminTests(unittest.TestCase):
             ).fetchone()
             conn.close()
             self.assertEqual(status, "rejected")
-            self.assertEqual(reason, "not az market")
+            self.assertTrue(reason.startswith("not az market"), reason)
             self.assertEqual(conf, 22)
             self.assertIsNone(rule_val)
+
+    def test_recheck_rejects_foreign_onsite_without_ai(self):
+        """Eligibility gate: on-site Tokyo ad with no relocation is rejected before any AI call."""
+        from app.cabinet_store import recheck_market_fit
+
+        conn = sqlite3.connect(self.db)
+        job_id = int(
+            conn.execute(
+                """
+                INSERT INTO jobs (
+                    title, company, city, text, status, created_at, norm_key, owner_subject,
+                    rule_confidence, ai_confidence, market_fit_reason
+                ) VALUES (
+                    'Office Engineer', 'Co', 'Tokyo', 'Build products in our Tokyo office.',
+                    'pending', '2026-10-14T13:00:00+04:00', 'elig-tokyo', '', 95, NULL, ''
+                )
+                """
+            ).lastrowid
+        )
+        conn.commit()
+        conn.close()
+        with patch("worker.market_fit.clarify_market_fit") as ai:
+            result = recheck_market_fit([job_id], scope="queue")
+        ai.assert_not_called()
+        self.assertEqual(result["rejected"], 1)
+        conn = sqlite3.connect(self.db)
+        status, conf, reason = conn.execute(
+            "SELECT status, ai_confidence, market_fit_reason FROM jobs WHERE id = ?", (job_id,)
+        ).fetchone()
+        conn.close()
+        self.assertEqual(status, "rejected")
+        self.assertLessEqual(conf, 10)
+        self.assertTrue(reason.startswith("Qayda: "))
 
     def test_recheck_market_fit_cancel_keeps_done_stops_rest(self):
         """Stop cancels remaining ads only; already-checked results stay written."""
@@ -770,7 +804,7 @@ class AdminTests(unittest.TestCase):
                 title, company, city, text, status, created_at, norm_key, owner_subject,
                 hidden, ai_confidence, market_fit_reason
             ) VALUES (
-                'Live unfit', 'Co', 'Tokyo', 'Office only Japan.', 'published', ?, ?, '',
+                'Live unfit', 'Co', '', 'Backend role.', 'published', ?, ?, '',
                 0, NULL, ''
             )
             """,
@@ -804,7 +838,7 @@ class AdminTests(unittest.TestCase):
         ).fetchone()
         conn.close()
         self.assertEqual(status, "rejected")
-        self.assertEqual(reason, "foreign office")
+        self.assertTrue(reason.startswith("foreign office"), reason)
         self.assertEqual(hidden, 0)
         self.assertEqual(conf, 12)
 

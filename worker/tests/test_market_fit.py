@@ -150,9 +150,9 @@ class MarketFitTest(unittest.TestCase):
         }
         out = finish_item(self.conn, item)
         self.assertIsNotNone(out)
-        # Graded: open place + remote evidence, not a flat 100.
-        self.assertGreaterEqual(out["rule_confidence"], 85)
-        self.assertLess(out["rule_confidence"], 100)
+        # Graded, and rules alone never reach the 85 approve band.
+        self.assertGreaterEqual(out["rule_confidence"], 70)
+        self.assertLessEqual(out["rule_confidence"], 80)
         self.assertIsNone(out["ai_confidence"])
         self.assertIn("open", (out.get("market_fit_reason") or "").lower())
 
@@ -198,12 +198,14 @@ class MarketFitTest(unittest.TestCase):
         self.assertIsNotNone(strong)
         self.assertIsNotNone(az)
         self.assertLess(weak["confidence"], mid["confidence"])
-        self.assertLess(mid["confidence"], strong["confidence"])
+        self.assertLessEqual(mid["confidence"], strong["confidence"])
         self.assertGreaterEqual(az["confidence"], strong["confidence"])
         self.assertLessEqual(az["confidence"], 100)
         # Not a binary 0/100 switch: weak board-default stays well below open-market.
         self.assertLessEqual(weak["confidence"], 70)
-        self.assertGreaterEqual(strong["confidence"], 84)
+        self.assertGreaterEqual(strong["confidence"], 78)
+        for row in (weak, mid, strong, az):
+            self.assertLessEqual(row["confidence"], 80)
 
     def test_fit_score_unsuitable_never_looks_like_full_match(self):
         # Model "100% sure unsuitable" must not display as 100% rule-fit.
@@ -211,16 +213,18 @@ class MarketFitTest(unittest.TestCase):
         self.assertLessEqual(fit_score(suitable=False, confidence=88), 35)
         self.assertEqual(fit_score(suitable=True, confidence=91), 91)
 
+    @staticmethod
+    def _flags(**on):
+        from worker.fit_mapping import FLAGS
+
+        out = {name: {"value": False, "quote": ""} for name in FLAGS}
+        for name, quote in on.items():
+            out[name] = {"value": True, "quote": quote}
+        return out
+
     def test_clarify_uses_complete_json(self):
-        result = GatewayResult(ok=True, prompt_version="market-fit-v4", model="x")
-        result.data = {
-            "suitable": True,
-            "remote": True,
-            "relocation": False,
-            "visa_support": False,
-            "reason": "worldwide remote",
-            "confidence": 91,
-        }
+        result = GatewayResult(ok=True, prompt_version="market-fit-v6", model="x")
+        result.data = {**self._flags(remote_worldwide="Work from anywhere."), "reason": "İstənilən ölkədən remote."}
         with patch("worker.market_fit.feature_on", return_value=True):
             with patch("worker.market_fit.complete_json", return_value=result) as call:
                 out = clarify_market_fit(
@@ -231,19 +235,19 @@ class MarketFitTest(unittest.TestCase):
                     conn=self.store.conn,
                 )
         call.assert_called_once()
+        self.assertEqual(call.call_args.kwargs["prompt_version"], "market-fit-v6")
+        self.assertNotIn("confidence", call.call_args.kwargs["schema"]["properties"])
         self.assertTrue(out["suitable"])
         self.assertTrue(out["remote"])
-        self.assertEqual(out["confidence"], 91)
+        self.assertEqual(out["confidence"], 90)  # computed by fit_mapping, not by the AI
+        self.assertIn("remote_worldwide", out["reason"])
+        self.assertIn("Work from anywhere.", out["reason"])
 
     def test_clarify_unsuitable_stores_low_fit(self):
-        result = GatewayResult(ok=True, prompt_version="market-fit-v4", model="x")
+        result = GatewayResult(ok=True, prompt_version="market-fit-v6", model="x")
         result.data = {
-            "suitable": False,
-            "remote": True,
-            "relocation": False,
-            "visa_support": False,
-            "reason": "US residency required",
-            "confidence": 100,
+            **self._flags(country_restricted="US residency 3 of 5 years.", no_sponsorship_stated="No visa sponsorship."),
+            "reason": "Yalnız ABŞ rezidentləri.",
         }
         with patch("worker.market_fit.feature_on", return_value=True):
             with patch("worker.market_fit.complete_json", return_value=result):
@@ -255,7 +259,8 @@ class MarketFitTest(unittest.TestCase):
                     conn=self.store.conn,
                 )
         self.assertFalse(out["suitable"])
-        self.assertEqual(out["confidence"], 0)
+        self.assertFalse(out["unclear"])
+        self.assertEqual(out["confidence"], 15)
 
     def _pending_rule_only(self, *, url: str, title: str = "Remote Backend"):
         self.store.upsert(
@@ -293,7 +298,7 @@ class MarketFitTest(unittest.TestCase):
             }
         )
 
-        def fake_clarify(*, title, company, place, text, conn):
+        def fake_clarify(*, title, company, place, text, conn, **_kw):
             if "US only" in title:
                 return {
                     "suitable": False,

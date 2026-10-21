@@ -67,6 +67,7 @@ from worker.market_fit import (
     auto_score_limit,
     is_rejected,
     score_pending_without_ai,
+    apply_eligibility_to_pending,
 )
 from worker.acceptance import finish_item  # noqa: F401  (re-exported)
 from worker.market_purge import purge_off_market
@@ -201,12 +202,15 @@ def _main(argv: list[str]) -> int:
         return _parse_cv_only()
     if len(argv) >= 2 and argv[1] == "purge-market":
         return _purge_market_only()
+    if len(argv) >= 2 and argv[1] == "rescore-eligibility":
+        return _rescore_eligibility(argv[2:])
     if len(argv) > 2 or (
         len(argv) == 2 and argv[1] not in {"list", "schedule", "parse-cv", "purge-market"}
     ):
         print(
             'usage: python -m worker '
-            '[list|schedule|parse-cv|purge-market|probe ["Source name" ...]]',
+            '[list|schedule|parse-cv|purge-market|rescore-eligibility [--dry-run] [--reset-ai]'
+            '|probe ["Source name" ...]]',
             flush=True,
         )
         return 2
@@ -218,6 +222,38 @@ def _main(argv: list[str]) -> int:
             _print_jobs(store)
             return 0
         return _run(store)
+    finally:
+        store.close()
+
+
+def _rescore_eligibility(args: list[str]) -> int:
+    """Re-cap pending scraped ads by Azerbaijan eligibility (no AI calls).
+
+    --dry-run: count only, write nothing. --reset-ai: clear AI % scored by an older
+    prompt so the scheduler re-checks it with the current market-fit prompt.
+    """
+    bad = [a for a in args if a not in {"--dry-run", "--reset-ai"}]
+    if bad:
+        print("usage: python -m worker rescore-eligibility [--dry-run] [--reset-ai]", flush=True)
+        return 2
+    store = Store()
+    try:
+        stats = apply_eligibility_to_pending(
+            store.conn, dry_run="--dry-run" in args, reset_ai="--reset-ai" in args
+        )
+        for row in stats.get("changes", []):
+            print(
+                f"  #{row['id']} rule {row['rule'][0]}->{row['rule'][1]} "
+                f"ai {row['ai'][0]}->{row['ai'][1]} | {row['reason']}",
+                flush=True,
+            )
+        print(
+            "rescore-eligibility: "
+            + ("DRY-RUN " if "--dry-run" in args else "")
+            + " ".join(f"{k}={v}" for k, v in stats.items() if k != "changes"),
+            flush=True,
+        )
+        return 0
     finally:
         store.close()
 
@@ -400,6 +436,16 @@ def _run_pass(store: Store) -> int:
     saved, queued = tidy_pending(store.conn)
     if saved or queued:
         print(f"tidy: saved={saved} queued={queued}", flush=True)
+    try:
+        elig = apply_eligibility_to_pending(store.conn)
+        if elig.get("changed"):
+            print(
+                "eligibility: "
+                + " ".join(f"{k}={v}" for k, v in elig.items() if k != "changes"),
+                flush=True,
+            )
+    except Exception:
+        capture_exception()
     try:
         ai_stats = score_pending_without_ai(store.conn, limit=auto_score_limit())
         if ai_stats.get("planned"):

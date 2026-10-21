@@ -1135,7 +1135,7 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
     ``rejected`` = AI answered unsuitable → status rejected (pending or
     published crawled ads). Counted as AI success.
     """
-    from worker.market_fit import clarify_market_fit
+    from worker.market_fit import checked_verdict
 
     if scope not in ("queue", "crawled", "crawl_rejects"):
         return "skipped"
@@ -1146,6 +1146,9 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
             row = conn.execute(
                 """
                 SELECT id, title, company, city, text, status,
+                       COALESCE((SELECT s.source_url FROM job_sources s WHERE s.job_id = jobs.id
+                                 ORDER BY s.id LIMIT 1), '') AS source_url,
+                       remote, relocation,
                        COALESCE(owner_subject, '') AS owner_subject,
                        COALESCE(hidden, 0) AS hidden,
                        merged_into
@@ -1161,25 +1164,31 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
                 "company": row["company"] or "",
                 "city": row["city"] or "",
                 "text": row["text"] or "",
+                "source_url": row["source_url"] or "",
+                "remote": bool(int(row["remote"] or 0)) or None,
+                "relocation": bool(int(row["relocation"] or 0)) or None,
             }
         finally:
             conn.close()
 
     conn = _connect()
     try:
-        verdict = clarify_market_fit(
+        verdict = checked_verdict(
             title=snap["title"],
             company=snap["company"],
             place=snap["city"],
             text=snap["text"],
             conn=conn,
+            source_url=snap["source_url"],
+            source_remote=snap["remote"],
+            source_relocation=snap["relocation"],
         )
     finally:
         conn.close()
     if verdict is None:
         return "failed"
 
-    reason = str(verdict.get("reason") or "")[:300]
+    reason = str(verdict.get("reason") or "")[:800]
     confidence = int(verdict.get("confidence") or 0)
     with _LOCK:
         conn = _connect()
@@ -1195,7 +1204,7 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
             if row is None or not _recheck_eligible(row, scope=scope):
                 return "skipped"
             status = row["status"] or ""
-            if not verdict.get("suitable"):
+            if not verdict.get("suitable") and not verdict.get("unclear"):
                 # Pending/published → rejected (shows on Rejected tab). Already
                 # rejected → refresh scores only. Do not only-hide published.
                 # crawl_rejects scope: score refresh + keep URL skip (hidden OK).
@@ -1216,7 +1225,7 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
                             SET status = ?, reject_reason = ?
                             WHERE id = ? AND status != ?
                             """,
-                            (REJECTED, reason or "unsuitable", job_id, REJECTED),
+                            (REJECTED, (reason or "unsuitable")[:300], job_id, REJECTED),
                         )
                     if scope == "crawl_rejects":
                         _touch_crawl_reject_reason(conn, job_id, reason)
@@ -1231,7 +1240,7 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
                     """,
                     (
                         REJECTED,
-                        reason or "unsuitable",
+                        (reason or "unsuitable")[:300],
                         confidence,
                         reason,
                         _now(),
@@ -1240,6 +1249,18 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
                 )
                 conn.commit()
                 return "rejected"
+            if verdict.get("unclear"):
+                # No evidence either way (40%): keep source flags, staff decides.
+                conn.execute(
+                    """
+                    UPDATE jobs
+                    SET ai_confidence = ?, market_fit_reason = ?, updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (confidence, reason, _now(), job_id),
+                )
+                conn.commit()
+                return "checked"
             remote = 1 if verdict.get("remote") else 0
             relocation = 1 if verdict.get("relocation") else 0
             conn.execute(
@@ -1314,7 +1335,7 @@ def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
     2) Still unscored → sync market_fit for up to ``ai_limit`` rows.
     Company/manual ads (owner_subject set) are skipped.
     """
-    from worker.market_fit import clarify_market_fit, rule_fit_confidence
+    from worker.market_fit import checked_rule_fit, checked_verdict
 
     if ai_limit < 0 or ai_limit > 50:
         raise CabinetError(422, "AI limit 0–50 arasında olmalıdır")
@@ -1329,6 +1350,8 @@ def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
             rows = conn.execute(
                 """
                 SELECT id, title, company, city, text, remote, relocation,
+                       COALESCE((SELECT s.source_url FROM job_sources s WHERE s.job_id = jobs.id
+                                 ORDER BY s.id LIMIT 1), '') AS source_url,
                        rule_confidence, ai_confidence, market_fit_reason
                 FROM jobs
                 WHERE status = ?
@@ -1352,14 +1375,13 @@ def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
                 pre_remote = bool(int(row["remote"] or 0))
                 pre_reloc = bool(int(row["relocation"] or 0))
                 had_rule = row["rule_confidence"] is not None
-                rule_fit = rule_fit_confidence(
+                rule_fit = checked_rule_fit(
                     title,
                     place,
                     text,
                     pre_remote=True if pre_remote else None,
                     pre_relocation=True if pre_reloc else None,
-                    remote_default=False,
-                    relocation_default=False,
+                    source_url=row["source_url"] or "",
                 )
                 if rule_fit:
                     conn.execute(
@@ -1377,7 +1399,7 @@ def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
                         """,
                         (
                             int(rule_fit["confidence"]),
-                            str(rule_fit.get("reason") or "rule market signal")[:300],
+                            str(rule_fit.get("reason") or "rule market signal")[:800],
                             _now(),
                             int(row["id"]),
                             PENDING,
@@ -1392,6 +1414,9 @@ def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
                             "company": row["company"] or "",
                             "city": place,
                             "text": text,
+                            "source_url": row["source_url"] or "",
+                            "remote": True if pre_remote else None,
+                            "relocation": True if pre_reloc else None,
                         }
                     )
             conn.commit()
@@ -1408,12 +1433,15 @@ def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
         job_id = snap["id"]
         conn = _connect()
         try:
-            verdict = clarify_market_fit(
+            verdict = checked_verdict(
                 title=snap["title"],
                 company=snap["company"],
                 place=snap["city"],
                 text=snap["text"],
                 conn=conn,
+                source_url=snap["source_url"],
+                source_remote=snap["remote"],
+                source_relocation=snap["relocation"],
             )
         finally:
             conn.close()
@@ -1421,7 +1449,7 @@ def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
             failed += 1
             continue
         checked += 1
-        reason = str(verdict.get("reason") or "")[:300]
+        reason = str(verdict.get("reason") or "")[:800]
         confidence = int(verdict.get("confidence") or 0)
         with _LOCK:
             conn = _connect()
@@ -1437,7 +1465,16 @@ def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
                     continue
                 if row["rule_confidence"] is not None or row["ai_confidence"] is not None:
                     continue
-                if not verdict.get("suitable"):
+                if verdict.get("unclear"):
+                    conn.execute(
+                        """
+                        UPDATE jobs
+                        SET ai_confidence = ?, market_fit_reason = ?, updated_at = ?
+                        WHERE id = ?
+                        """,
+                        (confidence, reason, _now(), job_id),
+                    )
+                elif not verdict.get("suitable"):
                     conn.execute(
                         """
                         UPDATE jobs
@@ -1447,7 +1484,7 @@ def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
                         """,
                         (
                             REJECTED,
-                            reason or "unsuitable",
+                            (reason or "unsuitable")[:300],
                             confidence,
                             reason,
                             _now(),

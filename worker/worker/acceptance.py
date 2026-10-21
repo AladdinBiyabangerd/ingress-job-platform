@@ -3,11 +3,17 @@ and the LinkedIn extension import (API), so both apply the same checks."""
 
 from __future__ import annotations
 
+from worker.eligibility import assess as assess_eligibility
+from worker.eligibility import cap_score, is_hard_reject
+from worker.eligibility import summary as eligibility_summary
 from worker.market_fit import (
+    AI_REASON_PREFIX,
+    RULE_REASON_PREFIX,
     clarify_market_fit,
     is_rejected,
     mark_rejected,
     rule_fit_confidence,
+    source_meta_line,
 )
 from worker.parsing import is_aggregator_snippet
 from worker.techstack import (
@@ -60,6 +66,22 @@ def finish_item(connector, item: dict | None) -> dict | None:
         relocation_default=relocation_default,
     )
 
+    # Azerbaijan eligibility from the ad text + source location (before any AI).
+    countries = [str(c) for c in (item.get("geo_countries") or []) if str(c or "").strip()]
+    elig = assess_eligibility(
+        title,
+        place,
+        text,
+        countries=countries or None,
+        source_remote=pre_remote if isinstance(pre_remote, bool) else None,
+        source_url=url,
+        source=str(getattr(connector, "name", "") or ""),
+    )
+    if is_hard_reject(elig):
+        if url:
+            mark_rejected(conn, url, ("eligibility: " + eligibility_summary(elig))[:300], via_ai=False)
+        return None
+
     enrich(item, remote_default=remote_default, relocation_default=relocation_default)
 
     # Tel Aviv / hybrid office etc.: drop before AI (no remote/reloc keywords).
@@ -69,15 +91,31 @@ def finish_item(connector, item: dict | None) -> dict | None:
         return None
 
     if rule_fit:
-        item["rule_confidence"] = int(rule_fit["confidence"])
+        item["rule_confidence"] = cap_score(int(rule_fit["confidence"]), elig, rule=True)
         item["ai_confidence"] = None
-        item["market_fit_reason"] = str(rule_fit.get("reason") or "rule market signal")[:300]
+        item["market_fit_reason"] = (
+            RULE_REASON_PREFIX
+            + eligibility_summary(elig)
+            + f" · qayda siqnalı: {rule_fit.get('reason') or 'market signal'}"
+        )[:800]
     else:
         verdict = clarify_market_fit(
-            title=title, company=company, place=place, text=text, conn=conn
+            title=title,
+            company=company,
+            place=place,
+            text=text,
+            conn=conn,
+            source_meta=source_meta_line(
+                remote=pre_remote,
+                relocation=pre_relocation,
+                place=place,
+                countries=countries,
+                source=str(getattr(connector, "name", "") or ""),
+            ),
         )
-        if not verdict or not verdict.get("suitable"):
-            if url and verdict is not None and not verdict.get("suitable"):
+        keep = bool(verdict) and bool(verdict.get("suitable") or verdict.get("unclear"))
+        if not keep:
+            if url and verdict is not None:
                 mark_rejected(
                     conn,
                     url,
@@ -85,11 +123,16 @@ def finish_item(connector, item: dict | None) -> dict | None:
                     via_ai=True,
                 )
             return None
-        item["remote"] = bool(verdict.get("remote"))
-        item["relocation"] = bool(verdict.get("relocation"))
+        if verdict.get("suitable"):
+            item["remote"] = bool(verdict.get("remote"))
+            item["relocation"] = bool(verdict.get("relocation"))
+        # unclear (no evidence, 40%): keep source flags, stay pending for staff.
         item["rule_confidence"] = None
-        item["ai_confidence"] = int(verdict.get("confidence") or 0)
-        item["market_fit_reason"] = str(verdict.get("reason") or "")[:300]
+        item["ai_confidence"] = cap_score(int(verdict.get("confidence") or 0), elig, rule=False)
+        reason = str(verdict.get("reason") or "")
+        if not reason.startswith(AI_REASON_PREFIX):
+            reason = AI_REASON_PREFIX + reason
+        item["market_fit_reason"] = reason[:800]
 
     if getattr(connector, "require_remote_or_relocation", False):
         if not (item.get("remote") or item.get("relocation")):

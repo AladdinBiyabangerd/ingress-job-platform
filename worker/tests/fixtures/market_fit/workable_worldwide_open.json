@@ -1,0 +1,41 @@
+{
+ "_note": "Real public row from https://jobs.workable.com/api/v1/jobs?query=developer%20worldwide&workplace=remote fetched 2026-10-21. Unmodified. Text says 'Location: Remote, accepting worldwide candidates'.",
+ "jobs": [
+  {
+   "department": "Mobile Development",
+   "id": "e5fb68e0-16fc-4b8e-af33-2f509e1d97db",
+   "title": "Unity Developer",
+   "state": "published",
+   "description": "<p><strong>Job Summary:</strong><br />Creative Chaos is seeing a highly motivated Unity Developer to help create a unique 3D social simulation video game for iOS &amp; Android. We are seeking a developer responsible for building games for various target platforms based on the Unity framework. Your primary responsibilities will be to implement game functionality translating design ideas, concepts, and requirements into a functional and engaging game. A commitment to collaborative problem solving, sophisticated design, and a quality product are essential.</p><p><strong>Duties &amp; Responsibilities:</strong></p><ul> <li>Implement game functionality as per communicated design</li> <li>Experience with Unity 3D development.</li> <li>Translate design specification into functional game</li> <li>Communicate with other team members to establish an effective pipeline and integrate media assets</li> <li>Design, build and maintain efficient, reusable, and reliable code</li> <li>Ensure the best possible performance, quality, and responsiveness of applications</li> <li>Identify bottlenecks and bugs, and devise solutions to address and mitigate these problems</li> <li>Help maintain code quality, organization, and automatization</li> <li>Participate on project teams as needed as Developer and Technical Lead, to develop and deploy software solutions to meet business needs.</li> <li>Adhere closely to departmental standards, leveraging existing codebases and inventing new tools and workflows.</li> <li>Mentor junior and intermediate developers through pair programming, code reviews and one-on-one conversation</li> <li>Keep educated on trends and tools in the industry and bring new knowledge and insight to the team.</li> <li>Participate in and initiate projects to improve and educate the department.</li> <li>Collaborate internally to build and maintain internal frameworks and tools to assist peers</li> <li>Participate in AGILE project methodology and assist others in learning and succeeding with our processes.</li> <li>Learn to estimate and scope project budgets, timelines, and feasibility of client requests to Helios’ standards.</li> <li>Approach responsibilities and challenges with optimism, leading teammates to success while keeping scope realistic.</li> </ul>",
+   "socialSharingDescription": "Job Summary:Creative Chaos is seeing a highly motivated Unity Developer to help create a unique 3D social simulation video game for iOS &amp;amp; Android. We are seeking a developer responsible for building games for various target platforms based on t...",
+   "employmentType": "Full-time",
+   "benefitsSection": "<ul> <li>Paid Time Off</li> <li>Work From Home</li> <li>Health Insurance</li> <li>OPD</li> <li>Training and Development</li> <li>Life Insurance</li> <li>Exchange Program</li> </ul>",
+   "requirementsSection": "<ul> <li>Must have experience in Unity development for iOS &amp; Android.</li> </ul><ul> <li>Expert knowledge of Unity3D and good programming skills</li> <li>Experience in working on both 2D and 3D games</li> <li>Ability to write well designed, testable, efficient code</li> <li>Should have problem-solving and analytical skills</li> <li>Strong object-oriented and data structure concepts</li> <li>Implement game functionality as per communicated design</li> <li>Experience with Unity 3D development.</li> <li>Translate design specification into functional game</li> <li>Design, build and maintain efficient, reusable, and reliable code</li> <li>Ensure the best possible performance, quality, and responsiveness of applications</li> <li>Identify bottlenecks and bugs and devise solutions to address and mitigate these problems</li> <li>Help maintain code quality, organization, and automatization</li> <li>Bachelor's OR Masters degree in Computer Science/Software Engineering/IT or equivalent.</li> <li>The candidate must possess a portfolio of considerable projects in Unity 3D.</li> <li>Must participate in all phases of project i-e development, testing, and deploying.</li> <li>Ability to write clear, well-documented, reusable code.<br /><br /><strong>Job type:<br /></strong>Contractual position leading to a full-time role.<br /><br /><strong>Location:<br /></strong>Remote, accepting worldwide candidates.</li> </ul>",
+   "url": "https://jobs.workable.com/view/up9N9oDC9fCe6CxMWTZsXD/remote-unity-developer-in-pakistan-at-creative-chaos",
+   "language": "en",
+   "locations": [
+    "TELECOMMUTE",
+    "Pakistan"
+   ],
+   "location": {
+    "city": "",
+    "subregion": null,
+    "countryName": "Pakistan"
+   },
+   "created": "2021-11-09T12:49:17.000Z",
+   "updated": "2021-11-09T12:49:17.000Z",
+   "company": {
+    "id": "baec563e-49d5-4e28-a9a8-e0cf1751ff65",
+    "title": "Creative Chaos",
+    "website": "https://creativechaos.co",
+    "image": "https://workablehr.s3.amazonaws.com/uploads/account/logo/496284/logo",
+    "description": "<p>Creative Chaos is an integrated technology innovation firm that specializes in building MVPs for startups and Fortune 500 companies. Our mission is to help startups and enterprises bring their ideas to life. </p><p>\n\nWe believe that innovation can only be delivered through ruthless commitment, grit, and resolve of a team.\n\nOur process is driven by a proven MVP Development Framework and powered by passionate people who are committed to delivery and excellence.\n\nWe specialize in building web applications, mobile apps and IOT solutions. </p><p>\nKey Facts: </p><p>\n• Established in 2000 </p><p>\n• Headquartered in San Francisco</p><p>\n• Global Delivery Network with offices in Boston, Toronto and South East Asia</p><p>• 300+ full-time associates globally </p><p>\n• Specialize in product innovation and agile development </p><p>\n• 400+ successful projects across multiple industry verticals </p><p>\n• Focus on full life-cycle technology implementation and solutions </p><p>\n• Diverse technology expertise</p>",
+    "url": "https://jobs.workable.com/company/p5L6kj66F2EG9zMPo2khja/jobs-at-creative-chaos",
+    "socialSharingImage": "https://workablehr.s3.amazonaws.com/uploads/account/open_graph_logo/496284/social",
+    "socialSharingDescription": "​Creative Chaos is an integrated technology innovation firm that specializes in building MVPs for startups and Fortune 500 companies. Our mission is to help startups and enterprises bring their ideas to life."
+   },
+   "isFeatured": false,
+   "workplace": "remote"
+  }
+ ]
+}

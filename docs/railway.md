@@ -126,7 +126,7 @@ that file is applied; set them yourself only if you use another bucket):
 | `EMBED_STALE_LIMIT` | Optional. Max jobs to embed per worker pass (default `250`, max `500`). ~13–16 NVIDIA API calls at chunk size 16 — well under typical hosted NIM RPM. |
 | `AI_RERANK_ENABLED` | Optional. Default follows gateway; `0` keeps structured-only matches. |
 | `AI_MATCH_WHY_ENABLED` | Optional. Default follows gateway; `0` skips LLM why sentences. |
-| Other AI flow flags | All AI flows are **on by default when any AI key is set**; `=0` (or a staff toggle in Moderasiya → AI flags) turns one off. `AI_MARKET_FIT_ENABLED` (worker + api: AI publish-fit check → staff queue "AI %"), `AI_JOB_TIDY_ENABLED` (worker: tidies ad text for the job page), `ENGAGEMENT_AI_COPY_ENABLED`, `AI_ROLE_COACH_ENABLED`, `AI_LEARNING_ROADMAP_ENABLED`, `AI_JOB_ANALYZE_ENABLED`, `AI_JOB_APPLY_DRAFT_ENABLED`, `AI_JOB_TAILORED_CV_ENABLED`. |
+| Other AI flow flags | All AI flows are **on by default when any AI key is set**; `=0` (or a staff toggle in Moderasiya → AI flags) turns one off. `AI_MARKET_FIT_ENABLED` (worker + api: AI yes/no eligibility checks → staff queue "AI checks %", computed in `worker/worker/fit_mapping.py`), `AI_JOB_TIDY_ENABLED` (worker: tidies ad text for the job page), `ENGAGEMENT_AI_COPY_ENABLED`, `AI_ROLE_COACH_ENABLED`, `AI_LEARNING_ROADMAP_ENABLED`, `AI_JOB_ANALYZE_ENABLED`, `AI_JOB_APPLY_DRAFT_ENABLED`, `AI_JOB_TAILORED_CV_ENABLED`. |
 | `INTERNAL_JOB_TOKEN` | Shared secret for worker → API digests + engagement, and Academy staff ops status (`X-Internal-Token`). Set the **same** value on **api**, **worker**, and Academy `JOB_INTERNAL_TOKEN`. If unset on worker, `engagement_jobs` / `email_jobs` are skipped and users get no hourly match notifications. |
 | `JOB_API_BASE_URL` (worker) | API base the worker POSTs to (private URL on Railway). Required for digests/engagement triggers. |
 | `VAPID_PUBLIC_KEY` | Web Push applicationServerKey (**api**). Generate with `npx web-push generate-vapid-keys`. Without all three VAPID vars, browser push never sends (in-app still works). |
@@ -199,6 +199,27 @@ every host still gets at most one request per second.
 
 CV upload uses the bucket only when `BUCKET_NAME`, `BUCKET_ACCESS_KEY`, and
 `BUCKET_SECRET_KEY` are all set. Otherwise files stay in `api/data/cvs/`.
+
+## Staff-queue % (market fit, Azerbaijan eligibility)
+
+* **Rule %** — deterministic keywords/schema (`worker/worker/market_fit.py:rule_fit_confidence`), never above 80.
+* **AI checks %** — the AI (`market-fit-v6`) returns only yes/no flags with quotes from the ad; the % is computed by
+  `worker/worker/fit_mapping.py:staff_percent` (95 AZ named · 90 worldwide · 88 region incl. AZ or relocation+visa ·
+  70 relocation or visa only · 40 no evidence · 15 country-restricted / temporary-abroad). Positive flags whose quote is not
+  in the ad are dropped.
+* Both are capped first by `worker/worker/eligibility.py` (parsed location, Workable country, local-entity signals).
+  Country-locked / foreign on-site ads (cap ≤ 10) are rejected without any AI call.
+* The reasons (flags + quotes + eligibility line, Azerbaijani) are shown under the ad title in Moderasiya.
+
+Re-score pending ads after deploying (no AI calls; safe, never changes status):
+
+```bash
+railway run --service worker python -m worker rescore-eligibility --dry-run   # list changes only
+railway run --service worker python -m worker rescore-eligibility --reset-ai  # apply; clear old-prompt AI %
+```
+
+`--reset-ai` clears AI % written by older prompts so the scheduler's normal `market_fit_auto` pass re-checks them
+(within `AI_GATEWAY_DAILY_CALL_LIMIT`). The scheduler also re-applies the eligibility caps every run.
 
 ## Cloudflare edge (production)
 

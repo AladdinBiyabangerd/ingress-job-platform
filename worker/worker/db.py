@@ -563,7 +563,7 @@ class Store:
                 ai_conf = max(0, min(100, int(ai_conf)))
             except (TypeError, ValueError):
                 ai_conf = None
-        fit_reason = str(item.get("market_fit_reason") or "")[:300]
+        fit_reason = str(item.get("market_fit_reason") or "")[:800]
         with self.conn:
             existing = self.conn.execute(
                 "SELECT id, job_id FROM job_sources WHERE source_url = ?",

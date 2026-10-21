@@ -904,6 +904,9 @@ export function Admin({
                             ) : null}
                           </div>
                           {job.company ? <span className="admin-mod-sub">{job.company}</span> : null}
+                          {job.market_fit_reason ? (
+                            <span className="admin-mod-sub admin-mod-fit">{job.market_fit_reason}</span>
+                          ) : null}
                           {job.reject_reason ? (
                             <span className="admin-mod-sub admin-mod-reject">
                               {t.rejectReason}: {job.reject_reason}

@@ -1,0 +1,38 @@
+Responsibilities
+- Designing and implementing complex workflows, APIs, and UI backends for payment platforms;
+- Performing TDD using various tools like JUnit;
+- Taking part in scaling highly available payment services (99.99%+ uptime);
+- Using AI coding assistants and agents (e.g. Claude Code, Kiro, GitHub Copilot) for implementation, refactoring, test generation, code review and legacy code exploration, and owning the quality of everything they produce;
+- Contributing to the team's shared AI tooling, such as agent skills, project instructions (e.g. CLAUDE.md), prompt templates and MCP server configurations, so AI-assisted work is consistent and repeatable;
+- Applying secure and responsible AI practices in a PCI DSS environment, so that no cardholder data, secrets or other sensitive information reaches AI tools.
+Requirements
+- 9-10+ years using core Java and/or J2EE, Spring;
+- Knowledge in ORM solutions, e.g. Hibernate;
+- Database experience with open-source databases like MySQL and/or PostgreSQL;
+- Experience in JavaScript and decent front-end skills;
+- Comfortable with TDD/BDD practices, JUnit, etc.;
+- Hands-on, day-to-day experience with AI coding assistants or agentic tools (e.g. Claude Code, Kiro, Cursor, GitHub Copilot), including writing effective prompts and specs and critically reviewing AI-generated code;
+- Practical understanding of how AI agents connect to engineering tools through MCP (Model Context Protocol) servers, e.g. GitHub, Jira, Confluence, databases, and of the related risks such as prompt injection and over-permissioned access.
+emerchantpay is a leading global payment service provider and acquirer for online, mobile, in-store and over the phone payments. Our global payments solution is available through a simple integration, offering a diverse range of features, including global acquiring, global and local payment methods, advanced fraud management and performance optimisation. We empower businesses to design seamless and engaging payment experiences for their consumers.
+We are looking for enthusiastic and experienced Java developers for one of our payment processing products that we are modernizing.
+The role combines hands-on engineering with modern, AI-assisted development practices. You will build and scale highly available payment services, using AI coding agents and tooling as part of your daily workflow while keeping the quality, security and reliability that payments demand.
+Considered as an Advantage
+- Experience in building APIs using latest standards;
+- Experience with SPA front-end apps;
+- Experience with bigger codebases and refactoring, including AI-assisted modernization of legacy code;
+- Creating agent skills, custom instructions or reusable workflows for AI coding tools;
+- Building MCP servers or tool integrations in Java (e.g. MCP Java SDK, Spring AI);
+- Integrating LLMs into Java services (e.g. Spring AI, LangChain4j, Amazon Bedrock, Claude API), including RAG, tool calling and guardrails;
+- OpenSSL, mod_security, general security knowledge;
+- Linux and devops skills with AWS, Ansible, Terraform, etc.;
+- Previous experience in the payment industry.
+If you are interested, please apply with your CV in English only. Only short-listed candidates will be contacted.
+Personal data of the applicants will be processed in strict confidentiality by emerchantpay ltd. UIC 175117520 solely for the purposes of selection and recruitment and will not be transferred to other data controllers unless required by law. Applicants provide their personal data on a voluntary basis and will have the right to access and correct their personal data within a reasonable time upon filing a written request.
+emerchantpay is an equal opportunity employer. We appreciate people with different backgrounds and mindsets, and we honor diversity and inclusion.
+Benefits
+- Fast-growing payment company;
+- Excellent working conditions, casual atmosphere, and state-of-the-art hardware;
+- Modern, challenging, constantly growing business;
+- Professional development - books, trainings, certifications, etc.;
+- Team buildings and fun activities;
+- 25 days paid holiday, 1 day for every 2 years with us;

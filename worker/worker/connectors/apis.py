@@ -562,7 +562,9 @@ class WorkableAggregatorConnector(FeedConnector):
     """https://jobs.workable.com — Workable's public job-search API (robots.txt only blocks
     /search*; /api/v1/jobs is open). Every Workable employer in one feed. A remote role is
     repeated once per country, so rows are merged on company + title and the listing is shown
-    as plain "Remote" (the posting text, not the per-country row, decides region locks)."""
+    as plain "Remote". The per-country rows are kept as ``geo_countries`` for the Azerbaijan
+    eligibility check: a Workable "remote" job is remote *within* those countries unless the
+    text says worldwide / a region that includes Azerbaijan."""
 
     name = "Workable jobs"
     entry_url = "https://jobs.workable.com/api/v1/jobs"
@@ -615,11 +617,14 @@ class WorkableAggregatorConnector(FeedConnector):
                         job.get("locations") or [])
                     loc = job.get("location") or {}
                     place = ", ".join(x for x in (clean(loc.get("city")), clean(loc.get("countryName"))) if x)
+                    country = clean(loc.get("countryName"))
                     prev = out.get(key)
                     if prev is not None:
                         # Same job, another country row: keep the first, remember the country.
                         if place and place not in prev["_places"]:
                             prev["_places"].append(place)
+                        if country and country not in prev["geo_countries"]:
+                            prev["geo_countries"].append(country)
                         continue
                     body = "\n\n".join(
                         text_from_html(job.get(k))
@@ -636,6 +641,7 @@ class WorkableAggregatorConnector(FeedConnector):
                         "category": [],
                         "remote": True if remote else None,
                         "_places": [place] if place else [],
+                        "geo_countries": [country] if country else [],
                         "_stamp": job.get("created"),
                     }
                 token = str(payload.get("nextPageToken") or "") if isinstance(payload, dict) else ""
