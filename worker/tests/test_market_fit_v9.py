@@ -215,3 +215,12 @@ class OrderTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CompanyStatementRoleBenefitTest(unittest.TestCase):
+    def test_role_benefit_mentioning_office_is_not_company_statement(self):
+        from worker.market_fit import _company_statement_only
+        self.assertFalse(_company_statement_only(
+            "Opportunity to work anywhere in the world (remote work or Lisbon office)"))
+        self.assertTrue(_company_statement_only("Fingerprint is a globally dispersed, 100% remote company."))
+

@@ -1010,7 +1010,7 @@ _VISA_CONDITIONAL = re.compile(
 # where this role may be done from.
 _COMPANY_SUBJECT = re.compile(r"(?i)\b(?:company|team|teams|employees|workforce|offices?|customers|clients|organi[sz]ation)\b")
 _ROLE_SUBJECT = re.compile(
-    r"(?i)\b(?:you|your|candidates?|applicants?|hire|hiring|role|position|job|work\s+from|open\s+to|join\s+from)\b"
+    r"(?i)\b(?:you|your|candidates?|applicants?|hire|hiring|role|position|job|work\s+from|work\s+(?:from\s+)?anywhere|opportunity\s+to\s+work|open\s+to|join\s+from)\b"
 )
 
 
