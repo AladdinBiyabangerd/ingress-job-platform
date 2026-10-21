@@ -203,24 +203,31 @@ CV upload uses the bucket only when `BUCKET_NAME`, `BUCKET_ACCESS_KEY`, and
 ## Staff-queue % (market fit, Azerbaijan eligibility)
 
 * **Rule %** — deterministic keywords/schema (`worker/worker/market_fit.py:rule_fit_confidence`), never above 80.
-* **AI checks %** — the AI (`market-fit-v8`) only extracts evidence: 12 yes/no flags, each with up to 3 verbatim
-  quotes (≤ 160 chars, one passage), plus an Azerbaijani reason (the prompt shows the full JSON example). It never
-  scores and never resolves conflicts. The % is computed by `worker/worker/fit_mapping.py:staff_percent`:
+* **AI checks %** — the AI (`market-fit-v9`) only extracts evidence: 13 yes/no flags, each with up to 3 verbatim
+  quotes (≤ 160 chars, one passage), plus an Azerbaijani reason. Flag order is the same everywhere (`FLAGS` in
+  `fit_mapping.py` = prompt definitions = JSON example = schema `required`). It never scores and never resolves
+  conflicts. The % is computed by `worker/worker/fit_mapping.py:staff_percent`:
   95 AZ named · 90 worldwide · 88 named geographic region that includes AZ (EMEA, CIS, Caucasus…; a time-zone range or
-  UTC offset alone never counts), or relocation+visa · 84 remote + "right to work in <country>" · 70 relocation or visa
-  only · 40 no evidence · 15 any restriction without a valid route.
-  Restriction flags: `remote_country_restricted`, `candidate_location_restricted` (must already reside in / be a
-  citizen of a named country; not for "the job is based in X" or "or willing to relocate"; blocks relocation/visa),
-  `work_authorization_required`, `no_sponsorship_stated`, `temporary_abroad_only`. A valid remote-from-AZ route survives
-  `no_sponsorship_stated`. `text_truncated` (the model may answer it; the code value wins) and
-  `work_location_unspecified` are separate and each cap at 84.
-  Conflicts are never resolved silently: `visa_support` + `no_sponsorship_stated` (or `work_authorization_required`)
-  keeps both flags and quotes, the visa route is not counted, and the conflict is listed in the reason and the
-  Moderasiya popover; the same for remote vs restriction and relocation vs residence requirement (restriction wins).
-  Code-side quote checks: verbatim in the ad, not stitched, ≤ 160 chars, about its flag (visa/sponsor/work permit for
-  visa flags, relocat for relocation, remote/anywhere/worldwide/region for remote flags, reside/citizen for
-  candidate location), and not negated near its key term ("We do not sponsor visas" backs `no_sponsorship_stated`,
-  never `visa_support`); rejected quotes are listed for the moderator.
+  UTC offset alone never counts) · 88 relocation + unconditional visa · 84 remote + "right to work in <country>" ·
+  70 relocation only, visa only, or relocation/visa with a *conditional* visa · 40 no evidence · 15 any restriction
+  without a valid route.
+  `visa_support_conditional` ("not for every role and every candidate", "case by case", "where possible", "may
+  sponsor", or a general company-wide statement): the visa route is weak (≤ 70) and never helps reach 85+; the code also
+  sets it when the ad itself qualifies sponsorship and the model missed it, and the qualifying quote is shown.
+  Restriction flags: `remote_country_restricted` (named countries / regions, or an explicit time-zone eligibility rule
+  that excludes UTC+4; not a working-hours overlap, not "US-based company" / "headquartered in"),
+  `candidate_location_restricted` (must already reside in / be a citizen of a named country; not "the job is based in
+  X" or "or willing to relocate"; blocks relocation/visa), `work_authorization_required`, `no_sponsorship_stated`,
+  `temporary_abroad_only`. A valid remote-from-AZ route survives `no_sponsorship_stated`.
+  `text_truncated`: the code is authoritative (the prompt cut at `PROMPT_TEXT_MAX`, or a source snippet such as a
+  description ending in "…"); the AI answer is only a hint. Code true always wins; an AI hint without a code cut is a
+  soft flag shown to the moderator and, conservatively, also caps at 84. `work_location_unspecified` is separate and
+  caps at 84.
+  Conflicts are never resolved silently (`visa_support` vs `no_sponsorship_stated` / `work_authorization_required`,
+  remote vs restriction, relocation vs residence requirement): both flags and quotes are kept, the restrictive side
+  wins, and the conflict is listed in the reason and the Moderasiya popover.
+  Code-side quote checks: verbatim in the ad, not stitched, ≤ 160 chars, about its flag, not a statement about the
+  company only ("a globally dispersed, 100% remote company"), not negated near its key term; rejected quotes are listed.
 * Both are capped first by `worker/worker/eligibility.py` (parsed location, Workable country, local-entity signals).
   Country-locked / foreign on-site ads (cap ≤ 10) are rejected without any AI call.
 * Click the AI % pill in Moderasiya to see the result: flags with quotes, conflicts, rejected quotes, cap, reason.
@@ -232,11 +239,11 @@ railway run --service worker python -m worker rescore-eligibility --dry-run   # 
 railway run --service worker python -m worker rescore-eligibility --reset-ai  # apply; clear old-prompt AI %
 ```
 
-`--reset-ai` clears AI % written by older prompts (any AI reason without the `(market-fit-v8)` tag, so v6/v7 rows too)
+`--reset-ai` clears AI % written by older prompts (any AI reason without the `(market-fit-v9)` tag, so v6–v8 rows too)
 so the scheduler's normal `market_fit_auto` pass re-checks them (within `AI_GATEWAY_DAILY_CALL_LIMIT`). The scheduler
 also re-applies the eligibility caps every run.
 
-Real-data eval (62 hand-labelled real ads from the DB plus 2 clearly marked synthetic conflict cases, `worker/tests/fixtures/market_fit/eval_real_ads.json`):
+Real-data eval (62 hand-labelled real ads from the DB, 3 cut variants of them and 2 clearly marked synthetic cases, covering the 8 review scenarios; `worker/tests/fixtures/market_fit/eval_real_ads.json`):
 
 ```bash
 cd worker

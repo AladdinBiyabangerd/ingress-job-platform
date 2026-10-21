@@ -7,6 +7,7 @@ stored in ``crawl_rejects`` so the next crawl skips them without another call.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -21,7 +22,9 @@ from worker.fit_mapping import (
     FLAGS,
     POSITIVE_FLAGS,
     CONFLICTS_AZ,
+    TRUNCATION_HINT,
     conflicts,
+    visa_strength,
     is_suitable,
     staff_percent,
     upgrade_legacy,
@@ -36,7 +39,7 @@ from worker.techstack import (
 log = logging.getLogger("ingress-job.worker.market_fit")
 
 PURPOSE = "market_fit"
-PROMPT_VERSION = "market-fit-v8"
+PROMPT_VERSION = "market-fit-v9"
 ENV_FLAG = "AI_MARKET_FIT_ENABLED"
 
 # Graded rule confidence (how sure deterministic rules are the ad is OK to publish).
@@ -61,7 +64,77 @@ CREATE TABLE IF NOT EXISTS crawl_rejects (
 );
 """
 
-_SYSTEM = """You check international tech job ads for a job board whose candidates live in Azerbaijan (AZ).
+_FLAG_DEFINITIONS = {
+    "remote_worldwide": "the role can be done remotely from any country / worldwide / anywhere in the world.",
+    "remote_region_includes_az": (
+        'the role can be done remotely within a named geographic region that clearly includes Azerbaijan '
+        '(e.g. "EMEA", "CIS", "Caucasus"). A time-zone range or UTC offset alone does not count.'
+    ),
+    "remote_az_explicit": "the ad explicitly allows working from Azerbaijan or Baku.",
+    "relocation": "genuine relocation support for this role (quote the target country or city when the ad states it).",
+    "visa_support": (
+        'the ad says it sponsors visas or work permits (a general "We do sponsor visas!" counts). '
+        "Relocation alone is not visa support."
+    ),
+    "visa_support_conditional": (
+        "the sponsorship is qualified: not guaranteed, not possible for every role or every candidate, case by case, "
+        '"where possible", "may sponsor", subject to eligibility, or only a general company-wide statement that does '
+        "not commit for this role. Quote the qualifying sentence. Always false when visa_support is false."
+    ),
+    "remote_country_restricted": (
+        "the remote work is limited to named countries or regions that do not clearly include Azerbaijan "
+        '(e.g. "Remote within Germany", "Remote — US residents only", "Must be based in the EU"), or the ad '
+        "explicitly uses a time-zone range as an eligibility rule that excludes UTC+4 (e.g. \"must be located "
+        "between UTC-5 and UTC-8\", \"only candidates in UTC-5..UTC-8\"). Not for a working-hours overlap "
+        '("overlap with CET"), not for a statement about the company itself ("US-based company", '
+        '"headquartered in London"), and not when the remote work is worldwide and only names other countries '
+        'as exceptions ("worldwide (except Russia)"). A time-zone rule that includes UTC+4 is neither a '
+        "restriction nor confirmation."
+    ),
+    "candidate_location_restricted": (
+        "the ad explicitly requires applicants to already reside in, be citizens or residents of, or have a "
+        "specified history of residence in a named country or region that excludes Azerbaijan. Do not set this "
+        "flag solely because the job is based in that country, or when the ad explicitly accepts applicants "
+        "willing to relocate there as an alternative."
+    ),
+    "work_authorization_required": (
+        "applicants must already hold the right to work in a named country, without employer sponsorship. "
+        'Not for "authorized to work from your home location".'
+    ),
+    "temporary_abroad_only": 'working from abroad is allowed only temporarily (e.g. "up to 30 days per year").',
+    "no_sponsorship_stated": "the ad explicitly says it does not sponsor visas or work permits.",
+    "text_truncated": (
+        "a hint only. True when you can see the text is cut (\"[… omitted …]\", it stops mid-sentence or ends "
+        'with "...") or the message says it is truncated. Our code decides the final value from how the text '
+        "was obtained; your false never overrides a cut the code knows about. Separate from "
+        "work_location_unspecified."
+    ),
+    "work_location_unspecified": (
+        "neither the ad text nor the location field says where the work is done or from where remote work is "
+        "allowed."
+    ),
+}
+_EXAMPLE_ON = {
+    "relocation": ["We offer relocation support to Berlin."],
+    "visa_support": ["We do sponsor visas!"],
+    "visa_support_conditional": ["Sponsorship is decided case by case and is not possible for every candidate."],
+}
+_EXAMPLE_REASON = (
+    "Berlinə relocation təklif olunur; viza sponsorluğu var, amma hər namizəd üçün zəmanət verilmir."
+)
+
+
+def _example_json() -> str:
+    lines = [
+        f'  "{name}": {{"value": {"true" if name in _EXAMPLE_ON else "false"}, '
+        f'"quotes": {json.dumps(_EXAMPLE_ON.get(name, []), ensure_ascii=False)}}},'
+        for name in FLAGS
+    ]
+    lines.append(f'  "reason": {json.dumps(_EXAMPLE_REASON, ensure_ascii=False)}')
+    return "{\n" + "\n".join(lines) + "\n}"
+
+
+_SYSTEM_TEMPLATE = """You check international tech job ads for a job board whose candidates live in Azerbaijan (AZ).
 Extract evidence, not conclusions: answer yes/no questions about the ad and copy the text that supports each answer. Do NOT score the ad or decide whether it is suitable; our code computes the result from your answers.
 
 A person living in Azerbaijan can take a job only through one of these routes:
@@ -70,7 +143,7 @@ B. Relocation: genuine relocation support for this role.
 C. Visa / work permit: explicit visa or work-permit sponsorship for this role.
 If the evidence is ambiguous, answer false. Never invent facts.
 
-Not enough on their own for route A: "remote", "fully remote", "remote-first", "remote-friendly", "flexible work location", "work from home or the office", "distributed team", "WFH", "hybrid", "almost any country", "most countries", a time-zone overlap or UTC range ("UTC+2 to UTC+6", "overlap with CET"). "Up to N days or weeks per year working from abroad" is temporary_abroad_only, not remote.
+Not enough on their own for route A: "remote", "fully remote", "remote-first", "remote-friendly", "flexible work location", "work from home or the office", "distributed team", "WFH", "hybrid", "almost any country", "most countries", a time-zone overlap or UTC range ("UTC+2 to UTC+6", "overlap with CET"), a statement about the company itself ("US-based company", "headquartered in London"). "Up to N days or weeks per year working from abroad" is temporary_abroad_only, not remote.
 "Relocation benefits may vary", "where applicable" and other generic relocation phrases are weak: relocation=true only for a clear offer for this role. Relocation does not imply visa support, and visa support does not imply relocation.
 The board location field and the source metadata are clues, not proof.
 
@@ -82,43 +155,24 @@ Evidence extraction and conflict handling
 5. Treat missing or omitted text as unknown, not as positive or negative evidence. If the text contains [… omitted …], do not assume that the omitted paragraphs support eligibility.
 6. A missing work location is not the same as truncated text; they are separate questions.
 7. Region-based eligibility is positive only when the geographic region named in the ad, in its ordinary and clear geographic meaning, includes Azerbaijan for the stated remote arrangement. A time-zone overlap or UTC offset alone is not a region. If it is debatable whether it includes Azerbaijan, answer false. Do not infer a company's internal geographic, payroll or legal-entity policy.
-8. no_sponsorship_stated=true means the ad explicitly says that visa or work-permit sponsorship is unavailable. It does not, by itself, disqualify a role that independently qualifies for remote work from Azerbaijan. If the ad both offers and refuses sponsorship, set visa_support and no_sponsorship_stated both to true, quote both, and mention the conflict in reason; do the same for visa_support and work_authorization_required.
+8. no_sponsorship_stated=true means the ad explicitly says that visa or work-permit sponsorship is unavailable. It does not, by itself, disqualify a role that independently qualifies for remote work from Azerbaijan. If the ad both offers and refuses sponsorship, set visa_support and no_sponsorship_stated both to true, quote both, and mention the conflict in reason; do the same for visa_support and work_authorization_required. A general "We do sponsor visas!" can make visa_support true, but whenever the ad qualifies it ("not for every role and every candidate", "case by case", "where possible", "may sponsor") also set visa_support_conditional and quote that qualification.
 9. Quotes must be copied verbatim from the supplied ad (title, location field or ad text), must be no longer than 160 characters, must be one continuous passage and must not be assembled from separate passages or paraphrased. If no exact supporting quote exists, return value=false and quotes=[] for that flag.
 10. Do not treat a statement that the company is an equal-opportunity employer, hires internationally, has a global team, or has customers or offices worldwide as evidence of remote eligibility, relocation or visa sponsorship.
 
 For each flag return {"value": true/false, "quotes": ["..."]}: up to 3 verbatim quotes that make the flag true, each one sentence or phrase of at most 160 characters; [] when false.
-- remote_worldwide: the role can be done remotely from any country / worldwide / anywhere in the world.
-- remote_region_includes_az: the role can be done remotely within a named geographic region that clearly includes Azerbaijan (e.g. "EMEA", "CIS", "Caucasus"). A time-zone range or UTC offset alone does not count.
-- remote_az_explicit: the ad explicitly allows working from Azerbaijan or Baku.
-- relocation: genuine relocation support for this role (quote the target country or city when the ad states it).
-- visa_support: explicit visa or work-permit sponsorship for this role.
-- remote_country_restricted: the remote work is limited to named countries, regions or time-zone ranges that do not clearly include Azerbaijan (e.g. "remote within Germany", "EU only", "US-based", "LATAM"). Not when the remote work is worldwide and only names other countries as exceptions ("worldwide (except Russia)").
-- candidate_location_restricted: the ad explicitly requires applicants to already reside in, be citizens or residents of, or have a specified history of residence in a named country or region that excludes Azerbaijan. Do not set this flag solely because the job is based in that country, or when the ad explicitly accepts applicants willing to relocate there as an alternative.
-- work_authorization_required: applicants must already hold the right to work in a named country, without employer sponsorship. Not for "authorized to work from your home location".
-- temporary_abroad_only: working from abroad is allowed only temporarily (e.g. "up to 30 days per year").
-- no_sponsorship_stated: the ad explicitly says it does not sponsor visas or work permits.
-- text_truncated: the supplied text contains "[… omitted …]" or visibly stops mid-ad. Our code decides this flag from how the text was cut; your answer is only a hint. It is separate from work_location_unspecified.
-- work_location_unspecified: neither the ad text nor the location field says where the work is done or from where remote work is allowed.
-reason: one or two short sentences in Azerbaijani for the moderator naming the route or the blocker, and any conflict (e.g. "Yalnız Bolqarıstan daxilində remote; Azərbaycandan iş təsdiqlənmir; relocation/viza yoxdur.").
+{flag_definitions}
+reason: one or two short sentences in Azerbaijani for the moderator naming the route or the blocker, any conflict and any condition on visa sponsorship (e.g. "Yalnız Bolqarıstan daxilində remote; Azərbaycandan iş təsdiqlənmir; relocation/viza yoxdur.").
 
-Output: one JSON object with these keys in this order (the 12 flags, then reason). Example of the shape only (for an imaginary ad; your values and quotes must come from the ad you are given):
-{
-  "remote_az_explicit": {"value": false, "quotes": []},
-  "remote_worldwide": {"value": true, "quotes": ["This role is fully remote and open to candidates anywhere in the world."]},
-  "remote_region_includes_az": {"value": false, "quotes": []},
-  "relocation": {"value": false, "quotes": []},
-  "visa_support": {"value": true, "quotes": ["We sponsor work visas for our Berlin office."]},
-  "remote_country_restricted": {"value": false, "quotes": []},
-  "candidate_location_restricted": {"value": false, "quotes": []},
-  "work_authorization_required": {"value": false, "quotes": []},
-  "temporary_abroad_only": {"value": false, "quotes": []},
-  "no_sponsorship_stated": {"value": true, "quotes": ["Unfortunately, we are unable to sponsor visas for this role."]},
-  "text_truncated": {"value": false, "quotes": []},
-  "work_location_unspecified": {"value": false, "quotes": []},
-  "reason": "İstənilən ölkədən remote açıq yazılıb. Viza barədə ziddiyyət var: həm sponsorluq, həm də imtina qeyd olunub."
-}
+Return one JSON object with exactly these keys in this order: {key_order}.
+Example of the shape only (an imaginary ad; your values and quotes must come from the ad you are given):
+{example}
 
 Reply with JSON only, matching the schema."""
+_SYSTEM = (
+    _SYSTEM_TEMPLATE.replace("{flag_definitions}", "\n".join(f"- {n}: {_FLAG_DEFINITIONS[n]}" for n in FLAGS))
+    .replace("{key_order}", ", ".join([*FLAGS, "reason"]))
+    .replace("{example}", _example_json())
+)
 
 _FLAG_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -156,15 +210,44 @@ _MUST_KEEP_PARAGRAPH = re.compile(
 )
 
 
+# A stored description that the source itself cut ("…platform-focused...", Jooble-style
+# snippets). "And much more..." at the end of a perks list is not a cut.
+_SOURCE_CUT_END = re.compile(r"[\w,;:)\-]\s*(?:\.\.\.|…)\s*$")
+_MORE_ELLIPSIS = re.compile(r"(?i)\b(?:and\s+)?(?:much\s+)?more\s*(?:\.\.\.|…)\s*$")
+
+
+def source_text_truncated(text: str) -> bool:
+    """Reliable signs that the source gave us a cut description (not our prompt limit)."""
+    from worker.parsing import is_aggregator_snippet
+
+    raw = (text or "").strip()
+    if not raw:
+        return False
+    if is_aggregator_snippet(raw):
+        return True
+    return bool(_SOURCE_CUT_END.search(raw)) and not _MORE_ELLIPSIS.search(raw)
+
+
+def truncation_source(text: str, limit: int = PROMPT_TEXT_MAX) -> str:
+    """'prompt_limit' | 'source_snippet' | '' — why the AI does not see the whole ad."""
+    raw = (text or "").strip()
+    if len(raw) > limit:
+        return "prompt_limit"
+    if source_text_truncated(raw):
+        return "source_snippet"
+    return ""
+
+
 def prompt_ad_text(text: str, limit: int = PROMPT_TEXT_MAX) -> tuple[str, bool]:
     """Full ad text when it fits; otherwise head + exclusion + eligibility paragraphs.
 
     Returns ``(text, truncated)``; ``truncated`` is passed on to the verdict so the
-    code (not the AI) sets the ``text_truncated`` flag.
+    code (not the AI) sets the ``text_truncated`` flag. It is also true when the source
+    itself only gave a cut description (:func:`source_text_truncated`).
     """
     raw = (text or "").strip()
     if len(raw) <= limit:
-        return raw, False
+        return raw, source_text_truncated(raw)
     paras = [p for p in re.split(r"\n\s*\n|\n(?=\s*[-•*]\s)", raw) if p.strip()]
     keep: set[int] = set()
     used = 0
@@ -694,6 +777,7 @@ def clarify_market_fit(
         ad_text=f"{title}\n{place}\n{text}",
         cached=bool(result.cached),
         truncated=truncated,
+        truncation_source=truncation_source(text, prompt_limit),
     )
 
 
@@ -708,12 +792,19 @@ def build_user_prompt(
 ) -> str:
     meta = " ".join(str(source_meta or "").split())[:400] or "(none)"
     body, truncated = prompt_ad_text(text, prompt_limit)
-    note = (
-        "Ad text: TRUNCATED — some paragraphs were omitted ([… omitted …]). Do not assume "
-        "anything favourable about the missing parts."
-        if truncated
-        else "Ad text: complete."
-    )
+    why = truncation_source(text, prompt_limit)
+    if why == "prompt_limit":
+        note = (
+            "Ad text: TRUNCATED — some paragraphs were omitted ([… omitted …]). Do not assume "
+            "anything favourable about the missing parts."
+        )
+    elif truncated:
+        note = (
+            "Ad text: TRUNCATED — the source only provided a shortened description. Do not assume "
+            "anything favourable about the missing parts."
+        )
+    else:
+        note = "Ad text: complete as provided by the source."
     return (
         f"Title: {title}\n"
         f"Company: {company}\n"
@@ -730,12 +821,13 @@ _FLAG_AZ = {
     "remote_region_includes_az": "Azərbaycanı əhatə edən regiondan remote",
     "relocation": "relocation dəstəyi",
     "visa_support": "viza/iş icazəsi dəstəyi",
+    "visa_support_conditional": "viza şərtlidir: hər rol/namizəd üçün zəmanət yoxdur (zəif yol)",
     "remote_country_restricted": "remote yalnız müəyyən ölkə/regionlarda",
     "candidate_location_restricted": "namizəd müəyyən ölkədə yaşamalı/vətəndaş olmalı",
     "work_authorization_required": "konkret ölkədə hazır iş icazəsi tələb olunur",
     "temporary_abroad_only": "yalnız müvəqqəti xaricdən iş",
     "no_sponsorship_stated": "viza sponsorluğu yoxdur",
-    "text_truncated": "mətn kəsilib (bəzi abzaslar AI-a göndərilməyib)",
+    "text_truncated": "mətn natamamdır (kəsilib və ya mənbə qısa snippet verib)",
     "work_location_unspecified": "iş yeri / remote əhatəsi yazılmayıb",
     # market-fit-v6 names, still in stored reasons and old cached answers.
     "country_restricted": "ölkə/rezidentlik məhdudiyyəti",
@@ -811,6 +903,9 @@ _RELEVANT = {
     "relocation": re.compile(r"(?i)relocat|\b(?:your|the)\s+move\s+to\b|\bmoving\s+(?:to|from)\b"),
     "visa_support": re.compile(r"(?i)visa|sponsor|work[\s-]?permit|immigration|blue\s+card"),
     "no_sponsorship_stated": re.compile(r"(?i)visa|sponsor|work[\s-]?permit|immigration"),
+    "visa_support_conditional": re.compile(
+        r"(?i)visa|sponsor|work[\s-]?permit|immigration|case[\s-]by[\s-]case|every|guarantee|possible|eligib"
+    ),
     "work_authorization_required": re.compile(
         r"(?i)authori[sz]|right\s+to\s+work|eligib\w*\s+to\s+work|legally|work[\s-]?permit|green\s+card|"
         r"citizen|permanent\s+resident|visa|sponsor"
@@ -883,6 +978,88 @@ def _negated(flag: str, quote: str) -> str:
     return ""
 
 
+# remote_country_restricted: statements about the company, or a working-hours overlap,
+# are not a restriction on where the candidate may work from.
+_COMPANY_HQ = re.compile(
+    r"(?i)\b(?:headquartered|headquarters|\bHQ\b)|"
+    r"\b[A-Z][\w.&]*(?:\s[A-Z][\w.&]*)?[\s-]based\s+(?:company|startup|start-up|firm|business|scale-?up|team|employer)\b|"
+    r"\b(?:company|startup|firm|we)\s+(?:is|are)\s+(?:headquartered|based)\s+in\b"
+)
+_TZ_MENTION = re.compile(r"(?i)\b(?:UTC|GMT|CET|CEST|EST|EDT|PST|PDT|ET|PT)\b|time\s?zones?|working\s+hours|overlap")
+_RESTRICTION_WORDING = re.compile(
+    r"(?i)\bonly\b|\bmust\b|\brequire[ds]?\b|\bresid|\bwithin\b|\beligib|\blimited\s+to\b|"
+    r"\b(?:candidates?|applicants?|people|engineers|you)\s+(?:in|from|located|based|living)\b|"
+    r"\b(?:located|based|living)\s+(?:in|between|within)\b|\bremote\s*(?:\(|[-–—:,]|in\b|from\b|within\b)"
+)
+_TZ_RANGE = re.compile(
+    r"(?i)\b(?:GMT|UTC)\s*([+\-−–]\s*\d{1,2})(?::\d{2})?\s*(?:-|–|—|\.\.|to|and|through)\s*"
+    r"(?:(?:GMT|UTC)\s*)?([+\-−–]\s*\d{1,2})(?::\d{2})?"
+)
+# visa_support_conditional: sponsorship qualified for some roles / candidates only.
+_VISA_CONDITIONAL = re.compile(
+    r"(?i)(?:visa|sponsor|work[\s-]?permit)[^.!?\n]{0,160}?(?:(?:\bnot\b|n['’]t\b)[^.!?\n]{0,60}\bevery\b|\bnot\s+(?:all|always|guaranteed)\b|"
+    r"case[\s-]by[\s-]case|where\s+possible|\bmay\b|\bmight\b|\bsubject\s+to\b|depending\s+on|\bcertain\s+roles\b|"
+    r"\bsome\s+roles\b|\beligible\s+roles\b|cannot\s+guarantee|can['’]t\s+guarantee|on\s+a\s+case)|"
+    r"(?:(?:\bnot\b|n['’]t\b)[^.!?\n]{0,60}\bevery\b|case[\s-]by[\s-]case|where\s+possible|\bmay\b|cannot\s+guarantee|can['’]t\s+guarantee)"
+    r"[^.!?\n]{0,80}?(?:visa|sponsor|work[\s-]?permit)|"
+    r"(?:\bnot\b|n['’]t\b)[^.!?\n]{0,60}(?:visa|sponsor)[^.!?\n]{0,40}\b(?:every|all)\b"
+)
+
+
+# Prompt rule 10: "a globally dispersed, 100% remote company" describes the company, not
+# where this role may be done from.
+_COMPANY_SUBJECT = re.compile(r"(?i)\b(?:company|team|teams|employees|workforce|offices?|customers|clients|organi[sz]ation)\b")
+_ROLE_SUBJECT = re.compile(
+    r"(?i)\b(?:you|your|candidates?|applicants?|hire|hiring|role|position|job|work\s+from|open\s+to|join\s+from)\b"
+)
+
+
+def _company_statement_only(q: str) -> bool:
+    return bool(_COMPANY_SUBJECT.search(q)) and not _ROLE_SUBJECT.search(q)
+
+
+def _tz_range_includes_az(quote: str) -> bool:
+    for m in _TZ_RANGE.finditer(quote or ""):
+        try:
+            lo, hi = (int(re.sub(r"[−–]", "-", g).replace(" ", "")) for g in m.groups())
+        except ValueError:
+            continue
+        if min(lo, hi) <= 4 <= max(lo, hi):
+            return True
+    return False
+
+
+def _country_restriction_problem(q: str) -> str:
+    """'' when the quote can show a remote-location restriction; else an 'alternativ' note."""
+    if _COMPANY_HQ.search(q) and not _RESTRICTION_WORDING.search(_COMPANY_HQ.sub(" ", q)):
+        return "alternativ: şirkətin özü haqqında (HQ), remote məhdudiyyəti deyil"
+    if _TZ_MENTION.search(q):
+        if _tz_range_includes_az(q):
+            return "alternativ: saat qurşağı aralığı UTC+4-ü əhatə edir, məhdudiyyət deyil"
+        if not _RESTRICTION_WORDING.search(q):
+            return "alternativ: iş saatlarının üst-üstə düşməsi, yer məhdudiyyəti deyil"
+    return ""
+
+
+def conditional_visa_sentence(ad_text: str) -> str:
+    """The ad's own sentence that qualifies visa sponsorship (≤160 chars), or ''."""
+    for part in re.split(r"(?<=[.!?])\s+|\n+", ad_text or ""):
+        part = " ".join(part.split())
+        if part and _VISA_CONDITIONAL.search(part) and not _NO_SPONSOR_ONLY.search(part):
+            if len(part) <= QUOTE_MAX:
+                return part
+            for piece in re.split(r"\s*;\s*", part):
+                if len(piece) <= QUOTE_MAX and _VISA_CONDITIONAL.search(piece):
+                    return piece
+            return part[:QUOTE_MAX].rsplit(" ", 1)[0]
+    return ""
+
+
+_NO_SPONSOR_ONLY = re.compile(
+    r"(?i)^(?=.*\b(?:not|no|unable|cannot|can['’]t)\b)(?!.*\b(?:every|all|case|possible|guarantee)\b).*$"
+)
+
+
 def check_quote(flag: str, quote: str, ad_text: str = "") -> str:
     """'' when the quote may back ``flag``; otherwise a short Azerbaijani rejection note."""
     q = " ".join(str(quote or "").split())
@@ -896,6 +1073,12 @@ def check_quote(flag: str, quote: str, ad_text: str = "") -> str:
         return "sitat elanda tapılmadı"
     if flag == "remote_worldwide" and _HEDGED_WORLDWIDE.search(q):
         return "qeyd-şərtli ifadə (almost/most …), hamı üçün deyil"
+    if flag in ("remote_worldwide", "remote_region_includes_az") and _company_statement_only(q):
+        return "şirkət haqqında ifadədir, bu rol üçün remote icazəsi deyil"
+    if flag == "remote_country_restricted":
+        problem = _country_restriction_problem(q)
+        if problem:
+            return problem
     relevant = _RELEVANT.get(flag)
     if relevant and not relevant.search(q):
         return _NOT_RELEVANT
@@ -954,6 +1137,7 @@ def verdict_from_ai(
     ad_text: str = "",
     cached: bool = False,
     truncated: bool | None = None,
+    truncation_source: str = "",
 ) -> dict[str, Any]:
     """Turn the AI's yes/no flags into a verdict; the % comes from :func:`staff_percent`.
 
@@ -999,10 +1183,27 @@ def verdict_from_ai(
             value = False
         flags[name] = value
         quotes[name] = good if value else []
-    if truncated is not None:  # the code value wins over the model's answer
-        flags["text_truncated"] = bool(truncated)
+    # visa qualifier: only meaningful with visa_support; code adds it when the ad itself
+    # qualifies sponsorship and the model missed it (conservative, never the reverse).
+    if not flags["visa_support"]:
+        flags["visa_support_conditional"] = False
+        quotes["visa_support_conditional"] = []
+    elif not flags["visa_support_conditional"]:
+        found = conditional_visa_sentence(ad_text)
+        if found:
+            flags["visa_support_conditional"] = True
+            quotes["visa_support_conditional"] = [found]
+            notes.append("visa_support_conditional: kod elanda şərtli viza ifadəsi tapdı")
+    # text_truncated: the code value (prompt cut / source snippet) is authoritative;
+    # the AI answer is only a hint, kept separately.
+    ai_hint = flags["text_truncated"]
+    code_cut = None if truncated is None else bool(truncated)
+    flags["text_truncated"] = ai_hint if code_cut is None else code_cut
     quotes["text_truncated"] = []
-    score, route = staff_percent(flags)
+    soft_hint = bool(ai_hint and code_cut is False)
+    score, route = staff_percent({**flags, TRUNCATION_HINT: soft_hint})
+    if soft_hint:
+        notes.append("text_truncated: AI mətnin natamam olduğundan şübhələnir, kod təsdiqləmir (84-ə qədər)")
     conflict_keys = conflicts(flags)
     conflict = bool(conflict_keys)
     true_parts = [
@@ -1023,7 +1224,7 @@ def verdict_from_ai(
         + (f" · {reason_az}" if reason_az else "")
     )
     suitable = is_suitable(route)
-    visa_ok = flags["visa_support"] and not (flags["no_sponsorship_stated"] or flags["work_authorization_required"])
+    visa_ok = bool(visa_strength(flags))
     return {
         "suitable": suitable,
         "unclear": route == "no_evidence",
@@ -1035,6 +1236,10 @@ def verdict_from_ai(
         "validation_notes": notes,
         "conflict": conflict,
         "conflicts": conflict_keys,
+        "visa_strength": visa_strength(flags),
+        "text_truncated_code": code_cut,
+        "text_truncated_ai_hint": bool(ai_hint),
+        "text_truncated_source": truncation_source,
         "reason_az": reason_az,
         "ai_score": score,
         "route": route,
@@ -1061,6 +1266,12 @@ def fit_detail(verdict: dict[str, Any]) -> dict[str, Any]:
         "conflicts": [
             {"key": k, "label": CONFLICTS_AZ.get(k, k)} for k in (verdict.get("conflicts") or []) if isinstance(k, str)
         ],
+        "visa_strength": str(verdict.get("visa_strength") or ""),
+        "text_truncated": {
+            "code": verdict.get("text_truncated_code"),
+            "ai_hint": bool(verdict.get("text_truncated_ai_hint")),
+            "source": str(verdict.get("text_truncated_source") or ""),
+        },
         "flags": [
             {"name": name, "label": _FLAG_AZ.get(name, name), "quotes": list(quotes.get(name) or [])[:QUOTES_PER_FLAG]}
             for name in FLAGS

@@ -14,8 +14,9 @@ remote_az_explicit                                                   95
 remote_worldwide, remote not blocked                                 90
 remote_region_includes_az, remote not blocked                        88
   ... same, but work_authorization_required (named country)          84
-relocation + visa_support, candidates not location-restricted        88
-relocation only, or visa_support only  (manual check)                70
+relocation + strong visa, candidates not location-restricted         88
+relocation + conditional visa                                        70
+relocation only, strong visa only, or conditional visa only          70
 any restriction, no valid route                                      15
 no evidence either way                                               40
 ==================================================================  =====
@@ -25,16 +26,23 @@ no evidence either way                                               40
   (conflicting quotes) the restriction wins; the AI does not resolve conflicts.
 * ``candidate_location_restricted`` (must already live in / be a citizen of named
   countries) also blocks the relocation and visa routes.
+* Visa strength: ``visa_support`` alone never means the candidate certainly qualifies.
+  It is *strong* only when ``visa_support_conditional`` is false (no "not every role /
+  candidate", "case by case", "where possible", "may sponsor", and not just a general
+  company-wide statement). A conditional visa is a weak route (70 at most) and never
+  helps reach 85+; the conditional quote is shown to the moderator.
 * ``visa_support`` together with ``no_sponsorship_stated`` or
   ``work_authorization_required`` is a *conflict*: both flags and their quotes are
   kept and shown to the moderator (:func:`conflicts`), and the visa route is not
-  counted (so it can never lift the ad to 85+). Neither touches a valid
-  remote-from-AZ route.
-* ``text_truncated`` (set by code, not the AI) or ``work_location_unspecified`` caps
-  the result at INFO_CAP (84): the missing part may hold a restriction.
+  counted. Neither touches a valid remote-from-AZ route.
+* ``text_truncated`` (decided by code from reliable metadata: the prompt cut or a
+  source snippet) or ``work_location_unspecified`` caps the result at INFO_CAP (84):
+  the missing part may hold a restriction. When only the AI hints at truncation (code
+  says complete), ``text_truncated_ai_hint`` is a soft flag: shown to the moderator and,
+  conservatively, also capped at 84 (AI_TRUNCATION_HINT_CAP).
 
-85+ is therefore reachable only with quoted remote-from-AZ evidence or relocation+visa,
-on a complete ad with a stated work location.
+85+ is therefore reachable only with quoted remote-from-AZ evidence or relocation + an
+unconditional, role-level visa, on a complete ad with a stated work location.
 """
 
 from __future__ import annotations
@@ -46,19 +54,23 @@ SCORE_WORLDWIDE = 90
 SCORE_REGION_INCL_AZ = 88
 SCORE_RELOC_AND_VISA = 88
 SCORE_SINGLE_ROUTE = 70  # relocation only / visa only: staff checks target country
+SCORE_WEAK_VISA = 70  # conditional / company-wide visa statement: never above this
 SCORE_RESTRICTED = 15
 SCORE_NO_EVIDENCE = 40
 INFO_CAP = 84  # below the 85 approve band
 TRUNCATED_CAP = INFO_CAP  # back-compat name
+AI_TRUNCATION_HINT_CAP = 84  # AI suspects a cut the code cannot confirm: conservative
 AUTH_CONFLICT_CAP = 84  # remote route + "must have the right to work in <country>"
 
+# Order = prompt definition order = JSON example order = schema "required" order.
 POSITIVE_FLAGS = (
-    "remote_az_explicit",
     "remote_worldwide",
     "remote_region_includes_az",
+    "remote_az_explicit",
     "relocation",
     "visa_support",
 )
+QUALIFIER_FLAGS = ("visa_support_conditional",)
 RESTRICTIVE_FLAGS = (
     "remote_country_restricted",
     "candidate_location_restricted",
@@ -67,12 +79,13 @@ RESTRICTIVE_FLAGS = (
     "no_sponsorship_stated",
 )
 INFO_FLAGS = ("text_truncated", "work_location_unspecified")
-FLAGS = POSITIVE_FLAGS + RESTRICTIVE_FLAGS + INFO_FLAGS
+FLAGS = POSITIVE_FLAGS + QUALIFIER_FLAGS + RESTRICTIVE_FLAGS + INFO_FLAGS
 
-# Flags the AI answers: all 12. The model may answer text_truncated too, but the
-# code value (from prompt_ad_text) always wins.
+# Flags the AI answers: all of them. For text_truncated the AI answer is only a hint;
+# the code value (prompt cut / source snippet) is authoritative.
 AI_FLAGS = FLAGS
 CODE_DECIDED_FLAGS = ("text_truncated",)
+TRUNCATION_HINT = "text_truncated_ai_hint"  # soft flag key (not an AI flag)
 
 # market-fit-v6 names -> v7 names (stored AI answers, cached results, old tests).
 LEGACY_FLAGS = {
@@ -125,16 +138,23 @@ def has_conflict(flags: dict[str, Any]) -> bool:
     return bool(conflicts(flags))
 
 
+def visa_strength(flags: dict[str, Any]) -> str:
+    """'strong' | 'weak' | '' (no usable visa route). Conflicts and residence rules count first."""
+    f = {name: bool(flags.get(name)) for name in FLAGS}
+    if not f["visa_support"] or f["no_sponsorship_stated"] or f["work_authorization_required"]:
+        return ""
+    if f["candidate_location_restricted"]:
+        return ""
+    return "weak" if f["visa_support_conditional"] else "strong"
+
+
 def staff_percent(flags: dict[str, Any]) -> tuple[int, str]:
     """Pure mapping: verified flags -> (staff %, route key). See module docstring."""
     f = {name: bool(flags.get(name)) for name in FLAGS}
     blocked = remote_blocked(f)
     restricted = blocked or f["work_authorization_required"]
-    # visa vs no-sponsorship / work-authorization: a surfaced conflict, visa not counted
-    visa = f["visa_support"] and not (f["no_sponsorship_stated"] or f["work_authorization_required"])
-    movable = not f["candidate_location_restricted"]
-    reloc = f["relocation"] and movable
-    visa = visa and movable
+    visa = visa_strength(f)  # conflicts: visa not counted (surfaced by conflicts())
+    reloc = f["relocation"] and not f["candidate_location_restricted"]
 
     if f["remote_az_explicit"]:
         score, route = SCORE_AZ_EXPLICIT, "remote_az_explicit"
@@ -142,12 +162,16 @@ def staff_percent(flags: dict[str, Any]) -> tuple[int, str]:
         score, route = SCORE_WORLDWIDE, "remote_worldwide"
     elif f["remote_region_includes_az"] and not blocked:
         score, route = SCORE_REGION_INCL_AZ, "remote_region_includes_az"
-    elif reloc and visa:
+    elif reloc and visa == "strong":
         score, route = SCORE_RELOC_AND_VISA, "relocation+visa_support"
+    elif reloc and visa == "weak":
+        score, route = SCORE_WEAK_VISA, "relocation+visa_conditional"
     elif reloc:
         score, route = SCORE_SINGLE_ROUTE, "relocation"
-    elif visa:
+    elif visa == "strong":
         score, route = SCORE_SINGLE_ROUTE, "visa_support"
+    elif visa == "weak":
+        score, route = SCORE_WEAK_VISA, "visa_conditional"
     elif restricted:
         score, route = SCORE_RESTRICTED, "restricted"
     else:
@@ -156,6 +180,8 @@ def staff_percent(flags: dict[str, Any]) -> tuple[int, str]:
         score = min(score, AUTH_CONFLICT_CAP)
     if f["text_truncated"] or f["work_location_unspecified"]:
         score = min(score, INFO_CAP)
+    if flags.get(TRUNCATION_HINT) and not f["text_truncated"]:
+        score = min(score, AI_TRUNCATION_HINT_CAP)
     return score, route
 
 

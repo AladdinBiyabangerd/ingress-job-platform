@@ -248,7 +248,7 @@ class PromptTest(unittest.TestCase):
     def test_full_text_and_meta_label(self):
         user = build_user_prompt(title="T", company="C", place="Remote", text=JB_TEXT,
                                  source_meta="remote_flag=True; countries=Bulgaria")
-        self.assertIn("Ad text: complete.", user)
+        self.assertIn("Ad text: complete as provided by the source.", user)
         self.assertIn("Source metadata (clue, may be wrong): remote_flag=True; countries=Bulgaria", user)
         self.assertIn("Relocation support", user)
 

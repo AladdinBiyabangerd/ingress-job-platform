@@ -129,7 +129,7 @@ class ExhaustiveTest(unittest.TestCase):
         self.assertLess(fm.INFO_CAP, BAND)
         self.assertLess(fm.AUTH_CONFLICT_CAP, BAND)
         self.assertLess(fm.SCORE_RESTRICTED, fm.SCORE_NO_EVIDENCE)
-        self.assertEqual(len(FLAGS), 12)
+        self.assertEqual(len(FLAGS), 13)
         self.assertEqual(fm.AI_FLAGS, fm.FLAGS)  # v8: the model may answer text_truncated; code wins
 
 

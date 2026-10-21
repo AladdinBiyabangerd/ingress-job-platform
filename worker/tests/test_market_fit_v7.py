@@ -196,10 +196,11 @@ class ConflictTest(unittest.TestCase):
 
     def test_code_truncation_wins_over_ai(self):
         data = _ai(remote_worldwide="Remote worldwide.")
-        data["text_truncated"] = {"value": True, "quotes": []}  # AI claim ignored
+        data["text_truncated"] = {"value": True, "quotes": []}  # AI hint only
         v = verdict_from_ai(data, ad_text="Remote worldwide.", truncated=False)
-        self.assertFalse(v["flags"]["text_truncated"])
-        self.assertEqual(v["confidence"], 90)
+        self.assertFalse(v["flags"]["text_truncated"])  # code value wins
+        self.assertTrue(v["text_truncated_ai_hint"])  # v9: kept as a soft flag, capped 84
+        self.assertEqual(v["confidence"], 84)
 
     def test_no_sponsorship_with_az_explicit_still_high(self):
         text = "Remote from Azerbaijan, Georgia or Turkey. We do not sponsor visas."
@@ -236,7 +237,7 @@ class ConflictTest(unittest.TestCase):
 
 class PromptTest(unittest.TestCase):
     def test_schema_and_prompt(self):
-        self.assertEqual(PROMPT_VERSION, "market-fit-v8")
+        self.assertEqual(PROMPT_VERSION, "market-fit-v9")
         self.assertIn("text_truncated", _JSON_SCHEMA["properties"])
         self.assertIn("work_location_unspecified", _JSON_SCHEMA["properties"])
         self.assertEqual(_JSON_SCHEMA["properties"]["relocation"]["properties"]["quotes"]["type"], "array")

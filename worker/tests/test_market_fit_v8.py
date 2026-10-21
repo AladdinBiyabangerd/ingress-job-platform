@@ -213,7 +213,7 @@ class QuoteValidationTest(unittest.TestCase):
         self.assertEqual(check_quote("relocation", move, move), "")
         for bare in ("100% Remote", "Remote First Culture - We’re a 100% distributed team!", "Fully remote role."):
             with self.subTest(bare=bare):
-                self.assertIn("aid deyil", check_quote("remote_worldwide", bare, bare))
+                self.assertNotEqual(check_quote("remote_worldwide", bare, bare), "")
         q = "This is a full-time, fully remote position for candidates based in the US."
         self.assertEqual(check_quote("candidate_location_restricted", q, q), "")
         q = "We require that all candidates have an existing Right to Work in the UK at the time of application."
@@ -259,20 +259,20 @@ class QuoteValidationTest(unittest.TestCase):
 
 class PromptSchemaV8Test(unittest.TestCase):
     def test_version(self):
-        self.assertEqual(PROMPT_VERSION, "market-fit-v8")
+        self.assertEqual(PROMPT_VERSION, "market-fit-v9")
 
     def test_full_json_example_in_prompt(self):
         start = _SYSTEM.index("\n{\n")
         end = _SYSTEM.index("\n}\n", start) + 2
         example = json.loads(_SYSTEM[start:end])
         self.assertEqual(list(example), [*FLAGS, "reason"])
-        self.assertEqual(len(FLAGS), 12)
+        self.assertEqual(len(FLAGS), 13)
         for name in FLAGS:
             self.assertEqual(set(example[name]), {"value", "quotes"})
         self.assertRegex(example["reason"], "[əğıöüçş]")  # Azerbaijani
         self.assertEqual(set(_JSON_SCHEMA["required"]), {*FLAGS, "reason"})
         self.assertIn("- text_truncated:", _SYSTEM)
-        self.assertIn("It is separate from work_location_unspecified.", _SYSTEM)
+        self.assertIn("Separate from work_location_unspecified.", _SYSTEM)
 
 
 if __name__ == "__main__":

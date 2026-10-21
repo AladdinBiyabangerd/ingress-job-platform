@@ -4,11 +4,15 @@ Fixtures: ``worker/tests/fixtures/market_fit/eval_real_ads.json`` — real scrap
 hand-labelled from the ad text only:
 
 * ``eligible``      — remote from Azerbaijan is clearly allowed; must reach 85+.
-* ``manual``        — a real relocation + visa route; the policy keeps it for a human
-                      check, so it must land in 60–84 (not auto-approved, not dropped).
+* ``manual``        — a real but weak / human-check route (relocation, conditional visa);
+                      it must land in 60–84 (not auto-approved, not dropped).
 * ``not_eligible``  — no route for an Azerbaijan resident; must stay below 85.
 * ``unclear``       — the text does not settle it; must stay below 85.
 * ``truncated``     — ad cut by ``prompt_ad_text`` (``prompt_limit``); must stay below 85.
+
+``scenario`` marks the 8 review scenarios (worldwide, remote within Germany, worldwide vs
+US-residents, conditional visa, relocation without visa, 30 days abroad, truncated, no
+location); the run prints a per-scenario table.
 
 ``flags`` holds only the flags the label is sure about (per-flag accuracy is
 measured on those).
@@ -93,6 +97,10 @@ def _verdict_score(ad: dict[str, Any], verdict: dict[str, Any], elig: dict[str, 
         "cap": cap,
         "flags": verdict.get("flags") or {},
         "notes": verdict.get("validation_notes") or [],
+        "conflicts": verdict.get("conflicts") or [],
+        "quotes": verdict.get("quotes") or {},
+        "visa_strength": verdict.get("visa_strength") or "",
+        "text_truncated_ai_hint": bool(verdict.get("text_truncated_ai_hint")),
         "reason": verdict.get("reason") or "",
     }
 
@@ -104,8 +112,10 @@ def replay_score(ad: dict[str, Any], raw: dict[str, Any] | None) -> dict[str, An
     if not isinstance(raw, dict):
         return None
     _, truncated = mf.prompt_ad_text(ad["text"], int(ad.get("prompt_limit") or mf.PROMPT_TEXT_MAX))
+    limit = int(ad.get("prompt_limit") or mf.PROMPT_TEXT_MAX)
     verdict = mf.verdict_from_ai(
-        raw, ad_text=f"{ad['title']}\n{ad.get('city') or ''}\n{ad['text']}", truncated=truncated
+        raw, ad_text=f"{ad['title']}\n{ad.get('city') or ''}\n{ad['text']}", truncated=truncated,
+        truncation_source=mf.truncation_source(ad["text"], limit),
     )
     return _verdict_score(ad, verdict, elig)
 
@@ -265,6 +275,17 @@ def run(args: list[str]) -> int:
     print("  by label: " + json.dumps(stats["by_label"]), flush=True)
     for name, acc in stats["per_flag"].items():
         print(f"  flag {name:<30} {acc['correct']:>3}/{acc['labelled']:<3} {acc['accuracy']:.0%}", flush=True)
+    scen = sorted((r for r in rows if r["ad"].get("scenario")), key=lambda r: r["ad"]["scenario"]["id"])
+    if scen:
+        print("  scenarios:", flush=True)
+        for r in scen:
+            res = r["result"] or {}
+            got = f"{res.get('score', '-')}% {res.get('route', 'miss')}" if res else "miss"
+            print(
+                f"   {r['ad']['scenario']['id']}. {r['ad']['scenario']['name'][:58]:<58} {r['ad']['key']:<34} "
+                f"{r['ad']['expected']:<12} {got:<34} {r['outcome']}",
+                flush=True,
+            )
     fps = [r["ad"]["key"] for r in rows if r["outcome"] == "FP"]
     fns = [r["ad"]["key"] for r in rows if r["outcome"] == "FN"]
     if fps:
