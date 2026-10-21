@@ -42,7 +42,7 @@ from worker.techstack import (
 log = logging.getLogger("ingress-job.worker.market_fit")
 
 PURPOSE = "market_fit"
-PROMPT_VERSION = "market-fit-v9"
+PROMPT_VERSION = "market-fit-v10"
 ENV_FLAG = "AI_MARKET_FIT_ENABLED"
 
 # Graded rule confidence (how sure deterministic rules are the ad is OK to publish).
@@ -99,8 +99,9 @@ _FLAG_DEFINITIONS = {
         "between UTC-5 and UTC-8\", \"only candidates in UTC-5..UTC-8\"). Not for a working-hours overlap "
         '("overlap with CET"), not for a statement about the company itself ("US-based company", '
         '"headquartered in London"), and not when the remote work is worldwide and only names other countries '
-        'as exceptions ("worldwide (except Russia)"). A time-zone rule that includes UTC+4 is neither a '
-        "restriction nor confirmation."
+        'as exceptions ("worldwide (except Russia)"). An exclusion list that names only other countries '
+        '("candidates from Russia and Belarus are not considered") is not a restriction against Azerbaijan. '
+        "A time-zone rule that includes UTC+4 is neither a restriction nor confirmation."
     ),
     "candidate_location_restricted": (
         "the ad explicitly requires applicants to already reside in, be citizens or residents of, or have a "
@@ -156,7 +157,7 @@ If the evidence is ambiguous, answer false. Never invent facts.
 
 Not enough on their own for route A: "remote", "fully remote", "remote-first", "remote-friendly", "flexible work location", "work from home or the office", "distributed team", "WFH", "hybrid", "almost any country", "most countries", a time-zone overlap or UTC range ("UTC+2 to UTC+6", "overlap with CET"), a statement about the company itself ("US-based company", "headquartered in London"). "Up to N days or weeks per year working from abroad" is temporary_abroad_only, not remote.
 "Relocation benefits may vary", "where applicable" and other generic relocation phrases are weak: relocation=true only for a clear offer for this role. Relocation does not imply visa support, and visa support does not imply relocation.
-The source metadata is a clue, not proof. The title and the location field are part of the ad: a country or city list there (e.g. a title ending "(Europe, Georgia, Turkey, Azerbaijan, Ukraine)" or a location field "Armenia, Azerbaijan, Georgia") names the places the role is open to; quote that list verbatim when you use it. If the ad text names a different list that leaves Azerbaijan out, set both flags and quote both.
+The source metadata is a clue, not proof. The title and the location field are part of the ad: a country or city list there (e.g. a title ending "(Europe, Georgia, Turkey, Azerbaijan, Ukraine)" or a location field "Armenia, Azerbaijan, Georgia") names the places the role is open to; quote that list verbatim when you use it. If the ad text gives a different allowed-country list that leaves Azerbaijan out, set both flags and quote both.
 
 Evidence extraction and conflict handling
 1. Extract evidence, not conclusions. Evaluate each flag independently. Several flags may be true at once when the ad contains evidence for each one, even when they contradict each other.
@@ -169,6 +170,12 @@ Evidence extraction and conflict handling
 8. no_sponsorship_stated=true means the ad explicitly says that visa or work-permit sponsorship is unavailable. It does not, by itself, disqualify a role that independently qualifies for remote work from Azerbaijan. If the ad both offers and refuses sponsorship, set visa_support and no_sponsorship_stated both to true, quote both, and mention the conflict in reason; do the same for visa_support and work_authorization_required. A general "We do sponsor visas!" can make visa_support true, but whenever the ad qualifies it ("not for every role and every candidate", "case by case", "where possible", "may sponsor") also set visa_support_conditional and quote that qualification.
 9. Quotes must be copied verbatim from the supplied ad (title, location field or ad text), must be no longer than 160 characters, must be one continuous passage and must not be assembled from separate passages or paraphrased. If no exact supporting quote exists, return value=false and quotes=[] for that flag.
 10. Do not treat a statement that the company is an equal-opportunity employer, hires internationally, has a global team, or has customers or offices worldwide as evidence of remote eligibility, relocation or visa sponsorship.
+
+Explicit country eligibility and exclusion lists
+1. Interpret allowed-country and excluded-country lists independently, based on their actual meaning. An exclusion list naming other countries does not restrict Azerbaijan unless Azerbaijan, Baku, or a geographic category that includes Azerbaijan is explicitly covered by that exclusion.
+2. If Azerbaijan is explicitly included in an allowed-country list for the role, treat this as positive evidence for remote eligibility, even if a separate exclusion list names other countries. Do not infer that Azerbaijan is excluded merely because it is absent from the exclusion list.
+3. If Azerbaijan appears in an allowed-country list and is also explicitly excluded elsewhere in the ad, preserve both pieces of evidence, flag the conflict, and send the case for moderator review.
+4. Apply these rules regardless of the language of the ad. Copy the relevant evidence verbatim; do not infer restrictions from the language, ordering, or mere presence of an exclusion list.
 
 For each flag return {"value": true/false, "quotes": ["..."]}: up to 3 verbatim quotes that make the flag true, each one sentence or phrase of at most 160 characters; [] when false.
 {flag_definitions}
@@ -1266,6 +1273,25 @@ def verdict_from_ai(
         notes.append("text_truncated: AI mətnin natamam olduğundan şübhələnir, kod təsdiqləmir (84-ə qədər)")
     conflict_keys = conflicts(flags)
     conflict = bool(conflict_keys)
+    # market-fit-v10 decision: list semantics are the AI's job (prompt section "Explicit
+    # country eligibility and exclusion lists"). The code never drops a quoted restriction
+    # on its own; when Azerbaijan is allowed and the restriction quotes do not even mention
+    # Azerbaijan / Baku / a region that includes it, it only tells the moderator so.
+    if "remote_vs_restriction" in conflict_keys and flags["remote_az_explicit"]:
+        # verbatim restriction quotes, also ones kept only conservatively (e.g. non-English
+        # wording the relevance check cannot read)
+        r_quotes = [
+            q
+            for name in ("remote_country_restricted", "candidate_location_restricted")
+            if flags[name] and isinstance(data.get(name), dict)
+            for q in _raw_quotes(data[name])
+            if not ad_text or _quote_in_ad(q, ad_text)
+        ]
+        if r_quotes and not any(_REGION_INCLUDES_AZ.search(q) for q in r_quotes):
+            notes.append(
+                "remote_country_restricted: məhdudiyyət sitatlarında Azərbaycan çəkilmir — siyahı başqa ölkələri "
+                "istisna edə bilər; moderator yoxlasın (84)"
+            )
     true_parts = [
         f"{name} ({_FLAG_AZ[name]})" + "".join(f" “{q}”" for q in quotes[name])
         for name in FLAGS

@@ -1,5 +1,5 @@
 {
- "about": "Real scraped ads from the local ingress-job DB (2026-10-21 snapshot), hand-labelled from the ad text only. expected: eligible = should reach 85+ (remote from AZ); manual = valid relocation/visa route, policy keeps it for a human check (60-84); not_eligible / unclear / truncated = must stay below 85. flags = only the flags the label is sure about. v8 additions: 1574 and 1817 (real), and two ads keyed 'synthetic-*' with company 'SYNTHETIC EXAMPLE', hand-written to cover worldwide-vs-residents and visa-vs-no-sponsorship conflicts that the local DB does not contain. v9 additions: 1 (Typeform), 1729 (Anthropic, conditional visa), 332#limit800; 'scenario' marks the 8 review scenarios. v9.1 additions (Azerbaijan/Baku review): every remaining real DB ad whose title, location field or text names Azerbaijan/Baku — 514, 1200 (location-field country lists incl. Azerbaijan; eligible), 1243 (location field lists Azerbaijan but the text's country list leaves it out; unclear), 1497 (team statement only; unclear) — plus three clearly marked synthetic ads: synthetic-az-excluded, synthetic-baku-onsite (on-site Baku = Azerbaijan route), synthetic-client-in-baku.",
+ "about": "Real scraped ads from the local ingress-job DB (2026-10-21 snapshot), hand-labelled from the ad text only. expected: eligible = should reach 85+ (remote from AZ); manual = valid relocation/visa route, policy keeps it for a human check (60-84); not_eligible / unclear / truncated = must stay below 85. flags = only the flags the label is sure about. v8 additions: 1574 and 1817 (real), and two ads keyed 'synthetic-*' with company 'SYNTHETIC EXAMPLE', hand-written to cover worldwide-vs-residents and visa-vs-no-sponsorship conflicts that the local DB does not contain. v9 additions: 1 (Typeform), 1729 (Anthropic, conditional visa), 332#limit800; 'scenario' marks the 8 review scenarios. v9.1 additions (Azerbaijan/Baku review): every remaining real DB ad whose title, location field or text names Azerbaijan/Baku — 514, 1200 (location-field country lists incl. Azerbaijan; eligible), 1243 (location field lists Azerbaijan but the text's country list leaves it out; unclear), 1497 (team statement only; unclear) — plus three clearly marked synthetic ads: synthetic-az-excluded, synthetic-baku-onsite (on-site Baku = Azerbaijan route), synthetic-client-in-baku. v10 additions (allowed / excluded country lists): six clearly marked synthetic ads — synthetic-list-allowed-en and -ru (Azerbaijan allowed, other countries excluded; eligible), synthetic-list-both-uk and -en (Azerbaijan in both lists; unclear, moderator), synthetic-list-neither (not_eligible), synthetic-worldwide-az-excluded (not_eligible). Real Ukrainian case: 514. Also the two earlier FP regressions as eval ads: emerchantpay-2530 (fixture emerchantpay_senior_java.txt) and jetbrains-4777935101 (fixture jetbrains_qa_build_tools.txt).",
  "ads": [
   {
    "key": "1072",
@@ -1326,6 +1326,144 @@
    },
    "evidence": "SYNTHETIC: only 'Our client is based in Baku' (company statement) and a bare 'fully remote'; no stated remote geography.",
    "text": "Our client is based in Baku and builds logistics software for the Caspian region.\n\nWe are looking for a Senior QA Engineer to join the client's product team. The position is fully remote.\n\nResponsibilities\n\n• Design and maintain automated tests (Playwright, TypeScript)\n• Plan regression testing for releases\n• Work with developers to reproduce and fix defects\n\nRequirements\n\n• 4+ years in QA, 2+ years in test automation\n• Experience with CI pipelines\n• Upper-intermediate English\n\nWe offer a flexible schedule and paid sick leave."
+  },
+  {
+   "company": "SYNTHETIC EXAMPLE",
+   "source": "synthetic",
+   "source_url": "",
+   "source_remote": true,
+   "source_relocation": false,
+   "city": "",
+   "key": "synthetic-list-allowed-en",
+   "title": "Backend Engineer (Python)",
+   "expected": "eligible",
+   "flags": {
+    "remote_az_explicit": true,
+    "remote_country_restricted": false
+   },
+   "evidence": "SYNTHETIC (a): 'Allowed countries: Azerbaijan, Georgia, Armenia, Moldova.' and a separate exclusion list of other countries only.",
+   "text": "Work format: fully remote.\n\nHiring geography\n\nAllowed countries: Azerbaijan, Georgia, Armenia, Moldova.\nCandidates from Russia, Belarus and the USA are not considered.\n\nResponsibilities\n\n• Build and maintain backend services in Python\n• Work with PostgreSQL and Kafka\n• Review code and write tests\n\nRequirements\n\n• 4+ years of backend experience\n• Upper-intermediate English\n\nWe offer a fixed USD salary, paid vacation and a hardware budget."
+  },
+  {
+   "company": "SYNTHETIC EXAMPLE",
+   "source": "synthetic",
+   "source_url": "",
+   "source_remote": true,
+   "source_relocation": false,
+   "city": "",
+   "key": "synthetic-list-allowed-ru",
+   "title": "Backend-разработчик (Python)",
+   "expected": "eligible",
+   "flags": {
+    "remote_az_explicit": true,
+    "remote_country_restricted": false
+   },
+   "evidence": "SYNTHETIC (a, Russian): 'Разрешённые страны: Азербайджан, Грузия, Армения, Молдова.' (allowed: Azerbaijan …); 'Не рассматриваем кандидатов из России, Беларуси и США.' (other countries only).",
+   "text": "Формат работы: полностью удалённо.\n\nГеография найма\n\nРазрешённые страны: Азербайджан, Грузия, Армения, Молдова.\nНе рассматриваем кандидатов из России, Беларуси и США.\n\nОбязанности\n\n• Разработка backend-сервисов на Python\n• Работа с PostgreSQL и Kafka\n• Код-ревью и написание тестов\n\nТребования\n\n• От 4 лет опыта в backend\n• Английский на уровне B1+\n\nМы предлагаем фиксированную зарплату в USD и оплачиваемый отпуск."
+  },
+  {
+   "company": "SYNTHETIC EXAMPLE",
+   "source": "synthetic",
+   "source_url": "",
+   "source_remote": true,
+   "source_relocation": false,
+   "city": "",
+   "key": "synthetic-list-both-uk",
+   "title": "Backend Engineer (Python)",
+   "expected": "unclear",
+   "flags": {
+    "remote_az_explicit": true,
+    "remote_country_restricted": true
+   },
+   "evidence": "SYNTHETIC (b, Ukrainian): Azerbaijan in the allowed list ('Дозволені країни: Азербайджан, …') and in the excluded list ('… не розглядаються: Азербайджан, Росія …'): conflict, moderator.",
+   "text": "Формат роботи: віддалено.\n\nГеографія найму\n\n🟢 Дозволені країни: Азербайджан, Грузія, Вірменія.\n🔴 Країни, з яких кандидати не розглядаються: Азербайджан, Росія, Білорусь.\n\nОбов’язки\n\n• Розробка backend-сервісів на Python\n• Робота з PostgreSQL та Kafka\n• Код-рев’ю та написання тестів\n\nВимоги\n\n• Від 4 років досвіду в backend\n• Англійська B1+\n\nМи пропонуємо фіксовану зарплату в USD та оплачувану відпустку."
+  },
+  {
+   "company": "SYNTHETIC EXAMPLE",
+   "source": "synthetic",
+   "source_url": "",
+   "source_remote": true,
+   "source_relocation": false,
+   "city": "",
+   "key": "synthetic-list-both-en",
+   "title": "Backend Engineer (Python)",
+   "expected": "unclear",
+   "flags": {
+    "remote_az_explicit": true,
+    "remote_country_restricted": true
+   },
+   "evidence": "SYNTHETIC (b): 'Allowed countries: Azerbaijan, Georgia, Armenia.' and 'Candidates from Azerbaijan and Russia are not considered.': conflict, moderator.",
+   "text": "Work format: fully remote.\n\nHiring geography\n\nAllowed countries: Azerbaijan, Georgia, Armenia.\nCandidates from Azerbaijan and Russia are not considered.\n\nResponsibilities\n\n• Build and maintain backend services in Python\n• Work with PostgreSQL and Kafka\n• Review code and write tests\n\nRequirements\n\n• 4+ years of backend experience\n• Upper-intermediate English\n\nWe offer a fixed USD salary, paid vacation and a hardware budget."
+  },
+  {
+   "company": "SYNTHETIC EXAMPLE",
+   "source": "synthetic",
+   "source_url": "",
+   "source_remote": true,
+   "source_relocation": false,
+   "city": "",
+   "key": "synthetic-list-neither",
+   "title": "Backend Engineer (Python)",
+   "expected": "not_eligible",
+   "flags": {
+    "remote_az_explicit": false,
+    "remote_country_restricted": true
+   },
+   "evidence": "SYNTHETIC (c): 'Allowed countries: Georgia, Armenia, Moldova.' — Azerbaijan in neither list.",
+   "text": "Work format: fully remote.\n\nHiring geography\n\nAllowed countries: Georgia, Armenia, Moldova.\nCandidates from Russia and Belarus are not considered.\n\nResponsibilities\n\n• Build and maintain backend services in Python\n• Work with PostgreSQL and Kafka\n• Review code and write tests\n\nRequirements\n\n• 4+ years of backend experience\n• Upper-intermediate English\n\nWe offer a fixed USD salary, paid vacation and a hardware budget."
+  },
+  {
+   "company": "SYNTHETIC EXAMPLE",
+   "source": "synthetic",
+   "source_url": "",
+   "source_remote": true,
+   "source_relocation": false,
+   "city": "",
+   "key": "synthetic-worldwide-az-excluded",
+   "title": "Backend Engineer (Python)",
+   "expected": "not_eligible",
+   "flags": {
+    "remote_az_explicit": false,
+    "remote_country_restricted": true
+   },
+   "evidence": "SYNTHETIC (d): 'You can work from anywhere in the world.' but 'Candidates from Azerbaijan are not considered.'",
+   "text": "Work format: fully remote. You can work from anywhere in the world.\n\nPlease note: candidates from Azerbaijan are not considered for this role.\n\nResponsibilities\n\n• Build and maintain backend services in Python\n• Work with PostgreSQL and Kafka\n• Review code and write tests\n\nRequirements\n\n• 4+ years of backend experience\n• Upper-intermediate English\n\nWe offer a fixed USD salary, paid vacation and a hardware budget."
+  },
+  {
+   "key": "emerchantpay-2530",
+   "job_id": 2530,
+   "title": "Senior Java Developer",
+   "company": "emerchantpay",
+   "city": "Remote",
+   "source": "Workable jobs",
+   "source_url": "https://jobs.workable.com/view/wVHpqJy8KCCPuKqZnvEGay/remote-senior-java-developer-in-sofia-at-emerchantpay",
+   "source_remote": true,
+   "source_relocation": false,
+   "expected": "not_eligible",
+   "flags": {
+    "remote_worldwide": false
+   },
+   "evidence": "Workable: remote, location Sofia, Bulgaria (URL slug '-in-sofia-'); no worldwide wording (earlier FP regression).",
+   "text": "Responsibilities\n- Designing and implementing complex workflows, APIs, and UI backends for payment platforms;\n- Performing TDD using various tools like JUnit;\n- Taking part in scaling highly available payment services (99.99%+ uptime);\n- Using AI coding assistants and agents (e.g. Claude Code, Kiro, GitHub Copilot) for implementation, refactoring, test generation, code review and legacy code exploration, and owning the quality of everything they produce;\n- Contributing to the team's shared AI tooling, such as agent skills, project instructions (e.g. CLAUDE.md), prompt templates and MCP server configurations, so AI-assisted work is consistent and repeatable;\n- Applying secure and responsible AI practices in a PCI DSS environment, so that no cardholder data, secrets or other sensitive information reaches AI tools.\nRequirements\n- 9-10+ years using core Java and/or J2EE, Spring;\n- Knowledge in ORM solutions, e.g. Hibernate;\n- Database experience with open-source databases like MySQL and/or PostgreSQL;\n- Experience in JavaScript and decent front-end skills;\n- Comfortable with TDD/BDD practices, JUnit, etc.;\n- Hands-on, day-to-day experience with AI coding assistants or agentic tools (e.g. Claude Code, Kiro, Cursor, GitHub Copilot), including writing effective prompts and specs and critically reviewing AI-generated code;\n- Practical understanding of how AI agents connect to engineering tools through MCP (Model Context Protocol) servers, e.g. GitHub, Jira, Confluence, databases, and of the related risks such as prompt injection and over-permissioned access.\nemerchantpay is a leading global payment service provider and acquirer for online, mobile, in-store and over the phone payments. Our global payments solution is available through a simple integration, offering a diverse range of features, including global acquiring, global and local payment methods, advanced fraud management and performance optimisation. We empower businesses to design seamless and engaging payment experiences for their consumers.\nWe are looking for enthusiastic and experienced Java developers for one of our payment processing products that we are modernizing.\nThe role combines hands-on engineering with modern, AI-assisted development practices. You will build and scale highly available payment services, using AI coding agents and tooling as part of your daily workflow while keeping the quality, security and reliability that payments demand.\nConsidered as an Advantage\n- Experience in building APIs using latest standards;\n- Experience with SPA front-end apps;\n- Experience with bigger codebases and refactoring, including AI-assisted modernization of legacy code;\n- Creating agent skills, custom instructions or reusable workflows for AI coding tools;\n- Building MCP servers or tool integrations in Java (e.g. MCP Java SDK, Spring AI);\n- Integrating LLMs into Java services (e.g. Spring AI, LangChain4j, Amazon Bedrock, Claude API), including RAG, tool calling and guardrails;\n- OpenSSL, mod_security, general security knowledge;\n- Linux and devops skills with AWS, Ansible, Terraform, etc.;\n- Previous experience in the payment industry.\nIf you are interested, please apply with your CV in English only. Only short-listed candidates will be contacted.\nPersonal data of the applicants will be processed in strict confidentiality by emerchantpay ltd. UIC 175117520 solely for the purposes of selection and recruitment and will not be transferred to other data controllers unless required by law. Applicants provide their personal data on a voluntary basis and will have the right to access and correct their personal data within a reasonable time upon filing a written request.\nemerchantpay is an equal opportunity employer. We appreciate people with different backgrounds and mindsets, and we honor diversity and inclusion.\nBenefits\n- Fast-growing payment company;\n- Excellent working conditions, casual atmosphere, and state-of-the-art hardware;\n- Modern, challenging, constantly growing business;\n- Professional development - books, trainings, certifications, etc.;\n- Team buildings and fun activities;\n- 25 days paid holiday, 1 day for every 2 years with us;\n"
+  },
+  {
+   "key": "jetbrains-4777935101",
+   "job_id": null,
+   "title": "QA Automation Engineer (IntelliJ IDEA Java Build Tools)",
+   "company": "JetBrains",
+   "city": "",
+   "source": "Greenhouse",
+   "source_url": "https://job-boards.eu.greenhouse.io/jetbrains/jobs/4777935101",
+   "source_remote": false,
+   "source_relocation": false,
+   "expected": "manual",
+   "flags": {
+    "remote_worldwide": false,
+    "relocation": true,
+    "temporary_abroad_only": true
+   },
+   "evidence": "'Flexible work location. Enjoy the freedom to work from home or from the office.'; 'Spend up to 30 days per year working remotely from abroad.'; 'Relocation support.' (target country not stated; earlier FP regression).",
+   "text": "Texnologiya: Java, IntelliJ IDEA, Maven, Gradle, Kotlin, Ruby, Groovy, Scala, Python, JavaScript, Objective-C, PHP\n\nNice to have\n- Experience testing developer tools, IDEs, and desktop applications.\n- Familiarity with JVM Frameworks (Spring or Jakarta) and databases.\n\nAt JetBrains, code is our passion. Ever since we started, back in 2000, we have been striving to make the strongest, most effective developer tools on earth. By automating routine checks and corrections, our tools speed up production, freeing developers and businesses to grow, discover, and create.\n\nIntelliJ IDEA revolutionized the Java development tool market back in 2001, becoming the first IDE to offer automated code refactoring. It continues to drive innovation in software development, making thousands of programmers more productive every day. In addition to Java, IntelliJ IDEA includes various development tools for other prominent languages such as Ruby, Groovy, Scala, Python, JavaScript, Objective-C, PHP, and Kotlin.\n\nWe're now looking for a QA Automation Engineer to join the IntelliJ IDEA Java Build Tools QA team and help ensure the quality of a product that our customers and software engineers around the world rely on daily. Since most Java projects in IntelliJ IDEA are built with Maven or Gradle, Java Build Tools is a critical part of the IDE experience, and your work will affect how smoothly our users can open, sync, build, and run their projects. You'll work alongside QA engineers to design and set up our automation process for Gradle and Maven end-to-end tests, as well as implement and automate test scenarios that catch issues before they reach our users.\n\nCore responsibilities\n- Design, develop, and maintain multi-platform and environmental (Linux, Windows, MacOS, Docker, WSL) automated test scenarios.\n- Expand test coverage for new and existing functionality.\n- Debug and troubleshoot test failures.\n- Improve existing automation based on team feedback and reduce test flakiness.\n- Track quality metrics, including testing coverage, failure rate, and flakiness.\n- Contribute to frameworks and tools with product-specific extensions as needed.\n- Help the team monitor test execution results and investigate failures.\n- Participate in release quality assessments.\n- Collaborate with QA and developers to define test strategies.\n- Do manual QA activities when needed.\n- Participate in the test documentation creation.\n- Improve domain-specific test infrastructure and CI/CD pipelines within your team's scope.\n- Share automation best practices with the team.\n- Work with the tooling team to adopt new frameworks and practices.\n\nRequired skills\n- Proven experience in test automation.\n- Solid programming skills in Kotlin/Java.\n- Experience with test frameworks like JUnit or TestNG.\n- Familiarity with build tools, like Maven and Gradle.\n- An understanding of software testing principles and methodologies.\n- Familiarity with CI/CD tools (TeamCity or similar).\n- Experience with reporting tools (Allure or others).\n- Version control experience (Git).\n- Proficiency in spoken and written English.\n- Responsibility, self-discipline, and self-learning skills.\n- Strong teamwork skills.\n- The ability to work independently, creatively, and on your own initiative.\n\n- Strong base salary. We offer competitive pay that reflects your skills and experience.\n- Flexible work location. Enjoy the freedom to work from home or from the office.\n- Remote work. Spend up to 30 days per year working remotely from abroad.\n- Extra time off. More days to relax, recharge, and do the things you love.\n- Medical insurance allowance. Enjoy peace of mind for you and your family.\n- Learning and development opportunities. Access to conferences, courses, and language classes.\n- Relocation support. We help make your move as smooth and stress-free as possible.\n- Language classes. Pick up the local language or sharpen your English skills.\n- Fuel your day. Enjoy a hot meal or receive a lunch allowance on workdays.\n- Mental health support. To help you feel your best, we provide easy access to professional mental health services.\n- Sports benefit. Enjoy an on-site gym or sports club stipend.\n- Internal events. Join company-wide celebrations and team gatherings.\n\n*Some benefits may vary depending on location.\n\n#LI-DNI\n\nWe are an equal opportunity employer\n\nWe know great ideas can come from anyone, anywhere. That's why we do our best to create an open and inclusive workplace – one that welcomes everyone regardless of their background, identity, religion, age, accessibility needs, or orientation.\n\nWe process the data provided in your job application in accordance with the Recruitment Privacy Policy.\n"
   }
  ]
 }

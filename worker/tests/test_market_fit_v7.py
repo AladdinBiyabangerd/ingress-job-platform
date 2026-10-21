@@ -237,7 +237,7 @@ class ConflictTest(unittest.TestCase):
 
 class PromptTest(unittest.TestCase):
     def test_schema_and_prompt(self):
-        self.assertEqual(PROMPT_VERSION, "market-fit-v9")
+        self.assertEqual(PROMPT_VERSION, "market-fit-v10")
         self.assertIn("text_truncated", _JSON_SCHEMA["properties"])
         self.assertIn("work_location_unspecified", _JSON_SCHEMA["properties"])
         self.assertEqual(_JSON_SCHEMA["properties"]["relocation"]["properties"]["quotes"]["type"], "array")

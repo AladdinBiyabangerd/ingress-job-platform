@@ -259,7 +259,7 @@ class QuoteValidationTest(unittest.TestCase):
 
 class PromptSchemaV8Test(unittest.TestCase):
     def test_version(self):
-        self.assertEqual(PROMPT_VERSION, "market-fit-v9")
+        self.assertEqual(PROMPT_VERSION, "market-fit-v10")
 
     def test_full_json_example_in_prompt(self):
         start = _SYSTEM.index("\n{\n")

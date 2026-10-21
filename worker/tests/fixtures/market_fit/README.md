@@ -19,5 +19,7 @@
   to force truncation. Two more entries (keys `synthetic-*`, company `SYNTHETIC EXAMPLE`) are hand-written,
   clearly marked, to cover conflicts the DB has no real example of (worldwide vs residents-only, visa vs
   no-sponsorship). `332#limit800` is a third cut variant. v9.1 adds three more synthetic ads
-  (`synthetic-az-excluded`, `synthetic-baku-onsite`, `synthetic-client-in-baku`) for AZ cases the DB lacks. `scenario` marks the 8 review scenarios
+  (`synthetic-az-excluded`, `synthetic-baku-onsite`, `synthetic-client-in-baku`) for AZ cases the DB lacks.
+  v10 adds six synthetic allowed/excluded-country-list ads (`synthetic-list-*`, `synthetic-worldwide-az-excluded`;
+  English, Russian, Ukrainian) and the emerchantpay / JetBrains regression ads from the text fixtures above. `scenario` marks the 8 review scenarios
   (see `worker/tests/test_market_fit_scenarios.py`).

@@ -198,7 +198,7 @@ class TruncationAuthorityTest(unittest.TestCase):
 
 class OrderTest(unittest.TestCase):
     def test_version(self):
-        self.assertEqual(PROMPT_VERSION, "market-fit-v9")
+        self.assertEqual(PROMPT_VERSION, "market-fit-v10")
 
     def test_flags_order_everywhere(self):
         self.assertEqual(FLAGS[0], "remote_worldwide")

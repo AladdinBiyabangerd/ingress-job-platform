@@ -203,7 +203,7 @@ CV upload uses the bucket only when `BUCKET_NAME`, `BUCKET_ACCESS_KEY`, and
 ## Staff-queue % (market fit, Azerbaijan eligibility)
 
 * **Rule %** — deterministic keywords/schema (`worker/worker/market_fit.py:rule_fit_confidence`), never above 80.
-* **AI checks %** — the AI (`market-fit-v9`) only extracts evidence: 13 yes/no flags, each with up to 3 verbatim
+* **AI checks %** — the AI (`market-fit-v10`) only extracts evidence: 13 yes/no flags, each with up to 3 verbatim
   quotes (≤ 160 chars, one passage), plus an Azerbaijani reason. Flag order is the same everywhere (`FLAGS` in
   `fit_mapping.py` = prompt definitions = JSON example = schema `required`). It never scores and never resolves
   conflicts. The % is computed by `worker/worker/fit_mapping.py:staff_percent`:
@@ -220,6 +220,12 @@ CV upload uses the bucket only when `BUCKET_NAME`, `BUCKET_ACCESS_KEY`, and
   on-site Baku is the same 95 route. Never from a negated mention ("excluding Azerbaijan", "not available in
   Azerbaijan", "не розглядаються: Азербайджан") or a company / client / team statement ("Our client is based in Baku",
   "the team is international (Ukraine, Azerbaijan)"). A quoted work place also clears `work_location_unspecified`.
+  Allowed- / excluded-country lists (v10 prompt section "Explicit country eligibility and exclusion lists"): the AI
+  reads each list by its meaning, in any language; an exclusion list naming only other countries is not a restriction
+  against Azerbaijan, and Azerbaijan in both lists is a conflict for the moderator. Code decision: the code does not
+  re-interpret lists and never drops a quoted restriction by itself; if the AI still flags a restriction next to a
+  verified Azerbaijan quote, the result stays 84 + conflict, with a note when the restriction quotes do not mention
+  Azerbaijan / Baku / an AZ-including region.
   Every visa result carries a `visa_note` shown in the popover and the reason: weak (conditional, ≤ 70), not counted
   (no-sponsorship / work-authorization conflict, or residence requirement), or irrelevant (a remote route wins: 90/95).
   Restriction flags: `remote_country_restricted` (named countries / regions, or an explicit time-zone eligibility rule
@@ -258,11 +264,11 @@ railway run --service worker python -m worker rescore-eligibility --dry-run --re
 railway run --service worker python -m worker rescore-eligibility --reset-ai --limit 50 --source Djinni
 ```
 
-`--reset-ai` clears AI % written by older prompts (any AI reason without the `(market-fit-v9)` tag, so v6–v8 rows too)
+`--reset-ai` clears AI % written by older prompts (any AI reason without the `(market-fit-v10)` tag, so v6–v9 rows too)
 so the scheduler's normal `market_fit_auto` pass re-checks them (within `AI_GATEWAY_DAILY_CALL_LIMIT`). The scheduler
 also re-applies the eligibility caps every run.
 
-Real-data eval (66 hand-labelled real ads from the DB — every ad naming Azerbaijan/Baku included — 3 cut variants of them and 5 clearly marked synthetic cases, covering the 8 review scenarios; `worker/tests/fixtures/market_fit/eval_real_ads.json`):
+Real-data eval (66 hand-labelled real ads from the DB — every ad naming Azerbaijan/Baku included — plus the emerchantpay and JetBrains regression ads, 3 cut variants and 11 clearly marked synthetic cases incl. allowed/excluded country lists, covering the 8 review scenarios; `worker/tests/fixtures/market_fit/eval_real_ads.json`):
 
 ```bash
 cd worker

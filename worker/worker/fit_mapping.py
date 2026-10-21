@@ -32,7 +32,10 @@ no evidence either way                                               40
   Azerbaijan and negated mentions never set it (quote validation). When the ad also
   quotes a restriction that leaves Azerbaijan out (e.g. the location field lists
   Azerbaijan but the text's country list does not) the conflict is shown and the %
-  is capped at AZ_CONFLICT_CAP (84) for a moderator.
+  is capped at AZ_CONFLICT_CAP (84) for a moderator. market-fit-v10: the AI reads
+  allowed / excluded country lists by meaning (an exclusion list naming only other
+  countries is no restriction); the code does not re-interpret lists and never drops a
+  quoted restriction itself, so an AI that still flags one keeps the 84 + conflict.
 * ``candidate_location_restricted`` (must already live in / be a citizen of named
   countries) also blocks the relocation and visa routes.
 * Visa strength: ``visa_support`` alone never means the candidate certainly qualifies.
