@@ -1,4 +1,4 @@
-"""Non-core AI flows are opt-in; core flows follow the gateway."""
+"""Every AI flow is on by default when a key exists; env 0 or a staff row turns it off."""
 
 from __future__ import annotations
 
@@ -9,25 +9,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from worker.ai_flags import (
-    FEATURE_ENV,
-    FEATURES,
-    OPT_IN_FEATURES,
-    feature_on,
-    invalidate_flag_cache,
-    set_flags,
-)
-
-CORE = {"market_fit", "gateway", "cv_fallback", "embeddings", "rerank", "llm_rerank", "match_why", "digest_intro"}
-EXPECTED_OPT_IN = {
-    "job_tidy",
-    "engagement_copy",
-    "role_coach",
-    "learning_roadmap",
-    "job_analyze",
-    "job_apply_draft",
-    "job_tailored_cv",
-}
+from worker.ai_flags import FEATURE_ENV, FEATURES, feature_on, invalidate_flag_cache, set_flags
 
 
 class FlagDefaultTests(unittest.TestCase):
@@ -46,41 +28,21 @@ class FlagDefaultTests(unittest.TestCase):
         self.conn.close()
         self.tmp.cleanup()
 
-    def test_opt_in_set(self):
-        self.assertEqual(set(OPT_IN_FEATURES) & set(FEATURES), EXPECTED_OPT_IN & set(FEATURES))
-
-    def test_core_on_opt_in_off_with_key_only(self):
+    def test_all_on_with_key(self):
         for name in FEATURES:
-            if name in OPT_IN_FEATURES:
-                self.assertFalse(feature_on(name, self.conn), name)
-            elif name in CORE:
-                self.assertTrue(feature_on(name, self.conn), name)
+            self.assertTrue(feature_on(name, self.conn), name)
 
-    def test_env_true_enables_opt_in(self):
-        for name in sorted(set(OPT_IN_FEATURES) & set(FEATURES)):
-            env_name = FEATURE_ENV[name]
-            with patch.dict(os.environ, {env_name: "1"}, clear=False):
-                self.assertTrue(feature_on(name, self.conn), name)
+    def test_env_zero_turns_off(self):
+        for name, env_name in FEATURE_ENV.items():
+            with patch.dict(os.environ, {env_name: "0"}, clear=False):
+                self.assertFalse(feature_on(name, self.conn), name)
 
     def test_job_tidy_env_name(self):
         self.assertEqual(FEATURE_ENV["job_tidy"], "AI_JOB_TIDY_ENABLED")
 
-    def test_staff_row_enables_opt_in(self):
-        set_flags(self.conn, {"job_tidy": True}, updated_by="test")
-        self.assertTrue(feature_on("job_tidy", self.conn))
-
-    def test_market_fit_on_with_key_off_without(self):
-        self.assertTrue(feature_on("market_fit", self.conn))
-        with patch.dict(os.environ, {"OPENAI_API_KEY": ""}, clear=False), patch(
-            "worker.ai_flags.key_configured", return_value=False
-        ):
-            invalidate_flag_cache()
-            self.assertFalse(feature_on("market_fit", self.conn))
-
-    def test_env_false_still_hard_off(self):
-        set_flags(self.conn, {"market_fit": True}, updated_by="test")
-        with patch.dict(os.environ, {"AI_MARKET_FIT_ENABLED": "0"}, clear=False):
-            self.assertFalse(feature_on("market_fit", self.conn))
+    def test_staff_row_turns_off(self):
+        set_flags(self.conn, {"market_fit": False}, updated_by="test")
+        self.assertFalse(feature_on("market_fit", self.conn))
 
 
 if __name__ == "__main__":

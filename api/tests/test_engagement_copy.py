@@ -78,7 +78,7 @@ class EngagementCopyTests(unittest.TestCase):
         finally:
             conn.close()
 
-    def test_defaults_off_with_api_key_when_env_unset(self):
+    def test_defaults_on_with_api_key_when_env_unset(self):
         from app.ai_flags import feature_on, invalidate_flag_cache
         from app.engagement_copy import copy_enabled
 
@@ -86,12 +86,6 @@ class EngagementCopyTests(unittest.TestCase):
         try:
             env = {k: v for k, v in os.environ.items() if k != "ENGAGEMENT_AI_COPY_ENABLED"}
             env["OPENAI_API_KEY"] = "sk-test"
-            with patch.dict("os.environ", env, clear=True):
-                invalidate_flag_cache()
-                # Opt-in flow: a key alone no longer turns it on.
-                self.assertFalse(feature_on("engagement_copy", conn))
-                self.assertFalse(copy_enabled(conn))
-            env["ENGAGEMENT_AI_COPY_ENABLED"] = "1"
             with patch.dict("os.environ", env, clear=True):
                 invalidate_flag_cache()
                 self.assertTrue(feature_on("engagement_copy", conn))

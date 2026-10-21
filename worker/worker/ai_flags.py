@@ -32,7 +32,7 @@ FEATURES = (
     "engagement_copy",
 )
 
-# market_fit (staff-queue publish-fit AI check) defaults ON with a key; job_tidy is opt-in.
+# market_fit defaults ON when any chat key exists (same as gateway / job_tidy).
 # Chat provider order is free-first → OpenAI last (see ai_gateway).
 FEATURE_ENV = {
     "gateway": "AI_GATEWAY_ENABLED",
@@ -49,20 +49,6 @@ FEATURE_ENV = {
     "digest_intro": "DIGEST_AI_INTRO_ENABLED",
     "engagement_copy": "ENGAGEMENT_AI_COPY_ENABLED",
 }
-
-# Non-core flows are opt-in: OFF unless the env var is true or a staff DB row
-# turns them on. Core matching/CV flows keep following the gateway.
-OPT_IN_FEATURES = frozenset(
-    {
-        "job_tidy",
-        "engagement_copy",
-        "role_coach",
-        "learning_roadmap",
-        "job_analyze",
-        "job_apply_draft",
-        "job_tailored_cv",
-    }
-)
 
 _FALSE = {"0", "false", "no", "off"}
 _TRUE = {"1", "true", "yes", "on"}
@@ -194,10 +180,8 @@ def feature_on(feature: str, conn=None) -> bool:
         return bool(stored[feature])
     if env is True:
         return True
-    if feature in OPT_IN_FEATURES:
-        return False
-    # market_fit = AI publish-fit check for the staff moderation queue: on with a key.
-    if feature in {"gateway", "market_fit"}:
+    # Notification engagement copy defaults on with the key (same as gateway).
+    if feature in {"gateway", "job_tidy", "engagement_copy", "market_fit"}:
         return key_configured()
     return feature_on("gateway", conn)
 

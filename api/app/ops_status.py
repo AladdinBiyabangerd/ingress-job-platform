@@ -11,15 +11,7 @@ import sqlite3
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from app.ai_flags import (
-    FEATURE_ENV,
-    FEATURES,
-    OPT_IN_FEATURES,
-    _env_state,
-    feature_on,
-    key_configured,
-    stored_flags,
-)
+from app.ai_flags import FEATURE_ENV, FEATURES, _env_state, feature_on, key_configured, stored_flags
 
 _CRAWL_RUNS_DDL = """
 CREATE TABLE IF NOT EXISTS crawl_runs (
@@ -129,22 +121,24 @@ def _feature_detail(feature: str, conn: sqlite3.Connection | None, *, budget_hit
             "status": "stopped",
             "reason": "Staff panelindən söndürülüb.",
         }
-    if not key_configured() and feature in {"gateway", "market_fit"}:
+    if not key_configured() and feature in {
+        "gateway",
+        "job_tidy",
+        "engagement_copy",
+        "market_fit",
+    }:
         return {
             "id": feature,
             "label": label,
             "status": "stopped",
             "reason": "Heç bir AI açarı qoyulmayıb (Gemini / Groq / NVIDIA / OpenRouter / OpenAI).",
         }
-    if not on and feature in OPT_IN_FEATURES and not stored.get(feature):
-        env_name = FEATURE_ENV.get(feature) or ""
-        return {
-            "id": feature,
-            "label": label,
-            "status": "stopped",
-            "reason": f"Standart olaraq sönülüdür; açmaq üçün {env_name}=1 və ya Staff paneli.",
-        }
-    if not on and feature != "gateway":
+    if not on and feature not in {
+        "gateway",
+        "job_tidy",
+        "engagement_copy",
+        "market_fit",
+    }:
         if not feature_on("gateway", conn):
             return {
                 "id": feature,
