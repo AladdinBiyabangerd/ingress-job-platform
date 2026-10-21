@@ -190,6 +190,15 @@ export function AiFitCell({ value, detail, reason, copy, locale }) {
                   ) : null}
                 </dl>
                 {detail.hard_reject ? <p className={styles.warn}>{t.hardReject}</p> : null}
+                {detail.visa_strength === "weak" ? <p className={styles.warn}>{t.visaWeak}</p> : null}
+                {detail.text_truncated && (detail.text_truncated.code || detail.text_truncated.ai_hint) ? (
+                  <p className={styles.warn}>
+                    <span className={styles.warnTitle}>{t.trunc}: </span>
+                    {detail.text_truncated.code
+                      ? (t.truncCode && (t.truncCode[detail.text_truncated.source || ""] || t.truncCode[""])) || ""
+                      : t.truncHint}
+                  </p>
+                ) : null}
                 {detail.conflict ? (
                   <div className={styles.warn} role="note">
                     <p className={styles.warnTitle}>{t.conflict}</p>
