@@ -276,6 +276,20 @@
   color: #93370d;
 }
 
+.warnTitle {
+  margin: 0;
+  font-weight: 600;
+}
+
+.conflicts {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.conflicts li + li {
+  margin-top: 2px;
+}
+
 .text {
   margin: 0;
   overflow-wrap: anywhere;

@@ -190,7 +190,20 @@ export function AiFitCell({ value, detail, reason, copy, locale }) {
                   ) : null}
                 </dl>
                 {detail.hard_reject ? <p className={styles.warn}>{t.hardReject}</p> : null}
-                {detail.conflict ? <p className={styles.warn}>{t.conflict}</p> : null}
+                {detail.conflict ? (
+                  <div className={styles.warn} role="note">
+                    <p className={styles.warnTitle}>{t.conflict}</p>
+                    {Array.isArray(detail.conflicts) && detail.conflicts.length ? (
+                      <ul className={styles.conflicts}>
+                        {detail.conflicts.map((c) => (
+                          <li key={c.key || c}>
+                            {(t.conflicts && t.conflicts[c.key]) || c.label || c.key || String(c)}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 {!detail.hard_reject ? (
                   <section className={styles.section}>
