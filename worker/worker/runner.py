@@ -213,7 +213,7 @@ def _main(argv: list[str]) -> int:
     ):
         print(
             'usage: python -m worker '
-            '[list|schedule|parse-cv|purge-market|rescore-eligibility [--dry-run] [--reset-ai]'
+            '[list|schedule|parse-cv|purge-market|rescore-eligibility [--dry-run] [--reset-ai] [--limit N] [--source NAME]'
             '|eval-market-fit [--live]'
             '|probe ["Source name" ...]]',
             flush=True,
@@ -236,15 +236,38 @@ def _rescore_eligibility(args: list[str]) -> int:
 
     --dry-run: count only, write nothing. --reset-ai: clear AI % scored by an older
     prompt so the scheduler re-checks it with the current market-fit prompt.
+    --limit N: only the N oldest pending ads. --source NAME: only ads from that
+    job_sources.source_name (exact). Use both for a staged rollout.
     """
-    bad = [a for a in args if a not in {"--dry-run", "--reset-ai"}]
-    if bad:
-        print("usage: python -m worker rescore-eligibility [--dry-run] [--reset-ai]", flush=True)
-        return 2
+    usage = (
+        "usage: python -m worker rescore-eligibility [--dry-run] [--reset-ai] "
+        "[--limit N] [--source NAME]"
+    )
+    flags: set[str] = set()
+    limit: int | None = None
+    source: str | None = None
+    rest = list(args)
+    while rest:
+        arg = rest.pop(0)
+        if arg in {"--dry-run", "--reset-ai"}:
+            flags.add(arg)
+        elif arg in {"--limit", "--source"} and rest:
+            value = rest.pop(0)
+            if arg == "--limit":
+                if not value.isdigit() or int(value) <= 0:
+                    print(usage, flush=True)
+                    return 2
+                limit = int(value)
+            else:
+                source = value
+        else:
+            print(usage, flush=True)
+            return 2
+    args = sorted(flags)
     store = Store()
     try:
         stats = apply_eligibility_to_pending(
-            store.conn, dry_run="--dry-run" in args, reset_ai="--reset-ai" in args
+            store.conn, dry_run="--dry-run" in args, reset_ai="--reset-ai" in args, limit=limit, source=source
         )
         for row in stats.get("changes", []):
             print(

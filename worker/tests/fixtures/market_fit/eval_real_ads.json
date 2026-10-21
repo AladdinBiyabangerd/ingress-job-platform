@@ -1,5 +1,5 @@
 {
- "about": "Real scraped ads from the local ingress-job DB (2026-10-21 snapshot), hand-labelled from the ad text only. expected: eligible = should reach 85+ (remote from AZ); manual = valid relocation/visa route, policy keeps it for a human check (60-84); not_eligible / unclear / truncated = must stay below 85. flags = only the flags the label is sure about. v8 additions: 1574 and 1817 (real), and two ads keyed 'synthetic-*' with company 'SYNTHETIC EXAMPLE', hand-written to cover worldwide-vs-residents and visa-vs-no-sponsorship conflicts that the local DB does not contain. v9 additions: 1 (Typeform), 1729 (Anthropic, conditional visa), 332#limit800; 'scenario' marks the 8 review scenarios.",
+ "about": "Real scraped ads from the local ingress-job DB (2026-10-21 snapshot), hand-labelled from the ad text only. expected: eligible = should reach 85+ (remote from AZ); manual = valid relocation/visa route, policy keeps it for a human check (60-84); not_eligible / unclear / truncated = must stay below 85. flags = only the flags the label is sure about. v8 additions: 1574 and 1817 (real), and two ads keyed 'synthetic-*' with company 'SYNTHETIC EXAMPLE', hand-written to cover worldwide-vs-residents and visa-vs-no-sponsorship conflicts that the local DB does not contain. v9 additions: 1 (Typeform), 1729 (Anthropic, conditional visa), 332#limit800; 'scenario' marks the 8 review scenarios. v9.1 additions (Azerbaijan/Baku review): every remaining real DB ad whose title, location field or text names Azerbaijan/Baku — 514, 1200 (location-field country lists incl. Azerbaijan; eligible), 1243 (location field lists Azerbaijan but the text's country list leaves it out; unclear), 1497 (team statement only; unclear) — plus three clearly marked synthetic ads: synthetic-az-excluded, synthetic-baku-onsite (on-site Baku = Azerbaijan route), synthetic-client-in-baku.",
  "ads": [
   {
    "key": "1072",
@@ -1210,6 +1210,122 @@
     "id": 7,
     "name": "truncated ad, key location condition not visible"
    }
+  },
+  {
+   "key": "514",
+   "job_id": 514,
+   "title": "Infrastructure Engineer (Enterprise Windows/Linux)",
+   "company": "ADVIBE AGENCY",
+   "city": "Armenia, Georgia, Azerbaijan, Uzbekistan, Ukraine",
+   "source": "Djinni",
+   "source_url": "https://djinni.co/jobs/852930-infrastructure-engineer-enterprise-windows-li",
+   "source_remote": true,
+   "source_relocation": false,
+   "expected": "eligible",
+   "flags": {
+    "remote_az_explicit": true
+   },
+   "evidence": "Location field 'Armenia, Georgia, Azerbaijan, Uzbekistan, Ukraine'; text (Ukrainian) '🟢 Дозволені країни: Киргизстан, Азербайджан, …'; 'Формат роботи: Remote / Online Office'.",
+   "text": "Формат роботи: Remote / Online Office\nЗарплата: $1 500–3 000 — залежно від досвіду та технічних навичок\nГрафік: 5/2, 09:00–18:00 (GMT+3 влітку / GMT+2 взимку)\nПерерви: 1 година на обід + 3 перерви по 15 хвилин\nДосвід: від 3 років на аналогічній посаді\n\nОсновні обов’язки\n\n• Адміністрування, підтримка та розвиток гібридної Windows/Linux-інфраструктури.\n• Забезпечення стабільності, продуктивності та відмовостійкості критично важливих систем.\n• Робота з Multi-domain Active Directory: керування доменами, користувачами, правами доступу та груповими політиками (GPO).\n• Адміністрування VMware vSphere (ESXi, vCenter, clusters, vSAN).\n• Робота з Proxmox VE та віртуальними серверами.\n• Підтримка та розвиток RDS Farm і FSLogix profiles для понад 100 користувачів.\n• Адміністрування фізичних серверів Bare Metal.\n• Налаштування та підтримка моніторингу через Zabbix.\n• Робота з DNS / DHCP.\n• Автоматизація рутинних завдань і процесів за допомогою PowerShell.\n• Розвиток і масштабування інфраструктури відповідно до потреб високонавантажених продуктів.\n• Пошук і усунення технічних проблем, оптимізація інфраструктурних рішень.\n\nОбов’язкові вимоги\n\n• Досвід роботи від 3 років на аналогічній посаді.\n• Практичний досвід адміністрування Active Directory: Multi-domain, GPO, troubleshooting.\n• Впевнені знання VMware: ESXi, vCenter, clusters, vSAN.\n• Практичний досвід роботи з Proxmox VE.\n• Досвід адміністрування RDS та FSLogix.\n• Навички автоматизації за допомогою PowerShell.\n• Досвід адміністрування фізичних серверів Bare Metal.\n• Розуміння принципів роботи гібридної Windows/Linux-інфраструктури.\n• Здатність самостійно діагностувати та усувати технічні проблеми.\n• Відповідальність, самостійність та уважність до деталей.\n\nТехнологічний стек\n\n• Multi-domain Active Directory / GPO\n• VMware vSphere / ESXi / vCenter / vSAN\n• Proxmox VE\n• RDS Farm / FSLogix\n• Bare Metal Servers\n• Zabbix Monitoring\n• DNS / DHCP\n• PowerShell\n\nУмови роботи\n\n• Віддалений формат роботи з підключенням до Online Office.\n• Графік 5/2, 09:00–18:00 (GMT+3 влітку / GMT+2 взимку).\n• Обідня перерва тривалістю 1 година та 3 перерви по 15 хвилин.\n• Заробітна плата $1 500–3 000 залежно від досвіду та результатів технічної співбесіди.\n\nГеографія найму\n\n🟢 Дозволені країни: Киргизстан, Азербайджан, Грузія, Вірменія, Узбекистан, Молдова, Україна.\n\n🔴 Країни, з яких кандидати не розглядаються: Казахстан, Росія, Білорусь, країни Європи (крім зазначених у дозволеному списку), США, Канада, Ізраїль.\n\n⚠️ Важливо для кандидатів з України: обов’язкова наявність безперебійного електропостачання та стабільного інтернету 24/7.\n\nВажливо!\n\nРобота передбачає перебування в Online Office з увімкненою камерою та демонстрацією екрана протягом робочого часу.\n\nШукаємо фахівця з реальним практичним досвідом адміністрування enterprise-інфраструктури, який самостійно працював із зазначеними технологіями, а не лише знайомий із ними теоретично.\n\nЯкщо ви маєте відповідний досвід і готові розвивати та підтримувати складну корпоративну інфраструктуру, будемо раді розглянути вашу кандидатуру!"
+  },
+  {
+   "key": "1200",
+   "job_id": 1200,
+   "title": ".NET Developer",
+   "company": "codeharbor.dev",
+   "city": "Armenia, Azerbaijan, Georgia, Kazakhstan, Kyrgyzstan",
+   "source": "Djinni",
+   "source_url": "https://djinni.co/jobs/851783-net-developer",
+   "source_remote": true,
+   "source_relocation": false,
+   "expected": "eligible",
+   "flags": {
+    "remote_az_explicit": true
+   },
+   "evidence": "Location field 'Armenia, Azerbaijan, Georgia, Kazakhstan, Kyrgyzstan'; 'Full Remote: The team is scattered worldwide'.",
+   "text": "We’re looking for an advanced Middle or Senior .Net engineer for a huge legacy project in the Healthcare domain. You will have the chance to solve complex problems with global impact. Here’s what we’re looking for in our ideal candidate and what you can expect from the role.\n\nWhat We Need from You:\n\n• Seasoned Expertise: Over 5 years of hands-on experience with .NET, Entity Framework, AWS, and cloud tech.\n• C# Proficiency: High skill in C# and .NET platforms, including both .NET Framework 4 and .NET 8.\n• Back-End Strength: Experience with ASP.NET (MVC), Windows Services, and RDBMS, especially MS SQL Server.\n• Best Practices Advocate: Clean Architecture, SOLID principles, design patterns, and unit testing are second nature to you.\n• Team Player: Collaboration is your middle name. You excel in working alongside Project Managers and are all about team success.\n• Communication Skills: Your English proficiency is at least pre-intermediate, for creating and understanding the documentation, tasks, interfaces, chats, etc.\n• Familiar with Front-End: While your focus is back-end, you’re no stranger to Vue or other front-end frameworks, along with HTML, CSS, and jQuery.\n\nNice-to-Haves:\n\n• Experience with Crystal Reports or similar enterprise-level tools is a big plus.\n\nYour Role and Responsibilities:\n\n• Architect of Solutions: Design, develop, and maintain robust, scalable, and secure applications using .NET technologies.\n• Code Master: Write clean, efficient, and maintainable code following best practices, conduct code reviews, and implement unit tests.\n• Problem Solver: Troubleshoot and resolve complex technical issues, ensuring the stability and performance of our applications.\n\nWorking Hours & Availability:\n\n• Full Remote: The team is scattered worldwide, so we all work comfortably from home.\n• Flexibility: It’s not necessary to check in every morning. The main thing is that you are available at about the same time as the team and turn up for scheduled meetings. And, of course, meet deadlines and get the job done right.😉\n\nThe candidate evaluation process consists of two stages — two interviews: a general interview and a purely technical interview with the project PM.\n\nWho are we:\n\nJoin Code Harbor — we are a team of dedicated IT professionals specializing in web development, CRM system construction, and startup support for our partners from the USA, Canada, or Europe.\n\nWe are committed to providing competitive and well-supported solutions to meet the needs of our clients by delivering not a bare service, but a problem-resolving development.\n\nAbout the project:\n\nOur client’s project unites over 90 medical clinics across the US states of Maryland, Northern Virginia, and Washington D.C., employing more than 1000 individuals and contractors.\n\nTo successfully manage multiple clinics and to provide consistently high-quality service, our client has developed a novel business model and implemented modern technology for the internal and external flow of information.\n\nThe core of the company, excluding employees, is the Intranet Portal. It connects all clinics and headquarters and includes schedules, appointment information, patients' info, an attorney portal, and much more. External IT provides instant access to clients' essential information and electronic transfer of medical records to the participating attorney.\n\nWhat we offer:\n\n• Full-time job\n• Work-from-home opportunity\n• Reasonable salary\n• 18 days of annual vacation\n• 5 days of paid sick leaves\n• A productive work environment with growth and development opportunities as an experienced specialist\n\nIf you’re excited by the prospect of shaping the future of technology and making a significant impact, we’d love to welcome you aboard. Let’s create something amazing together!"
+  },
+  {
+   "key": "1243",
+   "job_id": 1243,
+   "title": "System Administrator/VoIP Engineer (Asterisk)",
+   "company": "FinTech Synergy",
+   "city": "Azerbaijan, Armenia, Georgia, Moldova, Uzbekistan",
+   "source": "Djinni",
+   "source_url": "https://djinni.co/jobs/851673-system-administrator-voip-engineer-asterisk",
+   "source_remote": true,
+   "source_relocation": false,
+   "expected": "unclear",
+   "flags": {},
+   "evidence": "Conflict: location field 'Azerbaijan, Armenia, Georgia, Moldova, Uzbekistan' but the text says 'Open for candidates from countries as follows: Armenia, Georgia, Moldova, Uzbekistan, Kyrgyzstan, Tajikistan' (no Azerbaijan). Moderator decides; never 85+.",
+   "text": "PLEASE NOT:\n\nThis position is NOT with FinTech Synergy. We are sharing this opportunity on behalf of a partner company.\n\nWe are looking for a VoIP Engineer to develop, implement, and maintain our telephony infrastructure.\nYou will be responsible for configuring and optimizing VoIP systems, integrating telephony with internal services, troubleshooting technical issues, and ensuring stable and reliable operation.\nWe are looking for a hands-on specialist who can independently manage telephony infrastructure and take ownership of technical tasks from implementation to ongoing support.\n\nResponsibilities:\n\n- Deploy, configure, and maintain VoIP infrastructure based on Asterisk.\n- Configure SIP trunks, endpoints, extensions, and call routing.\n- Develop and maintain dial plans, IVR menus, call queues, and call forwarding scenarios.\n- Integrate telephony systems with backend services, CRM platforms, and third-party APIs.\n- Work with Asterisk AMI/ARI interfaces and automate telephony-related processes.\n- Monitor system performance, investigate incidents, and troubleshoot SIP/RTP-related issues.\n- Analyze logs and network traffic to identify and resolve connectivity and call-quality problems.\n- Manage Linux-based servers and ensure system stability and security.\n- Configure and maintain databases related to call records and telephony services.\n- Implement updates, improvements, and new telephony features.\n- Maintain technical documentation and configuration records.\n- Collaborate with developers and infrastructure specialists on integrations and system improvements.\n\nRequirements:\n\n- 2+ years of practical experience in VoIP engineering, telephony administration, or a related role.\n- Hands-on experience with Asterisk is preferred.\n- Strong knowledge of SIP, RTP, NAT, codecs, and VoIP networking.\n- Experience configuring SIP trunks, call routing, and dial plans.\n- Practical experience with Linux server administration (Debian/Ubuntu).\n- Understanding of telephony architecture and troubleshooting methodologies.\n- Experience with AMI/ARI integrations or similar telephony APIs.\n- Basic SQL knowledge and experience working with MySQL/MariaDB.\n- Understanding of network security, firewalls, and VoIP infrastructure protection.\n- Ability to independently investigate and resolve technical issues.\n\nWhat We Offer:\n\n- Fully remote cooperation.\n- Full-time position.\n- Opportunity to take ownership of telephony infrastructure and contribute to its development.\n- Professional environment with technical collaboration across teams.\n- Compensation: Discussed individually based on experience.\n\nOpen for candidates from countries as follows:\n\nArmenia, Georgia, Moldova, Uzbekistan, Kyrgyzstan, Tajikistan"
+  },
+  {
+   "key": "1497",
+   "job_id": 1497,
+   "title": "Sr. Backend Engineer",
+   "company": "OneDome",
+   "city": "",
+   "source": "Breezy boards (Remote)",
+   "source_url": "https://onedome.breezy.hr/p/3a37532f4b2001-sr-backend-engineer",
+   "source_remote": true,
+   "source_relocation": false,
+   "expected": "unclear",
+   "flags": {
+    "remote_az_explicit": false
+   },
+   "evidence": "Only 'The team is international (Ukraine, Azerbaijan, South Africa).' (team statement, not a work allowance); London working hours; no stated remote geography.",
+   "text": "Key Responsibilities:\n\n• Work on product features and impact customer experience\n• Develop and maintain our Java Spring-based platform for a quickly scaling business\n• Collaborate with a distributed team of highly skilled engineers\n• Contribute to the architecture and design of our growing platform\n• Ensure code quality, performance, and scalability\n\nRequirements:\n\n• Strong Java experience (6+ years)\n• Proficiency in Spring Framework (Spring Boot, Spring Cloud, MVC, Security), ORM frameworks (JPA/Hibernate)\n• Experience with relational and NoSQL databases.\n• AWS knowledge, including ECS, EC2, RDS, Lambda, S3, IAM, CloudFormation, CloudWatch, etc.\n• DevOps skills in AWS provisioning, operations, and management.\n• Strong problem-solving skills and attention to detail.\n• Ability to work independently in a remote setting.\n• Fluent English and Russian communication skills.\n• AI adoption\n\nNice to Have:\n\n• AWS Certification\n• Team lead experience\n\nWhat do we offer:\n\n• Challenging tasks with a great opportunity to level up your skills\n• 20 working days of paid vacation\n• Working hours are 9:00–17:00 London time\nAdditional days off follow the UK holiday calendar\n• The team is international (Ukraine, Azerbaijan, South Africa)."
+  },
+  {
+   "company": "SYNTHETIC EXAMPLE",
+   "source": "synthetic",
+   "source_url": "",
+   "source_remote": true,
+   "source_relocation": false,
+   "key": "synthetic-az-excluded",
+   "title": "Senior Backend Engineer (Remote)",
+   "city": "",
+   "expected": "not_eligible",
+   "flags": {
+    "remote_az_explicit": false,
+    "remote_country_restricted": true
+   },
+   "evidence": "SYNTHETIC: 'This is a remote role open to candidates in Europe and the CIS, excluding Azerbaijan and Belarus.'",
+   "text": "About the role\n\nWe are looking for a Senior Backend Engineer (Go, PostgreSQL) to join our payments platform team.\n\nLocation\n\nThis is a remote role open to candidates in Europe and the CIS, excluding Azerbaijan and Belarus. Because of payroll limitations we cannot employ people in Azerbaijan at the moment.\n\nWhat you will do\n\n• Build and operate payment services in Go\n• Own PostgreSQL schemas and migrations\n• Take part in on-call rotation\n\nRequirements\n\n• 5+ years of backend experience\n• Strong Go and SQL skills\n• Fluent English\n\nWe offer a competitive salary, 25 days of paid vacation and a home-office budget."
+  },
+  {
+   "company": "SYNTHETIC EXAMPLE",
+   "source": "synthetic",
+   "source_url": "",
+   "source_remote": false,
+   "source_relocation": false,
+   "key": "synthetic-baku-onsite",
+   "title": "Backend Engineer (Python)",
+   "city": "Baku, Azerbaijan",
+   "expected": "eligible",
+   "flags": {
+    "remote_az_explicit": true,
+    "remote_worldwide": false
+   },
+   "evidence": "SYNTHETIC: 'This position is based in our Baku office, on-site five days a week.' On-site Baku counts as the Azerbaijan route (a candidate living in AZ can do it).",
+   "text": "We are a fintech company building digital banking products.\n\nThis position is based in our Baku office, on-site five days a week. Remote work is not possible for this role.\n\nResponsibilities\n\n• Develop REST APIs in Python (Django, FastAPI)\n• Work with PostgreSQL and Redis\n• Write tests and review code\n\nRequirements\n\n• 3+ years with Python\n• Good knowledge of SQL\n• English B2 or higher\n\nWe offer medical insurance, lunch and a yearly training budget."
+  },
+  {
+   "company": "SYNTHETIC EXAMPLE",
+   "source": "synthetic",
+   "source_url": "",
+   "source_remote": true,
+   "source_relocation": false,
+   "key": "synthetic-client-in-baku",
+   "title": "Senior QA Engineer",
+   "city": "",
+   "expected": "unclear",
+   "flags": {
+    "remote_az_explicit": false
+   },
+   "evidence": "SYNTHETIC: only 'Our client is based in Baku' (company statement) and a bare 'fully remote'; no stated remote geography.",
+   "text": "Our client is based in Baku and builds logistics software for the Caspian region.\n\nWe are looking for a Senior QA Engineer to join the client's product team. The position is fully remote.\n\nResponsibilities\n\n• Design and maintain automated tests (Playwright, TypeScript)\n• Plan regression testing for releases\n• Work with developers to reproduce and fix defects\n\nRequirements\n\n• 4+ years in QA, 2+ years in test automation\n• Experience with CI pipelines\n• Upper-intermediate English\n\nWe offer a flexible schedule and paid sick leave."
   }
  ]
 }

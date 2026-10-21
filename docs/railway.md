@@ -207,13 +207,21 @@ CV upload uses the bucket only when `BUCKET_NAME`, `BUCKET_ACCESS_KEY`, and
   quotes (≤ 160 chars, one passage), plus an Azerbaijani reason. Flag order is the same everywhere (`FLAGS` in
   `fit_mapping.py` = prompt definitions = JSON example = schema `required`). It never scores and never resolves
   conflicts. The % is computed by `worker/worker/fit_mapping.py:staff_percent`:
-  95 AZ named · 90 worldwide · 88 named geographic region that includes AZ (EMEA, CIS, Caucasus…; a time-zone range or
+  95 AZ named (84 when a restriction leaving AZ out is quoted too) · 90 worldwide · 88 named geographic region that includes AZ (EMEA, CIS, Caucasus…; a time-zone range or
   UTC offset alone never counts) · 88 relocation + unconditional visa · 84 remote + "right to work in <country>" ·
   70 relocation only, visa only, or relocation/visa with a *conditional* visa · 40 no evidence · 15 any restriction
   without a valid route.
   `visa_support_conditional` ("not for every role and every candidate", "case by case", "where possible", "may
   sponsor", or a general company-wide statement): the visa route is weak (≤ 70) and never helps reach 85+; the code also
   sets it when the ad itself qualifies sponsorship and the model missed it, and the qualifying quote is shown.
+  `remote_az_explicit`: remote from Azerbaijan, Azerbaijan / Baku in the list of places the role is open to (title
+  "(Europe, Georgia, Turkey, Azerbaijan, Ukraine)", location field "Armenia, Azerbaijan, Georgia"; Latin, Azerbaijani
+  and Cyrillic spellings), or hybrid / on-site work in Baku: a candidate living in Azerbaijan can do all of them, so
+  on-site Baku is the same 95 route. Never from a negated mention ("excluding Azerbaijan", "not available in
+  Azerbaijan", "не розглядаються: Азербайджан") or a company / client / team statement ("Our client is based in Baku",
+  "the team is international (Ukraine, Azerbaijan)"). A quoted work place also clears `work_location_unspecified`.
+  Every visa result carries a `visa_note` shown in the popover and the reason: weak (conditional, ≤ 70), not counted
+  (no-sponsorship / work-authorization conflict, or residence requirement), or irrelevant (a remote route wins: 90/95).
   Restriction flags: `remote_country_restricted` (named countries / regions, or an explicit time-zone eligibility rule
   that excludes UTC+4; not a working-hours overlap, not "US-based company" / "headquartered in"),
   `candidate_location_restricted` (must already reside in / be a citizen of a named country; not "the job is based in
@@ -237,13 +245,16 @@ Re-score pending ads after deploying (no AI calls; safe, never changes status):
 ```bash
 railway run --service worker python -m worker rescore-eligibility --dry-run   # list changes only
 railway run --service worker python -m worker rescore-eligibility --reset-ai  # apply; clear old-prompt AI %
+# staged rollout: a small subset first (oldest pending first), optionally one source
+railway run --service worker python -m worker rescore-eligibility --dry-run --reset-ai --limit 50 --source Djinni
+railway run --service worker python -m worker rescore-eligibility --reset-ai --limit 50 --source Djinni
 ```
 
 `--reset-ai` clears AI % written by older prompts (any AI reason without the `(market-fit-v9)` tag, so v6–v8 rows too)
 so the scheduler's normal `market_fit_auto` pass re-checks them (within `AI_GATEWAY_DAILY_CALL_LIMIT`). The scheduler
 also re-applies the eligibility caps every run.
 
-Real-data eval (62 hand-labelled real ads from the DB, 3 cut variants of them and 2 clearly marked synthetic cases, covering the 8 review scenarios; `worker/tests/fixtures/market_fit/eval_real_ads.json`):
+Real-data eval (66 hand-labelled real ads from the DB — every ad naming Azerbaijan/Baku included — 3 cut variants of them and 5 clearly marked synthetic cases, covering the 8 review scenarios; `worker/tests/fixtures/market_fit/eval_real_ads.json`):
 
 ```bash
 cd worker

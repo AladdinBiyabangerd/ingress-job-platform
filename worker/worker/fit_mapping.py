@@ -11,6 +11,7 @@ Order of evaluation (first match wins; a restriction beats a weaker positive):
 Evidence (positive flags need a verified quote)                       %
 ==================================================================  =====
 remote_az_explicit                                                   95
+  ... same, but a remote restriction / work-auth rule is also quoted    84
 remote_worldwide, remote not blocked                                 90
 remote_region_includes_az, remote not blocked                        88
   ... same, but work_authorization_required (named country)          84
@@ -24,6 +25,14 @@ no evidence either way                                               40
 * remote is blocked by ``remote_country_restricted``, ``candidate_location_restricted``
   or ``temporary_abroad_only``. When a remote flag and a restriction are both true
   (conflicting quotes) the restriction wins; the AI does not resolve conflicts.
+* ``remote_az_explicit`` covers remote from Azerbaijan, Azerbaijan / Baku in the list of
+  places the role is open to (title or location field), and hybrid / on-site work in
+  Baku or elsewhere in Azerbaijan: a candidate who lives in Azerbaijan can do all of
+  them, so on-site Baku is the same 95 route. Company / client / team statements about
+  Azerbaijan and negated mentions never set it (quote validation). When the ad also
+  quotes a restriction that leaves Azerbaijan out (e.g. the location field lists
+  Azerbaijan but the text's country list does not) the conflict is shown and the %
+  is capped at AZ_CONFLICT_CAP (84) for a moderator.
 * ``candidate_location_restricted`` (must already live in / be a citizen of named
   countries) also blocks the relocation and visa routes.
 * Visa strength: ``visa_support`` alone never means the candidate certainly qualifies.
@@ -60,6 +69,7 @@ SCORE_NO_EVIDENCE = 40
 INFO_CAP = 84  # below the 85 approve band
 TRUNCATED_CAP = INFO_CAP  # back-compat name
 AI_TRUNCATION_HINT_CAP = 84  # AI suspects a cut the code cannot confirm: conservative
+AZ_CONFLICT_CAP = 84  # Azerbaijan explicitly allowed, but a restriction is quoted too
 AUTH_CONFLICT_CAP = 84  # remote route + "must have the right to work in <country>"
 
 # Order = prompt definition order = JSON example order = schema "required" order.
@@ -176,6 +186,8 @@ def staff_percent(flags: dict[str, Any]) -> tuple[int, str]:
         score, route = SCORE_RESTRICTED, "restricted"
     else:
         score, route = SCORE_NO_EVIDENCE, "no_evidence"
+    if route == "remote_az_explicit" and (blocked or f["work_authorization_required"]):
+        score = min(score, AZ_CONFLICT_CAP)
     if route in ("remote_worldwide", "remote_region_includes_az") and f["work_authorization_required"]:
         score = min(score, AUTH_CONFLICT_CAP)
     if f["text_truncated"] or f["work_location_unspecified"]:
@@ -183,6 +195,34 @@ def staff_percent(flags: dict[str, Any]) -> tuple[int, str]:
     if flags.get(TRUNCATION_HINT) and not f["text_truncated"]:
         score = min(score, AI_TRUNCATION_HINT_CAP)
     return score, route
+
+
+REMOTE_ROUTES = ("remote_az_explicit", "remote_worldwide", "remote_region_includes_az")
+
+# Why the visa evidence did / did not count (shown in the popover and the reason).
+VISA_NOTES_AZ = {
+    "weak": "viza şərtlidir: zəif yol, maks. 70%, 85+ vermir",
+    "remote_route": "viza şərti nəzərə alınmır: remote yol (Azərbaycandan iş) vizadan asılı deyil",
+    "no_sponsorship": "viza sayılmır: elan həm də sponsorluq olmadığını yazır (ziddiyyət)",
+    "work_authorization": "viza sayılmır: konkret ölkədə hazır iş icazəsi tələb olunur (ziddiyyət)",
+    "candidate_location": "viza sayılmır: namizəd müəyyən ölkədə yaşamalıdır",
+}
+
+
+def visa_note(flags: dict[str, Any], route: str = "") -> str:
+    """'' or a VISA_NOTES_AZ key explaining how the visa evidence was used."""
+    f = {name: bool(flags.get(name)) for name in FLAGS}
+    if not f["visa_support"]:
+        return ""
+    if f["no_sponsorship_stated"]:
+        return "no_sponsorship"
+    if f["work_authorization_required"]:
+        return "work_authorization"
+    if f["candidate_location_restricted"]:
+        return "candidate_location"
+    if route in REMOTE_ROUTES:
+        return "remote_route" if f["visa_support_conditional"] else ""
+    return "weak" if f["visa_support_conditional"] else ""
 
 
 def is_suitable(route: str) -> bool:

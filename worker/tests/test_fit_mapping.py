@@ -64,7 +64,8 @@ class TableTest(unittest.TestCase):
         (_on("remote_worldwide", "remote_country_restricted", "text_truncated"), 15, "restricted"),
         (_on("remote_az_explicit", "remote_country_restricted", "text_truncated"), 84, "remote_az_explicit"),
         # explicit AZ wins over a restriction (AZ named = AZ allowed)
-        (_on("remote_az_explicit", "remote_country_restricted"), 95, "remote_az_explicit"),
+        # v9.1: Azerbaijan allowed but a restriction is quoted too -> conflict, moderator (84)
+        (_on("remote_az_explicit", "remote_country_restricted"), 84, "remote_az_explicit"),
     ]
 
     def test_table(self):
