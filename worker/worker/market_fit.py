@@ -17,6 +17,7 @@ from typing import Any
 
 from worker.ai_flags import feature_on
 from worker.ai_gateway import complete_json
+from worker.az_context import NEGATION, NEGATION_OK, quote_az_context
 from worker.fit_mapping import (
     AI_FLAGS,
     FLAGS,
@@ -855,19 +856,9 @@ QUOTES_PER_FLAG = 3
 
 # Negation / exclusion words that turn a positive-looking quote into the opposite
 # ("We do not offer visa sponsorship" is not visa_support evidence).
-_NEGATION = re.compile(
-    r"(?i)\b(?:not|no|never|none|nor|unable|cannot|unfortunately|unavailable|ineligible|"
-    r"without|excluding|exclude[sd]?|except)\b|n['’]t\b|"
-    r"(?<!\w)(?:не|ні|нет|без|крім|окрім|кроме|исключая|за\s+исключением)(?!\w)"
-)
-# Phrases with a negation word that still read positive for remote / relocation.
-_NEGATION_OK = re.compile(
-    r"(?i)\bno\s+matter\b|\bregardless\b|\bnot\s+(?:limited|restricted|tied|bound)\s+to\b|"
-    r"\bwithout\s+(?:any\s+)?(?:location|geographic(?:al)?|country|borders?)"
-    r"(?:\s+(?:restrictions?|limits?|limitations?|boundaries))?\b|"
-    r"\bno\s+(?:location|geographic(?:al)?|country)\s+(?:restrictions?|limits?|limitations?|requirements?)\b|"
-    r"\bwithout\s+(?:the\s+)?need\s+to\s+relocate\b"
-)
+# Shared with the eligibility pre-check (worker.az_context) so both layers agree.
+_NEGATION = NEGATION
+_NEGATION_OK = NEGATION_OK
 _KEY_TERMS = {
     "visa_support": r"visa|sponsor|work[\s-]?permit|immigration|blue\s+card",
     "relocation": r"relocat|move|moving",
@@ -1035,20 +1026,8 @@ _ROLE_SUBJECT = re.compile(
 # remote_az_explicit: "Our client is based in Baku", "the team is international (Ukraine,
 # Azerbaijan)", "the largest operator in Azerbaijan" describe the company, not where this
 # role may be done from. Work wording ("remote", "on-site", "hire", "open to") keeps the quote.
-_AZ_COMPANY_SUBJECT = re.compile(
-    r"(?i)\b(?:company|companies|client|clients|customer|customers|partner|partners|operator|team|teams|"
-    r"employees|colleagues|workforce|headquarter\w*|offices?|organi[sz]ation|subsidiary|bank|market|markets)\b|"
-    r"\bazerbaijani\s+\w+"
-)
-_AZ_WORK = re.compile(
-    r"(?i)\b(?:remote(?:ly)?|hybrid|on[\s-]?site|in[\s-]office|office[\s-]based|work(?:ing)?\s+(?:from|in)|"
-    r"hire|hiring|open\s+(?:to|for)|candidates?|applicants?|you|your|location|allowed|eligible|relocat\w*|"
-    r"role|position|job|vacanc\w*|based\s+in\s+(?:baku|azerbaijan)\s*\()\b"
-)
-
-
 def _az_company_statement(q: str) -> bool:
-    return bool(_AZ_COMPANY_SUBJECT.search(q)) and not _AZ_WORK.search(q)
+    return quote_az_context(q) == "company"
 
 
 def _company_statement_only(q: str) -> bool:
@@ -1112,8 +1091,12 @@ def check_quote(flag: str, quote: str, ad_text: str = "") -> str:
         return "qeyd-şərtli ifadə (almost/most …), hamı üçün deyil"
     if flag in ("remote_worldwide", "remote_region_includes_az") and _company_statement_only(q):
         return "şirkət haqqında ifadədir, bu rol üçün remote icazəsi deyil"
-    if flag == "remote_az_explicit" and _az_company_statement(q):
-        return "şirkət/müştəri/komanda haqqında ifadədir, Azərbaycandan iş icazəsi deyil"
+    if flag == "remote_az_explicit":
+        context = quote_az_context(q)
+        if context == "company":
+            return "şirkət/müştəri/komanda haqqında ifadədir, Azərbaycandan iş icazəsi deyil"
+        if context == "negative":
+            return "sitatda Azərbaycan inkar/istisna kontekstindədir"
     if flag == "remote_country_restricted":
         problem = _country_restriction_problem(q)
         if problem:

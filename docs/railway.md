@@ -240,6 +240,12 @@ CV upload uses the bucket only when `BUCKET_NAME`, `BUCKET_ACCESS_KEY`, and
   quote with work wording or a list of places clears `work_location_unspecified` (a bare "EMEA" does not).
 * Both are capped first by `worker/worker/eligibility.py` (parsed location, Workable country, local-entity signals).
   Country-locked / foreign on-site ads (cap ≤ 10) are rejected without any AI call.
+  Azerbaijan / Baku mentions are read by context (`worker/worker/az_context.py`, the same helpers the AI quote check
+  uses): allowed / hire in / remote from / title or location list / on-site Baku → a *candidate* only (cap 100, the AI
+  quote and the moderator decide); negation or exclusion ("do not hire from Azerbaijan", "excluding Azerbaijan",
+  "не розглядаються: Азербайджан") → restriction evidence, cap 15, never a pre-AI reject on the negation alone; both
+  at once → cap 84 for a moderator; company / client / team / office statements ("Our client is based in Baku") →
+  neutral, noted in the summary. The pre-check only selects candidates and caps; it never decides suitability.
 * Click the AI % pill in Moderasiya to see the result: flags with quotes, conflicts, rejected quotes, cap, reason.
 
 Re-score pending ads after deploying (no AI calls; safe, never changes status):

@@ -6,11 +6,25 @@ the staff queue cannot show 85+ for an ad that Azerbaijan-based candidates
 cannot really apply to.
 
 Fields (same names as the market_fit AI schema):
-- remote_scope: anywhere | region_incl_az | country_locked | home_country_hybrid
-  | onsite | unknown
+- remote_scope: anywhere | az_listed | region_incl_az | country_locked
+  | home_country_hybrid | onsite | unknown
 - works_from_az: yes | no | unclear  (permanently, from Azerbaijan)
 - relocation: yes | no, relocation_target: country/city or "" when not stated
 - visa: yes | no
+
+Azerbaijan / Baku mentions (``worker.az_context``, shared with the AI quote check):
+
+* positive (allowed / hire in / remote from / listed in the title or location list,
+  on-site Baku) -> ``works_from_az=yes``, cap 100: only a *candidate*; the AI quotes and
+  the moderator decide.
+* negative ("do not hire from Azerbaijan", "excluding Azerbaijan", "не розглядаються:
+  Азербайджан") -> restriction evidence: ``works_from_az=no``, ``country_locked``, cap
+  CAP_AZ_EXCLUDED (15). Never a pre-AI hard reject (cap 10) on the negation alone: the
+  regex may misread a sentence, so the AI still checks the ad and the moderator sees why.
+  A hard reject still happens when another rule locks the ad on its own.
+* both positive and negative -> conflict: ``unclear``, cap CAP_AZ_CONFLICT (84, moderator).
+* company / client / team / office statements ("Our client is based in Baku") -> neutral:
+  ignored for eligibility, noted in the summary.
 """
 
 from __future__ import annotations
@@ -19,6 +33,7 @@ import re
 from typing import Any
 from urllib.parse import unquote
 
+from worker.az_context import AZ_NAME, az_mentions
 from worker.techstack import (
     _AZ_EXPLICIT,
     _FOREIGN_GEO_RE,
@@ -40,8 +55,10 @@ CAP_LOCKED = 10  # cannot work from AZ and no relocation → rejected before AI
 CAP_UNCLEAR = 40  # nothing confirms AZ eligibility
 CAP_RELOC_UNCONFIRMED = 60  # relocation offered, target country or visa unknown
 CAP_RELOC_CONFIRMED = 80  # relocation + visa + target stated (still a human check)
+CAP_AZ_EXCLUDED = 15  # Azerbaijan named in a negation / exclusion (AI still checks; no hard reject)
+CAP_AZ_CONFLICT = 84  # Azerbaijan both allowed and excluded: moderator decides
 
-SCOPES = ("anywhere", "region_incl_az", "country_locked", "home_country_hybrid", "onsite", "unknown")
+SCOPES = ("anywhere", "az_listed", "region_incl_az", "country_locked", "home_country_hybrid", "onsite", "unknown")
 TRI = ("yes", "no", "unclear")
 
 _COUNTRY_AZ = {
@@ -130,6 +147,17 @@ def _quote(text: str, match: re.Match | None, width: int = 90) -> str:
     return f"“{snippet[:width]}”"
 
 
+_GENERIC_UNKNOWN = (
+    "Remote yalnız mənbə metadata-sındadır, mətndə yazılmayıb",
+    "Mətndə remote və ya relocation açıq yazılmayıb",
+    "Remote var, amma hansı ölkədən işləmək olar — göstərilməyib",
+)
+
+
+def _unit_quote(unit: str, width: int = 90) -> str:
+    return f"“{' '.join(str(unit or '').split())[:width]}”"
+
+
 def _first(rx: re.Pattern[str], text: str) -> re.Match | None:
     return rx.search(text or "")
 
@@ -157,6 +185,10 @@ def assess(
     if slug_place and not pins:
         pins = [slug_place]
     pins_az = [c for c in pins if _AZ_EXPLICIT.search(str(c))]
+    az = az_mentions(title, place, body, extra_positive=[str(c) for c in pins_az])
+    az_pos, az_neg, az_company = az["positive"], az["negative"], az["company"]
+    az_conflict = bool(az_pos and az_neg)
+    az_excluded_only = False
 
     # ---- relocation / visa -------------------------------------------------
     reloc = relocation_flag(title, place, body)
@@ -185,11 +217,18 @@ def assess(
     # Explicit remote wording in the ad itself (not the source flag / city field).
     text_remote = remote_flag(title, "", body) and not abroad_days
 
-    if _AZ_EXPLICIT.search(sample) or pins_az:
-        scope, works = "region_incl_az", "yes"
-        hit = _first(_AZ_EXPLICIT, sample)
-        if hit:
-            evidence.append(_quote(sample, hit))
+    if az_conflict:
+        scope, works = "az_listed", "unclear"
+        reasons.append("Azərbaycan həm iş yeri kimi, həm də inkar/istisna kontekstində çəkilir — moderator yoxlasın")
+        evidence.extend([_unit_quote(az_pos[0]), _unit_quote(az_neg[0])])
+    elif az_pos:
+        named = any(AZ_NAME.search(u) for u in az_pos)
+        scope, works = ("az_listed" if named else "region_incl_az"), "yes"
+        reasons.append(
+            ("Azərbaycan/Bakı iş yeri kimi göstərilib" if named else "Azərbaycanı əhatə edən region göstərilib")
+            + " — mümkün uyğunluq, AI sitatı və moderator təsdiqləyir"
+        )
+        evidence.append(_unit_quote(az_pos[0]))
     elif anywhere_in:
         scope, works = "country_locked", "no"
         where = re.split(r"(?<=\.)\s", anywhere_in.group(1))[0]
@@ -232,6 +271,21 @@ def assess(
         else:
             reasons.append("Remote var, amma hansı ölkədən işləmək olar — göstərilməyib")
 
+    if az_neg and not az_pos:
+        # restriction evidence; cap low but never a hard reject on the negation alone
+        if works != "no":
+            az_excluded_only = True
+            # the generic "location not stated" line no longer describes this ad
+            reasons[:] = [r for r in reasons if r not in _GENERIC_UNKNOWN]
+        scope, works = "country_locked", "no"
+        reasons.append("Azərbaycan inkar/istisna kontekstində çəkilir (məhdudiyyət sübutu)")
+        evidence.append(_unit_quote(az_neg[0]))
+    if az_company and not az_pos and not az_neg:
+        reasons.append(
+            "Azərbaycan/Bakı yalnız şirkət/müştəri/komanda haqqında cümlədə çəkilir — uyğunluq sübutu deyil: "
+            + _unit_quote(az_company[0], 70)
+        )
+
     if (local_entity or local_leave) and works != "yes" and not text_remote:
         bits = []
         if local_entity:
@@ -243,7 +297,9 @@ def assess(
             works = "unclear"
 
     # ---- cap ---------------------------------------------------------------
-    if works == "yes":
+    if az_conflict:
+        cap = CAP_AZ_CONFLICT
+    elif works == "yes":
         cap = 100
     elif reloc:
         if visa and target:
@@ -261,7 +317,7 @@ def assess(
             + (f"; göstərilməyib: {', '.join(missing)} — yeri yoxlayın" if missing else "")
         )
     elif works == "no":
-        cap = CAP_LOCKED
+        cap = CAP_AZ_EXCLUDED if az_excluded_only else CAP_LOCKED
     else:
         cap = CAP_UNCLEAR
 
@@ -279,6 +335,7 @@ def assess(
 
 _SCOPE_AZ = {
     "anywhere": "istənilən ölkə",
+    "az_listed": "Azərbaycan iş yeri kimi göstərilib",
     "region_incl_az": "Azərbaycanı əhatə edən region",
     "country_locked": "ölkəyə bağlı",
     "home_country_hybrid": "ofis ölkəsində hibrid/evdən",
