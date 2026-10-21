@@ -438,18 +438,25 @@ class AdminTests(unittest.TestCase):
             self.assertEqual(detail.status_code, 200, detail.text)
             self.assertEqual(detail.json()["status"], "rejected")
 
+            # Rejected ads stay off the public list until staff explicitly approve them.
+            mid_ids = {item["id"] for item in self.client.get("/api/v1/jobs").json()["items"]}
+            self.assertEqual(mid_ids, {live_id})
+
+            # Since 86ee2cd (business-rules: "Approve always means published (pending or
+            # rejected → published)"), bulk approve publishes pending AND rejected ads;
+            # already-published and unknown ids are skipped without failing.
             bulk = self.client.post(
                 "/api/v1/admin/jobs/approve-bulk",
                 headers={"Authorization": "Bearer test"},
-                json={"ids": [ids[1], ids[0], 999999]},
+                json={"ids": [ids[1], ids[0], live_id, 999999]},
             )
             self.assertEqual(bulk.status_code, 200, bulk.text)
-            self.assertEqual(bulk.json()["approved"], 1)
-            self.assertEqual(bulk.json()["items"][0]["id"], ids[1])
+            self.assertEqual(bulk.json()["approved"], 2)
+            self.assertEqual([item["id"] for item in bulk.json()["items"]], [ids[1], ids[0]])
+            self.assertTrue(all(item["status"] == "published" for item in bulk.json()["items"]))
 
         public_ids = {item["id"] for item in self.client.get("/api/v1/jobs").json()["items"]}
-        self.assertEqual(public_ids, {ids[1], live_id})
-        self.assertNotIn(ids[0], public_ids)
+        self.assertEqual(public_ids, {ids[0], ids[1], live_id})
 
     def test_backfill_confidence_fills_rule_then_ai(self):
         conn = sqlite3.connect(self.db)
