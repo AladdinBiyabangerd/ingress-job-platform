@@ -217,13 +217,13 @@ class MarketFitTest(unittest.TestCase):
     def _flags(**on):
         from worker.fit_mapping import FLAGS
 
-        out = {name: {"value": False, "quote": ""} for name in FLAGS}
+        out = {name: {"value": False, "quotes": []} for name in FLAGS if name != "text_truncated"}
         for name, quote in on.items():
-            out[name] = {"value": True, "quote": quote}
+            out[name] = {"value": True, "quotes": [quote]}
         return out
 
     def test_clarify_uses_complete_json(self):
-        result = GatewayResult(ok=True, prompt_version="market-fit-v6", model="x")
+        result = GatewayResult(ok=True, prompt_version="market-fit-v7", model="x")
         result.data = {**self._flags(remote_worldwide="Work from anywhere."), "reason": "İstənilən ölkədən remote."}
         with patch("worker.market_fit.feature_on", return_value=True):
             with patch("worker.market_fit.complete_json", return_value=result) as call:
@@ -235,7 +235,7 @@ class MarketFitTest(unittest.TestCase):
                     conn=self.store.conn,
                 )
         call.assert_called_once()
-        self.assertEqual(call.call_args.kwargs["prompt_version"], "market-fit-v6")
+        self.assertEqual(call.call_args.kwargs["prompt_version"], "market-fit-v7")
         self.assertNotIn("confidence", call.call_args.kwargs["schema"]["properties"])
         self.assertTrue(out["suitable"])
         self.assertTrue(out["remote"])
@@ -244,9 +244,9 @@ class MarketFitTest(unittest.TestCase):
         self.assertIn("Work from anywhere.", out["reason"])
 
     def test_clarify_unsuitable_stores_low_fit(self):
-        result = GatewayResult(ok=True, prompt_version="market-fit-v6", model="x")
+        result = GatewayResult(ok=True, prompt_version="market-fit-v7", model="x")
         result.data = {
-            **self._flags(country_restricted="US residency 3 of 5 years.", no_sponsorship_stated="No visa sponsorship."),
+            **self._flags(candidate_location_restricted="US residency 3 of 5 years.", no_sponsorship_stated="No visa sponsorship."),
             "reason": "Yalnız ABŞ rezidentləri.",
         }
         with patch("worker.market_fit.feature_on", return_value=True):

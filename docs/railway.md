@@ -203,10 +203,17 @@ CV upload uses the bucket only when `BUCKET_NAME`, `BUCKET_ACCESS_KEY`, and
 ## Staff-queue % (market fit, Azerbaijan eligibility)
 
 * **Rule %** — deterministic keywords/schema (`worker/worker/market_fit.py:rule_fit_confidence`), never above 80.
-* **AI checks %** — the AI (`market-fit-v6`) returns only yes/no flags with quotes from the ad; the % is computed by
-  `worker/worker/fit_mapping.py:staff_percent` (95 AZ named · 90 worldwide · 88 region incl. AZ or relocation+visa ·
-  70 relocation or visa only · 40 no evidence · 15 country-restricted / temporary-abroad). Positive flags whose quote is not
-  in the ad are dropped.
+* **AI checks %** — the AI (`market-fit-v7`) only extracts evidence: 11 yes/no flags, each with up to 3 verbatim
+  quotes (≤ 160 chars, one passage), plus an Azerbaijani reason. It never scores and never resolves conflicts. The % is
+  computed by `worker/worker/fit_mapping.py:staff_percent`:
+  95 AZ named · 90 worldwide · 88 region/time-zone range that includes AZ, or relocation+visa · 84 remote + "right to
+  work in <country>" · 70 relocation or visa only · 40 no evidence · 15 any restriction without a valid route.
+  Restriction flags: `remote_country_restricted`, `candidate_location_restricted` (also blocks relocation/visa),
+  `work_authorization_required` and `no_sponsorship_stated` (both cancel visa only; a valid remote-from-AZ route stays),
+  `temporary_abroad_only`. `text_truncated` (set by code when the ad was cut) and `work_location_unspecified` cap at 84.
+  Code-side quote checks: a positive flag counts only with a quote that is verbatim in the ad, not stitched, ≤ 160 chars
+  and not negated near its key term ("We do not offer visa sponsorship" never backs `visa_support`); rejected quotes
+  are listed in the reason for the moderator.
 * Both are capped first by `worker/worker/eligibility.py` (parsed location, Workable country, local-entity signals).
   Country-locked / foreign on-site ads (cap ≤ 10) are rejected without any AI call.
 * The reasons (flags + quotes + eligibility line, Azerbaijani) are shown under the ad title in Moderasiya.
@@ -218,8 +225,21 @@ railway run --service worker python -m worker rescore-eligibility --dry-run   # 
 railway run --service worker python -m worker rescore-eligibility --reset-ai  # apply; clear old-prompt AI %
 ```
 
-`--reset-ai` clears AI % written by older prompts so the scheduler's normal `market_fit_auto` pass re-checks them
-(within `AI_GATEWAY_DAILY_CALL_LIMIT`). The scheduler also re-applies the eligibility caps every run.
+`--reset-ai` clears AI % written by older prompts (any AI reason without the `(market-fit-v7)` tag, so v6 rows too)
+so the scheduler's normal `market_fit_auto` pass re-checks them (within `AI_GATEWAY_DAILY_CALL_LIMIT`). The scheduler
+also re-applies the eligibility caps every run.
+
+Real-data eval (60 hand-labelled ads from the DB, `worker/tests/fixtures/market_fit/eval_real_ads.json`):
+
+```bash
+cd worker
+python -m worker eval-market-fit                       # offline: labelled flags -> mapping + eligibility caps
+python -m worker eval-market-fit --live --save data/eval-live.json   # real AI calls (keys from env, ~60 calls)
+python -m worker eval-market-fit --replay data/eval-live.json        # re-score saved AI answers, no AI calls
+```
+
+It reports false positives (wrongly 85+), false negatives (remote-from-AZ ad below 85, or a relocation+visa ad
+dropped below 60) and per-flag accuracy on the labelled flags.
 
 ## Cloudflare edge (production)
 

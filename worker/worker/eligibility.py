@@ -81,8 +81,28 @@ _OPEN_STRONG = re.compile(
     r"\bremote\s*(?:\(|-|–|:|,)\s*(?:worldwide|world[\s-]?wide|global|anywhere)\b|"
     r"location[\s-]?independent|no\s+location\s+restrict\w*|from\s+any\s+(?:country|location)\b|"
     r"\bemea\b|\beméa\b|\bcaucasus\b|central\s+asia|"
+    r"\bhire\s+(?:globally|worldwide)\s+regardless\s+of\s+(?:time\s?zones?|location|country)\b|"
     r"(?<![,\w]\s)(?<!anyone,\s)\bwork\s+from\s+anywhere\b['\"’”]?(?!\s+(?:with)?in\b)(?![^\n.]{0,40}\d{1,3}\s+(?:days?|weeks?))"
 )
+# "time zones between GMT+4 - GMT+12" / "between UTC-4 and UTC+4": a range that
+# contains Azerbaijan's UTC+4 is a region that includes AZ.
+_TZ_RANGE = re.compile(
+    r"(?i)\b(?:GMT|UTC)\s*([+\-−–]\s*\d{1,2})(?::\d{2})?\s*(?:-|–|—|to|and|through)\s*"
+    r"(?:(?:GMT|UTC)\s*)?([+\-−–]\s*\d{1,2})(?::\d{2})?"
+)
+
+
+def _tz_range_includes_az(text: str) -> re.Match | None:
+    for m in _TZ_RANGE.finditer(text or ""):
+        try:
+            lo, hi = (int(re.sub(r"[−–]", "-", g).replace(" ", "")) for g in m.groups())
+        except ValueError:
+            continue
+        if min(lo, hi) <= 4 <= max(lo, hi):
+            return m
+    return None
+
+
 # Local employer / local contract markers (company register ids, statutory leave).
 _LOCAL_ENTITY = re.compile(
     r"(?i)\b(?:UIC|EIK|ЕИК|BULSTAT|KRS|NIP|REGON|CUI|CIF|NIF|IČO|ICO|KvK|"
@@ -178,6 +198,7 @@ def assess(
             anywhere_in = cand
             break
     open_strong = _first(_OPEN_STRONG, sample)
+    tz_az = _tz_range_includes_az(sample)
     region_lock = region_restriction_reason(title, place, body, source)
     local_entity = _first(_LOCAL_ENTITY, body)
     local_leave = _first(_LOCAL_LEAVE, body)
@@ -201,7 +222,7 @@ def assess(
             if region_lock == "work_authorization"
             else "Remote yalnız müəyyən region üçün"
         )
-    elif pins and not open_strong:
+    elif pins and not (open_strong or tz_az):
         scope, works = "country_locked", "no"
         names = ", ".join(az_name(c) for c in pins[:4])
         if len(pins) == 1:
@@ -211,6 +232,9 @@ def assess(
     elif open_strong and not _named_foreign_place(place):
         scope, works = "anywhere", "yes"
         evidence.append(_quote(sample, open_strong))
+    elif tz_az and not _named_foreign_place(place):
+        scope, works = "region_incl_az", "yes"
+        evidence.append(_quote(sample, tz_az))
     elif abroad_days or (flex and not text_remote):
         scope, works = "home_country_hybrid", "no"
         if abroad_days:

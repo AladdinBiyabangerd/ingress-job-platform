@@ -204,12 +204,17 @@ def _main(argv: list[str]) -> int:
         return _purge_market_only()
     if len(argv) >= 2 and argv[1] == "rescore-eligibility":
         return _rescore_eligibility(argv[2:])
+    if len(argv) >= 2 and argv[1] == "eval-market-fit":
+        from worker.market_fit_eval import run as eval_market_fit
+
+        return eval_market_fit(argv[2:])
     if len(argv) > 2 or (
         len(argv) == 2 and argv[1] not in {"list", "schedule", "parse-cv", "purge-market"}
     ):
         print(
             'usage: python -m worker '
             '[list|schedule|parse-cv|purge-market|rescore-eligibility [--dry-run] [--reset-ai]'
+            '|eval-market-fit [--live]'
             '|probe ["Source name" ...]]',
             flush=True,
         )

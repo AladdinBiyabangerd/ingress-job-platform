@@ -388,6 +388,8 @@ class Store:
             "rule_confidence": "INTEGER",
             "ai_confidence": "INTEGER",
             "market_fit_reason": "TEXT NOT NULL DEFAULT ''",
+            # JSON for the Moderasiya "AI %" popover (worker.market_fit.fit_detail).
+            "market_fit_detail": "TEXT NOT NULL DEFAULT ''",
         }
         for name, decl in alters.items():
             if name not in cols:

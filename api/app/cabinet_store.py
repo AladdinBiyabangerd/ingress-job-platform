@@ -25,6 +25,7 @@ Ordinary cabinet creates do not write a source URL.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import uuid
 from datetime import datetime
@@ -93,6 +94,8 @@ _COLUMNS = {
     "rule_confidence": "INTEGER",
     "ai_confidence": "INTEGER",
     "market_fit_reason": "TEXT NOT NULL DEFAULT ''",
+    # JSON for the Moderasiya "AI %" popover (worker.market_fit.fit_detail).
+    "market_fit_detail": "TEXT NOT NULL DEFAULT ''",
 }
 
 _APP_COLUMNS = {
@@ -598,7 +601,20 @@ def _owner(row: sqlite3.Row) -> dict:
         payload["ai_confidence"] = _score_or_none(row, "ai_confidence")
     if "market_fit_reason" in keys:
         payload["market_fit_reason"] = row["market_fit_reason"] or ""
+    if "market_fit_detail" in keys:
+        payload["market_fit_detail"] = fit_detail_payload(row["market_fit_detail"])
     return payload
+
+
+def fit_detail_payload(raw) -> dict | None:
+    """Stored market_fit_detail JSON -> dict for the admin popover (None when absent/bad)."""
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
 
 
 def list_owned(subject: str) -> list[dict]:
@@ -807,7 +823,7 @@ def close_ad(subject: str, job_id: int) -> dict:
 _MOD_COLS = """
     id, title, company, city, remote, text, language, salary,
     job_type, status, created_at, updated_at, reject_reason, apply_form, owner_subject,
-    rule_confidence, ai_confidence, market_fit_reason
+    rule_confidence, ai_confidence, market_fit_reason, market_fit_detail
 """
 
 
@@ -866,6 +882,7 @@ def list_moderation() -> list[dict]:
                    '' AS apply_form, j.owner_subject,
                    j.rule_confidence, j.ai_confidence,
                    COALESCE(j.market_fit_reason, '') AS market_fit_reason,
+                   COALESCE(j.market_fit_detail, '') AS market_fit_detail,
                    COALESCE(js.source_name, '') AS source_name,
                    COALESCE(js.source_url, '') AS source_url
             FROM jobs j
@@ -1135,7 +1152,7 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
     ``rejected`` = AI answered unsuitable → status rejected (pending or
     published crawled ads). Counted as AI success.
     """
-    from worker.market_fit import checked_verdict
+    from worker.market_fit import checked_verdict, store_fit_detail
 
     if scope not in ("queue", "crawled", "crawl_rejects"):
         return "skipped"
@@ -1203,6 +1220,7 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
             ).fetchone()
             if row is None or not _recheck_eligible(row, scope=scope):
                 return "skipped"
+            store_fit_detail(conn, job_id, verdict)  # committed with the score below
             status = row["status"] or ""
             if not verdict.get("suitable") and not verdict.get("unclear"):
                 # Pending/published → rejected (shows on Rejected tab). Already
@@ -1335,7 +1353,7 @@ def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
     2) Still unscored → sync market_fit for up to ``ai_limit`` rows.
     Company/manual ads (owner_subject set) are skipped.
     """
-    from worker.market_fit import checked_rule_fit, checked_verdict
+    from worker.market_fit import checked_rule_fit, checked_verdict, store_fit_detail
 
     if ai_limit < 0 or ai_limit > 50:
         raise CabinetError(422, "AI limit 0–50 arasında olmalıdır")
@@ -1465,6 +1483,7 @@ def backfill_moderation_confidence(*, ai_limit: int = 40) -> dict:
                     continue
                 if row["rule_confidence"] is not None or row["ai_confidence"] is not None:
                     continue
+                store_fit_detail(conn, job_id, verdict)  # committed with the score below
                 if verdict.get("unclear"):
                     conn.execute(
                         """

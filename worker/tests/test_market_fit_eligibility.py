@@ -183,9 +183,9 @@ class WorkableRowsTest(unittest.TestCase):
 def _ai(reason="", **on):
     from worker.fit_mapping import FLAGS
 
-    out = {name: {"value": False, "quote": ""} for name in FLAGS}
+    out = {name: {"value": False, "quotes": []} for name in FLAGS if name != "text_truncated"}
     for name, quote in on.items():
-        out[name] = {"value": True, "quote": quote}
+        out[name] = {"value": True, "quotes": [quote] if quote else []}
     out["reason"] = reason
     return out
 
@@ -196,7 +196,7 @@ class AiVerdictTest(unittest.TestCase):
     def test_emerchantpay_expected_answer_below_band(self):
         v = verdict_from_ai(_ai(
             "Remote yeri göstərilməyib; Bolqarıstan şirkəti; Azərbaycandan iş təsdiqlənmir.",
-            text_truncated_or_missing_location="",
+            work_location_unspecified="",
         ), ad_text=EMP_TEXT)
         self.assertEqual(v["confidence"], 40)
         self.assertTrue(v["unclear"])

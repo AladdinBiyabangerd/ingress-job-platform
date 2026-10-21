@@ -40,6 +40,7 @@ SELECT
     j.rule_confidence,
     j.ai_confidence,
     COALESCE(j.market_fit_reason, '') AS market_fit_reason,
+    COALESCE(j.market_fit_detail, '') AS market_fit_detail,
     COALESCE(js.source_name, '') AS source_name
 FROM jobs j
 {_SOURCE_JOIN}
@@ -66,6 +67,7 @@ SELECT
     j.rule_confidence,
     j.ai_confidence,
     COALESCE(j.market_fit_reason, '') AS market_fit_reason,
+    COALESCE(j.market_fit_detail, '') AS market_fit_detail,
     COALESCE(js.source_name, '') AS source_name,
     COALESCE(js.source_url, '') AS source_url
 FROM jobs j
@@ -116,6 +118,10 @@ def _public(row: sqlite3.Row) -> dict:
         payload["ai_confidence"] = _score_or_none(row, "ai_confidence")
     if "market_fit_reason" in keys:
         payload["market_fit_reason"] = row["market_fit_reason"] or ""
+    if "market_fit_detail" in keys:
+        from app.cabinet_store import fit_detail_payload
+
+        payload["market_fit_detail"] = fit_detail_payload(row["market_fit_detail"])
     return payload
 
 
@@ -200,6 +206,8 @@ def _crawled_row(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
             j.merged_into,
             j.rule_confidence, j.ai_confidence,
             COALESCE(j.market_fit_reason, '') AS market_fit_reason,
+            COALESCE(j.market_fit_detail, '') AS market_fit_detail,
+    COALESCE(j.market_fit_detail, '') AS market_fit_detail,
             COALESCE(js.source_name, '') AS source_name
         FROM jobs j
         {_SOURCE_JOIN}
