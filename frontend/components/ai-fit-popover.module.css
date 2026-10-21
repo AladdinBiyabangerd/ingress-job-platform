@@ -1,0 +1,304 @@
+/* "AI %" cell pill + popover (component-scoped; tokens from app/globals.css :root). */
+
+.wrap {
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 28px;
+  padding: 3px 6px 3px 10px;
+  border: 1px solid var(--border, #e4e9f2);
+  border-radius: 999px;
+  background: var(--surface, #fff);
+  color: var(--text, #101828);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--fw-semibold, 600);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast, 140ms) var(--ease-out, ease),
+    border-color var(--dur-fast, 140ms) var(--ease-out, ease),
+    box-shadow var(--dur-fast, 140ms) var(--ease-out, ease);
+}
+
+.pill:hover {
+  border-color: var(--brand-border-active, #a8b8ff);
+  background: var(--brand-soft, #eef3ff);
+}
+
+.pill:focus-visible {
+  outline: 2px solid var(--brand, #001fff);
+  outline-offset: 2px;
+}
+
+.pill[aria-expanded="true"] {
+  border-color: var(--brand, #001fff);
+  background: var(--brand-soft, #eef3ff);
+  box-shadow: 0 0 0 3px rgb(0 31 255 / 10%);
+}
+
+.pill[aria-expanded="true"] .icon {
+  transform: rotate(180deg);
+}
+
+.icon {
+  width: 14px;
+  height: 14px;
+  color: var(--muted, #667085);
+  transition: transform var(--dur-fast, 140ms) var(--ease-out, ease);
+}
+
+.value {
+  min-width: 2.6ch;
+  text-align: right;
+}
+
+/* Score bands: 85+ approve, 60–84 manual check, below 60 low, none = not checked. */
+.approve { border-color: #a6e9c5; background: #ecfdf3; color: #067647; }
+.manual { border-color: #fedf89; background: #fffaeb; color: #93370d; }
+.low { color: var(--text, #101828); }
+.none { color: var(--muted, #667085); font-weight: var(--fw-medium, 500); }
+.approveText { color: #067647; }
+.manualText { color: #93370d; }
+.lowText, .noneText { color: var(--text, #101828); }
+
+.pop {
+  position: fixed;
+  top: var(--pop-top, 0);
+  left: var(--pop-left, 0);
+  z-index: 60;
+  width: min(380px, calc(100vw - 24px));
+  max-height: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border, #e4e9f2);
+  border-radius: var(--radius-md, 12px);
+  background: var(--surface, #fff);
+  color: var(--text, #101828);
+  box-shadow: 0 12px 32px rgb(16 24 40 / 14%), 0 2px 6px rgb(16 24 40 / 6%);
+  text-align: left;
+  white-space: normal;
+  font-size: 13px;
+  line-height: 1.45;
+  animation: pop-in var(--dur-fast, 140ms) var(--ease-out, ease);
+}
+
+.pop:focus {
+  outline: none;
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pop { animation: none; }
+  .pill, .icon { transition: none; }
+}
+
+/* Phones: a bottom sheet instead of an anchored popover. */
+@media (max-width: 640px) {
+  .pop {
+    top: auto;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: auto;
+    max-height: 75vh;
+  }
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 12px 10px 16px;
+  border-bottom: 1px solid var(--border, #e4e9f2);
+}
+
+.title {
+  margin: 0;
+  color: var(--muted, #667085);
+  font-size: 12px;
+  font-weight: var(--fw-semibold, 600);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.scoreRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+}
+
+.score {
+  font-size: 24px;
+  font-weight: var(--fw-bold, 700);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.badge {
+  display: inline-flex;
+  padding: 2px 8px;
+  border: 1px solid var(--border, #e4e9f2);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: var(--fw-medium, 500);
+}
+
+.close {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: 0;
+  border-radius: var(--radius-sm, 8px);
+  background: transparent;
+  color: var(--muted, #667085);
+  cursor: pointer;
+}
+
+.close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.close:hover {
+  background: var(--canvas, #f5f7fc);
+  color: var(--text, #101828);
+}
+
+.close:focus-visible {
+  outline: 2px solid var(--brand, #001fff);
+  outline-offset: 1px;
+}
+
+.body {
+  display: grid;
+  gap: 12px;
+  padding: 12px 16px 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.facts dt {
+  color: var(--muted, #667085);
+  font-size: 12px;
+}
+
+.facts dd {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-weight: var(--fw-medium, 500);
+}
+
+.section {
+  display: grid;
+  gap: 6px;
+}
+
+.h {
+  margin: 0;
+  color: var(--muted, #667085);
+  font-size: 12px;
+  font-weight: var(--fw-semibold, 600);
+}
+
+.flags,
+.notes {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flag {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 8px);
+  background: var(--canvas, #f5f7fc);
+}
+
+.flagLabel {
+  font-weight: var(--fw-semibold, 600);
+}
+
+.flagKey {
+  color: var(--muted, #667085);
+  font-size: 11px;
+}
+
+.quote {
+  display: block;
+  padding-left: 8px;
+  border-left: 2px solid var(--brand-border, #cbd5ff);
+  color: var(--text, #101828);
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
+.notes li {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm, 8px);
+  background: #fef3f2;
+  color: #b42318;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.warn {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid #fedf89;
+  border-radius: var(--radius-sm, 8px);
+  background: #fffaeb;
+  color: #93370d;
+}
+
+.text {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.subtle {
+  margin: 0;
+  color: var(--muted, #667085);
+  font-size: 12px;
+  font-weight: var(--fw-regular, 400);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 8px 16px 10px;
+  border-top: 1px solid var(--border, #e4e9f2);
+  color: var(--muted, #667085);
+  font-size: 12px;
+}
+
+.meta code {
+  font-size: 11px;
+}

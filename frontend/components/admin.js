@@ -41,6 +41,7 @@ import { CollectedAdmin } from "./collected-admin";
 import { ManualAd } from "./manual-ad";
 import { PageChrome } from "./page-chrome";
 import { Pager } from "./pager";
+import { AiFitCell } from "./ai-fit-popover";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
 const ADMIN_TABS = new Set([
@@ -904,9 +905,6 @@ export function Admin({
                             ) : null}
                           </div>
                           {job.company ? <span className="admin-mod-sub">{job.company}</span> : null}
-                          {job.market_fit_reason ? (
-                            <span className="admin-mod-sub admin-mod-fit">{job.market_fit_reason}</span>
-                          ) : null}
                           {job.reject_reason ? (
                             <span className="admin-mod-sub admin-mod-reject">
                               {t.rejectReason}: {job.reject_reason}
@@ -917,7 +915,13 @@ export function Admin({
                           {confidenceCell(job.rule_confidence, job.market_fit_reason)}
                         </td>
                         <td className="admin-mod-pct-col">
-                          {confidenceCell(job.ai_confidence, job.market_fit_reason)}
+                          <AiFitCell
+                            value={job.ai_confidence}
+                            detail={job.market_fit_detail}
+                            reason={job.market_fit_reason}
+                            copy={t.aiFit}
+                            locale={locale}
+                          />
                         </td>
                         <td className="admin-mod-source">{sourceCell(t, job)}</td>
                         <td className="admin-mod-actions">

@@ -28,6 +28,7 @@ import {
 import { AdminListFilterBar } from "./admin-list-filter-bar";
 import { AdminRecheckProgress } from "./admin-recheck-progress";
 import { Pager } from "./pager";
+import { AiFitCell } from "./ai-fit-popover";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
 
@@ -501,15 +502,18 @@ export function CollectedAdmin({ locale, initialItems = null }) {
                             ) : null}
                           </div>
                           {job.company ? <span className="admin-mod-sub">{job.company}</span> : null}
-                          {job.market_fit_reason ? (
-                            <span className="admin-mod-sub admin-mod-fit">{job.market_fit_reason}</span>
-                          ) : null}
                         </td>
                         <td className="admin-mod-pct-col">
                           {confidenceCell(job.rule_confidence, job.market_fit_reason)}
                         </td>
                         <td className="admin-mod-pct-col">
-                          {confidenceCell(job.ai_confidence, job.market_fit_reason)}
+                          <AiFitCell
+                            value={job.ai_confidence}
+                            detail={job.market_fit_detail}
+                            reason={job.market_fit_reason}
+                            copy={t.aiFit}
+                            locale={locale}
+                          />
                         </td>
                         <td className="admin-mod-source">{sourceCell(t, job)}</td>
                         <td className="admin-mod-actions">
