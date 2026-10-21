@@ -11,8 +11,10 @@
   (offices: Serbia, Germany, Cyprus, Spain, Czech Republic, Poland, Armenia).
 - `workable_country_locked.json`, `workable_anywhere_locked.json`, `workable_worldwide_open.json`
   — unmodified rows from the public jobs.workable.com /api/v1/jobs search (robots.txt allows it).
-- `eval_real_ads.json` — 60 real scraped ads from the local ingress-job DB (2026-10-21 snapshot; text as
+- `eval_real_ads.json` — 62 real scraped ads from the local ingress-job DB (2026-10-21 snapshot; text as
   stored), hand-labelled from the ad text only for `python -m worker eval-market-fit`. `expected`: eligible (85+),
   manual (relocation + visa route, 60–84), not_eligible / unclear / truncated (< 85). `flags` lists only the flags
   the label is sure about; `evidence` quotes the deciding sentence. Two entries re-use an ad with `prompt_limit`
-  to force truncation.
+  to force truncation. Two more entries (keys `synthetic-*`, company `SYNTHETIC EXAMPLE`) are hand-written,
+  clearly marked, to cover conflicts the DB has no real example of (worldwide vs residents-only, visa vs
+  no-sponsorship).

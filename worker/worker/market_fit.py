@@ -20,7 +20,8 @@ from worker.fit_mapping import (
     AI_FLAGS,
     FLAGS,
     POSITIVE_FLAGS,
-    has_conflict,
+    CONFLICTS_AZ,
+    conflicts,
     is_suitable,
     staff_percent,
     upgrade_legacy,
@@ -35,7 +36,7 @@ from worker.techstack import (
 log = logging.getLogger("ingress-job.worker.market_fit")
 
 PURPOSE = "market_fit"
-PROMPT_VERSION = "market-fit-v7"
+PROMPT_VERSION = "market-fit-v8"
 ENV_FLAG = "AI_MARKET_FIT_ENABLED"
 
 # Graded rule confidence (how sure deterministic rules are the ad is OK to publish).
@@ -64,12 +65,12 @@ _SYSTEM = """You check international tech job ads for a job board whose candidat
 Extract evidence, not conclusions: answer yes/no questions about the ad and copy the text that supports each answer. Do NOT score the ad or decide whether it is suitable; our code computes the result from your answers.
 
 A person living in Azerbaijan can take a job only through one of these routes:
-A. Remote from Azerbaijan: the ad allows Azerbaijan or Baku by name, says the role can be done from any country / worldwide / anywhere in the world, or names a region or time-zone range whose ordinary, clear geographic meaning includes Azerbaijan (UTC+4).
+A. Remote from Azerbaijan: the ad explicitly allows Azerbaijan or Baku, allows work from anywhere in the world, or names a geographic region that clearly includes Azerbaijan. A time-zone overlap or UTC offset alone is not evidence of geographic eligibility.
 B. Relocation: genuine relocation support for this role.
 C. Visa / work permit: explicit visa or work-permit sponsorship for this role.
 If the evidence is ambiguous, answer false. Never invent facts.
 
-Not enough on their own for route A: "remote", "fully remote", "remote-first", "remote-friendly", "flexible work location", "work from home or the office", "distributed team", "WFH", "hybrid", "almost any country", "most countries". "Up to N days or weeks per year working from abroad" is temporary_abroad_only, not remote.
+Not enough on their own for route A: "remote", "fully remote", "remote-first", "remote-friendly", "flexible work location", "work from home or the office", "distributed team", "WFH", "hybrid", "almost any country", "most countries", a time-zone overlap or UTC range ("UTC+2 to UTC+6", "overlap with CET"). "Up to N days or weeks per year working from abroad" is temporary_abroad_only, not remote.
 "Relocation benefits may vary", "where applicable" and other generic relocation phrases are weak: relocation=true only for a clear offer for this role. Relocation does not imply visa support, and visa support does not imply relocation.
 The board location field and the source metadata are clues, not proof.
 
@@ -80,24 +81,42 @@ Evidence extraction and conflict handling
 4. When the ad contains conflicting statements (for example "remote worldwide" and "US and Canada residents only"), set every applicable flag and quote each statement. Do not silently resolve the conflict or invent an explanation. Mention the conflict in reason.
 5. Treat missing or omitted text as unknown, not as positive or negative evidence. If the text contains [… omitted …], do not assume that the omitted paragraphs support eligibility.
 6. A missing work location is not the same as truncated text; they are separate questions.
-7. Region-based eligibility is positive only when the region or time-zone range named in the ad, in its ordinary and clear geographic meaning, includes Azerbaijan for the stated remote arrangement. If it is debatable whether it includes Azerbaijan, answer false. Do not infer a company's internal geographic, payroll or legal-entity policy.
-8. no_sponsorship_stated=true means the ad explicitly says that visa or work-permit sponsorship is unavailable. It does not, by itself, disqualify a role that independently qualifies for remote work from Azerbaijan.
+7. Region-based eligibility is positive only when the geographic region named in the ad, in its ordinary and clear geographic meaning, includes Azerbaijan for the stated remote arrangement. A time-zone overlap or UTC offset alone is not a region. If it is debatable whether it includes Azerbaijan, answer false. Do not infer a company's internal geographic, payroll or legal-entity policy.
+8. no_sponsorship_stated=true means the ad explicitly says that visa or work-permit sponsorship is unavailable. It does not, by itself, disqualify a role that independently qualifies for remote work from Azerbaijan. If the ad both offers and refuses sponsorship, set visa_support and no_sponsorship_stated both to true, quote both, and mention the conflict in reason; do the same for visa_support and work_authorization_required.
 9. Quotes must be copied verbatim from the supplied ad (title, location field or ad text), must be no longer than 160 characters, must be one continuous passage and must not be assembled from separate passages or paraphrased. If no exact supporting quote exists, return value=false and quotes=[] for that flag.
 10. Do not treat a statement that the company is an equal-opportunity employer, hires internationally, has a global team, or has customers or offices worldwide as evidence of remote eligibility, relocation or visa sponsorship.
 
 For each flag return {"value": true/false, "quotes": ["..."]}: up to 3 verbatim quotes that make the flag true, each one sentence or phrase of at most 160 characters; [] when false.
 - remote_worldwide: the role can be done remotely from any country / worldwide / anywhere in the world.
-- remote_region_includes_az: the role can be done remotely within a named region or time-zone range that clearly includes Azerbaijan.
+- remote_region_includes_az: the role can be done remotely within a named geographic region that clearly includes Azerbaijan (e.g. "EMEA", "CIS", "Caucasus"). A time-zone range or UTC offset alone does not count.
 - remote_az_explicit: the ad explicitly allows working from Azerbaijan or Baku.
 - relocation: genuine relocation support for this role (quote the target country or city when the ad states it).
 - visa_support: explicit visa or work-permit sponsorship for this role.
 - remote_country_restricted: the remote work is limited to named countries, regions or time-zone ranges that do not clearly include Azerbaijan (e.g. "remote within Germany", "EU only", "US-based", "LATAM"). Not when the remote work is worldwide and only names other countries as exceptions ("worldwide (except Russia)").
-- candidate_location_restricted: applicants must already live in, be residents or citizens of, or have lived for years in named countries or regions that do not include Azerbaijan, whatever the work arrangement. Not when the ad offers relocation as the alternative ("based in X or willing to relocate").
+- candidate_location_restricted: the ad explicitly requires applicants to already reside in, be citizens or residents of, or have a specified history of residence in a named country or region that excludes Azerbaijan. Do not set this flag solely because the job is based in that country, or when the ad explicitly accepts applicants willing to relocate there as an alternative.
 - work_authorization_required: applicants must already hold the right to work in a named country, without employer sponsorship. Not for "authorized to work from your home location".
 - temporary_abroad_only: working from abroad is allowed only temporarily (e.g. "up to 30 days per year").
 - no_sponsorship_stated: the ad explicitly says it does not sponsor visas or work permits.
+- text_truncated: the supplied text contains "[… omitted …]" or visibly stops mid-ad. Our code decides this flag from how the text was cut; your answer is only a hint. It is separate from work_location_unspecified.
 - work_location_unspecified: neither the ad text nor the location field says where the work is done or from where remote work is allowed.
 reason: one or two short sentences in Azerbaijani for the moderator naming the route or the blocker, and any conflict (e.g. "Yalnız Bolqarıstan daxilində remote; Azərbaycandan iş təsdiqlənmir; relocation/viza yoxdur.").
+
+Output: one JSON object with these keys in this order (the 12 flags, then reason). Example of the shape only (for an imaginary ad; your values and quotes must come from the ad you are given):
+{
+  "remote_az_explicit": {"value": false, "quotes": []},
+  "remote_worldwide": {"value": true, "quotes": ["This role is fully remote and open to candidates anywhere in the world."]},
+  "remote_region_includes_az": {"value": false, "quotes": []},
+  "relocation": {"value": false, "quotes": []},
+  "visa_support": {"value": true, "quotes": ["We sponsor work visas for our Berlin office."]},
+  "remote_country_restricted": {"value": false, "quotes": []},
+  "candidate_location_restricted": {"value": false, "quotes": []},
+  "work_authorization_required": {"value": false, "quotes": []},
+  "temporary_abroad_only": {"value": false, "quotes": []},
+  "no_sponsorship_stated": {"value": true, "quotes": ["Unfortunately, we are unable to sponsor visas for this role."]},
+  "text_truncated": {"value": false, "quotes": []},
+  "work_location_unspecified": {"value": false, "quotes": []},
+  "reason": "İstənilən ölkədən remote açıq yazılıb. Viza barədə ziddiyyət var: həm sponsorluq, həm də imtina qeyd olunub."
+}
 
 Reply with JSON only, matching the schema."""
 
@@ -419,7 +438,7 @@ AI_REASON_PREFIX = "AI: "
 
 
 def is_current_ai_reason(reason: str) -> bool:
-    """True for a reason written by the current prompt ("AI: 90% (market-fit-v7) ...")."""
+    """True for a reason written by the current prompt ("AI: 90% (market-fit-v8) ...")."""
     text = str(reason or "")
     return text.startswith(AI_REASON_PREFIX) and f"({PROMPT_VERSION})" in text[:40]
 
@@ -761,17 +780,61 @@ _HEDGED_WORLDWIDE = re.compile(
     r"(?:anywhere|any\s+(?:country|location)|everywhere|(?:of\s+the\s+)?(?:countries|locations|world))\b"
 )
 # Regions whose ordinary geographic meaning clearly includes Azerbaijan. A region
-# quote must name one of these (or a UTC/GMT range containing +4); "Eastern Europe",
+# quote must name one of these (a UTC/GMT range alone never counts); "Eastern Europe",
 # "Central Asia", "Europe" alone are debatable and do not count.
 _REGION_INCLUDES_AZ = re.compile(
     r"(?i)azerbaijan|\bbaku\b|caucasus|\bcis\b|commonwealth\s+of\s+independent\s+states|"
     r"\bemea\b|eurasia"
 )
-# "based in Munich or open to relocate" offers relocation as the alternative: not a
-# candidate-location restriction.
+# "based in Munich or open to relocate", "candidates worldwide may relocate": relocation
+# is accepted as the alternative, so not a candidate-location restriction.
 _RELOCATE_ALTERNATIVE = re.compile(
-    r"(?i)\bor\s+(?:be\s+|are\s+)?(?:willing|open|able|ready|happy)\s+to\s+(?:re)?locat"
+    r"(?i)\bor\s+(?:be\s+|are\s+)?(?:willing|open|able|ready|happy)\s+to\s+(?:re)?locat|"
+    r"\b(?:candidates?|applicants?|you|people|talent)\b[^.;]{0,40}?\b(?:may|can|could|are\s+welcome\s+to)\s+relocat|"
+    r"\b(?:willing|open|ready|happy)\s+to\s+relocate\b[^.;]{0,30}?\b(?:welcome|considered|accepted|also)\b"
 )
+# What each flag's quote must talk about (a quote that does not mention its subject
+# cannot "directly support" the flag).
+_RELEVANT = {
+    "remote_az_explicit": re.compile(r"(?i)azerbaijan|\bbaku\b"),
+    # bare "remote" / "100% remote" / "distributed team" is not worldwide (prompt says so too)
+    "remote_worldwide": re.compile(
+        r"(?i)anywhere|worldwide|world[\s-]?wide|\bworld\b|\bglobal(?:ly)?\b|any\s+(?:country|location|place)|"
+        r"all\s+countries|every\s+country|location[\s-]?independent|regardless\s+of\s+(?:location|country|where)|"
+        r"no\s+(?:location|geographic(?:al)?|country)\s+(?:restrictions?|limits?|requirements?)|wherever\s+you"
+    ),
+    "remote_region_includes_az": re.compile(
+        r"(?i)remote|anywhere|work\s+from|based|location|region|countr|hir|azerbaijan|\bbaku\b|caucasus|\bcis\b|"
+        r"commonwealth|\bemea\b|eurasia|europe|asia"
+    ),
+    # "relocat…", or a real ad's "We support you with your move to Germany"
+    "relocation": re.compile(r"(?i)relocat|\b(?:your|the)\s+move\s+to\b|\bmoving\s+(?:to|from)\b"),
+    "visa_support": re.compile(r"(?i)visa|sponsor|work[\s-]?permit|immigration|blue\s+card"),
+    "no_sponsorship_stated": re.compile(r"(?i)visa|sponsor|work[\s-]?permit|immigration"),
+    "work_authorization_required": re.compile(
+        r"(?i)authori[sz]|right\s+to\s+work|eligib\w*\s+to\s+work|legally|work[\s-]?permit|green\s+card|"
+        r"citizen|permanent\s+resident|visa|sponsor"
+    ),
+    "remote_country_restricted": re.compile(
+        r"(?i)remote|based|located|location|within|only|resid|countr|region|time\s?zone|utc|gmt|\bin\s+[A-Z]|"
+        r"anywhere|from\s+(?:the\s+)?[A-Z]"
+    ),
+    "candidate_location_restricted": re.compile(
+        r"(?i)resid|citizen|nationals?\b|passport|\blive[sd]?\s+in|living\s+in|lived|"
+        r"currently\s+(?:located|based|living|in)|"
+        r"\b(?:candidates?|applicants?|talent|people|professionals|engineers|those|individuals)\s+(?:who\s+are\s+|that\s+are\s+)?"
+        r"(?:based|located|living|residing)\s+(?:in|within)\b|"
+        r"(?:candidates?|applicants?|you)\s+(?:must|should|need\s+to|are\s+required\s+to|will\s+need\s+to)\s+"
+        r"(?:already\s+)?(?:be\s+)?(?:based|located|living|in)\b|must\s+be\s+(?:based|located)\b"
+    ),
+    "temporary_abroad_only": re.compile(
+        r"(?i)abroad|outside|temporar|\d+\s+(?:days?|weeks?|months?)|per\s+year|a\s+year|travel|anywhere"
+    ),
+}
+_NOT_RELEVANT = "sitat bu bayrağa aid deyil (mövzu sözü yoxdur)"
+# Restrictive flags an off-topic quote may switch off. Others stay true (conservative):
+# a country list in a title is hard to recognise by keywords.
+_DROP_WHEN_OFF_TOPIC = ("candidate_location_restricted",)
 
 
 # "Remote, worldwide (except Russia)": worldwide minus named other countries is not a
@@ -831,17 +894,17 @@ def check_quote(flag: str, quote: str, ad_text: str = "") -> str:
         return "sitat ayrı hissələrdən yığılıb"
     if ad_text and not _quote_in_ad(q, ad_text):
         return "sitat elanda tapılmadı"
+    if flag == "remote_worldwide" and _HEDGED_WORLDWIDE.search(q):
+        return "qeyd-şərtli ifadə (almost/most …), hamı üçün deyil"
+    relevant = _RELEVANT.get(flag)
+    if relevant and not relevant.search(q):
+        return _NOT_RELEVANT
     if flag in POSITIVE_FLAGS:
         word = _negated(flag, q)
         if word:
             return f"sitatda inkar/istisna var ('{word}')"
-    if flag == "remote_worldwide" and _HEDGED_WORLDWIDE.search(q):
-        return "qeyd-şərtli ifadə (almost/most …), hamı üçün deyil"
-    if flag == "remote_region_includes_az":
-        from worker.eligibility import _tz_range_includes_az
-
-        if not (_REGION_INCLUDES_AZ.search(q) or _tz_range_includes_az(q)):
-            return "region Azərbaycanı aydın əhatə etmir"
+    if flag == "remote_region_includes_az" and not _REGION_INCLUDES_AZ.search(q):
+        return "region Azərbaycanı aydın əhatə etmir (saat qurşağı region sayılmır)"
     if flag in ("remote_country_restricted", "candidate_location_restricted") and _exclusion_only(q):
         return "alternativ: dünya üzrə remote, yalnız başqa ölkələr istisnadır"
     if flag == "candidate_location_restricted" and _RELOCATE_ALTERNATIVE.search(q):
@@ -915,7 +978,8 @@ def verdict_from_ai(
             usable, problem = _best_quote(name, quote, ad_text)
             if problem:
                 problems.append(problem)
-                if value and (name in POSITIVE_FLAGS or problem.startswith("alternativ")):
+                if value and (name in POSITIVE_FLAGS or problem.startswith("alternativ") or problem == _NOT_RELEVANT):
+                    # off-topic quote on a kept restrictive flag: noted for the moderator
                     notes.append(f"{name}: {problem} “{quote[:120]}”")
                 elif value and name not in POSITIVE_FLAGS and problem.startswith("sitat 160"):
                     good.append(quote[:QUOTE_MAX])  # restriction counts anyway; shown trimmed
@@ -927,17 +991,20 @@ def verdict_from_ai(
             good = []
             if not candidates:
                 notes.append(f"{name}: sitat yoxdur")
-        if name in ("remote_country_restricted", "candidate_location_restricted") and value and candidates and not good and all(
-            p.startswith("alternativ") for p in problems
+        if name not in POSITIVE_FLAGS and value and candidates and not good and all(
+            p.startswith("alternativ") or (p == _NOT_RELEVANT and name in _DROP_WHEN_OFF_TOPIC) for p in problems
         ):
-            value = False  # only "based in X or willing to relocate"
+            # every quote is off-topic or offers the alternative ("or willing to relocate"):
+            # the quotes themselves show the restriction is not there
+            value = False
         flags[name] = value
         quotes[name] = good if value else []
-    if truncated is not None:
+    if truncated is not None:  # the code value wins over the model's answer
         flags["text_truncated"] = bool(truncated)
-        quotes["text_truncated"] = []
+    quotes["text_truncated"] = []
     score, route = staff_percent(flags)
-    conflict = has_conflict(flags)
+    conflict_keys = conflicts(flags)
+    conflict = bool(conflict_keys)
     true_parts = [
         f"{name} ({_FLAG_AZ[name]})" + "".join(f" “{q}”" for q in quotes[name])
         for name in FLAGS
@@ -946,8 +1013,12 @@ def verdict_from_ai(
     reason_az = " ".join(str(data.get("reason") or "").split())[:240]
     reason = (
         f"{AI_REASON_PREFIX}{score}% ({PROMPT_VERSION}) AI-nın bəli/xeyr yoxlamalarından hesablanıb · "
+        + (
+            "ziddiyyətli sübut (moderator baxsın): " + "; ".join(CONFLICTS_AZ[k] for k in conflict_keys) + " · "
+            if conflict
+            else ""
+        )
         + ("; ".join(true_parts) if true_parts else "heç bir bayraq doğru deyil")
-        + (" · ziddiyyətli sübut: məhdudiyyət üstün tutuldu, moderator baxsın" if conflict else "")
         + (f" · yoxlamada rədd edilən sitatlar: {'; '.join(notes)}" if notes else "")
         + (f" · {reason_az}" if reason_az else "")
     )
@@ -963,6 +1034,7 @@ def verdict_from_ai(
         "quotes": quotes,
         "validation_notes": notes,
         "conflict": conflict,
+        "conflicts": conflict_keys,
         "reason_az": reason_az,
         "ai_score": score,
         "route": route,
@@ -986,6 +1058,9 @@ def fit_detail(verdict: dict[str, Any]) -> dict[str, Any]:
         "eligibility": str(verdict.get("eligibility") or ""),
         "hard_reject": bool(verdict.get("hard_reject")),
         "conflict": bool(verdict.get("conflict")),
+        "conflicts": [
+            {"key": k, "label": CONFLICTS_AZ.get(k, k)} for k in (verdict.get("conflicts") or []) if isinstance(k, str)
+        ],
         "flags": [
             {"name": name, "label": _FLAG_AZ.get(name, name), "quotes": list(quotes.get(name) or [])[:QUOTES_PER_FLAG]}
             for name in FLAGS

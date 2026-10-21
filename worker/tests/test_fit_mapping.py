@@ -1,4 +1,4 @@
-"""Exhaustive tests for the deterministic staff-% mapping (worker.fit_mapping, market-fit-v7)."""
+"""Exhaustive tests for the deterministic staff-% mapping (worker.fit_mapping, market-fit-v8)."""
 
 from __future__ import annotations
 
@@ -130,7 +130,7 @@ class ExhaustiveTest(unittest.TestCase):
         self.assertLess(fm.AUTH_CONFLICT_CAP, BAND)
         self.assertLess(fm.SCORE_RESTRICTED, fm.SCORE_NO_EVIDENCE)
         self.assertEqual(len(FLAGS), 12)
-        self.assertNotIn("text_truncated", fm.AI_FLAGS)
+        self.assertEqual(fm.AI_FLAGS, fm.FLAGS)  # v8: the model may answer text_truncated; code wins
 
 
 class LegacyTest(unittest.TestCase):

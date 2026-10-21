@@ -1,4 +1,4 @@
-"""market-fit-v7: quote validation (negation / length / stitching), conflicts, truncation."""
+"""market-fit v7+v8: quote validation (negation / length / stitching), conflicts, truncation."""
 
 from __future__ import annotations
 
@@ -47,8 +47,8 @@ class QuotePerFlagTest(unittest.TestCase):
             "Unfortunately we cannot hire remotely anywhere in the world.",
         ),
         "remote_region_includes_az": (
-            "Remote work from time zones between GMT+4 - GMT+12.",
-            "Remote work is not possible from time zones east of GMT+3.",
+            "Remote across EMEA.",
+            "Remote work is not available anywhere in EMEA.",
         ),
         "remote_az_explicit": (
             "You can work remotely from Baku, Azerbaijan.",
@@ -144,10 +144,14 @@ class RealAdRulesTest(unittest.TestCase):
     def test_region_must_clearly_include_az(self):
         bad = "We're especially interested in candidates located in Eastern European or Central Asian regions."
         self.assertIn("region", check_quote("remote_region_includes_az", bad, bad))
-        for good in ("Remote work from time zones between GMT+4 - GMT+12.", "Remote across EMEA.",
-                     "Remote within the South Caucasus.", "between UTC-4 and UTC+4"):
+        for good in ("Remote across EMEA.", "Remote within the South Caucasus.", "Remote for CIS-based engineers."):
             with self.subTest(q=good):
                 self.assertEqual(check_quote("remote_region_includes_az", good, good), "")
+        # v8: a time-zone range or UTC offset alone is not geographic evidence
+        for tz in ("Remote work from time zones between GMT+4 - GMT+12.", "Remote, between UTC-4 and UTC+4",
+                   "Remote with 4 hours overlap with GMT+4"):
+            with self.subTest(tz=tz):
+                self.assertNotEqual(check_quote("remote_region_includes_az", tz, tz), "")
         self.assertNotEqual(check_quote("remote_region_includes_az", "Remote (CET ±2h)", "Remote (CET ±2h)"), "")
 
     def test_based_in_or_relocate_is_not_a_restriction(self):
@@ -230,10 +234,10 @@ class ConflictTest(unittest.TestCase):
         self.assertTrue(v["flags"]["remote_country_restricted"])
 
 
-class PromptV7Test(unittest.TestCase):
+class PromptTest(unittest.TestCase):
     def test_schema_and_prompt(self):
-        self.assertEqual(PROMPT_VERSION, "market-fit-v7")
-        self.assertNotIn("text_truncated", _JSON_SCHEMA["properties"])
+        self.assertEqual(PROMPT_VERSION, "market-fit-v8")
+        self.assertIn("text_truncated", _JSON_SCHEMA["properties"])
         self.assertIn("work_location_unspecified", _JSON_SCHEMA["properties"])
         self.assertEqual(_JSON_SCHEMA["properties"]["relocation"]["properties"]["quotes"]["type"], "array")
         self.assertNotIn("text_truncated_or_missing_location", _SYSTEM)
@@ -244,7 +248,7 @@ class PromptV7Test(unittest.TestCase):
         self.assertNotIn("EMEA, Europe + Caucasus", _SYSTEM)
         for name in AI_FLAGS:
             self.assertIn(f"- {name}:", _SYSTEM)
-        self.assertEqual(set(FLAGS) - set(AI_FLAGS), {"text_truncated"})
+        self.assertEqual(set(FLAGS), set(AI_FLAGS))
 
     def test_truncation_keeps_exclusion_paragraphs(self):
         filler = "\n\n".join(f"Paragraph {i} about the product roadmap and team rituals." * 5 for i in range(400))

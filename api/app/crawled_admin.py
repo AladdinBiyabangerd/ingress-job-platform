@@ -207,7 +207,6 @@ def _crawled_row(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
             j.rule_confidence, j.ai_confidence,
             COALESCE(j.market_fit_reason, '') AS market_fit_reason,
             COALESCE(j.market_fit_detail, '') AS market_fit_detail,
-    COALESCE(j.market_fit_detail, '') AS market_fit_detail,
             COALESCE(js.source_name, '') AS source_name
         FROM jobs j
         {_SOURCE_JOIN}

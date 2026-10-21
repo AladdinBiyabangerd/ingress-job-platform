@@ -25,8 +25,11 @@ no evidence either way                                               40
   (conflicting quotes) the restriction wins; the AI does not resolve conflicts.
 * ``candidate_location_restricted`` (must already live in / be a citizen of named
   countries) also blocks the relocation and visa routes.
-* ``visa_support`` is cancelled by ``no_sponsorship_stated`` or
-  ``work_authorization_required``. Neither touches a valid remote-from-AZ route.
+* ``visa_support`` together with ``no_sponsorship_stated`` or
+  ``work_authorization_required`` is a *conflict*: both flags and their quotes are
+  kept and shown to the moderator (:func:`conflicts`), and the visa route is not
+  counted (so it can never lift the ad to 85+). Neither touches a valid
+  remote-from-AZ route.
 * ``text_truncated`` (set by code, not the AI) or ``work_location_unspecified`` caps
   the result at INFO_CAP (84): the missing part may hold a restriction.
 
@@ -66,8 +69,10 @@ RESTRICTIVE_FLAGS = (
 INFO_FLAGS = ("text_truncated", "work_location_unspecified")
 FLAGS = POSITIVE_FLAGS + RESTRICTIVE_FLAGS + INFO_FLAGS
 
-# Flags the AI answers (text_truncated is decided by code from prompt_ad_text).
-AI_FLAGS = tuple(name for name in FLAGS if name != "text_truncated")
+# Flags the AI answers: all 12. The model may answer text_truncated too, but the
+# code value (from prompt_ad_text) always wins.
+AI_FLAGS = FLAGS
+CODE_DECIDED_FLAGS = ("text_truncated",)
 
 # market-fit-v6 names -> v7 names (stored AI answers, cached results, old tests).
 LEGACY_FLAGS = {
@@ -91,14 +96,33 @@ def remote_blocked(f: dict[str, bool]) -> bool:
     return f["remote_country_restricted"] or f["candidate_location_restricted"] or f["temporary_abroad_only"]
 
 
-def has_conflict(flags: dict[str, Any]) -> bool:
-    """Positive and negative evidence on the same route (moderator should look)."""
+# Conflict keys -> Azerbaijani note for the moderator (reason + popover).
+CONFLICTS_AZ = {
+    "remote_vs_restriction": "remote sübutu ilə məhdudiyyət sübutu ziddiyyətlidir; məhdudiyyət üstün tutuldu",
+    "visa_vs_no_sponsorship": "visa_support və no_sponsorship_stated ikisi də doğrudur; viza yolu sayılmadı",
+    "visa_vs_work_authorization": "visa_support və work_authorization_required ziddiyyətlidir; viza yolu sayılmadı",
+    "move_vs_candidate_location": "relocation/viza ilə namizədin yaşayış tələbi ziddiyyətlidir; tələb üstün tutuldu",
+}
+
+
+def conflicts(flags: dict[str, Any]) -> list[str]:
+    """Positive and negative evidence on the same route; every one is shown, none silently resolved."""
     f = {name: bool(flags.get(name)) for name in FLAGS}
     remote_pos = f["remote_worldwide"] or f["remote_region_includes_az"] or f["remote_az_explicit"]
-    any_restriction = remote_blocked(f) or f["work_authorization_required"]
-    visa_conflict = f["visa_support"] and (f["no_sponsorship_stated"] or f["work_authorization_required"])
-    reloc_conflict = (f["relocation"] or f["visa_support"]) and f["candidate_location_restricted"]
-    return (remote_pos and any_restriction) or visa_conflict or reloc_conflict
+    out: list[str] = []
+    if remote_pos and (remote_blocked(f) or f["work_authorization_required"]):
+        out.append("remote_vs_restriction")
+    if f["visa_support"] and f["no_sponsorship_stated"]:
+        out.append("visa_vs_no_sponsorship")
+    if f["visa_support"] and f["work_authorization_required"]:
+        out.append("visa_vs_work_authorization")
+    if (f["relocation"] or f["visa_support"]) and f["candidate_location_restricted"]:
+        out.append("move_vs_candidate_location")
+    return out
+
+
+def has_conflict(flags: dict[str, Any]) -> bool:
+    return bool(conflicts(flags))
 
 
 def staff_percent(flags: dict[str, Any]) -> tuple[int, str]:
@@ -106,6 +130,7 @@ def staff_percent(flags: dict[str, Any]) -> tuple[int, str]:
     f = {name: bool(flags.get(name)) for name in FLAGS}
     blocked = remote_blocked(f)
     restricted = blocked or f["work_authorization_required"]
+    # visa vs no-sponsorship / work-authorization: a surfaced conflict, visa not counted
     visa = f["visa_support"] and not (f["no_sponsorship_stated"] or f["work_authorization_required"])
     movable = not f["candidate_location_restricted"]
     reloc = f["relocation"] and movable
