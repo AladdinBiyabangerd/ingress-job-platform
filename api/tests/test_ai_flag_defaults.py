@@ -18,10 +18,9 @@ from app.ai_flags import (
     set_flags,
 )
 
-CORE = {"gateway", "cv_fallback", "embeddings", "rerank", "llm_rerank", "match_why", "digest_intro"}
+CORE = {"market_fit", "gateway", "cv_fallback", "embeddings", "rerank", "llm_rerank", "match_why", "digest_intro"}
 EXPECTED_OPT_IN = {
     "job_tidy",
-    "market_fit",
     "engagement_copy",
     "role_coach",
     "learning_roadmap",
@@ -67,8 +66,16 @@ class FlagDefaultTests(unittest.TestCase):
         self.assertEqual(FEATURE_ENV["job_tidy"], "AI_JOB_TIDY_ENABLED")
 
     def test_staff_row_enables_opt_in(self):
-        set_flags(self.conn, {"market_fit": True}, updated_by="test")
+        set_flags(self.conn, {"job_tidy": True}, updated_by="test")
+        self.assertTrue(feature_on("job_tidy", self.conn))
+
+    def test_market_fit_on_with_key_off_without(self):
         self.assertTrue(feature_on("market_fit", self.conn))
+        with patch.dict(os.environ, {"OPENAI_API_KEY": ""}, clear=False), patch(
+            "app.ai_flags.key_configured", return_value=False
+        ):
+            invalidate_flag_cache()
+            self.assertFalse(feature_on("market_fit", self.conn))
 
     def test_env_false_still_hard_off(self):
         set_flags(self.conn, {"market_fit": True}, updated_by="test")

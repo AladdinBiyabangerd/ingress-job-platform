@@ -1,7 +1,7 @@
 """Staff-controlled AI flow flags in the shared jobs DB.
 
 Env still hard-offs a feature when set to 0/false/off. A DB row then wins.
-With no row: gateway defaults on when any AI provider key is set
+With no row: gateway and market_fit default on when any AI provider key is set
 (Gemini/Groq/NVIDIA/OpenRouter/OpenAI); core flows (cv_fallback, embeddings,
 rerank, llm_rerank, match_why, digest_intro) follow gateway; OPT_IN_FEATURES
 stay off unless their env var is true. Chat calls use free providers first,
@@ -60,7 +60,6 @@ FEATURE_ENV = {
 OPT_IN_FEATURES = frozenset(
     {
         "job_tidy",
-        "market_fit",
         "engagement_copy",
         "role_coach",
         "learning_roadmap",
@@ -211,7 +210,8 @@ def feature_on(feature: str, conn=None) -> bool:
         return True
     if feature in OPT_IN_FEATURES:
         return False
-    if feature == "gateway":
+    # market_fit = AI publish-fit check for the staff moderation queue: on with a key.
+    if feature in {"gateway", "market_fit"}:
         return key_configured()
     return feature_on("gateway", conn)
 

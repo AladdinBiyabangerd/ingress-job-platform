@@ -1127,7 +1127,7 @@ class AdminAiFlagTests(unittest.TestCase):
                 # Non-core flows are opt-in (env true or staff row).
                 self.assertFalse(body["flags"]["role_coach"])
                 self.assertFalse(body["flags"]["engagement_copy"])
-                self.assertFalse(body["flags"]["market_fit"])
+                self.assertTrue(body["flags"]["market_fit"])
 
                 saved = self.client.put(
                     "/api/v1/admin/ai-flags",

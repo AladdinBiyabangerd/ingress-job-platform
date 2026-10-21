@@ -129,7 +129,7 @@ def _feature_detail(feature: str, conn: sqlite3.Connection | None, *, budget_hit
             "status": "stopped",
             "reason": "Staff panelindən söndürülüb.",
         }
-    if not key_configured() and feature == "gateway":
+    if not key_configured() and feature in {"gateway", "market_fit"}:
         return {
             "id": feature,
             "label": label,

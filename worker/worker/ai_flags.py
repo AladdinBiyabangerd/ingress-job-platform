@@ -32,7 +32,7 @@ FEATURES = (
     "engagement_copy",
 )
 
-# market_fit / job_tidy are opt-in (see OPT_IN_FEATURES): env true or a staff DB row.
+# market_fit (staff-queue publish-fit AI check) defaults ON with a key; job_tidy is opt-in.
 # Chat provider order is free-first → OpenAI last (see ai_gateway).
 FEATURE_ENV = {
     "gateway": "AI_GATEWAY_ENABLED",
@@ -55,7 +55,6 @@ FEATURE_ENV = {
 OPT_IN_FEATURES = frozenset(
     {
         "job_tidy",
-        "market_fit",
         "engagement_copy",
         "role_coach",
         "learning_roadmap",
@@ -197,7 +196,8 @@ def feature_on(feature: str, conn=None) -> bool:
         return True
     if feature in OPT_IN_FEATURES:
         return False
-    if feature == "gateway":
+    # market_fit = AI publish-fit check for the staff moderation queue: on with a key.
+    if feature in {"gateway", "market_fit"}:
         return key_configured()
     return feature_on("gateway", conn)
 
