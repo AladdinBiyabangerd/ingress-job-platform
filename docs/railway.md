@@ -226,6 +226,8 @@ CV upload uses the bucket only when `BUCKET_NAME`, `BUCKET_ACCESS_KEY`, and
   re-interpret lists and never drops a quoted restriction by itself; if the AI still flags a restriction next to a
   verified Azerbaijan quote, the result stays 84 + conflict, with a note when the restriction quotes do not mention
   Azerbaijan / Baku / an AZ-including region.
+  Quote verification only: a restriction quote that itself names Azerbaijan / Baku / CIS / Caucasus as allowed
+  ("Allowed countries: Azerbaijan, Georgia") cannot back a restriction and is rejected ("Central Asia" alone does not count).
   Every visa result carries a `visa_note` shown in the popover and the reason: weak (conditional, ≤ 70), not counted
   (no-sponsorship / work-authorization conflict, or residence requirement), or irrelevant (a remote route wins: 90/95).
   Restriction flags: `remote_country_restricted` (named countries / regions, or an explicit time-zone eligibility rule

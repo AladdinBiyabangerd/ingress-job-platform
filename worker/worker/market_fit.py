@@ -17,7 +17,7 @@ from typing import Any
 
 from worker.ai_flags import feature_on
 from worker.ai_gateway import complete_json
-from worker.az_context import NEGATION, NEGATION_OK, quote_az_context
+from worker.az_context import NEGATION, NEGATION_OK, classify_unit, quote_az_context
 from worker.fit_mapping import (
     AI_FLAGS,
     FLAGS,
@@ -933,6 +933,7 @@ _RELEVANT = {
         r"(?i)resid|citizen|nationals?\b|passport|\blive[sd]?\s+in|living\s+in|lived|"
         r"currently\s+(?:located|based|living|in)|"
         r"\bopen\s+(?:for|to)\s+(?:candidates?|applicants?)\s+(?:from|in)\b|"
+        r"\b(?:candidates?|applicants?)\s+from\b|"
         r"\b(?:candidates?|applicants?|talent|people|professionals|engineers|those|individuals)\s+(?:who\s+are\s+|that\s+are\s+)?"
         r"(?:based|located|living|residing)\s+(?:in|within)\b|"
         r"(?:candidates?|applicants?|you)\s+(?:must|should|need\s+to|are\s+required\s+to|will\s+need\s+to)\s+"
@@ -1083,6 +1084,14 @@ _NO_SPONSOR_ONLY = re.compile(
 )
 
 
+def _names_az_as_allowed(q: str) -> bool:
+    """Azerbaijan / Baku / CIS / Caucasus named outside any negation in the quote itself
+    ("Central Asia" alone is debatable and does not count)."""
+    if quote_az_context(q) != "positive":
+        return False
+    return any(kind == "positive" and not re.match(r"(?i)central", name) for kind, name in classify_unit(q))
+
+
 def check_quote(flag: str, quote: str, ad_text: str = "") -> str:
     """'' when the quote may back ``flag``; otherwise a short Azerbaijani rejection note."""
     q = " ".join(str(quote or "").split())
@@ -1108,6 +1117,10 @@ def check_quote(flag: str, quote: str, ad_text: str = "") -> str:
         problem = _country_restriction_problem(q)
         if problem:
             return problem
+    if flag in ("remote_country_restricted", "candidate_location_restricted") and _names_az_as_allowed(q):
+        # the quote itself names Azerbaijan / Baku / an AZ region as allowed ("Allowed countries:
+        # Azerbaijan, Georgia"): it cannot back "limited to places that exclude Azerbaijan"
+        return "alternativ: sitatda Azərbaycan icazəli yerlər arasındadır, məhdudiyyət deyil"
     relevant = _RELEVANT.get(flag)
     if relevant and not relevant.search(q):
         return _NOT_RELEVANT
