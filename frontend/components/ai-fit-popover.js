@@ -123,6 +123,10 @@ export function AiFitCell({ value, detail, reason, copy, locale }) {
   const hasDetail = detail && typeof detail === "object";
   const legacyReason = !hasDetail && reason && String(reason).startsWith("AI: ") ? String(reason) : "";
   const ruleReason = !hasDetail && reason && !legacyReason ? String(reason) : "";
+  // v9: how the visa evidence was used (weak / not counted / remote route unaffected).
+  const visaKey = hasDetail
+    ? (detail.visa_note && detail.visa_note.key) || (detail.visa_strength === "weak" ? "weak" : "")
+    : "";
   const capped = hasDetail && detail.cap != null && detail.ai_score != null && Number(detail.cap) < Number(detail.ai_score);
 
   return (
@@ -190,7 +194,12 @@ export function AiFitCell({ value, detail, reason, copy, locale }) {
                   ) : null}
                 </dl>
                 {detail.hard_reject ? <p className={styles.warn}>{t.hardReject}</p> : null}
-                {detail.visa_strength === "weak" ? <p className={styles.warn}>{t.visaWeak}</p> : null}
+                {visaKey ? (
+                  <p className={styles.warn}>
+                    <span className={styles.warnTitle}>{t.visa}: </span>
+                    {(t.visaNotes && t.visaNotes[visaKey]) || (detail.visa_note && detail.visa_note.label) || visaKey}
+                  </p>
+                ) : null}
                 {detail.text_truncated && (detail.text_truncated.code || detail.text_truncated.ai_hint) ? (
                   <p className={styles.warn}>
                     <span className={styles.warnTitle}>{t.trunc}: </span>
