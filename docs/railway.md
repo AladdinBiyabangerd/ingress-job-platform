@@ -236,6 +236,8 @@ CV upload uses the bucket only when `BUCKET_NAME`, `BUCKET_ACCESS_KEY`, and
   wins, and the conflict is listed in the reason and the Moderasiya popover.
   Code-side quote checks: verbatim in the ad, not stitched, ≤ 160 chars, about its flag, not a statement about the
   company only ("a globally dispersed, 100% remote company"), not negated near its key term; rejected quotes are listed.
+  A copied prompt label ("Location field (as listed by the source): …") is stripped before the verbatim check. Only a
+  quote with work wording or a list of places clears `work_location_unspecified` (a bare "EMEA" does not).
 * Both are capped first by `worker/worker/eligibility.py` (parsed location, Workable country, local-entity signals).
   Country-locked / foreign on-site ads (cap ≤ 10) are rejected without any AI call.
 * Click the AI % pill in Moderasiya to see the result: flags with quotes, conflicts, rejected quotes, cap, reason.

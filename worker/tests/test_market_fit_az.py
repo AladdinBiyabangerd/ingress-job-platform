@@ -181,5 +181,30 @@ class ConditionalVisaCombinationTest(unittest.TestCase):
         self.assertEqual(visa_note({**f, "work_authorization_required": True}, "restricted"), "work_authorization")
 
 
+class PostLiveFixesTest(unittest.TestCase):
+    """Two general bugs found by the fresh live pass (ads 1200 and 72)."""
+
+    def test_prompt_field_label_is_stripped_from_quote(self):
+        v = _verdict(
+            "Full Remote: The team is scattered worldwide.",
+            title=".NET Developer",
+            place="Armenia, Azerbaijan, Georgia, Kazakhstan, Kyrgyzstan",
+            remote_az_explicit=["Location field (as listed by the source): Armenia, Azerbaijan, Georgia, Kazakhstan, Kyrgyzstan"],
+        )
+        self.assertEqual(v["quotes"]["remote_az_explicit"], ["Armenia, Azerbaijan, Georgia, Kazakhstan, Kyrgyzstan"])
+        self.assertEqual((v["route"], v["ai_score"]), ("remote_az_explicit", 95))
+
+    def test_bare_region_token_does_not_clear_unspecified_location(self):
+        v = _verdict(
+            "We're hiring a Product Support Engineer in EMEA.",
+            title="Product Support Engineer - EMEA",
+            remote_region_includes_az=["EMEA"],
+            work_location_unspecified=[],
+        )
+        self.assertTrue(v["flags"]["remote_region_includes_az"])
+        self.assertTrue(v["flags"]["work_location_unspecified"])
+        self.assertEqual(v["ai_score"], 84)
+
+
 if __name__ == "__main__":
     unittest.main()

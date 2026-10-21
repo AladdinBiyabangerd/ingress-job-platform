@@ -1158,6 +1158,20 @@ def _best_quote(flag: str, quote: str, ad_text: str) -> tuple[str, str]:
     return "", problem
 
 
+# The model sometimes copies the user-prompt field label with the value
+# ("Location field (as listed by the source): Armenia, Azerbaijan"); the label is ours,
+# not the ad's, so it is stripped before the verbatim check.
+_PROMPT_LABEL = re.compile(
+    r"^\s*(?:Title|Company|Location field \(as listed by the source\)|Board location field(?: \([^)]*\))?|"
+    r"Source metadata \([^)]*\))\s*:\s*",
+    re.I,
+)
+
+
+def _strip_prompt_label(quote: str) -> str:
+    return _PROMPT_LABEL.sub("", quote, count=1)
+
+
 def _raw_quotes(raw: dict[str, Any]) -> list[str]:
     quotes = raw.get("quotes")
     if isinstance(quotes, str):
@@ -1167,7 +1181,19 @@ def _raw_quotes(raw: dict[str, Any]) -> list[str]:
     legacy = raw.get("quote")  # market-fit-v6 answers
     if isinstance(legacy, str) and legacy.strip():
         quotes = [*quotes, legacy]
-    return [" ".join(str(q or "").split()) for q in quotes if str(q or "").strip()][:QUOTES_PER_FLAG]
+    out = [_strip_prompt_label(" ".join(str(q or "").split())) for q in quotes if str(q or "").strip()]
+    return [q for q in out if q][:QUOTES_PER_FLAG]
+
+
+_WORK_PLACE_WORDING = re.compile(
+    r"(?i)\b(?:remote(?:ly)?|hybrid|on[\s-]?site|office|work(?:ing)?|hire|hiring|candidates?|applicants?|"
+    r"based|located|location|anywhere|worldwide|open\s+(?:to|for)|allowed|eligible|resid\w*)\b|"
+    r"дозвол|віддален|удал[её]н"
+)
+
+
+def _states_work_place(quote: str) -> bool:
+    return bool(_WORK_PLACE_WORDING.search(quote)) or quote.count(",") >= 1
 
 
 def verdict_from_ai(
@@ -1235,9 +1261,12 @@ def verdict_from_ai(
             notes.append("visa_support_conditional: kod elanda şərtli viza ifadəsi tapdı")
     # A quoted work geography (remote from AZ / worldwide / region, or a quoted country
     # restriction) means the work location IS stated: "unspecified" contradicts it.
-    located = [n for n in ("remote_az_explicit", "remote_worldwide", "remote_region_includes_az") if flags[n]]
-    if flags["remote_country_restricted"] and quotes["remote_country_restricted"]:
-        located.append("remote_country_restricted")
+    # A bare place token ("EMEA") is not a statement of where the work is done; a quote
+    # with work wording or a list of two or more places is.
+    located = [
+        n for n in ("remote_az_explicit", "remote_worldwide", "remote_region_includes_az", "remote_country_restricted")
+        if flags[n] and any(_states_work_place(q) for q in quotes[n])
+    ]
     if flags["work_location_unspecified"] and located:
         flags["work_location_unspecified"] = False
         quotes["work_location_unspecified"] = []
