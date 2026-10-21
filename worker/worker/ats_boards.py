@@ -120,8 +120,12 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
         "strike", "flex", "archer56")),
     # 2026-10-14 wave: kalil greenhouse slug sweep (~1.7k new) + finish_item dry-run (AI off).
     # Also fixed ONSITE_HEAVY false positive on "no travel required" which blocked bare Remote.
+    # 2026-10-15: fingerprint + leaflink (remaining kalil GH sweep, pure-Remote dry-run) merged
+    # here instead of a 2-board group (groups need >= 3 boards). The "Anywhere (Open Globally)"
+    # foreign-lock fix lives in techstack._PLACE_OPEN_WORDS (43be2ff).
     ("Greenhouse boards (Remote & relocation 8)", "greenhouse", "Remote siqnallı lövhələr (süpürmə 2026-10-14)", (
-        "ciq", "coverahealth", "documocareers", "enformion", "khealthcareers")),
+        "ciq", "coverahealth", "documocareers", "enformion", "khealthcareers",
+        "fingerprint", "leaflink")),
     # ---- Lever (api.lever.co)
     ("Lever boards (Europe)", "lever", "Avropa", (
         "spotify", "qonto", "swile", "aircall", "zopa", "farfetch", "malt", "blablacar",
@@ -144,6 +148,10 @@ GROUPS: list[tuple[str, str, str, tuple[str, ...]]] = [
     # gov-contractor heavy boards (clearstreet, agile-defense, ans, shieldai, …) left out.
     ("Lever boards (Remote & relocation 2)", "lever", "Remote siqnallı lövhələr (dry-run 2026-10-14)", (
         "entefy", "egen", "oddin", "raya", "ioconnectservices.com", "pingwind")),
+    # 2026-10-15: pure-Remote dry-run keepers; US-ISP/gov/defense/clearance-heavy left out.
+    ("Lever boards (Remote & relocation 3)", "lever", "Remote siqnallı lövhələr (süpürmə 2026-10-15)", (
+        "Ubiminds", "magnals", "arootah", "brightedge", "fantasy", "glass-health-inc",
+        "oci", "peoplegrove", "teamsnap", "truv", "Espresso", "curai")),
     # ---- Teamtailor ({company}.teamtailor.com/jobs.rss)
     ("Teamtailor boards (Nordics)", "teamtailor", "Skandinaviya", (
         "tibber", "polestar", "anyfin", "instabee", "templafy", "detectify", "doktor", "bannerflow",
