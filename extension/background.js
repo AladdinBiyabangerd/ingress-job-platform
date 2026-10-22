@@ -12,6 +12,7 @@ function badge(count, recording) {
   chrome.action.setBadgeText({ text: recording || count ? String(count) : "" });
 }
 
+
 async function refreshBadge() {
   const { recording, jobs } = await getState();
   badge(Object.keys(jobs).length, recording);
