@@ -906,6 +906,65 @@ def list_moderation() -> list[dict]:
     return [_owner(row) for row in rows]
 
 
+def _score_passes(value: int | None, op: str, cut: int) -> bool:
+    if value is None:
+        return False
+    return value <= cut if op == "lte" else value >= cut
+
+
+def pending_ids_by_list_filter(
+    *,
+    ai_op: str = "gte",
+    ai_value: int | None = None,
+    rule_op: str = "gte",
+    rule_value: int | None = None,
+    source: str = "",
+    limit: int | None = None,
+) -> list[int]:
+    """Pending ad ids matching the staff queue list filter, in table order (newest first).
+
+    Mirrors ``frontend/lib/admin-list-filter.js``: a set AI/rule cut drops rows
+    without that score; ``source`` is a case-insensitive substring of the first
+    source name or URL.
+    """
+    needle = (source or "").strip().lower()
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT j.id, j.rule_confidence, j.ai_confidence,
+                   COALESCE(js.source_name, '') AS source_name,
+                   COALESCE(js.source_url, '') AS source_url
+            FROM jobs j
+            {_MOD_SOURCE_JOIN}
+            WHERE j.status = ?
+            ORDER BY j.id DESC
+            """,
+            (PENDING,),
+        ).fetchall()
+    finally:
+        conn.close()
+    out: list[int] = []
+    for row in rows:
+        if ai_value is not None and not _score_passes(
+            _score_or_none(row, "ai_confidence"), ai_op, int(ai_value)
+        ):
+            continue
+        if rule_value is not None and not _score_passes(
+            _score_or_none(row, "rule_confidence"), rule_op, int(rule_value)
+        ):
+            continue
+        if needle:
+            name = str(row["source_name"] or "").lower()
+            url = str(row["source_url"] or "").lower()
+            if needle not in name and needle not in url:
+                continue
+        out.append(int(row["id"]))
+        if limit is not None and len(out) >= limit:
+            break
+    return out
+
+
 def get_moderation(job_id: int) -> dict:
     conn = _connect()
     try:
@@ -1143,8 +1202,11 @@ def _touch_crawl_reject_reason(conn: sqlite3.Connection, job_id: int, reason: st
             mark_rejected(conn, url, reason or "unsuitable", via_ai=True)
 
 
-def recheck_one(job_id: int, *, scope: str = "queue") -> str:
+def recheck_one(job_id: int, *, scope: str = "queue", fresh: bool = False) -> str:
     """Re-run market_fit on one ad. Returns outcome token for job counters.
+
+    ``fresh=True`` (staff «AI ilə yenidən yoxla») asks the AI again instead of
+    reusing the cached answer for the same prompt; budget/cost limits still apply.
 
     Outcomes: checked | rejected | failed | skipped
     ``checked`` = AI answered suitable (scores updated), or already-rejected
@@ -1199,6 +1261,7 @@ def recheck_one(job_id: int, *, scope: str = "queue") -> str:
             source_url=snap["source_url"],
             source_remote=snap["remote"],
             source_relocation=snap["relocation"],
+            **({"fresh": True} if fresh else {}),
         )
     finally:
         conn.close()

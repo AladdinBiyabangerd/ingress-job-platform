@@ -26,6 +26,7 @@ import {
 import { AdminListFilterBar } from "./admin-list-filter-bar";
 import { AdminRecheckProgress } from "./admin-recheck-progress";
 import { Pager } from "./pager";
+import tableStyles from "./admin-mod-table.module.css";
 
 const SCOPE = "crawl_rejects";
 
@@ -481,10 +482,10 @@ export function AdminCrawlRejects({ locale }) {
                     {t.adminColIngested}
                   </th>
                   <th scope="col">{t.adminColTitle}</th>
-                  <th className="admin-mod-pct-col" scope="col" title={t.adminColRulePctTitle}>
+                  <th className={`admin-mod-pct-col ${tableStyles.pctHead}`} scope="col" title={t.adminColRulePctTitle}>
                     {t.adminColRulePct}
                   </th>
-                  <th className="admin-mod-pct-col" scope="col" title={t.adminColAiPctTitle}>
+                  <th className={`admin-mod-pct-col ${tableStyles.pctHead}`} scope="col" title={t.adminColAiPctTitle}>
                     {t.adminColAiPct}
                   </th>
                   <th className="admin-mod-source" scope="col">

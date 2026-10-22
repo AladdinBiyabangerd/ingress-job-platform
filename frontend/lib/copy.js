@@ -656,6 +656,20 @@ export const copy = {
     adminThresholdConfirm: (n) => `${n} elan dərc olunsun?`,
     adminThresholdNone: "Bu faizə uyğun gözləyən elan yoxdur.",
     adminRecheckNone: "AI skoru olmayan gözləyən elan yoxdur.",
+    adminThresholdRecheckTitle:
+      "Seçilmiş elanları, seçim yoxdursa siyahı filtrinə uyğun gözləyən elanları (limitə qədər) AI-a yenidən göndərir. Köhnə AI nəticəsi istifadə olunmur, yenisi yazılır.",
+    adminRecheckLimit: "Limit",
+    adminRecheckLimitTitle: "Heç nə seçilməyibsə, filtrə uyğun ən çox neçə elan yoxlansın (1–200, cədvəldəki sıra ilə)",
+    adminRecheckConfirmSelected: (n) =>
+      `Seçilmiş ${n} elan AI ilə yenidən yoxlansın? Mövcud AI nəticəsi yenilənəcək.`,
+    adminRecheckConfirmFiltered: (n) =>
+      `Filtrə uyğun ${n} gözləyən elan AI ilə yenidən yoxlansın? Mövcud AI nəticəsi yenilənəcək.`,
+    adminRecheckNoneFiltered: "Filtrə uyğun gözləyən elan yoxdur.",
+    adminRecheckBusy: "AI yoxlama artıq gedir. Bitməsini gözləyin və ya dayandırın.",
+    adminRecheckCapped: (total, requested) =>
+      `Limitə görə ${requested} elandan yalnız ${total} elan yoxlandı.`,
+    adminBackfillConfidenceTitle:
+      "Yalnız faizi olmayan gözləyən elanları doldurur: əvvəl qayda faizi, sonra ən çox 40 elana AI faizi. Mövcud faizlərə toxunmur.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI yoxlama: ${checked} yoxlandı, ${rejected} rədd, ${failed} uğursuz.`,
     adminRecheckCrawledNote: (checked, rejected, hidden, failed) =>
@@ -1891,6 +1905,20 @@ export const copy = {
     adminThresholdConfirm: (n) => `Publish ${n} ads?`,
     adminThresholdNone: "No pending ads match this percent.",
     adminRecheckNone: "No pending ads without an AI score.",
+    adminThresholdRecheckTitle:
+      "Sends the selected ads, or with no selection the pending ads matching the list filter (up to the limit), to the AI again. The old AI result is not reused; a new one is written.",
+    adminRecheckLimit: "Limit",
+    adminRecheckLimitTitle: "With nothing selected, how many filtered ads to check at most (1–200, in table order)",
+    adminRecheckConfirmSelected: (n) =>
+      `Re-check ${n} selected ads with AI? The current AI result will be replaced.`,
+    adminRecheckConfirmFiltered: (n) =>
+      `Re-check ${n} pending ads matching the filter with AI? The current AI result will be replaced.`,
+    adminRecheckNoneFiltered: "No pending ads match the filter.",
+    adminRecheckBusy: "An AI re-check is already running. Wait for it or stop it.",
+    adminRecheckCapped: (total, requested) =>
+      `Limit applied: checked the first ${total} of ${requested} ads.`,
+    adminBackfillConfidenceTitle:
+      "Fills only pending ads with no percent: rule percent first, then AI percent for up to 40 ads. Existing percents are left alone.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI recheck: ${checked} checked, ${rejected} rejected, ${failed} failed.`,
     adminRecheckCrawledNote: (checked, rejected, hidden, failed) =>
@@ -3128,6 +3156,20 @@ export const copy = {
     adminThresholdConfirm: (n) => `Опубликовать ${n} объявлений?`,
     adminThresholdNone: "Нет ожидающих объявлений с таким процентом.",
     adminRecheckNone: "Нет ожидающих объявлений без AI-оценки.",
+    adminThresholdRecheckTitle:
+      "Отправляет выбранные объявления, а без выбора — ожидающие объявления по фильтру списка (до лимита), в AI заново. Старый результат AI не используется, записывается новый.",
+    adminRecheckLimit: "Лимит",
+    adminRecheckLimitTitle: "Если ничего не выбрано — сколько объявлений по фильтру проверить максимум (1–200, по порядку таблицы)",
+    adminRecheckConfirmSelected: (n) =>
+      `Перепроверить ${n} выбранных объявлений через AI? Текущий результат AI будет заменён.`,
+    adminRecheckConfirmFiltered: (n) =>
+      `Перепроверить ${n} ожидающих объявлений по фильтру через AI? Текущий результат AI будет заменён.`,
+    adminRecheckNoneFiltered: "Нет ожидающих объявлений по фильтру.",
+    adminRecheckBusy: "Проверка AI уже идёт. Дождитесь окончания или остановите.",
+    adminRecheckCapped: (total, requested) =>
+      `Из-за лимита проверены первые ${total} из ${requested} объявлений.`,
+    adminBackfillConfidenceTitle:
+      "Заполняет только ожидающие объявления без процента: сначала процент по правилам, затем AI для не более 40 объявлений. Существующие проценты не трогает.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI: проверено ${checked}, отклонено ${rejected}, ошибка ${failed}.`,
     adminRecheckCrawledNote: (checked, rejected, hidden, failed) =>

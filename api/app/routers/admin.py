@@ -96,11 +96,28 @@ class ThresholdApproveIn(BaseModel):
     status: str = Field(default="pending", pattern="^(pending|rejected)$")
 
 
+class RecheckListFilterIn(BaseModel):
+    """Same fields as the staff list filter bar (frontend/lib/admin-list-filter.js)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ai_op: str = Field(default="gte", pattern="^(gte|lte)$")
+    ai_value: int | None = Field(default=None, ge=0, le=100)
+    rule_op: str = Field(default="gte", pattern="^(gte|lte)$")
+    rule_value: int | None = Field(default=None, ge=0, le=100)
+    source: str = Field(default="", max_length=200)
+
+
 class RecheckMarketFitIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     ids: list[int] = Field(default_factory=list, max_length=2000)
     scope: str = Field(default="queue", pattern="^(queue|crawled|crawl_rejects)$")
+    # True = ask the AI again (skip cached answer); capped per run.
+    fresh: bool = False
+    # Used only when ids is empty: pending queue ads matching this filter.
+    filter: RecheckListFilterIn | None = None
+    limit: int | None = Field(default=None, ge=1, le=200)
 
 
 class JobTidyRunIn(BaseModel):
@@ -269,6 +286,9 @@ def recheck_fit(body: RecheckMarketFitIn, user: VerifiedAccess = Depends(require
             body.ids,
             scope=body.scope,
             created_by=user.subject,
+            fresh=body.fresh,
+            list_filter=body.filter.model_dump() if body.filter is not None else None,
+            limit=body.limit,
         )
     )
 

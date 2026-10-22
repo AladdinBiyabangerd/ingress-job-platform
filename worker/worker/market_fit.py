@@ -761,8 +761,11 @@ def clarify_market_fit(
     conn: sqlite3.Connection | None,
     source_meta: str = "",
     prompt_limit: int = PROMPT_TEXT_MAX,
+    fresh: bool = False,
 ) -> dict[str, Any] | None:
     """Ask AI. Returns verdict dict, or None when AI is off / fails.
+
+    ``fresh=True`` bypasses the AI answer cache (staff re-check).
 
     ``source_meta`` (connector remote flag / location / countries) is sent labelled
     as possibly wrong; the AI must decide from the ad text.
@@ -789,6 +792,7 @@ def clarify_market_fit(
         schema_name="market_fit",
         conn=conn,
         timeout=45.0,
+        **({"bypass_cache": True} if fresh else {}),
     )
     if not result.ok or not isinstance(result.data, dict):
         last_miss_error = (result.error or "failed")[:180]
@@ -1433,8 +1437,11 @@ def checked_verdict(
     countries: list[str] | None = None,
     source: str = "",
     prompt_limit: int = PROMPT_TEXT_MAX,
+    fresh: bool = False,
 ) -> dict[str, Any] | None:
     """Eligibility gate + AI flags + cap: the one path for staff rechecks / fills.
+
+    ``fresh=True`` asks the AI again instead of reusing a cached answer.
 
     Hard-locked ads (country-only remote etc.) are answered without an AI call.
     Otherwise the AI % (from fit_mapping) is capped by the eligibility cap and
@@ -1480,6 +1487,7 @@ def checked_verdict(
             source=source,
         ),
         prompt_limit=prompt_limit,
+        **({"fresh": True} if fresh else {}),
     )
     if verdict is None:
         return None

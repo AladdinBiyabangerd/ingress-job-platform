@@ -11,6 +11,8 @@ import { hrefFor, text } from "../lib/copy";
 import { calendarDate } from "../lib/dates";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
 import {
+  RECHECK_DEFAULT_LIMIT,
+  RECHECK_FRESH_MAX,
   forgetRecheckJob,
   pollRecheckJob,
   progressFromRecheck,
@@ -42,6 +44,7 @@ import { ManualAd } from "./manual-ad";
 import { PageChrome } from "./page-chrome";
 import { Pager } from "./pager";
 import { AiFitCell } from "./ai-fit-popover";
+import tableStyles from "./admin-mod-table.module.css";
 
 const TYPES = ["", "ofis", "hibrid", "uzaqdan"];
 const ADMIN_TABS = new Set([
@@ -111,12 +114,11 @@ function thresholdMatchIds(items, score, op, threshold, status = "pending") {
     .map((job) => job.id);
 }
 
-/** Recheck: only pending ads with no AI score; oldest first. */
-function missingAiScoreIds(items) {
-  return items
-    .filter((job) => job.status === "pending" && jobScore(job, "ai") == null)
-    .map((job) => job.id)
-    .sort((a, b) => a - b);
+/** Re-check limit (no selection): 1..RECHECK_FRESH_MAX, default RECHECK_DEFAULT_LIMIT. */
+function recheckLimitValue(raw) {
+  const n = Math.round(Number(raw));
+  if (!Number.isFinite(n) || n < 1) return RECHECK_DEFAULT_LIMIT;
+  return Math.min(RECHECK_FRESH_MAX, n);
 }
 
 function countThresholdMatches(items, score, op, threshold, status = "pending") {
@@ -207,6 +209,7 @@ export function Admin({
   const [recheckProgress, setRecheckProgress] = useState(null);
   const [recheckJobId, setRecheckJobId] = useState("");
   const [recheckStopping, setRecheckStopping] = useState(false);
+  const [recheckLimit, setRecheckLimit] = useState(String(RECHECK_DEFAULT_LIMIT));
   const [listFilter, setListFilter] = useState(emptyAdminListFilter);
 
   async function load() {
@@ -491,19 +494,20 @@ export function Admin({
     }
   }
 
-  async function applyRecheckResult(last) {
+  async function applyRecheckResult(last, suffix = "") {
     const checked = Number(last?.checked) || 0;
     const rejected = Number(last?.rejected) || 0;
     const failed = Number(last?.failed) || 0;
+    const tail = suffix ? ` ${suffix}` : "";
     if (last?.status === "failed") {
       setError(t.adminError);
     } else if (last?.status === "cancelled") {
-      setNote(t.adminRecheckStoppedNote(checked, rejected, failed));
+      setNote(t.adminRecheckStoppedNote(checked, rejected, failed) + tail);
     } else if (checked === 0 && rejected === 0 && failed > 0) {
       const why = String(last?.error || "").trim();
       setNote(why ? `${t.adminRecheckBudgetStop} [${why}]` : t.adminRecheckBudgetStop);
     } else {
-      setNote(t.adminRecheckNote(checked, rejected, failed));
+      setNote(t.adminRecheckNote(checked, rejected, failed) + tail);
     }
     try {
       await load();
@@ -522,34 +526,64 @@ export function Admin({
     if (!res.ok) setRecheckStopping(false);
   }
 
-  async function recheckByThreshold() {
-    const ids = missingAiScoreIds(items);
-    if (!ids.length) {
-      setNote(t.adminRecheckNone);
-      return;
+  /**
+   * «AI ilə yenidən yoxla»: always asks the AI again (fresh, cache bypassed).
+   * Selected pending rows win; with no selection the API takes the pending ads
+   * matching the list filter, in table order, up to the limit field.
+   * Filling only missing scores is «Köhnə faizləri doldur» (backfillConfidence).
+   */
+  async function recheckWithAi() {
+    const selectedIds = items
+      .filter((job) => job.status === "pending" && selected.has(job.id))
+      .map((job) => job.id);
+    const limit = recheckLimitValue(recheckLimit);
+    let planned;
+    let ask;
+    let ids = [];
+    let opts = { scope: "queue", fresh: true };
+    if (selectedIds.length) {
+      ids = selectedIds;
+      planned = Math.min(selectedIds.length, RECHECK_FRESH_MAX);
+      ask = t.adminRecheckConfirmSelected(planned);
+    } else {
+      const matches = viewItems.filter((job) => job.status === "pending").length;
+      if (!matches) {
+        setError("");
+        setNote(t.adminRecheckNoneFiltered);
+        return;
+      }
+      planned = Math.min(matches, limit);
+      ask = t.adminRecheckConfirmFiltered(planned);
+      opts = { ...opts, filter: listFilter, limit };
     }
+    if (!window.confirm(ask)) return;
     setError("");
     setNote("");
     setBusy(true);
     setRecheckStopping(false);
-    setRecheckProgress({ total: ids.length, done: 0, remaining: ids.length });
-    const started = await adminStartRecheckMarketFit(ids, { scope: "queue" });
+    setRecheckProgress({ total: planned, done: 0, remaining: planned });
+    const started = await adminStartRecheckMarketFit(ids, opts);
     if (!started.ok || !started.data?.job_id) {
       setBusy(false);
       setRecheckProgress(null);
-      setError(t.adminError);
+      if (started.status === 409) setNote(t.adminRecheckBusy);
+      else if (started.status === 422 && !selectedIds.length) setNote(t.adminRecheckNoneFiltered);
+      else setError(t.adminError);
       return;
     }
     const jobId = started.data.job_id;
+    const total = Number(started.data.total) || planned;
+    const requested = Number(started.data.requested) || total;
+    const cappedNote = started.data.capped ? t.adminRecheckCapped(total, requested) : "";
     setRecheckJobId(jobId);
     rememberRecheckJob("queue", jobId);
-    setRecheckProgress(progressFromRecheck(started.data, ids.length));
+    setRecheckProgress(progressFromRecheck(started.data, total));
     const { ok, last } = await pollRecheckJob(jobId, {
       onProgress: setRecheckProgress,
       onStatus: (status) => {
         if (status === "cancelling") setRecheckStopping(true);
       },
-      fallbackTotal: ids.length,
+      fallbackTotal: total,
     });
     forgetRecheckJob("queue");
     setBusy(false);
@@ -560,7 +594,7 @@ export function Admin({
       setError(t.adminError);
       return;
     }
-    await applyRecheckResult(last);
+    await applyRecheckResult(last, cappedNote);
   }
 
   async function backfillConfidence() {
@@ -763,15 +797,34 @@ export function Admin({
                         type="button"
                         className="btn small"
                         disabled={busy}
-                        onClick={recheckByThreshold}
+                        onClick={recheckWithAi}
+                        title={t.adminThresholdRecheckTitle}
                       >
-                        {t.adminThresholdRecheck}
+                        {selectedCount
+                          ? `${t.adminThresholdRecheck} (${selectedCount})`
+                          : t.adminThresholdRecheck}
                       </button>
+                      <label
+                        className={`admin-mod-threshold-field ${tableStyles.recheckLimit}`}
+                        title={t.adminRecheckLimitTitle}
+                      >
+                        <span className={tableStyles.recheckLimitLabel}>{t.adminRecheckLimit}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={RECHECK_FRESH_MAX}
+                          value={recheckLimit}
+                          disabled={busy || selectedCount > 0}
+                          onChange={(event) => setRecheckLimit(event.target.value)}
+                          aria-label={t.adminRecheckLimitTitle}
+                        />
+                      </label>
                       <button
                         type="button"
                         className="btn small"
                         disabled={busy}
                         onClick={backfillConfidence}
+                        title={t.adminBackfillConfidenceTitle}
                       >
                         {t.adminBackfillConfidence}
                       </button>
@@ -827,8 +880,8 @@ export function Admin({
                     ) : null}
                     <th className="admin-mod-date" scope="col">{t.adminColIngested}</th>
                     <th scope="col">{t.adminColTitle}</th>
-                    <th className="admin-mod-pct-col" scope="col" title={t.adminColRulePctTitle}>{t.adminColRulePct}</th>
-                    <th className="admin-mod-pct-col" scope="col" title={t.adminColAiPctTitle}>{t.adminColAiPct}</th>
+                    <th className={`admin-mod-pct-col ${tableStyles.pctHead}`} scope="col" title={t.adminColRulePctTitle}>{t.adminColRulePct}</th>
+                    <th className={`admin-mod-pct-col ${tableStyles.pctHead}`} scope="col" title={t.adminColAiPctTitle}>{t.adminColAiPct}</th>
                     <th className="admin-mod-source" scope="col">{t.adminColSource}</th>
                     <th className="admin-mod-actions" scope="col">{t.adminColActions}</th>
                   </tr>

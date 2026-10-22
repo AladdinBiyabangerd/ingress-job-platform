@@ -3,6 +3,9 @@
 import { adminPollRecheckMarketFit } from "./server/refresh";
 
 export const RECHECK_POLL_MS = 1500;
+/** Max ads per fresh «AI ilə yenidən yoxla» run (API FRESH_MAX_IDS). */
+export const RECHECK_FRESH_MAX = 200;
+export const RECHECK_DEFAULT_LIMIT = 50;
 /** Matches API stale window (~90s) + a little slack for slow polls. */
 export const RECHECK_STALE_MS = 105_000;
 

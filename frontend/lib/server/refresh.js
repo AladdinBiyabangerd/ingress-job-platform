@@ -218,18 +218,53 @@ export async function adminApproveThreshold({ score, op, threshold, status = "pe
   return mutate("/api/v1/admin/jobs/approve-threshold", { body });
 }
 
-export async function adminStartRecheckMarketFit(ids, { scope = "queue" } = {}) {
+/** Max ads per fresh (cache-bypassing) AI re-check; mirrors API FRESH_MAX_IDS. */
+const RECHECK_FRESH_MAX = 200;
+
+function scoreCut(value) {
+  const raw = String(value ?? "").trim();
+  if (raw === "") return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : null;
+}
+
+/**
+ * Start an async market-fit recheck.
+ * - ids: explicit ads (checkbox selection). Wins when non-empty.
+ * - filter (queue only, used when ids is empty): staff list filter
+ *   {aiOp, aiValue, ruleOp, ruleValue, source}; the API picks matching pending ads.
+ * - fresh: ask the AI again (skip cached answer). limit: 1..RECHECK_FRESH_MAX.
+ */
+export async function adminStartRecheckMarketFit(
+  ids,
+  { scope = "queue", fresh = false, filter = null, limit = null } = {},
+) {
   const list = Array.isArray(ids)
     ? ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
     : [];
-  if (!list.length) return { ok: false, status: 422, data: {} };
   const resolved =
     scope === "crawled" ? "crawled" : scope === "crawl_rejects" ? "crawl_rejects" : "queue";
+  const body = {
+    ids: list.slice(0, 2000),
+    scope: resolved,
+  };
+  if (!list.length) {
+    if (!filter || resolved !== "queue") return { ok: false, status: 422, data: {} };
+    body.filter = {
+      ai_op: filter.aiOp === "lte" ? "lte" : "gte",
+      ai_value: scoreCut(filter.aiValue),
+      rule_op: filter.ruleOp === "lte" ? "lte" : "gte",
+      rule_value: scoreCut(filter.ruleValue),
+      source: String(filter.source || "").trim().slice(0, 200),
+    };
+  }
+  if (fresh) body.fresh = true;
+  const cap = Number(limit);
+  if (Number.isFinite(cap) && cap > 0) {
+    body.limit = Math.max(1, Math.min(RECHECK_FRESH_MAX, Math.round(cap)));
+  }
   return mutate("/api/v1/admin/jobs/recheck-market-fit", {
-    body: {
-      ids: list.slice(0, 2000),
-      scope: resolved,
-    },
+    body,
     timeoutMs: 30_000,
   });
 }

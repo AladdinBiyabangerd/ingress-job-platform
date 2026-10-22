@@ -2,6 +2,12 @@
 
 POST starts a daemon thread that rechecks one ad at a time. Progress lives in
 the shared jobs DB so any API replica can answer GET polls.
+
+``fresh`` runs (queue «AI ilə yenidən yoxla») bypass the AI answer cache so the
+model is really asked again; they are capped at ``FRESH_MAX_IDS`` ads per run
+and only one can be active per scope. The gateway's daily budget still applies.
+Targets are either explicit ids (checkbox selection) or, for the queue, the
+staff list filter + limit resolved server-side.
 """
 
 from __future__ import annotations
@@ -13,7 +19,14 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from app.cabinet_store import CabinetError, _LOCK, _connect, _now, recheck_one
+from app.cabinet_store import (
+    CabinetError,
+    _LOCK,
+    _connect,
+    _now,
+    pending_ids_by_list_filter,
+    recheck_one,
+)
 
 log = logging.getLogger("ingress-job.api.market_fit_recheck")
 
@@ -43,6 +56,8 @@ _MAX_IDS = 2000
 # AI call timeout is 45s; no progress past this means the worker thread died
 # (API restart / replica) and the UI would stick on «Dayandırılır…».
 _STALE_SECONDS = 90
+# Fresh (cache-bypassing) reruns cost one provider call per ad.
+FRESH_MAX_IDS = 200
 
 
 def _ensure(conn) -> None:
@@ -134,19 +149,77 @@ def _normalize_ids(job_ids: list[int]) -> list[int]:
     return ordered
 
 
+def _parse_payload(raw: str | None) -> tuple[list, bool]:
+    """job_ids column: legacy JSON list, or {"ids": [...], "fresh": true}."""
+    try:
+        data = json.loads(raw or "[]")
+    except json.JSONDecodeError:
+        return [], False
+    if isinstance(data, dict):
+        ids = data.get("ids")
+        return (ids if isinstance(ids, list) else []), bool(data.get("fresh"))
+    if isinstance(data, list):
+        return data, False
+    return [], False
+
+
+def _active_fresh_job(conn, scope: str) -> str:
+    rows = conn.execute(
+        """
+        SELECT * FROM market_fit_recheck_jobs
+        WHERE scope = ? AND status IN ('queued', 'running', 'cancelling')
+        """,
+        (scope,),
+    ).fetchall()
+    for row in rows:
+        _, fresh = _parse_payload(row["job_ids"])
+        if not fresh:
+            continue
+        row = _finalize_stale_row(conn, row)
+        if (row["status"] or "") in ("queued", "running", "cancelling"):
+            return str(row["id"])
+    return ""
+
+
 def start_recheck_job(
     job_ids: list[int],
     *,
     scope: str = "queue",
     created_by: str = "",
+    fresh: bool = False,
+    list_filter: dict[str, Any] | None = None,
+    limit: int | None = None,
 ) -> dict[str, Any]:
+    """Start a background recheck.
+
+    ``job_ids`` wins when given (checkbox selection). With no ids and a
+    ``list_filter`` (queue only), pending ads matching the filter are taken in
+    table order. ``limit`` trims either list; fresh runs are also capped at
+    ``FRESH_MAX_IDS``. Response adds ``requested`` (before trimming) and
+    ``capped``.
+    """
     if scope not in ("queue", "crawled", "crawl_rejects"):
         raise CabinetError(422, "scope queue, crawled və ya crawl_rejects olmalıdır")
+    if limit is not None and (limit < 1 or limit > FRESH_MAX_IDS):
+        raise CabinetError(422, f"Limit 1–{FRESH_MAX_IDS} arasında olmalıdır")
     ordered = _normalize_ids(job_ids)
+    if not ordered and list_filter is not None:
+        if scope != "queue":
+            raise CabinetError(422, "Filtrlə yoxlama yalnız növbə üçündür")
+        ordered = pending_ids_by_list_filter(**list_filter)
+        if not ordered:
+            raise CabinetError(422, "Filtrə uyğun gözləyən elan yoxdur")
     if not ordered:
         raise CabinetError(422, "Elan seçilməyib")
     if len(ordered) > _MAX_IDS:
         raise CabinetError(422, f"Birdən çox {_MAX_IDS} elan seçilə bilər")
+    requested = len(ordered)
+    cut = limit
+    if fresh:
+        cut = min(cut or FRESH_MAX_IDS, FRESH_MAX_IDS)
+    if cut is not None:
+        ordered = ordered[:cut]
+    payload = json.dumps({"ids": ordered, "fresh": True}) if fresh else json.dumps(ordered)
 
     job_id = uuid.uuid4().hex
     now = _now()
@@ -154,6 +227,10 @@ def start_recheck_job(
         conn = _connect()
         try:
             _ensure(conn)
+            if fresh:
+                busy = _active_fresh_job(conn, scope)
+                if busy:
+                    raise CabinetError(409, "AI yenidən yoxlama artıq gedir; bitməsini gözləyin və ya dayandırın")
             conn.execute(
                 """
                 INSERT INTO market_fit_recheck_jobs (
@@ -161,7 +238,7 @@ def start_recheck_job(
                     failed, skipped, error, job_ids, created_by, created_at, updated_at
                 ) VALUES (?, ?, 'queued', ?, 0, 0, 0, 0, 0, 0, '', ?, ?, ?, ?)
                 """,
-                (job_id, scope, len(ordered), json.dumps(ordered), created_by or "", now, now),
+                (job_id, scope, len(ordered), payload, created_by or "", now, now),
             )
             conn.commit()
         finally:
@@ -178,7 +255,11 @@ def start_recheck_job(
         daemon=True,
         name=f"market-fit-recheck-{job_id[:8]}",
     ).start()
-    return get_recheck_job(job_id)
+    out = get_recheck_job(job_id)
+    out["requested"] = requested
+    out["capped"] = requested > len(ordered)
+    out["fresh"] = bool(fresh)
+    return out
 
 
 def get_recheck_job(job_id: str) -> dict[str, Any]:
@@ -330,10 +411,7 @@ def _run_job(job_id: str) -> None:
                 )
                 conn.commit()
                 scope = row["scope"] or "queue"
-                try:
-                    ids = json.loads(row["job_ids"] or "[]")
-                except json.JSONDecodeError:
-                    ids = []
+                ids, fresh = _parse_payload(row["job_ids"])
             finally:
                 conn.close()
 
@@ -349,7 +427,10 @@ def _run_job(job_id: str) -> None:
             except (TypeError, ValueError):
                 _bump(job_id, fields=["skipped"])
                 continue
-            outcome = recheck_one(ad_id, scope=scope)
+            if fresh:
+                outcome = recheck_one(ad_id, scope=scope, fresh=True)
+            else:
+                outcome = recheck_one(ad_id, scope=scope)
             if outcome == "checked":
                 _bump(job_id, fields=["checked"])
             elif outcome == "rejected":

@@ -800,6 +800,200 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(int(body["done"]), 6)
         self.assertEqual(int(body["remaining"]), 12)
 
+    # --- Fresh «AI ilə yenidən yoxla» (selected ids / filter + limit / cap) ---
+
+    def _seed_pending(self, title, *, ai=None, rule=None, source=None, key=None):
+        conn = sqlite3.connect(self.db)
+        cur = conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key, owner_subject,
+                rule_confidence, ai_confidence, market_fit_reason
+            ) VALUES (?, 'Co', '', 'Backend role.', 'pending', '2026-10-22T12:00:00+04:00', ?, '', ?, ?, 'seed')
+            """,
+            (title, key or f"fresh-{title}", rule, ai),
+        )
+        job_id = int(cur.lastrowid)
+        if source:
+            conn.execute(
+                """
+                INSERT INTO job_sources (job_id, source_name, source_url, external_id, last_seen)
+                VALUES (?, ?, ?, '', '2026-10-22T12:00:00+04:00')
+                """,
+                (job_id, source, f"https://{source.lower()}.example/job/{job_id}"),
+            )
+        conn.commit()
+        conn.close()
+        return job_id
+
+    def _poll_recheck(self, job_key):
+        import time
+
+        body = None
+        for _ in range(80):
+            polled = self.client.get(
+                f"/api/v1/admin/jobs/recheck-market-fit/{job_key}",
+                headers={"Authorization": "Bearer test"},
+            )
+            self.assertEqual(polled.status_code, 200, polled.text)
+            body = polled.json()
+            if body.get("status") in ("done", "failed", "cancelled"):
+                break
+            time.sleep(0.05)
+        return body
+
+    def test_fresh_recheck_selected_ids_rescored_even_with_existing_ai_score(self):
+        scored = self._seed_pending("Already scored", ai=90)
+        untouched = self._seed_pending("Not selected", ai=90)
+        verdict = {
+            "suitable": True,
+            "unclear": False,
+            "remote": True,
+            "relocation": False,
+            "reason": "fresh AI answer",
+            "confidence": 70,
+        }
+        with self._auth("job:staff", "admin-staff"):
+            with patch("worker.market_fit.clarify_market_fit", return_value=verdict) as ai:
+                res = self.client.post(
+                    "/api/v1/admin/jobs/recheck-market-fit",
+                    headers={"Authorization": "Bearer test"},
+                    json={"ids": [scored], "scope": "queue", "fresh": True},
+                )
+                self.assertEqual(res.status_code, 200, res.text)
+                started = res.json()
+                self.assertTrue(started["fresh"])
+                self.assertEqual(started["total"], 1)
+                self.assertEqual(started["requested"], 1)
+                self.assertFalse(started["capped"])
+                body = self._poll_recheck(started["job_id"])
+        self.assertEqual(body["status"], "done")
+        self.assertEqual(body["checked"], 1)
+        ai.assert_called_once()
+        # The AI cache must be bypassed for a staff re-check.
+        self.assertTrue(ai.call_args.kwargs.get("fresh"))
+        conn = sqlite3.connect(self.db)
+        rows = dict(
+            conn.execute(
+                "SELECT id, ai_confidence FROM jobs WHERE id IN (?, ?)", (scored, untouched)
+            ).fetchall()
+        )
+        conn.close()
+        # Fresh AI 70 capped by eligibility (no AZ evidence in "Backend role.") → 40;
+        # the old 90 is replaced, the unselected row keeps its score.
+        self.assertEqual(rows[scored], 40)
+        self.assertEqual(rows[untouched], 90)
+
+    def test_fresh_recheck_without_selection_uses_list_filter_and_limit(self):
+        a1 = self._seed_pending("Alpha old", ai=30, source="Alpha")
+        a2 = self._seed_pending("Alpha mid", ai=10, source="Alpha")
+        a3 = self._seed_pending("Alpha new", ai=40, source="Alpha")
+        self._seed_pending("Alpha high", ai=95, source="Alpha")
+        self._seed_pending("Beta", ai=10, source="Beta")
+        self._seed_pending("Alpha unscored", ai=None, source="Alpha")
+        calls = []
+
+        def record(ad_id, scope="queue", fresh=False):
+            calls.append((ad_id, scope, fresh))
+            return "checked"
+
+        with self._auth("job:staff", "admin-staff"):
+            with patch("app.market_fit_recheck_jobs.recheck_one", side_effect=record):
+                res = self.client.post(
+                    "/api/v1/admin/jobs/recheck-market-fit",
+                    headers={"Authorization": "Bearer test"},
+                    json={
+                        "ids": [],
+                        "scope": "queue",
+                        "fresh": True,
+                        "filter": {"ai_op": "lte", "ai_value": 50, "source": "alpha"},
+                        "limit": 2,
+                    },
+                )
+                self.assertEqual(res.status_code, 200, res.text)
+                started = res.json()
+                body = self._poll_recheck(started["job_id"])
+        self.assertEqual(started["requested"], 3)
+        self.assertEqual(started["total"], 2)
+        self.assertTrue(started["capped"])
+        self.assertEqual(body["status"], "done")
+        # Table order (newest first), AI ≤ 50, source contains "alpha", limit 2.
+        self.assertEqual([c[0] for c in calls], [a3, a2])
+        self.assertTrue(all(c[2] is True for c in calls))
+        self.assertNotIn(a1, [c[0] for c in calls])
+
+        with self._auth("job:staff", "admin-staff"):
+            none = self.client.post(
+                "/api/v1/admin/jobs/recheck-market-fit",
+                headers={"Authorization": "Bearer test"},
+                json={"fresh": True, "filter": {"source": "nope-source"}, "limit": 5},
+            )
+        self.assertEqual(none.status_code, 422, none.text)
+
+    def test_fresh_recheck_caps_batch_and_limit_bounds(self):
+        from app import market_fit_recheck_jobs as jobs
+
+        ids = list(range(100000, 100000 + jobs.FRESH_MAX_IDS + 5))
+        seen = []
+
+        def record(ad_id, scope="queue", fresh=False):
+            seen.append(ad_id)
+            return "skipped"
+
+        with self._auth("job:staff", "admin-staff"):
+            with patch("app.market_fit_recheck_jobs.recheck_one", side_effect=record):
+                res = self.client.post(
+                    "/api/v1/admin/jobs/recheck-market-fit",
+                    headers={"Authorization": "Bearer test"},
+                    json={"ids": ids, "fresh": True},
+                )
+                self.assertEqual(res.status_code, 200, res.text)
+                started = res.json()
+                body = self._poll_recheck(started["job_id"])
+            too_big = self.client.post(
+                "/api/v1/admin/jobs/recheck-market-fit",
+                headers={"Authorization": "Bearer test"},
+                json={"ids": ids[:3], "fresh": True, "limit": jobs.FRESH_MAX_IDS + 1},
+            )
+        self.assertEqual(started["total"], jobs.FRESH_MAX_IDS)
+        self.assertEqual(started["requested"], jobs.FRESH_MAX_IDS + 5)
+        self.assertTrue(started["capped"])
+        self.assertEqual(body["status"], "done")
+        self.assertEqual(len(seen), jobs.FRESH_MAX_IDS)
+        self.assertEqual(seen, ids[: jobs.FRESH_MAX_IDS])
+        self.assertEqual(too_big.status_code, 422, too_big.text)
+
+    def test_fresh_recheck_refuses_second_concurrent_run(self):
+        import threading
+
+        gate = threading.Event()
+        entered = threading.Event()
+
+        def slow(ad_id, scope="queue", fresh=False):
+            entered.set()
+            gate.wait(timeout=3)
+            return "checked"
+
+        job_id = self._seed_pending("Concurrent", ai=50)
+        with self._auth("job:staff", "admin-staff"):
+            with patch("app.market_fit_recheck_jobs.recheck_one", side_effect=slow):
+                first = self.client.post(
+                    "/api/v1/admin/jobs/recheck-market-fit",
+                    headers={"Authorization": "Bearer test"},
+                    json={"ids": [job_id], "fresh": True},
+                )
+                self.assertEqual(first.status_code, 200, first.text)
+                self.assertTrue(entered.wait(timeout=2))
+                second = self.client.post(
+                    "/api/v1/admin/jobs/recheck-market-fit",
+                    headers={"Authorization": "Bearer test"},
+                    json={"ids": [job_id], "fresh": True},
+                )
+                gate.set()
+                body = self._poll_recheck(first.json()["job_id"])
+        self.assertEqual(second.status_code, 409, second.text)
+        self.assertEqual(body["status"], "done")
+
     def test_crawled_recheck_rejects_published_unsuitable(self):
         """Published scraped ads AI marks unfit become rejected (Rejected tab), not only hidden."""
         from app.cabinet_store import recheck_market_fit
