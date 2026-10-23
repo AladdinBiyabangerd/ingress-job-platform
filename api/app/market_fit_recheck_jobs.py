@@ -9,7 +9,8 @@ daily budget still applies: a fresh run stops early (status ``budget_stopped``)
 when the AI says it is over budget / switched off, instead of failing every
 remaining ad. Targets are explicit ids (capped at ``FRESH_MAX_IDS`` when
 fresh), the staff list filter + limit, or — for the queue threshold panel —
-every pending ad matching AI/rule op+percent, with no cap. The thread checks
+every pending ad matching AI/rule op+percent, with no cap («AI ≤ N» also
+takes ads the AI never scored). The thread checks
 one ad at a time, so the HTTP start call returns at once and the UI polls.
 """
 
@@ -215,10 +216,15 @@ def start_recheck_job(
     if not ordered and threshold is not None:
         if scope != "queue":
             raise CabinetError(422, "Faizlə yoxlama yalnız növbə üçündür")
+        score = str(threshold.get("score") or "")
+        op = str(threshold.get("op") or "")
+        # «AI ≤ N» re-check also sends ads with no AI score yet («—»): they
+        # are exactly the ones that most need an AI look. «≥ N» stays scored-only.
         ordered = pending_ids_by_threshold(
-            score=str(threshold.get("score") or ""),
-            op=str(threshold.get("op") or ""),
+            score=score,
+            op=op,
             threshold=int(threshold.get("threshold") or 0),
+            include_unscored=score == "ai",
         )
         if not ordered:
             raise CabinetError(422, "Bu faizə uyğun gözləyən elan yoxdur")

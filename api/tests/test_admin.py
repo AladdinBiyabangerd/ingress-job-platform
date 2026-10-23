@@ -1534,6 +1534,44 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(none.status_code, 422, none.text)
         self.assertEqual(wrong_scope.status_code, 422, wrong_scope.text)
 
+    def test_fresh_recheck_ai_lte_zero_takes_unscored_pending(self):
+        unscored = self._seed_pending("No AI", ai=None, rule=60)
+        zero = self._seed_pending("Zero AI", ai=0, rule=60)
+        self._seed_pending("Scored AI", ai=55, rule=60)
+        seen = []
+
+        def record(ad_id, scope="queue", fresh=False):
+            seen.append(ad_id)
+            return "checked"
+
+        headers = {"Authorization": "Bearer test"}
+        with self._auth("job:staff", "admin-staff"):
+            with patch("app.market_fit_recheck_jobs.recheck_one", side_effect=record):
+                res = self.client.post(
+                    "/api/v1/admin/jobs/recheck-market-fit",
+                    headers=headers,
+                    json={"fresh": True, "threshold": {"score": "ai", "op": "lte", "threshold": 0}},
+                )
+                self.assertEqual(res.status_code, 200, res.text)
+                self._poll_recheck(res.json()["job_id"])
+            # «≥ N» never pulls in unscored ads.
+            gte = self.client.post(
+                "/api/v1/admin/jobs/recheck-market-fit",
+                headers=headers,
+                json={"fresh": True, "threshold": {"score": "ai", "op": "gte", "threshold": 99}},
+            )
+            # Publish / reject by «AI ≤ 0» must not touch never-checked ads.
+            rej = self.client.post(
+                "/api/v1/admin/jobs/reject-threshold",
+                headers=headers,
+                json={"score": "ai", "op": "lte", "threshold": 0},
+            )
+        self.assertEqual(sorted(seen), sorted([unscored, zero]))
+        self.assertEqual(gte.status_code, 422, gte.text)
+        self.assertEqual(rej.status_code, 200, rej.text)
+        self.assertEqual(rej.json()["ids"], [zero])
+        self.assertEqual(self._statuses(unscored)[unscored][0], "pending")
+
     def test_fresh_recheck_stops_early_when_ai_budget_is_spent(self):
         import worker.market_fit as mf
 

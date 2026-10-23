@@ -21,6 +21,14 @@ test("threshold match: AI ≤ / ≥ with inclusive edge, unscored never matches"
   assert.deepEqual(thresholdMatchIds(ITEMS, "ai", "gte", "99"), []);
 });
 
+test("AI re-check: «≤ N» also takes unscored rows, «≥ N» and publish/reject do not", () => {
+  const opts = { includeUnscored: true };
+  assert.deepEqual(thresholdMatchIds(ITEMS, "ai", "lte", 0, "pending", opts), [4]);
+  assert.deepEqual(thresholdMatchIds(ITEMS, "ai", "lte", 40, "pending", opts), [1, 2, 4]);
+  assert.deepEqual(thresholdMatchIds(ITEMS, "ai", "gte", 40, "pending", opts), [2, 3]);
+  assert.deepEqual(thresholdMatchIds(ITEMS, "ai", "lte", 0), []);
+});
+
 test("threshold match: rule score and rejected status are separate", () => {
   assert.deepEqual(thresholdMatchIds(ITEMS, "rule", "gte", 50), [1, 4]);
   assert.deepEqual(thresholdMatchIds(ITEMS, "rule", "lte", 50, "rejected"), [5]);

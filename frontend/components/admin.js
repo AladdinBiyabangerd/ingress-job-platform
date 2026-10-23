@@ -91,8 +91,8 @@ function confidenceCell(value, reason) {
   return <span className="admin-mod-pct">{label}</span>;
 }
 
-function countThresholdMatches(items, score, op, threshold, status = "pending") {
-  return thresholdMatchIds(items, score, op, threshold, status).length;
+function countThresholdMatches(items, score, op, threshold, status = "pending", opts = {}) {
+  return thresholdMatchIds(items, score, op, threshold, status, opts).length;
 }
 
 function statusLabel(t, status) {
@@ -548,7 +548,10 @@ export function Admin({
    * applies: the run stops early (budget_stopped) and the note says so.
    */
   async function recheckWithAi() {
-    const planned = countThresholdMatches(items, scoreKind, scoreOp, scoreThreshold, "pending");
+    // «AI ≤ N» also takes ads with no AI score yet («—»), same as the API.
+    const planned = countThresholdMatches(items, scoreKind, scoreOp, scoreThreshold, "pending", {
+      includeUnscored: scoreKind === "ai",
+    });
     if (!planned) {
       setError("");
       setNote(t.adminThresholdNone);

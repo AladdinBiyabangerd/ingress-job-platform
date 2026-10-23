@@ -1080,9 +1080,13 @@ def _score_column(score: str) -> str:
     raise CabinetError(422, "Skor ai və ya rule olmalıdır")
 
 
-def _threshold_match(value: int | None, op: str, threshold: int) -> bool:
+def _threshold_match(
+    value: int | None, op: str, threshold: int, *, include_unscored: bool = False
+) -> bool:
     if value is None:
-        return False
+        # Never-scored rows only join «≤ N» when the caller asks (AI re-check):
+        # «not checked yet» sits below every percent. Publish/reject keep them out.
+        return include_unscored and op == "lte"
     if op == "gte":
         return value >= threshold
     if op == "lte":
@@ -1100,6 +1104,7 @@ def _ids_by_threshold(
     limit: int | None = None,
     min_score: int | None = None,
     max_score: int | None = None,
+    include_unscored: bool = False,
 ) -> list[int]:
     col = _score_column(score)
     if op not in ("gte", "lte"):
@@ -1133,7 +1138,7 @@ def _ids_by_threshold(
                 continue
             if max_score is not None and value > max_score:
                 continue
-        elif not _threshold_match(value, op, threshold):
+        elif not _threshold_match(value, op, threshold, include_unscored=include_unscored):
             continue
         matched.append(int(row["id"]))
         if limit is not None and len(matched) >= limit:
@@ -1165,15 +1170,26 @@ def approve_ads_by_threshold(
     return approve_ads(ids, max_ids=None)
 
 
-def pending_ids_by_threshold(*, score: str, op: str, threshold: int) -> list[int]:
+def pending_ids_by_threshold(
+    *, score: str, op: str, threshold: int, include_unscored: bool = False
+) -> list[int]:
     """Pending queue ad ids whose AI/rule percent matches op+threshold (newest first).
 
-    Same match as «Faizə görə dərc et»: rows without that score never match.
+    Same match as «Faizə görə dərc et»: rows without that score never match,
+    unless ``include_unscored`` — then they also match «≤ N» (AI re-check of
+    ads the AI has not scored yet, shown as «—»).
     """
     with _LOCK:
         conn = _connect()
         try:
-            return _ids_by_threshold(conn, score=score, op=op, threshold=threshold, status=PENDING)
+            return _ids_by_threshold(
+                conn,
+                score=score,
+                op=op,
+                threshold=threshold,
+                status=PENDING,
+                include_unscored=include_unscored,
+            )
         finally:
             conn.close()
 
