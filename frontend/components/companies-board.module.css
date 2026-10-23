@@ -1,0 +1,6 @@
+/* Companies page front: no hero copy / Academy promo — only the search row (component-scoped; globals.css untouched). */
+
+.front:global(.home-board-front) {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "search";
+}

@@ -1,4 +1,5 @@
-import { BoardAcademyPromo, BoardSideNav } from "./board-side-nav";
+import { BoardSideNav } from "./board-side-nav";
+import styles from "./companies-board.module.css";
 import { CompanyBoardCard } from "./company-board-card";
 import { Shell } from "./shell";
 import { SortSelect } from "./sort-select";
@@ -75,17 +76,10 @@ export function CompaniesPage({ locale, data, error, q, sort }) {
           <BoardSideNav locale={locale} />
 
           <div className="home-board-main">
-            <div className="home-board-front">
-              <section className="home-board-hero-copy" aria-labelledby="companies-front-title">
-                <p className="home-board-eyebrow">{t.companiesEyebrow}</p>
-                <p className="home-board-brand">{t.homeBrand}</p>
-                <h1 id="companies-front-title" className="home-board-title">
-                  {t.companiesTitle}
-                </h1>
-                <p className="home-board-lede">{t.companiesLede}</p>
-              </section>
-
-              <BoardAcademyPromo locale={locale} />
+            <div className={`home-board-front ${styles.front}`}>
+              <h1 id="companies-front-title" className="visually-hidden">
+                {t.companiesTitle}
+              </h1>
 
               <form
                 className="home-board-search companies-board-search"
@@ -176,13 +170,6 @@ export function CompaniesLoading({ locale }) {
         <div className="home-board-shell companies-board-shell">
           <BoardSideNav locale={locale} />
           <div className="home-board-main">
-            <div className="home-board-front">
-              <section className="home-board-hero-copy">
-                <span className="skeleton skeleton-line short" />
-                <span className="skeleton skeleton-line" />
-                <span className="skeleton skeleton-line short" />
-              </section>
-            </div>
             <div className="home-board-card-list">
               {Array.from({ length: 5 }, (_, index) => (
                 <div key={index} className="job-board-card job-board-card-skeleton" aria-hidden="true">

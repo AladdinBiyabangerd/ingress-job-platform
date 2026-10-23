@@ -79,7 +79,6 @@ const PRIMARY_NAV = [
   { key: "browse", mode: "browse" },
   { key: "companies", mode: "companies" },
   { key: "trends", mode: "trends" },
-  { key: "learning", external: true },
 ];
 
 /** Staff get Moderasiya right after Elanlar. */
@@ -96,7 +95,6 @@ function primaryNavLabel(t, key) {
   if (key === "admin") return t.admin;
   if (key === "companies") return t.navCompanies;
   if (key === "trends") return t.navTrends;
-  if (key === "learning") return t.navLearning;
   return t.navJobs;
 }
 
@@ -114,13 +112,6 @@ function PrimaryNav({ locale, mode, jobId, className, me }) {
     <nav className={className ? `primary-nav ${className}` : "primary-nav"} aria-label={t.browse}>
       {primaryNavItems(me).map((item) => {
         const label = primaryNavLabel(t, item.key);
-        if (item.external) {
-          return (
-            <a key={item.key} href={ingressUrl(locale)} rel="noopener noreferrer" target="_blank">
-              {label}
-            </a>
-          );
-        }
         const on = primaryNavActive(mode, item.key, jobId);
         if (item.mode === "browse") {
           return (
@@ -186,15 +177,6 @@ function MobileNav({ locale, mode, me, returnTo, onClose, toggleRef, jobId }) {
       <ul className="mobile-nav-links">
         {primaryNavItems(me).map((item) => {
           const label = primaryNavLabel(t, item.key);
-          if (item.external) {
-            return (
-              <li key={item.key}>
-                <a href={ingressUrl(locale)} rel="noopener noreferrer" target="_blank">
-                  {label}
-                </a>
-              </li>
-            );
-          }
           const on = primaryNavActive(mode, item.key, jobId);
           return (
             <li key={item.key}>
@@ -342,13 +324,13 @@ function BoardAuthActions({ locale, returnTo, me, onMe }) {
   );
 }
 
-/** Board chrome: Jobs · Companies · Trends · Learning header + wrap-board. */
+/** Board chrome: Jobs · Companies · Trends header + wrap-board. */
 const BOARD_SHELL_MODES = new Set(["browse", "companies", "saved", "applications", "profile"]);
 
 function BoardBottomNav({ locale, mode }) {
   const t = text(locale);
   return (
-    <nav className="board-bottom-nav" aria-label={t.menuLabel}>
+    <nav className="board-bottom-nav" aria-label={t.menuLabel} style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
       <PersistedBrowseLink
         locale={locale}
         className={mode === "browse" ? "on" : ""}
@@ -372,10 +354,6 @@ function BoardBottomNav({ locale, mode }) {
       >
         <BoardNavIconApplied />
         <span>{t.navAppliedShort}</span>
-      </a>
-      <a href={ingressUrl(locale)} rel="noopener noreferrer" target="_blank">
-        <BoardNavIconAcademy />
-        <span>{t.navLearning}</span>
       </a>
       <a
         href={hrefFor(locale, { mode: "profile" })}
@@ -411,15 +389,6 @@ function BoardNavIconApplied() {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
       <path d="M8 4h8a2 2 0 012 2v14l-6-3-6 3V6a2 2 0 012-2z" />
       <path d="M9 10h6M9 14h4" />
-    </svg>
-  );
-}
-
-function BoardNavIconAcademy() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <path d="M12 3l9 5-9 5-9-5 9-5z" />
-      <path d="M5 10v5c0 1.5 3 3 7 3s7-1.5 7-3v-5" />
     </svg>
   );
 }

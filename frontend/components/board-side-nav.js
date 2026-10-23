@@ -128,20 +128,3 @@ export function BoardSideNav({ locale, active = null }) {
     </aside>
   );
 }
-
-export function BoardAcademyPromo({ locale }) {
-  const t = text(locale);
-  return (
-    <a
-      className="home-board-hero-copy home-board-hero-copy--promo"
-      href={ingressUrl(locale)}
-      rel="noopener noreferrer"
-      target="_blank"
-    >
-      <p className="home-board-eyebrow">{t.academyPromoEyebrow}</p>
-      <p className="home-board-brand">{t.academyPromoTitle}</p>
-      <p className="home-board-title">{t.academyPromoBody}</p>
-      <p className="home-board-lede home-board-lede--cta">{t.academyPromoCta}</p>
-    </a>
-  );
-}
