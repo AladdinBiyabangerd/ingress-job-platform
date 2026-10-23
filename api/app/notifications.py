@@ -40,27 +40,27 @@ _COPY = {
     "az": {
         "application_new": (
             "Yeni müraciət: {title}",
-            "«{title}» elanına Ingress Job saytında yeni müraciət gəldi.",
+            "«{title}» elanına Technology Jobs saytında yeni müraciət gəldi.",
         ),
         "application_seen": (
             "Müraciətinizə baxıldı: {title}",
-            "«{title}» elanına Ingress Job saytında göndərdiyiniz müraciətə baxıldı.",
+            "«{title}» elanına Technology Jobs saytında göndərdiyiniz müraciətə baxıldı.",
         ),
         "application_rejected": (
             "Müraciətiniz rədd edildi: {title}",
-            "«{title}» elanına Ingress Job saytında göndərdiyiniz müraciət rədd edildi.",
+            "«{title}» elanına Technology Jobs saytında göndərdiyiniz müraciət rədd edildi.",
         ),
         "ad_approved": (
             "Elanınız təsdiqləndi: {title}",
-            "«{title}» elanınız Ingress Job saytında təsdiqləndi və dərc olundu.",
+            "«{title}» elanınız Technology Jobs saytında təsdiqləndi və dərc olundu.",
         ),
         "ad_rejected": (
             "Elanınız rədd edildi: {title}",
-            "«{title}» elanınız Ingress Job saytında rədd edildi.",
+            "«{title}» elanınız Technology Jobs saytında rədd edildi.",
         ),
         "ad_review": (
             "Elanınız yenidən moderasiyadadır: {title}",
-            "«{title}» elanınız mühüm dəyişiklikdən sonra Ingress Job saytında yenidən moderasiyadadır.",
+            "«{title}» elanınız mühüm dəyişiklikdən sonra Technology Jobs saytında yenidən moderasiyadadır.",
         ),
         "match_new": (
             "Sənə uyğun yeni elan: {title}",
@@ -83,27 +83,27 @@ _COPY = {
     "en": {
         "application_new": (
             "New application: {title}",
-            "A new application arrived on Ingress Job for «{title}».",
+            "A new application arrived on Technology Jobs for «{title}».",
         ),
         "application_seen": (
             "Your application was seen: {title}",
-            "Your application on Ingress Job for «{title}» was marked as seen.",
+            "Your application on Technology Jobs for «{title}» was marked as seen.",
         ),
         "application_rejected": (
             "Your application was rejected: {title}",
-            "Your application on Ingress Job for «{title}» was rejected.",
+            "Your application on Technology Jobs for «{title}» was rejected.",
         ),
         "ad_approved": (
             "Your ad was approved: {title}",
-            "Your ad «{title}» was approved and published on Ingress Job.",
+            "Your ad «{title}» was approved and published on Technology Jobs.",
         ),
         "ad_rejected": (
             "Your ad was rejected: {title}",
-            "Your ad «{title}» was rejected on Ingress Job.",
+            "Your ad «{title}» was rejected on Technology Jobs.",
         ),
         "ad_review": (
             "Your ad is back in review: {title}",
-            "Your published ad «{title}» went back to review on Ingress Job after a significant edit.",
+            "Your published ad «{title}» went back to review on Technology Jobs after a significant edit.",
         ),
         "match_new": (
             "New match for you: {title}",
@@ -126,27 +126,27 @@ _COPY = {
     "ru": {
         "application_new": (
             "Новый отклик: {title}",
-            "На Ingress Job по объявлению «{title}» пришёл новый отклик.",
+            "На Technology Jobs по объявлению «{title}» пришёл новый отклик.",
         ),
         "application_seen": (
             "Ваш отклик просмотрен: {title}",
-            "Ваш отклик на Ingress Job по объявлению «{title}» отмечен как просмотренный.",
+            "Ваш отклик на Technology Jobs по объявлению «{title}» отмечен как просмотренный.",
         ),
         "application_rejected": (
             "Ваш отклик отклонён: {title}",
-            "Ваш отклик на Ingress Job по объявлению «{title}» отклонён.",
+            "Ваш отклик на Technology Jobs по объявлению «{title}» отклонён.",
         ),
         "ad_approved": (
             "Ваше объявление одобрено: {title}",
-            "Объявление «{title}» одобрено и опубликовано на Ingress Job.",
+            "Объявление «{title}» одобрено и опубликовано на Technology Jobs.",
         ),
         "ad_rejected": (
             "Ваше объявление отклонено: {title}",
-            "Объявление «{title}» отклонено на Ingress Job.",
+            "Объявление «{title}» отклонено на Technology Jobs.",
         ),
         "ad_review": (
             "Ваше объявление снова на модерации: {title}",
-            "Опубликованное объявление «{title}» снова на модерации Ingress Job после существенной правки.",
+            "Опубликованное объявление «{title}» снова на модерации Technology Jobs после существенной правки.",
         ),
         "match_new": (
             "Новое совпадение: {title}",
@@ -447,7 +447,7 @@ def send_email(*, to: str, subject: str, body: str) -> None:
         return
     message = EmailMessage()
     message["Subject"] = subject
-    message["From"] = formataddr(("Ingress Job", address))
+    message["From"] = formataddr(("Technology Jobs", address))
     message["To"] = to
     message.set_content(body)
     user = os.environ.get("EMAIL_HOST_USER") or ""

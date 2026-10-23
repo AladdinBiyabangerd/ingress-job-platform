@@ -1,4 +1,4 @@
-/** Browser tab title badge: "(2) Ingress Job — …" like Instagram / YouTube. */
+/** Browser tab title badge: "(2) Technology Jobs — …" like Instagram / YouTube. */
 
 export const UNREAD_NOTIFICATIONS_EVENT = "ingress:unread-notifications";
 
@@ -9,7 +9,7 @@ export function stripUnreadTitlePrefix(title) {
 }
 
 export function formatUnreadDocumentTitle(baseTitle, unread) {
-  const base = stripUnreadTitlePrefix(baseTitle).trim() || "Ingress Job";
+  const base = stripUnreadTitlePrefix(baseTitle).trim() || "Technology Jobs";
   const n = Math.max(0, Math.floor(Number(unread) || 0));
   if (n <= 0) return base;
   const label = n > 99 ? "99+" : String(n);

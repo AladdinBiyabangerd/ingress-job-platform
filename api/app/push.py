@@ -201,7 +201,7 @@ def send_web_push(
 
     payload = json.dumps(
         {
-            "title": (title or "").strip() or "Ingress Job",
+            "title": (title or "").strip() or "Technology Jobs",
             "body": (body or "").strip(),
             "url": (url or "").strip() or "/",
             "tag": (tag or "").strip() or "ingress-job",

@@ -227,7 +227,7 @@ class TrendsTests(unittest.TestCase):
         body = res.json()
         self.assertTrue(body["items"])
         self.assertIn("disclaimer", body)
-        self.assertIn("Ingress Job", body["disclaimer"])
+        self.assertIn("Technology Jobs", body["disclaimer"])
         names = [item["name"] for item in body["items"]]
         self.assertIn("Java", names)
         self.assertNotIn("React", names)  # filtered by category

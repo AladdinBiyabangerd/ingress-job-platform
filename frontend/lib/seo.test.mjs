@@ -36,7 +36,7 @@ describe("localePath + hreflang", () => {
 describe("metadata", () => {
   it("home metadata includes founder keywords and canonical languages", () => {
     const meta = homeMetadata("az");
-    assert.match(meta.title, /Ingress Job/);
+    assert.match(meta.title, /Technology Jobs/);
     assert.ok(meta.keywords.includes("Aladdin Biyabangerd"));
     assert.equal(meta.creator, FOUNDER.name);
     assert.ok(meta.alternates.languages.az);

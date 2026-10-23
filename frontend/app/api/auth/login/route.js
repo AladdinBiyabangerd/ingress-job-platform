@@ -32,7 +32,7 @@ function turnstileGateHtml(actionUrl, siteKey) {
   const safeKey = String(siteKey).replace(/"/g, "&quot;");
   return `<!doctype html>
 <html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ingress Job</title>
+<title>Technology Jobs</title>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <style>
   body{font-family:system-ui,sans-serif;margin:0;min-height:100vh;display:grid;place-items:center;background:#f7f5f1;color:#1a1a1a}

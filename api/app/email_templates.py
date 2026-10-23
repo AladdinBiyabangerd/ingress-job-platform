@@ -11,9 +11,9 @@ from typing import Any
 
 _UI = {
     "az": {
-        "brand": "Ingress Job",
+        "brand": "Technology Jobs",
         "unsub": "Abunəlikdən çıxmaq",
-        "footer_tag": "Daha çox karyera imkanları üçün Ingress Job ilə qalın.",
+        "footer_tag": "Daha çox karyera imkanları üçün Technology Jobs ilə qalın.",
         "benefit_remote": "Uzaqdan işləmək",
         "benefit_remote_sub": "Çevik iş rejimi",
         "benefit_career": "Karyera inkişafı",
@@ -54,9 +54,9 @@ _UI = {
         "role_label": "Rol",
     },
     "en": {
-        "brand": "Ingress Job",
+        "brand": "Technology Jobs",
         "unsub": "Unsubscribe",
-        "footer_tag": "Stay with Ingress Job for more career opportunities.",
+        "footer_tag": "Stay with Technology Jobs for more career opportunities.",
         "benefit_remote": "Remote work",
         "benefit_remote_sub": "Flexible schedule",
         "benefit_career": "Career growth",
@@ -97,9 +97,9 @@ _UI = {
         "role_label": "Role",
     },
     "ru": {
-        "brand": "Ingress Job",
+        "brand": "Technology Jobs",
         "unsub": "Отписаться",
-        "footer_tag": "Оставайтесь с Ingress Job для новых карьерных возможностей.",
+        "footer_tag": "Оставайтесь с Technology Jobs для новых карьерных возможностей.",
         "benefit_remote": "Удалённая работа",
         "benefit_remote_sub": "Гибкий график",
         "benefit_career": "Рост карьеры",
@@ -399,13 +399,13 @@ def render_match_job_html(
         pill = pack["near_pill"]
         lead = pack["near_lead"]
         preheader = f"{title} — {score}% · {badge}"
-        page_title = f"Ingress Job — {badge}"
+        page_title = f"Technology Jobs — {badge}"
     else:
         badge = pack["high_badge_header"]
         pill = pack["high_pill"]
         lead = pack["high_lead"]
         preheader = f"{title} — {score}% · {badge}"
-        page_title = f"Ingress Job — {badge}"
+        page_title = f"Technology Jobs — {badge}"
     inner = (
         _hero(pill=pill, heading_html=_title_br(title), lead_html=lead)
         + _job_card(
@@ -548,7 +548,7 @@ def render_digest_html(
     )
     return _shell(
         lang=lang,
-        title=f"Ingress Job — {pack['digest_badge_header']}",
+        title=f"Technology Jobs — {pack['digest_badge_header']}",
         preheader=preheader,
         badge_header=pack["digest_badge_header"],
         inner=inner,
@@ -584,7 +584,7 @@ def render_profile_nudge_html(
     )
     return _shell(
         lang=lang,
-        title=f"Ingress Job — {pack['nudge_badge_header']}",
+        title=f"Technology Jobs — {pack['nudge_badge_header']}",
         preheader=pack["nudge_title"],
         badge_header=pack["nudge_badge_header"],
         inner=inner,
@@ -634,7 +634,7 @@ def render_coach_weekly_html(
     )
     return _shell(
         lang=lang,
-        title=f"Ingress Job — {pack['coach_badge_header']}",
+        title=f"Technology Jobs — {pack['coach_badge_header']}",
         preheader=f"{pack['coach_badge_header']}: {role_text}",
         badge_header=pack["coach_badge_header"],
         inner=inner,

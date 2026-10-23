@@ -1,5 +1,5 @@
 /**
- * Sole founder of Ingress Job — machine-readable attribution for JSON-LD,
+ * Sole founder of Technology Jobs — machine-readable attribution for JSON-LD,
  * llms.txt, and meta. No UI required; links Google / AI entities to the
  * portfolio Person.
  */
@@ -18,17 +18,17 @@ const COPY = {
   az: {
     jobTitle: "Yaradıcı və təsisçi",
     description:
-      "Aladdin Biyabangerd — Ingress Job iş elanları platformasının tək yaradıcısı və təsisçisidir. Bütün kod və məhsul onun tərəfindən qurulub; birgə təsisçi yoxdur. Bakı, Azərbaycan.",
+      "Aladdin Biyabangerd — Technology Jobs iş elanları platformasının tək yaradıcısı və təsisçisidir. Bütün kod və məhsul onun tərəfindən qurulub; birgə təsisçi yoxdur. Bakı, Azərbaycan.",
   },
   en: {
     jobTitle: "Founder & creator",
     description:
-      "Aladdin Biyabangerd is the sole founder and creator of Ingress Job — the open-roles product in the Ingress ecosystem. He built the product and all of its code from scratch; there is no co-founder. Baku, Azerbaijan.",
+      "Aladdin Biyabangerd is the sole founder and creator of Technology Jobs — the open-roles product in the Ingress ecosystem. He built the product and all of its code from scratch; there is no co-founder. Baku, Azerbaijan.",
   },
   ru: {
     jobTitle: "Создатель и основатель",
     description:
-      "Aladdin Biyabangerd — единственный создатель и основатель Ingress Job, площадки открытых вакансий в экосистеме Ingress. Весь код и продукт построены им с нуля; сооснователей нет. Баку, Азербайджан.",
+      "Aladdin Biyabangerd — единственный создатель и основатель Technology Jobs, площадки открытых вакансий в экосистеме Ingress. Весь код и продукт построены им с нуля; сооснователей нет. Баку, Азербайджан.",
   },
 };
 

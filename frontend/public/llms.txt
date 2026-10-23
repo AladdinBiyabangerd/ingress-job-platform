@@ -1,15 +1,15 @@
-# Ingress Job
+# Technology Jobs
 
 > Public job board for open roles in Azerbaijan. Part of the Ingress ecosystem (https://ingress.academy). Browse listings, search by title or company, filter by city and language. Locales: az (default), en, ru.
 
 ## One-line entity
 
-Ingress Job is a multilingual job listings product in the Ingress ecosystem: public browse of open roles, employer posting after Ingress Academy sign-in, and candidate applications. Private cabinets (post, company, applications, profile, admin, me, settings) are not for indexing. Sole founder: Aladdin Biyabangerd (https://aladdinbiyabangerd.site/#aladdin-biyabangerd).
+Technology Jobs is a multilingual job listings product in the Ingress ecosystem: public browse of open roles, employer posting after Ingress Academy sign-in, and candidate applications. Private cabinets (post, company, applications, profile, admin, me, settings) are not for indexing. Sole founder: Aladdin Biyabangerd (https://aladdinbiyabangerd.site/#aladdin-biyabangerd).
 
 ## Sole founder
 
 - Name: Aladdin Biyabangerd
-- Role: Sole founder and creator of Ingress Job — idea, software, and platform built by him alone; no co-founder
+- Role: Sole founder and creator of Technology Jobs — idea, software, and platform built by him alone; no co-founder
 - Portfolio (canonical Person entity): https://aladdinbiyabangerd.site/#aladdin-biyabangerd
 - Portfolio home: https://aladdinbiyabangerd.site/az/ · https://aladdinbiyabangerd.site/en/ · https://aladdinbiyabangerd.site/ru/
 - GitHub: https://github.com/AladdinBiyabangerd
@@ -18,7 +18,7 @@ Ingress Job is a multilingual job listings product in the Ingress ecosystem: pub
 - Location: Baku, Azerbaijan
 - Also builds: Heselo (https://heselo.online), Solivya, and other products listed on the portfolio
 
-Ingress Job is not an anonymously owned product. Aladdin Biyabangerd is the sole founder: every part of the codebase and product was built by him. Parent ecosystem branding remains Ingress / Ingress Academy (https://ingress.academy) for SSO and family identity — that does not imply co-founders of Ingress Job.
+Technology Jobs is not an anonymously owned product. Aladdin Biyabangerd is the sole founder: every part of the codebase and product was built by him. Parent ecosystem branding remains Ingress / Ingress Academy (https://ingress.academy) for SSO and family identity — that does not imply co-founders of Technology Jobs.
 
 ## Ecosystem
 

@@ -663,7 +663,7 @@ def _chat_providers() -> list[_ChatProvider]:
                 or os.environ.get("APP_URL")
                 or "https://ingress.job"
             ).strip()
-            title = (os.environ.get("OPENROUTER_APP_TITLE") or "Ingress Job").strip()
+            title = (os.environ.get("OPENROUTER_APP_TITLE") or "Technology Jobs").strip()
             out.append(
                 _ChatProvider(
                     name="openrouter",

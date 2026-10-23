@@ -50,15 +50,15 @@ def _trends_ensure_key() -> str:
         return configured or "sqlite-default"
 
 DISCLAIMER = {
-    "az": "Trendlər yalnız Ingress Job-un izlədiyi elanlar əsasında hesablanır, bütün bazarı əks etdirmir.",
-    "en": "Trends reflect only listings Ingress Job tracks — not the whole market.",
-    "ru": "Тренды считаются только по вакансиям, которые отслеживает Ingress Job, а не по всему рынку.",
+    "az": "Trendlər yalnız Technology Jobs-un izlədiyi elanlar əsasında hesablanır, bütün bazarı əks etdirmir.",
+    "en": "Trends reflect only listings Technology Jobs tracks — not the whole market.",
+    "ru": "Тренды считаются только по вакансиям, которые отслеживает Technology Jobs, а не по всему рынку.",
 }
 
 SOURCE_NOTE = {
-    "az": "Ingress Job-un izlədiyi elanlar əsasında",
-    "en": "Based on listings tracked by Ingress Job",
-    "ru": "На основе вакансий, отслеживаемых Ingress Job",
+    "az": "Technology Jobs-un izlədiyi elanlar əsasında",
+    "en": "Based on listings tracked by Technology Jobs",
+    "ru": "На основе вакансий, отслеживаемых Technology Jobs",
 }
 
 

@@ -120,7 +120,7 @@ export function JobDetailActions({
           ? window.location.href
           : `${window.location.origin}${model.returnTo}`
         : model.returnTo;
-    const title = model.title || "Ingress Job";
+    const title = model.title || "Technology Jobs";
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share({ title, url });

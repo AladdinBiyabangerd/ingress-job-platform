@@ -8,7 +8,7 @@ export const HTML_LANG = { az: "az", en: "en", ru: "ru" };
 const OG_LOCALE = { az: "az_AZ", en: "en_US", ru: "ru_RU" };
 
 export const SITE = {
-  name: "Ingress Job",
+  name: "Technology Jobs",
   themeColor: "#001FFF",
   backgroundColor: "#f6f5f1",
   logoPath: "/ingress-mark.svg",
@@ -22,7 +22,7 @@ export const SITE = {
 
 const HOME = {
   az: {
-    title: "Ingress Job — Açıq iş elanları",
+    title: "Technology Jobs — Açıq iş elanları",
     description:
       "Ingress ekosisteminin iş elanları platforması. Azərbaycanda açıq vakansiyalara baxın; başlıq, şirkət, şəhər və dilə görə süzün.",
     keywords: [
@@ -35,18 +35,18 @@ const HOME = {
       "IT vakansiya Azərbaycan",
       "remote iş",
       "iş elanları onlayn",
-      "Ingress Job",
+      "Technology Jobs",
       "Ingress",
       "Ingress Academy",
       "Aladdin Biyabangerd",
     ],
     breadcrumbHome: "Elanlar",
-    ogImageAlt: "Ingress Job — açıq iş elanları",
+    ogImageAlt: "Technology Jobs — açıq iş elanları",
     countryName: "Azərbaycan",
     knowsAbout: ["iş elanları", "vakansiyalar", "işə qəbul", "Azərbaycan əmək bazarı", "Ingress ekosistemi"],
   },
   en: {
-    title: "Ingress Job — Open roles",
+    title: "Technology Jobs — Open roles",
     description:
       "The job board in the Ingress ecosystem. Browse open roles in Azerbaijan; search by title or company and filter by city and language.",
     keywords: [
@@ -58,18 +58,18 @@ const HOME = {
       "remote jobs Azerbaijan",
       "Baku tech jobs",
       "job board Azerbaijan",
-      "Ingress Job",
+      "Technology Jobs",
       "Ingress",
       "Ingress Academy",
       "Aladdin Biyabangerd",
     ],
     breadcrumbHome: "Jobs",
-    ogImageAlt: "Ingress Job — open job listings",
+    ogImageAlt: "Technology Jobs — open job listings",
     countryName: "Azerbaijan",
     knowsAbout: ["job listings", "vacancies", "hiring", "Azerbaijan job market", "Ingress ecosystem"],
   },
   ru: {
-    title: "Ingress Job — Открытые вакансии",
+    title: "Technology Jobs — Открытые вакансии",
     description:
       "Площадка вакансий в экосистеме Ingress. Смотрите открытые вакансии в Азербайджане; ищите по должности или компании, фильтруйте по городу и языку.",
     keywords: [
@@ -80,13 +80,13 @@ const HOME = {
       "IT вакансии Баку",
       "удалённая работа Азербайджан",
       "доска вакансий",
-      "Ingress Job",
+      "Technology Jobs",
       "Ingress",
       "Ingress Academy",
       "Aladdin Biyabangerd",
     ],
     breadcrumbHome: "Вакансии",
-    ogImageAlt: "Ingress Job — открытые вакансии",
+    ogImageAlt: "Technology Jobs — открытые вакансии",
     countryName: "Азербайджан",
     knowsAbout: ["вакансии", "поиск работы", "найм", "рынок труда Азербайджана", "экосистема Ingress"],
   },
@@ -254,26 +254,26 @@ const COMPANIES_COPY = {
   az: {
     title: "Şirkətlər — açıq vakansiyalar və müraciətlər",
     description:
-      "Ingress Job-da açıq elanı olan şirkətlər: elan sayı, texnologiyalar, uzaqdan iş və müraciət statistikası. Aladdin Biyabangerd tərəfindən qurulub.",
+      "Technology Jobs-da açıq elanı olan şirkətlər: elan sayı, texnologiyalar, uzaqdan iş və müraciət statistikası. Aladdin Biyabangerd tərəfindən qurulub.",
     breadcrumb: "Şirkətlər",
     company: (name, jobs) => `${name} — ${jobs} açıq elan`,
-    keywords: ["şirkətlər", "işəgötürənlər", "vakansiya şirkətləri", "Ingress Job", "Aladdin Biyabangerd"],
+    keywords: ["şirkətlər", "işəgötürənlər", "vakansiya şirkətləri", "Technology Jobs", "Aladdin Biyabangerd"],
   },
   en: {
     title: "Companies — open jobs and applications",
     description:
-      "Companies hiring on Ingress Job: open roles, tech stack, remote work and application stats. Built by Aladdin Biyabangerd.",
+      "Companies hiring on Technology Jobs: open roles, tech stack, remote work and application stats. Built by Aladdin Biyabangerd.",
     breadcrumb: "Companies",
     company: (name, jobs) => `${name} — ${jobs} open ${jobs === 1 ? "job" : "jobs"}`,
-    keywords: ["companies hiring", "employers Azerbaijan", "job board companies", "Ingress Job", "Aladdin Biyabangerd"],
+    keywords: ["companies hiring", "employers Azerbaijan", "job board companies", "Technology Jobs", "Aladdin Biyabangerd"],
   },
   ru: {
     title: "Компании — открытые вакансии и отклики",
     description:
-      "Компании с вакансиями на Ingress Job: количество вакансий, технологии, удалёнка и статистика откликов. Создано Aladdin Biyabangerd.",
+      "Компании с вакансиями на Technology Jobs: количество вакансий, технологии, удалёнка и статистика откликов. Создано Aladdin Biyabangerd.",
     breadcrumb: "Компании",
     company: (name, jobs) => `${name} — открытые вакансии: ${jobs}`,
-    keywords: ["компании", "работодатели", "вакансии компаний", "Ingress Job", "Aladdin Biyabangerd"],
+    keywords: ["компании", "работодатели", "вакансии компаний", "Technology Jobs", "Aladdin Biyabangerd"],
   },
 };
 
@@ -293,41 +293,41 @@ const TRENDS_COPY = {
   az: {
     title: "Bacarıq trendləri",
     description:
-      "Bu dövrdə hansı bacarıqlar önə çıxır? Ingress Job-un izlədiyi elanlarda tələb payı və həftəlik dəyişim — bütün bazarı əks etdirmir.",
+      "Bu dövrdə hansı bacarıqlar önə çıxır? Technology Jobs-un izlədiyi elanlarda tələb payı və həftəlik dəyişim — bütün bazarı əks etdirmir.",
     breadcrumb: "Trendlər",
     skillTitle: (name) => `${name} — bacarıq trendi`,
     skillDescription: (name) =>
-      `${name} bacarığının Ingress Job elanlarındakı tələb payı və həftəlik dəyişimi. Bütün bazarı əks etdirmir.`,
+      `${name} bacarığının Technology Jobs elanlarındakı tələb payı və həftəlik dəyişimi. Bütün bazarı əks etdirmir.`,
     skillJobsTitle: (name) => `${name} — tələb edən iş elanları`,
     skillJobsDescription: (name) =>
-      `${name} bacarığı tələb olunan açıq elanlar Ingress Job-da. Trend səhifəsi tələb payını göstərir.`,
-    keywords: ["bacarıq trendləri", "IT skills", "vakansiya tələbi", "Ingress Job", "Aladdin Biyabangerd"],
+      `${name} bacarığı tələb olunan açıq elanlar Technology Jobs-da. Trend səhifəsi tələb payını göstərir.`,
+    keywords: ["bacarıq trendləri", "IT skills", "vakansiya tələbi", "Technology Jobs", "Aladdin Biyabangerd"],
   },
   en: {
     title: "Skill trends",
     description:
-      "Who is ahead this period? Skill demand share and week-over-week change in listings Ingress Job tracks — not the whole market.",
+      "Who is ahead this period? Skill demand share and week-over-week change in listings Technology Jobs tracks — not the whole market.",
     breadcrumb: "Trends",
     skillTitle: (name) => `${name} — skill trend`,
     skillDescription: (name) =>
-      `Demand share and week-over-week change for ${name} in listings Ingress Job tracks — not the whole market.`,
+      `Demand share and week-over-week change for ${name} in listings Technology Jobs tracks — not the whole market.`,
     skillJobsTitle: (name) => `${name} — jobs requiring this skill`,
     skillJobsDescription: (name) =>
-      `Open roles on Ingress Job that ask for ${name}. The trend page shows demand share over time.`,
-    keywords: ["skill trends", "IT skills demand", "job market skills", "Ingress Job", "Aladdin Biyabangerd"],
+      `Open roles on Technology Jobs that ask for ${name}. The trend page shows demand share over time.`,
+    keywords: ["skill trends", "IT skills demand", "job market skills", "Technology Jobs", "Aladdin Biyabangerd"],
   },
   ru: {
     title: "Тренды навыков",
     description:
-      "Кто впереди в этом периоде? Доля спроса на навыки и недельное изменение в вакансиях Ingress Job — не весь рынок.",
+      "Кто впереди в этом периоде? Доля спроса на навыки и недельное изменение в вакансиях Technology Jobs — не весь рынок.",
     breadcrumb: "Тренды",
     skillTitle: (name) => `${name} — тренд навыка`,
     skillDescription: (name) =>
-      `Доля спроса и недельное изменение для ${name} в вакансиях Ingress Job — не весь рынок.`,
+      `Доля спроса и недельное изменение для ${name} в вакансиях Technology Jobs — не весь рынок.`,
     skillJobsTitle: (name) => `${name} — вакансии с этим навыком`,
     skillJobsDescription: (name) =>
-      `Открытые вакансии на Ingress Job, где требуется ${name}. Страница тренда показывает долю спроса.`,
-    keywords: ["тренды навыков", "спрос на навыки", "IT навыки", "Ingress Job", "Aladdin Biyabangerd"],
+      `Открытые вакансии на Technology Jobs, где требуется ${name}. Страница тренда показывает долю спроса.`,
+    keywords: ["тренды навыков", "спрос на навыки", "IT навыки", "Technology Jobs", "Aladdin Biyabangerd"],
   },
 };
 

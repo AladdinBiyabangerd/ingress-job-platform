@@ -76,7 +76,7 @@ def academy_career_path_url(path_id: str, *, utm_medium: str = "digest") -> str:
 
 COPY = {
     "az": {
-        "digest_subject": "Ingress Job: bu həftənin uyğun elanları",
+        "digest_subject": "Technology Jobs: bu həftənin uyğun elanları",
         "digest_intro": "Profilinizə uyğun yeni elanlar:",
         "digest_trends": "Bacarıq trendləri:",
         "digest_gap": "Öyrənmə tövsiyəsi:",
@@ -85,10 +85,10 @@ COPY = {
         "high_subject": "Yüksək uyğunluq: {title}",
         "high_body": "Yeni elan «{title}» ({company}) profilinizə yaxşı uyğun gəlir (skor {score}%).\n{explanation}\n\nElanı görüntüləmək üçün məktubdakı düyməyə klikləyin.",
         "unsub": "Abunəlikdən çıxmaq üçün məktubun altındakı linkə klikləyin.",
-        "footer": "Ingress Job",
+        "footer": "Technology Jobs",
     },
     "en": {
-        "digest_subject": "Ingress Job: matches for you this period",
+        "digest_subject": "Technology Jobs: matches for you this period",
         "digest_intro": "New jobs that fit your profile:",
         "digest_trends": "Skill trends:",
         "digest_gap": "Learning tip:",
@@ -97,10 +97,10 @@ COPY = {
         "high_subject": "Strong match: {title}",
         "high_body": "New job «{title}» ({company}) looks like a strong match (score {score}%).\n{explanation}\n\nOpen the job with the button in this email.",
         "unsub": "To unsubscribe, use the link at the bottom of this email.",
-        "footer": "Ingress Job",
+        "footer": "Technology Jobs",
     },
     "ru": {
-        "digest_subject": "Ingress Job: подходящие вакансии за период",
+        "digest_subject": "Technology Jobs: подходящие вакансии за период",
         "digest_intro": "Новые вакансии под ваш профиль:",
         "digest_trends": "Тренды навыков:",
         "digest_gap": "Совет по обучению:",
@@ -109,7 +109,7 @@ COPY = {
         "high_subject": "Сильное совпадение: {title}",
         "high_body": "Новая вакансия «{title}» ({company}) хорошо совпадает с профилем (оценка {score}%).\n{explanation}\n\nОткройте вакансию кнопкой в этом письме.",
         "unsub": "Чтобы отписаться, используйте ссылку внизу письма.",
-        "footer": "Ingress Job",
+        "footer": "Technology Jobs",
     },
 }
 
@@ -376,7 +376,7 @@ def send_marketing_email(
         return SendResult(False, "bad_smtp_config")
     message = EmailMessage()
     message["Subject"] = subject
-    message["From"] = formataddr(("Ingress Job", address))
+    message["From"] = formataddr(("Technology Jobs", address))
     message["To"] = to
     if unsubscribe_link:
         message["List-Unsubscribe"] = f"<{unsubscribe_link}>"

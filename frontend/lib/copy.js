@@ -26,7 +26,7 @@ export const copy = {
     signIn: "Daxil ol",
     createAccount: "Hesab yarat",
     jobBoardEyebrow: "JOB BOARD",
-    homeBrand: "Ingress Job",
+    homeBrand: "Technology Jobs",
     homeHeadline: "Növbəti imkanını tap…",
     openRolesLede: "Uzaqdan, relokasiya və şirkət elanlarını Ingress ekosistemində tapın.",
     searchKeywordPlaceholder: "Vəzifə, şirkət və ya açar söz",
@@ -70,7 +70,7 @@ export const copy = {
     post: "Elan yarat",
     ecosystemLine: "Ingress ekosisteminin bir hissəsi",
     ecosystemLinkLabel: "Ingress Academy",
-    ecosystemFooter: "Ingress Job — Ingress ekosisteminin iş elanları məhsulu. Giriş Ingress Academy hesabı ilədir.",
+    ecosystemFooter: "Technology Jobs — Ingress ekosisteminin iş elanları məhsulu. Giriş Ingress Academy hesabı ilədir.",
     openRole: "Aç",
     allCities: "Bütün ölkələr",
     count: (n) => `${n} elan`,
@@ -105,12 +105,12 @@ export const copy = {
       title: "Tez-tez verilən suallar",
       items: [
         {
-          q: "Ingress Job nədir?",
-          a: "Ingress Job Azərbaycanda açıq iş elanlarını bir yerdə göstərən platformadır və Ingress ekosisteminin bir hissəsidir. Vəzifə, şirkət, şəhər, dil və əməkhaqqı üzrə axtarıb süzə bilərsiniz.",
+          q: "Technology Jobs nədir?",
+          a: "Technology Jobs Azərbaycanda açıq iş elanlarını bir yerdə göstərən platformadır və Ingress ekosisteminin bir hissəsidir. Vəzifə, şirkət, şəhər, dil və əməkhaqqı üzrə axtarıb süzə bilərsiniz.",
         },
         {
           q: "Ingress ilə əlaqəsi nədir?",
-          a: "Ingress Job Ingress layihə ailəsinin məhsuludur. Giriş və qeydiyyat Ingress Academy hesabı ilə gedir — eyni hesab ekosistemdəki digər məhsullarda da istifadə oluna bilər.",
+          a: "Technology Jobs Ingress layihə ailəsinin məhsuludur. Giriş və qeydiyyat Ingress Academy hesabı ilə gedir — eyni hesab ekosistemdəki digər məhsullarda da istifadə oluna bilər.",
         },
         {
           q: "Elanlara baxmaq pulsuzdur?",
@@ -309,7 +309,7 @@ export const copy = {
     trendsWindowUnit: "gün",
     trendsWindowApply: "Göstər",
     trendsDisclaimer:
-      "Trendlər yalnız Ingress Job-un izlədiyi elanlar əsasında hesablanır, bütün bazarı əks etdirmir.",
+      "Trendlər yalnız Technology Jobs-un izlədiyi elanlar əsasında hesablanır, bütün bazarı əks etdirmir.",
     trendsPulseLive: "Canlı bacarıq nəbzi",
     trendsPulseWindowHint: (n) => `Son ${n} gün`,
     trendsPulseTitleLead: "Bu dövrdə",
@@ -1338,7 +1338,7 @@ export const copy = {
     signIn: "Sign in",
     createAccount: "Create account",
     jobBoardEyebrow: "JOB BOARD",
-    homeBrand: "Ingress Job",
+    homeBrand: "Technology Jobs",
     homeHeadline: "Find your next opportunity…",
     openRolesLede: "Find remote, relocation-friendly and company-posted IT roles in the Ingress ecosystem.",
     searchKeywordPlaceholder: "Job title, company, or keyword",
@@ -1382,7 +1382,7 @@ export const copy = {
     post: "Post a job",
     ecosystemLine: "Part of the Ingress ecosystem",
     ecosystemLinkLabel: "Ingress Academy",
-    ecosystemFooter: "Ingress Job is the job board in the Ingress ecosystem. Sign-in uses your Ingress Academy account.",
+    ecosystemFooter: "Technology Jobs is the job board in the Ingress ecosystem. Sign-in uses your Ingress Academy account.",
     openRole: "Open",
     allCities: "All countries",
     count: (n) => `${n} ${n === 1 ? "job" : "jobs"}`,
@@ -1417,12 +1417,12 @@ export const copy = {
       title: "Common questions",
       items: [
         {
-          q: "What is Ingress Job?",
-          a: "Ingress Job is a board of open roles in Azerbaijan and part of the Ingress ecosystem. Search and filter by title, company, city, language, and salary.",
+          q: "What is Technology Jobs?",
+          a: "Technology Jobs is a board of open roles in Azerbaijan and part of the Ingress ecosystem. Search and filter by title, company, city, language, and salary.",
         },
         {
           q: "How does it relate to Ingress?",
-          a: "Ingress Job is a product in the Ingress family. Sign-in and registration use your Ingress Academy account — the same account can work across other products in the ecosystem.",
+          a: "Technology Jobs is a product in the Ingress family. Sign-in and registration use your Ingress Academy account — the same account can work across other products in the ecosystem.",
         },
         {
           q: "Is browsing free?",
@@ -1621,7 +1621,7 @@ export const copy = {
     trendsWindowPrefix: "Last",
     trendsWindowUnit: "days",
     trendsWindowApply: "Show",
-    trendsDisclaimer: "Trends reflect only listings Ingress Job tracks — not the whole market.",
+    trendsDisclaimer: "Trends reflect only listings Technology Jobs tracks — not the whole market.",
     trendsPulseLive: "Live skill pulse",
     trendsPulseWindowHint: (n) => `Last ${n} days`,
     trendsPulseTitleLead: "Who is",
@@ -2652,7 +2652,7 @@ export const copy = {
     signIn: "Войти",
     createAccount: "Создать аккаунт",
     jobBoardEyebrow: "JOB BOARD",
-    homeBrand: "Ingress Job",
+    homeBrand: "Technology Jobs",
     homeHeadline: "Найдите следующую возможность…",
     openRolesLede: "Находите удалённые, релокационные и корпоративные IT-вакансии в экосистеме Ingress.",
     searchKeywordPlaceholder: "Должность, компания или ключевое слово",
@@ -2696,7 +2696,7 @@ export const copy = {
     post: "Разместить вакансию",
     ecosystemLine: "Часть экосистемы Ingress",
     ecosystemLinkLabel: "Ingress Academy",
-    ecosystemFooter: "Ingress Job — площадка вакансий в экосистеме Ingress. Вход через аккаунт Ingress Academy.",
+    ecosystemFooter: "Technology Jobs — площадка вакансий в экосистеме Ingress. Вход через аккаунт Ingress Academy.",
     openRole: "Открыть",
     allCities: "Все страны",
     count: (n) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? "вакансия" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? "вакансии" : "вакансий"}`,
@@ -2731,12 +2731,12 @@ export const copy = {
       title: "Частые вопросы",
       items: [
         {
-          q: "Что такое Ingress Job?",
-          a: "Ingress Job — площадка открытых вакансий в Азербайджане и часть экосистемы Ingress. Ищите и фильтруйте по должности, компании, городу, языку и зарплате.",
+          q: "Что такое Technology Jobs?",
+          a: "Technology Jobs — площадка открытых вакансий в Азербайджане и часть экосистемы Ingress. Ищите и фильтруйте по должности, компании, городу, языку и зарплате.",
         },
         {
           q: "Как это связано с Ingress?",
-          a: "Ingress Job — продукт семейства Ingress. Вход и регистрация идут через аккаунт Ingress Academy — тот же аккаунт можно использовать в других продуктах экосистемы.",
+          a: "Technology Jobs — продукт семейства Ingress. Вход и регистрация идут через аккаунт Ingress Academy — тот же аккаунт можно использовать в других продуктах экосистемы.",
         },
         {
           q: "Просмотр бесплатный?",
@@ -2936,7 +2936,7 @@ export const copy = {
     trendsWindowUnit: "дн.",
     trendsWindowApply: "Показать",
     trendsDisclaimer:
-      "Тренды считаются только по вакансиям, которые отслеживает Ingress Job, а не по всему рынку.",
+      "Тренды считаются только по вакансиям, которые отслеживает Technology Jobs, а не по всему рынку.",
     trendsPulseLive: "Живой пульс навыков",
     trendsPulseWindowHint: (n) => `За ${n} дн.`,
     trendsPulseTitleLead: "Кто",

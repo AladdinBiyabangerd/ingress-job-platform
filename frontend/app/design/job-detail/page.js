@@ -12,7 +12,7 @@ const LABELS = {
 };
 
 export const metadata = {
-  title: "Job Detail design preview — Ingress Job",
+  title: "Job Detail design preview — Technology Jobs",
   robots: { index: false, follow: false },
 };
 

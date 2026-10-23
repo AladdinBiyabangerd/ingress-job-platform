@@ -114,7 +114,7 @@ class RequestTrace:
 
 _docs = "/docs" if _debug() else None
 app = FastAPI(
-    title="Ingress Job",
+    title="Technology Jobs",
     version="0.0.1",
     docs_url=_docs,
     redoc_url="/redoc" if _debug() else None,

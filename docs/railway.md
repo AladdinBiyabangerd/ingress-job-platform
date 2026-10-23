@@ -90,7 +90,7 @@ that file is applied; set them yourself only if you use another bucket):
 | `EMAIL_USE_TLS` | Academy STARTTLS flag. Default true. |
 | `EMAIL_USE_SSL` | Academy SSL flag. Default false. |
 | `EMAIL_TIMEOUT` | Academy SMTP timeout in seconds. Default 20. |
-| `DEFAULT_FROM_EMAIL` | Academy From address. The display name sent by this API is Ingress Job. |
+| `DEFAULT_FROM_EMAIL` | Academy From address. The display name sent by this API is Technology Jobs. |
 | `OIDC_ISSUER` | Same name the API already uses. |
 | `OIDC_AUDIENCE` | Same name the API already uses. |
 | `OIDC_JWKS_URL` | Same name the API already uses. |

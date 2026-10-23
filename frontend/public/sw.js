@@ -1,4 +1,4 @@
-/* Ingress Job Web Push service worker (engagement Phase 5). */
+/* Technology Jobs Web Push service worker (engagement Phase 5). */
 
 self.addEventListener("push", (event) => {
   let data = {};
@@ -11,7 +11,7 @@ self.addEventListener("push", (event) => {
       data = {};
     }
   }
-  const title = (data && data.title) || "Ingress Job";
+  const title = (data && data.title) || "Technology Jobs";
   const options = {
     body: (data && data.body) || "",
     data: { url: (data && data.url) || "/" },

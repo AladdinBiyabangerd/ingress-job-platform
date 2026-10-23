@@ -454,7 +454,7 @@ export function Shell({ locale, mode, jobId, companySlug, skillId, children }) {
           <div className="top-left">
             <PersistedBrowseLink locale={locale} className="brand">
               <img className="mark" src="/ingress-mark.svg" alt="" aria-hidden="true" />
-              <span className="brand-text">Ingress Job</span>
+              <span className="brand-text">Technology Jobs</span>
             </PersistedBrowseLink>
             <PrimaryNav
               locale={locale}

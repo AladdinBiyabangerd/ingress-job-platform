@@ -298,10 +298,10 @@ class NotificationTests(unittest.TestCase):
                 },
             )
         approved = RecordingSMTP.sent[-1].messages[-1]
-        self.assertEqual(approved["From"], "Ingress Job <jobs@example.test>")
+        self.assertEqual(approved["From"], "Technology Jobs <jobs@example.test>")
         self.assertEqual(approved["To"], "owner@example.test")
         self.assertEqual(approved["Subject"], "Your ad was approved: Backend engineer")
-        self.assertIn("Ingress Job", approved.get_content())
+        self.assertIn("Technology Jobs", approved.get_content())
         self.assertNotIn("Reason:", approved.get_content())
 
         with patch("smtplib.SMTP", RecordingSMTP):
