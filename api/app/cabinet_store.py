@@ -1165,6 +1165,98 @@ def approve_ads_by_threshold(
     return approve_ads(ids, max_ids=None)
 
 
+def pending_ids_by_threshold(*, score: str, op: str, threshold: int) -> list[int]:
+    """Pending queue ad ids whose AI/rule percent matches op+threshold (newest first).
+
+    Same match as «Faizə görə dərc et»: rows without that score never match.
+    """
+    with _LOCK:
+        conn = _connect()
+        try:
+            return _ids_by_threshold(conn, score=score, op=op, threshold=threshold, status=PENDING)
+        finally:
+            conn.close()
+
+
+def _threshold_reject_reason(score: str, op: str, threshold: int) -> str:
+    kind = "AI" if score == "ai" else "Qayda"
+    sign = "≤" if op == "lte" else "≥"
+    return f"Faizə görə toplu rədd: {kind} {sign} {threshold}%"
+
+
+def reject_ads_by_threshold(
+    *,
+    score: str,
+    op: str,
+    threshold: int,
+    reason: str = "",
+) -> dict:
+    """Reject every pending ad whose AI/rule percent matches the threshold.
+
+    Mirrors ``reject_ad`` per row (reason stored, owner notified) in one
+    transaction; emails go out after commit. Non-pending rows are untouched.
+    """
+    cleaned = " ".join((reason or "").split())
+    if len(cleaned) > 400:
+        raise CabinetError(422, "Rədd səbəbi 400 simvoldan uzun ola bilməz")
+    notes: list[dict] = []
+    rejected: list[int] = []
+    with _LOCK:
+        conn = _connect()
+        try:
+            ids = _ids_by_threshold(
+                conn,
+                score=score,
+                op=op,
+                threshold=threshold,
+                status=PENDING,
+            )
+            why = cleaned or _threshold_reject_reason(score, op, threshold)
+            now = _now()
+            for job_id in ids:
+                updated = conn.execute(
+                    """
+                    UPDATE jobs
+                    SET status = ?, reject_reason = ?, updated_at = ?
+                    WHERE id = ? AND status = ?
+                    """,
+                    (REJECTED, why, now, job_id, PENDING),
+                )
+                if not updated.rowcount:
+                    continue
+                rejected.append(job_id)
+                row = conn.execute(
+                    f"SELECT {_MOD_COLS} FROM jobs WHERE id = ?",
+                    (job_id,),
+                ).fetchone()
+                owner = (row["owner_subject"] or "").strip() if row is not None else ""
+                if owner:
+                    from app.notifications import insert_notification
+
+                    note = insert_notification(
+                        conn,
+                        recipient=owner,
+                        kind="ad_rejected",
+                        job_id=job_id,
+                        job_title=row["title"] or "",
+                        application_id=None,
+                        status=REJECTED,
+                        reason=why,
+                        language=row["language"] or "",
+                    )
+                    if note:
+                        notes.append(note)
+            conn.commit()
+        finally:
+            conn.close()
+    if notes:
+        from app.notifications import deliver_email
+
+        for note in notes:
+            deliver_email(note)
+    return {"rejected": len(rejected), "ids": rejected}
+
+
 def _recheck_eligible(row: sqlite3.Row, *, scope: str) -> bool:
     status = row["status"] or ""
     if scope == "queue":

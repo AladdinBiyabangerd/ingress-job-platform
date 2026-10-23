@@ -651,19 +651,20 @@ export const copy = {
     adminThresholdNone: "Bu faizə uyğun gözləyən elan yoxdur.",
     adminRecheckNone: "AI skoru olmayan gözləyən elan yoxdur.",
     adminThresholdRecheckTitle:
-      "Seçilmiş elanları, seçim yoxdursa siyahı filtrinə uyğun gözləyən elanları (limitə qədər) AI-a yenidən göndərir. Köhnə AI nəticəsi istifadə olunmur, yenisi yazılır.",
-    adminRecheckLimit: "Limit",
-    adminRecheckLimitTitle: "Heç nə seçilməyibsə, filtrə uyğun ən çox neçə elan yoxlansın (1–200, cədvəldəki sıra ilə)",
-    adminRecheckConfirmSelected: (n) =>
-      `Seçilmiş ${n} elan AI ilə yenidən yoxlansın? Mövcud AI nəticəsi yenilənəcək.`,
-    adminRecheckConfirmFiltered: (n) =>
-      `Filtrə uyğun ${n} gözləyən elan AI ilə yenidən yoxlansın? Mövcud AI nəticəsi yenilənəcək.`,
-    adminRecheckNoneFiltered: "Filtrə uyğun gözləyən elan yoxdur.",
+      "Seçilmiş faiz növünə və rəqəmə uyğun bütün gözləyən elanları (limitsiz) AI-a yenidən göndərir. Köhnə AI nəticəsi istifadə olunmur, yenisi yazılır. Gündəlik AI limiti bitsə dayanır.",
+    adminRecheckConfirmThreshold: (n) =>
+      `Bu faizə uyğun ${n} gözləyən elan AI ilə yenidən yoxlansın? Hər elan ayrıca pullu AI sorğusudur (təxminən 10–45 san). Mövcud AI nəticəsi yenilənəcək.`,
+    adminRecheckQueued: (n) =>
+      `${n} elan AI yoxlamasına göndərildi. Arxa fonda bir-bir yoxlanır, səhifəni yeniləsəniz də davam edir.`,
+    adminRecheckBudgetHalt: (left) =>
+      `Gündəlik AI limiti bitdi və ya AI söndürülüb — ${left} elan yoxlanmadan qaldı.`,
+    adminThresholdReject: "Faizə uyğun rədd et",
+    adminThresholdRejectTitle: "Seçilmiş faiz növünə və rəqəmə uyğun bütün gözləyən elanları rədd edir.",
+    adminThresholdRejectConfirm: (n) =>
+      `Bu faizə uyğun ${n} gözləyən elan rədd edilsin? Bu, geri qaytarılmır (Rədd edilənlər bölməsindən yenidən dərc etmək olar).`,
+    adminThresholdRejectedNote: (n) => `${n} elan rədd edildi.`,
+    adminThresholdRejectReason: (kind, op, n) => `Faizə görə toplu rədd: ${kind} ${op} ${n}%`,
     adminRecheckBusy: "AI yoxlama artıq gedir. Bitməsini gözləyin və ya dayandırın.",
-    adminRecheckCapped: (total, requested) =>
-      `Limitə görə ${requested} elandan yalnız ${total} elan yoxlandı.`,
-    adminBackfillConfidenceTitle:
-      "Yalnız faizi olmayan gözləyən elanları doldurur: əvvəl qayda faizi, sonra ən çox 40 elana AI faizi. Mövcud faizlərə toxunmur.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI yoxlama: ${checked} yoxlandı, ${rejected} rədd, ${failed} uğursuz.`,
     adminRecheckCrawledNote: (checked, rejected, hidden, failed) =>
@@ -677,9 +678,6 @@ export const copy = {
     adminRecheckCrawledStoppedNote: (checked, rejected, hidden, failed) =>
       `Dayandırıldı (edilənlər saxlanıldı): ${checked} yoxlandı, ${rejected} rədd, ${hidden} gizlədildi, ${failed} uğursuz.`,
     adminRecheckBudgetStop: "AI cavab vermədi (limit/off). Qalanlar sonra davam edə bilər.",
-    adminBackfillConfidence: "Köhnə faizləri doldur",
-    adminBackfillNote: (rule, checked, rejected, failed, left) =>
-      `Faiz: qayda ${rule}, AI ${checked} (rədd ${rejected}, uğursuz ${failed}), qalan ${left}.`,
     rejectReason: "Rədd səbəbi",
     rejectReasonRequired: "Rədd səbəbi yazılmalıdır.",
     resubmitHint: "Rədd edilmiş elanı saxlayanda o yenidən moderasiyaya düşür və ictimai siyahıdan kənarda qalır.",
@@ -1898,19 +1896,20 @@ export const copy = {
     adminThresholdNone: "No pending ads match this percent.",
     adminRecheckNone: "No pending ads without an AI score.",
     adminThresholdRecheckTitle:
-      "Sends the selected ads, or with no selection the pending ads matching the list filter (up to the limit), to the AI again. The old AI result is not reused; a new one is written.",
-    adminRecheckLimit: "Limit",
-    adminRecheckLimitTitle: "With nothing selected, how many filtered ads to check at most (1–200, in table order)",
-    adminRecheckConfirmSelected: (n) =>
-      `Re-check ${n} selected ads with AI? The current AI result will be replaced.`,
-    adminRecheckConfirmFiltered: (n) =>
-      `Re-check ${n} pending ads matching the filter with AI? The current AI result will be replaced.`,
-    adminRecheckNoneFiltered: "No pending ads match the filter.",
+      "Sends every pending ad matching the chosen score type and percent (no limit) to the AI again. The old AI result is not reused; a new one is written. Stops if the daily AI budget runs out.",
+    adminRecheckConfirmThreshold: (n) =>
+      `Re-check ${n} matching pending ads with AI? Each ad is a separate paid AI call (about 10–45 s). The current AI result will be replaced.`,
+    adminRecheckQueued: (n) =>
+      `${n} ads queued for AI re-check. They are checked one by one in the background and continue even if you reload the page.`,
+    adminRecheckBudgetHalt: (left) =>
+      `Daily AI budget ran out or AI is switched off — ${left} ads were left unchecked.`,
+    adminThresholdReject: "Reject by percent",
+    adminThresholdRejectTitle: "Rejects every pending ad matching the chosen score type and percent.",
+    adminThresholdRejectConfirm: (n) =>
+      `Reject ${n} matching pending ads? (You can publish them again from the Rejected tab.)`,
+    adminThresholdRejectedNote: (n) => `${n} ads rejected.`,
+    adminThresholdRejectReason: (kind, op, n) => `Bulk reject by percent: ${kind} ${op} ${n}%`,
     adminRecheckBusy: "An AI re-check is already running. Wait for it or stop it.",
-    adminRecheckCapped: (total, requested) =>
-      `Limit applied: checked the first ${total} of ${requested} ads.`,
-    adminBackfillConfidenceTitle:
-      "Fills only pending ads with no percent: rule percent first, then AI percent for up to 40 ads. Existing percents are left alone.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI recheck: ${checked} checked, ${rejected} rejected, ${failed} failed.`,
     adminRecheckCrawledNote: (checked, rejected, hidden, failed) =>
@@ -1924,9 +1923,6 @@ export const copy = {
     adminRecheckCrawledStoppedNote: (checked, rejected, hidden, failed) =>
       `Stopped (kept what finished): ${checked} checked, ${rejected} rejected, ${hidden} hidden, ${failed} failed.`,
     adminRecheckBudgetStop: "AI did not respond (budget/off). Remaining can continue later.",
-    adminBackfillConfidence: "Fill missing percents",
-    adminBackfillNote: (rule, checked, rejected, failed, left) =>
-      `Scores: rule ${rule}, AI ${checked} (rejected ${rejected}, failed ${failed}), left ${left}.`,
     rejectReason: "Rejection reason",
     rejectReasonRequired: "A rejection reason is required.",
     resubmitHint: "Saving a rejected ad sends it back to moderation and keeps it off the public list.",
@@ -3147,19 +3143,20 @@ export const copy = {
     adminThresholdNone: "Нет ожидающих объявлений с таким процентом.",
     adminRecheckNone: "Нет ожидающих объявлений без AI-оценки.",
     adminThresholdRecheckTitle:
-      "Отправляет выбранные объявления, а без выбора — ожидающие объявления по фильтру списка (до лимита), в AI заново. Старый результат AI не используется, записывается новый.",
-    adminRecheckLimit: "Лимит",
-    adminRecheckLimitTitle: "Если ничего не выбрано — сколько объявлений по фильтру проверить максимум (1–200, по порядку таблицы)",
-    adminRecheckConfirmSelected: (n) =>
-      `Перепроверить ${n} выбранных объявлений через AI? Текущий результат AI будет заменён.`,
-    adminRecheckConfirmFiltered: (n) =>
-      `Перепроверить ${n} ожидающих объявлений по фильтру через AI? Текущий результат AI будет заменён.`,
-    adminRecheckNoneFiltered: "Нет ожидающих объявлений по фильтру.",
+      "Отправляет в AI заново все ожидающие объявления по выбранному типу оценки и проценту (без лимита). Старый результат AI не используется, записывается новый. Останавливается, если дневной лимит AI исчерпан.",
+    adminRecheckConfirmThreshold: (n) =>
+      `Перепроверить AI ${n} подходящих ожидающих объявлений? Каждое — отдельный платный запрос к AI (примерно 10–45 с). Текущий результат AI будет заменён.`,
+    adminRecheckQueued: (n) =>
+      `${n} объявлений отправлено на проверку AI. Они проверяются по одному в фоне и продолжаются даже после перезагрузки страницы.`,
+    adminRecheckBudgetHalt: (left) =>
+      `Дневной лимит AI исчерпан или AI выключен — ${left} объявлений остались непроверенными.`,
+    adminThresholdReject: "Отклонить по %",
+    adminThresholdRejectTitle: "Отклоняет все ожидающие объявления по выбранному типу оценки и проценту.",
+    adminThresholdRejectConfirm: (n) =>
+      `Отклонить ${n} подходящих ожидающих объявлений? (Их можно снова опубликовать во вкладке «Отклонённые».)`,
+    adminThresholdRejectedNote: (n) => `Отклонено объявлений: ${n}.`,
+    adminThresholdRejectReason: (kind, op, n) => `Массовое отклонение по %: ${kind} ${op} ${n}%`,
     adminRecheckBusy: "Проверка AI уже идёт. Дождитесь окончания или остановите.",
-    adminRecheckCapped: (total, requested) =>
-      `Из-за лимита проверены первые ${total} из ${requested} объявлений.`,
-    adminBackfillConfidenceTitle:
-      "Заполняет только ожидающие объявления без процента: сначала процент по правилам, затем AI для не более 40 объявлений. Существующие проценты не трогает.",
     adminRecheckNote: (checked, rejected, failed) =>
       `AI: проверено ${checked}, отклонено ${rejected}, ошибка ${failed}.`,
     adminRecheckCrawledNote: (checked, rejected, hidden, failed) =>
@@ -3173,9 +3170,6 @@ export const copy = {
     adminRecheckCrawledStoppedNote: (checked, rejected, hidden, failed) =>
       `Остановлено (сделанное сохранено): проверено ${checked}, отклонено ${rejected}, скрыто ${hidden}, ошибка ${failed}.`,
     adminRecheckBudgetStop: "AI не ответил (лимит/выкл). Остальное можно продолжить позже.",
-    adminBackfillConfidence: "Заполнить старые %",
-    adminBackfillNote: (rule, checked, rejected, failed, left) =>
-      `Проценты: правило ${rule}, AI ${checked} (откл. ${rejected}, ошибка ${failed}), осталось ${left}.`,
     rejectReason: "Причина отклонения",
     rejectReasonRequired: "Нужно написать причину отклонения.",
     resubmitHint: "Сохранение отклонённого объявления снова отправляет его на модерацию и оставляет вне общего списка.",

@@ -10,9 +10,8 @@ import { applyFormFromJob, applyFormPayload, applyFormReady } from "../lib/apply
 import { hrefFor, text } from "../lib/copy";
 import { calendarDate } from "../lib/dates";
 import { LIST_PAGE_SIZE, usePagination } from "../lib/pagination";
+import { thresholdMatchIds } from "../lib/admin-threshold";
 import {
-  RECHECK_DEFAULT_LIMIT,
-  RECHECK_FRESH_MAX,
   forgetRecheckJob,
   pollRecheckJob,
   progressFromRecheck,
@@ -23,11 +22,11 @@ import {
   adminActJob,
   adminApproveBulk,
   adminApproveThreshold,
-  adminBackfillConfidence,
   adminCancelRecheckMarketFit,
   adminPatchJob,
   adminStartRecheckMarketFit,
   adminRejectJob,
+  adminRejectThreshold,
   crawledPatchJob,
   fetchAdminJob,
   refreshAdminQueue,
@@ -90,35 +89,6 @@ function confidenceCell(value, reason) {
     );
   }
   return <span className="admin-mod-pct">{label}</span>;
-}
-
-function jobScore(job, score) {
-  const raw = score === "rule" ? job.rule_confidence : job.ai_confidence;
-  if (raw == null || raw === "") return null;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : null;
-}
-
-/** Publish filter: only ads that already have a numeric score. */
-function thresholdMatchIds(items, score, op, threshold, status = "pending") {
-  const cut = Number(threshold);
-  const want = status === "rejected" ? "rejected" : "pending";
-  if (!Number.isFinite(cut)) return [];
-  return items
-    .filter((job) => {
-      if (job.status !== want) return false;
-      const value = jobScore(job, score);
-      if (value == null) return false;
-      return op === "lte" ? value <= cut : value >= cut;
-    })
-    .map((job) => job.id);
-}
-
-/** Re-check limit (no selection): 1..RECHECK_FRESH_MAX, default RECHECK_DEFAULT_LIMIT. */
-function recheckLimitValue(raw) {
-  const n = Math.round(Number(raw));
-  if (!Number.isFinite(n) || n < 1) return RECHECK_DEFAULT_LIMIT;
-  return Math.min(RECHECK_FRESH_MAX, n);
 }
 
 function countThresholdMatches(items, score, op, threshold, status = "pending") {
@@ -209,7 +179,6 @@ export function Admin({
   const [recheckProgress, setRecheckProgress] = useState(null);
   const [recheckJobId, setRecheckJobId] = useState("");
   const [recheckStopping, setRecheckStopping] = useState(false);
-  const [recheckLimit, setRecheckLimit] = useState(String(RECHECK_DEFAULT_LIMIT));
   const [listFilter, setListFilter] = useState(emptyAdminListFilter);
 
   async function load() {
@@ -463,14 +432,16 @@ export function Admin({
     }
   }
 
-  async function approveByThreshold({ quick = false } = {}) {
+  /** «Faizə görə dərc et»: publish every ad matching kind + op + percent (after confirm). */
+  async function approveByThreshold() {
     const status = tab === "rejected" ? "rejected" : "pending";
     const matchCount = countThresholdMatches(items, scoreKind, scoreOp, scoreThreshold, status);
     if (!matchCount) {
+      setError("");
       setNote(t.adminThresholdNone);
       return;
     }
-    if (!quick && !window.confirm(t.adminThresholdConfirm(matchCount))) return;
+    if (!window.confirm(t.adminThresholdConfirm(matchCount))) return;
     setError("");
     setNote("");
     setBusy(true);
@@ -494,12 +465,56 @@ export function Admin({
     }
   }
 
+  /** «Faizə uyğun rədd et»: reject every pending ad matching kind + op + percent. */
+  async function rejectByThreshold() {
+    const matchCount = countThresholdMatches(items, scoreKind, scoreOp, scoreThreshold, "pending");
+    if (!matchCount) {
+      setError("");
+      setNote(t.adminThresholdNone);
+      return;
+    }
+    if (!window.confirm(t.adminThresholdRejectConfirm(matchCount))) return;
+    setError("");
+    setNote("");
+    setBusy(true);
+    const res = await adminRejectThreshold({
+      score: scoreKind,
+      op: scoreOp,
+      threshold: Number(scoreThreshold),
+      reason: t.adminThresholdRejectReason(
+        scoreKind === "rule" ? t.adminScoreRule : t.adminScoreAi,
+        scoreOp === "lte" ? t.adminOpLte : t.adminOpGte,
+        Number(scoreThreshold),
+      ),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setError(t.adminError);
+      return;
+    }
+    const count = Number(res.data?.rejected) || 0;
+    setNote(count ? t.adminThresholdRejectedNote(count) : t.adminThresholdNone);
+    try {
+      await load();
+    } catch {
+      setError(t.loadError);
+    }
+  }
+
   async function applyRecheckResult(last, suffix = "") {
     const checked = Number(last?.checked) || 0;
     const rejected = Number(last?.rejected) || 0;
     const failed = Number(last?.failed) || 0;
     const tail = suffix ? ` ${suffix}` : "";
-    if (last?.status === "failed") {
+    if (last?.status === "budget_stopped") {
+      const total = Number(last?.total) || 0;
+      const done = Number(last?.done) || 0;
+      setNote(
+        `${t.adminRecheckNote(checked, rejected, failed)} ${t.adminRecheckBudgetHalt(
+          Math.max(0, total - done),
+        )} [${String(last?.error || "").trim() || "ai_budget_exceeded"}]`,
+      );
+    } else if (last?.status === "failed") {
       setError(t.adminError);
     } else if (last?.status === "cancelled") {
       setNote(t.adminRecheckStoppedNote(checked, rejected, failed) + tail);
@@ -527,54 +542,40 @@ export function Admin({
   }
 
   /**
-   * «AI ilə yenidən yoxla»: always asks the AI again (fresh, cache bypassed).
-   * Selected pending rows win; with no selection the API takes the pending ads
-   * matching the list filter, in table order, up to the limit field.
-   * Filling only missing scores is «Köhnə faizləri doldur» (backfillConfidence).
+   * «AI ilə yenidən yoxla»: asks the AI again (fresh, cache bypassed) for EVERY
+   * pending ad matching kind + op + percent — no limit. The API runs it in a
+   * background thread one ad at a time; we poll progress. Daily AI budget still
+   * applies: the run stops early (budget_stopped) and the note says so.
    */
   async function recheckWithAi() {
-    const selectedIds = items
-      .filter((job) => job.status === "pending" && selected.has(job.id))
-      .map((job) => job.id);
-    const limit = recheckLimitValue(recheckLimit);
-    let planned;
-    let ask;
-    let ids = [];
-    let opts = { scope: "queue", fresh: true };
-    if (selectedIds.length) {
-      ids = selectedIds;
-      planned = Math.min(selectedIds.length, RECHECK_FRESH_MAX);
-      ask = t.adminRecheckConfirmSelected(planned);
-    } else {
-      const matches = viewItems.filter((job) => job.status === "pending").length;
-      if (!matches) {
-        setError("");
-        setNote(t.adminRecheckNoneFiltered);
-        return;
-      }
-      planned = Math.min(matches, limit);
-      ask = t.adminRecheckConfirmFiltered(planned);
-      opts = { ...opts, filter: listFilter, limit };
+    const planned = countThresholdMatches(items, scoreKind, scoreOp, scoreThreshold, "pending");
+    if (!planned) {
+      setError("");
+      setNote(t.adminThresholdNone);
+      return;
     }
-    if (!window.confirm(ask)) return;
+    if (!window.confirm(t.adminRecheckConfirmThreshold(planned))) return;
     setError("");
     setNote("");
     setBusy(true);
     setRecheckStopping(false);
     setRecheckProgress({ total: planned, done: 0, remaining: planned });
-    const started = await adminStartRecheckMarketFit(ids, opts);
+    const started = await adminStartRecheckMarketFit([], {
+      scope: "queue",
+      fresh: true,
+      threshold: { score: scoreKind, op: scoreOp, threshold: Number(scoreThreshold) },
+    });
     if (!started.ok || !started.data?.job_id) {
       setBusy(false);
       setRecheckProgress(null);
       if (started.status === 409) setNote(t.adminRecheckBusy);
-      else if (started.status === 422 && !selectedIds.length) setNote(t.adminRecheckNoneFiltered);
+      else if (started.status === 422) setNote(t.adminThresholdNone);
       else setError(t.adminError);
       return;
     }
     const jobId = started.data.job_id;
     const total = Number(started.data.total) || planned;
-    const requested = Number(started.data.requested) || total;
-    const cappedNote = started.data.capped ? t.adminRecheckCapped(total, requested) : "";
+    setNote(t.adminRecheckQueued(total));
     setRecheckJobId(jobId);
     rememberRecheckJob("queue", jobId);
     setRecheckProgress(progressFromRecheck(started.data, total));
@@ -594,33 +595,7 @@ export function Admin({
       setError(t.adminError);
       return;
     }
-    await applyRecheckResult(last, cappedNote);
-  }
-
-  async function backfillConfidence() {
-    setError("");
-    setNote("");
-    setBusy(true);
-    const res = await adminBackfillConfidence({ aiLimit: 40 });
-    setBusy(false);
-    if (!res.ok) {
-      setError(t.adminError);
-      return;
-    }
-    setNote(
-      t.adminBackfillNote(
-        Number(res.data?.rule_filled) || 0,
-        Number(res.data?.ai_checked) || 0,
-        Number(res.data?.ai_rejected) || 0,
-        Number(res.data?.ai_failed) || 0,
-        Number(res.data?.still_unscored) || 0,
-      ),
-    );
-    try {
-      await load();
-    } catch {
-      setError(t.loadError);
-    }
+    await applyRecheckResult(last);
   }
 
   const pendingIds = items.filter((job) => job.status === "pending").map((job) => job.id);
@@ -779,17 +754,9 @@ export function Admin({
                     type="button"
                     className="btn small primary"
                     disabled={busy}
-                    onClick={() => approveByThreshold({ quick: false })}
+                    onClick={approveByThreshold}
                   >
                     {t.adminThresholdPublish}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn small"
-                    disabled={busy}
-                    onClick={() => approveByThreshold({ quick: true })}
-                  >
-                    {t.adminThresholdPublishQuick}
                   </button>
                   {tab === "queue" ? (
                     <>
@@ -800,33 +767,16 @@ export function Admin({
                         onClick={recheckWithAi}
                         title={t.adminThresholdRecheckTitle}
                       >
-                        {selectedCount
-                          ? `${t.adminThresholdRecheck} (${selectedCount})`
-                          : t.adminThresholdRecheck}
+                        {t.adminThresholdRecheck}
                       </button>
-                      <label
-                        className={`admin-mod-threshold-field ${tableStyles.recheckLimit}`}
-                        title={t.adminRecheckLimitTitle}
-                      >
-                        <span className={tableStyles.recheckLimitLabel}>{t.adminRecheckLimit}</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={RECHECK_FRESH_MAX}
-                          value={recheckLimit}
-                          disabled={busy || selectedCount > 0}
-                          onChange={(event) => setRecheckLimit(event.target.value)}
-                          aria-label={t.adminRecheckLimitTitle}
-                        />
-                      </label>
                       <button
                         type="button"
-                        className="btn small"
+                        className="btn small red"
                         disabled={busy}
-                        onClick={backfillConfidence}
-                        title={t.adminBackfillConfidenceTitle}
+                        onClick={rejectByThreshold}
+                        title={t.adminThresholdRejectTitle}
                       >
-                        {t.adminBackfillConfidence}
+                        {t.adminThresholdReject}
                       </button>
                     </>
                   ) : null}

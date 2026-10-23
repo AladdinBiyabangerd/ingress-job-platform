@@ -1320,6 +1320,260 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(left, 0)
 
 
+    # --- queue threshold panel: «Faizə uyğun rədd et» + unlimited «AI ilə yenidən yoxla» ---
+
+    def _statuses(self, *ids):
+        conn = sqlite3.connect(self.db)
+        marks = ",".join("?" for _ in ids)
+        rows = conn.execute(
+            f"SELECT id, status, reject_reason FROM jobs WHERE id IN ({marks})", ids
+        ).fetchall()
+        conn.close()
+        return {row[0]: (row[1], row[2]) for row in rows}
+
+    def test_reject_threshold_requires_staff(self):
+        body = {"score": "ai", "op": "lte", "threshold": 40}
+        guest = self.client.post("/api/v1/admin/jobs/reject-threshold", json=body)
+        self.assertEqual(guest.status_code, 401)
+        with self._auth("job:employer", "admin-employer"):
+            denied = self.client.post(
+                "/api/v1/admin/jobs/reject-threshold",
+                headers={"Authorization": "Bearer test"},
+                json=body,
+            )
+        self.assertEqual(denied.status_code, 403)
+
+    def test_reject_threshold_validates_body(self):
+        headers = {"Authorization": "Bearer test"}
+        with self._auth("job:staff", "admin-staff"):
+            for bad in (
+                {"score": "x", "op": "lte", "threshold": 40},
+                {"score": "ai", "op": "lt", "threshold": 40},
+                {"score": "ai", "op": "lte", "threshold": 101},
+                {"score": "ai", "op": "lte", "threshold": -1},
+                {"score": "ai", "op": "lte", "threshold": 40, "status": "rejected"},
+            ):
+                res = self.client.post("/api/v1/admin/jobs/reject-threshold", headers=headers, json=bad)
+                self.assertEqual(res.status_code, 422, (bad, res.text))
+
+    def test_reject_threshold_ai_lte_rejects_only_matching_pending(self):
+        low = self._seed_pending("Low AI", ai=20, rule=95)
+        edge = self._seed_pending("Edge AI", ai=40, rule=95)
+        high = self._seed_pending("High AI", ai=80, rule=10)
+        unscored = self._seed_pending("No AI", ai=None, rule=10)
+        conn = sqlite3.connect(self.db)
+        cur = conn.execute(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key, owner_subject,
+                ai_confidence, market_fit_reason
+            ) VALUES ('Live low', 'Co', '', 'x', 'published', '2026-10-22T12:00:00+04:00',
+                      'live-low', '', 5, 'seed')
+            """
+        )
+        live = int(cur.lastrowid)
+        conn.commit()
+        conn.close()
+
+        with self._auth("job:staff", "admin-staff"):
+            res = self.client.post(
+                "/api/v1/admin/jobs/reject-threshold",
+                headers={"Authorization": "Bearer test"},
+                json={"score": "ai", "op": "lte", "threshold": 40},
+            )
+        self.assertEqual(res.status_code, 200, res.text)
+        self.assertEqual(res.json()["rejected"], 2)
+        self.assertEqual(sorted(res.json()["ids"]), sorted([low, edge]))
+        rows = self._statuses(low, edge, high, unscored, live)
+        self.assertEqual(rows[low][0], "rejected")
+        self.assertEqual(rows[edge][0], "rejected")
+        self.assertIn("AI ≤ 40", rows[low][1])
+        self.assertEqual(rows[high][0], "pending")
+        self.assertEqual(rows[unscored][0], "pending")
+        self.assertEqual(rows[live][0], "published")
+
+    def test_reject_threshold_rule_gte_uses_rule_score_and_custom_reason(self):
+        a = self._seed_pending("Rule high", ai=10, rule=90)
+        b = self._seed_pending("Rule low", ai=95, rule=30)
+        with self._auth("job:staff", "admin-staff"):
+            res = self.client.post(
+                "/api/v1/admin/jobs/reject-threshold",
+                headers={"Authorization": "Bearer test"},
+                json={"score": "rule", "op": "gte", "threshold": 90, "reason": "  Staff   cut  "},
+            )
+        self.assertEqual(res.status_code, 200, res.text)
+        self.assertEqual(res.json()["rejected"], 1)
+        rows = self._statuses(a, b)
+        self.assertEqual(rows[a], ("rejected", "Staff cut"))
+        self.assertEqual(rows[b][0], "pending")
+
+    def test_reject_threshold_no_match_returns_zero(self):
+        keep = self._seed_pending("Keep", ai=70)
+        with self._auth("job:staff", "admin-staff"):
+            res = self.client.post(
+                "/api/v1/admin/jobs/reject-threshold",
+                headers={"Authorization": "Bearer test"},
+                json={"score": "ai", "op": "gte", "threshold": 99},
+            )
+        self.assertEqual(res.status_code, 200, res.text)
+        self.assertEqual(res.json(), {"rejected": 0, "ids": []})
+        self.assertEqual(self._statuses(keep)[keep][0], "pending")
+
+    def test_reject_threshold_notifies_owner(self):
+        ad = self._pending()
+        conn = sqlite3.connect(self.db)
+        conn.execute("UPDATE jobs SET ai_confidence = 10 WHERE id = ?", (ad["id"],))
+        conn.commit()
+        conn.close()
+        with self._auth("job:staff", "admin-staff"):
+            with patch("app.notifications.deliver_email") as mail:
+                res = self.client.post(
+                    "/api/v1/admin/jobs/reject-threshold",
+                    headers={"Authorization": "Bearer test"},
+                    json={"score": "ai", "op": "lte", "threshold": 20},
+                )
+        self.assertEqual(res.status_code, 200, res.text)
+        self.assertEqual(res.json()["rejected"], 1)
+        conn = sqlite3.connect(self.db)
+        kinds = [
+            row[0]
+            for row in conn.execute(
+                "SELECT kind FROM notifications WHERE job_id = ?", (ad["id"],)
+            ).fetchall()
+        ]
+        conn.close()
+        self.assertIn("ad_rejected", kinds)
+        self.assertEqual(mail.call_count, 1)
+
+    def test_fresh_recheck_by_threshold_takes_all_matches_without_cap(self):
+        from app import market_fit_recheck_jobs as jobs
+
+        conn = sqlite3.connect(self.db)
+        conn.executemany(
+            """
+            INSERT INTO jobs (
+                title, company, city, text, status, created_at, norm_key, owner_subject,
+                ai_confidence, rule_confidence, market_fit_reason
+            ) VALUES (?, 'Co', '', 'x', 'pending', '2026-10-22T12:00:00+04:00', ?, '', ?, 50, 'seed')
+            """,
+            [
+                (f"Bulk {i}", f"bulk-thr-{i}", 30 if i % 2 == 0 else 90)
+                for i in range(2 * jobs.FRESH_MAX_IDS + 10)
+            ],
+        )
+        conn.commit()
+        want = [
+            row[0]
+            for row in conn.execute(
+                "SELECT id FROM jobs WHERE status = 'pending' AND ai_confidence <= 30 ORDER BY id DESC"
+            ).fetchall()
+        ]
+        conn.close()
+        self.assertGreater(len(want), jobs.FRESH_MAX_IDS)
+        seen = []
+
+        def record(ad_id, scope="queue", fresh=False):
+            seen.append((ad_id, fresh))
+            return "checked"
+
+        with self._auth("job:staff", "admin-staff"):
+            with patch("app.market_fit_recheck_jobs.recheck_one", side_effect=record):
+                res = self.client.post(
+                    "/api/v1/admin/jobs/recheck-market-fit",
+                    headers={"Authorization": "Bearer test"},
+                    json={
+                        "scope": "queue",
+                        "fresh": True,
+                        "threshold": {"score": "ai", "op": "lte", "threshold": 30},
+                    },
+                )
+                self.assertEqual(res.status_code, 200, res.text)
+                started = res.json()
+                body = self._poll_recheck(started["job_id"])
+        self.assertEqual(started["total"], len(want))
+        self.assertEqual(started["requested"], len(want))
+        self.assertFalse(started["capped"])
+        self.assertEqual(body["status"], "done")
+        self.assertEqual(body["checked"], len(want))
+        self.assertEqual([s[0] for s in seen], want)
+        self.assertTrue(all(s[1] for s in seen))
+
+    def test_fresh_recheck_by_threshold_rule_gte_and_no_match(self):
+        hit = self._seed_pending("Rule hit", ai=10, rule=85)
+        self._seed_pending("Rule miss", ai=99, rule=20)
+        seen = []
+
+        def record(ad_id, scope="queue", fresh=False):
+            seen.append(ad_id)
+            return "checked"
+
+        with self._auth("job:staff", "admin-staff"):
+            with patch("app.market_fit_recheck_jobs.recheck_one", side_effect=record):
+                res = self.client.post(
+                    "/api/v1/admin/jobs/recheck-market-fit",
+                    headers={"Authorization": "Bearer test"},
+                    json={"fresh": True, "threshold": {"score": "rule", "op": "gte", "threshold": 80}},
+                )
+                self.assertEqual(res.status_code, 200, res.text)
+                self._poll_recheck(res.json()["job_id"])
+            none = self.client.post(
+                "/api/v1/admin/jobs/recheck-market-fit",
+                headers={"Authorization": "Bearer test"},
+                json={"fresh": True, "threshold": {"score": "rule", "op": "gte", "threshold": 100}},
+            )
+            wrong_scope = self.client.post(
+                "/api/v1/admin/jobs/recheck-market-fit",
+                headers={"Authorization": "Bearer test"},
+                json={
+                    "scope": "crawled",
+                    "fresh": True,
+                    "threshold": {"score": "rule", "op": "gte", "threshold": 10},
+                },
+            )
+        self.assertEqual(seen, [hit])
+        self.assertEqual(none.status_code, 422, none.text)
+        self.assertEqual(wrong_scope.status_code, 422, wrong_scope.text)
+
+    def test_fresh_recheck_stops_early_when_ai_budget_is_spent(self):
+        import worker.market_fit as mf
+
+        ids = [self._seed_pending(f"Budget {i}", ai=20) for i in range(5)]
+        calls = []
+
+        def broke(ad_id, scope="queue", fresh=False):
+            calls.append(ad_id)
+            mf.last_miss_error = "ai_budget_exceeded"
+            return "failed"
+
+        with self._auth("job:staff", "admin-staff"):
+            try:
+                with patch("app.market_fit_recheck_jobs.recheck_one", side_effect=broke):
+                    res = self.client.post(
+                        "/api/v1/admin/jobs/recheck-market-fit",
+                        headers={"Authorization": "Bearer test"},
+                        json={"fresh": True, "threshold": {"score": "ai", "op": "lte", "threshold": 20}},
+                    )
+                    self.assertEqual(res.status_code, 200, res.text)
+                    body = None
+                    import time
+
+                    for _ in range(80):
+                        body = self.client.get(
+                            f"/api/v1/admin/jobs/recheck-market-fit/{res.json()['job_id']}",
+                            headers={"Authorization": "Bearer test"},
+                        ).json()
+                        if body["status"] not in ("queued", "running", "cancelling"):
+                            break
+                        time.sleep(0.05)
+            finally:
+                mf.last_miss_error = ""
+        self.assertEqual(body["status"], "budget_stopped")
+        self.assertEqual(body["error"], "ai_budget_exceeded")
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(body["total"], len(ids))
+        self.assertEqual(body["remaining"], len(ids) - 1)
+
+
 class AdminAiFlagTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

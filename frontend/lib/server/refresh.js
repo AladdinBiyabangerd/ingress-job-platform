@@ -5,8 +5,8 @@ import { adPayload } from "./ad";
 import { sessionAccess } from "./me";
 
 const TIMEOUT_MS = 10_000;
-/** Market-fit recheck/backfill: several sequential AI calls per request. */
-const AI_BATCH_TIMEOUT_MS = 120_000;
+/** Bulk threshold reject: many rows + owner e-mails in one request. */
+const BULK_TIMEOUT_MS = 60_000;
 const ID_OK = /^\d+$/;
 
 async function bearer() {
@@ -218,6 +218,18 @@ export async function adminApproveThreshold({ score, op, threshold, status = "pe
   return mutate("/api/v1/admin/jobs/approve-threshold", { body });
 }
 
+/** Queue «Faizə uyğun rədd et»: reject every pending ad matching score+op+threshold. */
+export async function adminRejectThreshold({ score, op, threshold, reason = "" }) {
+  const body = {
+    score: score === "rule" ? "rule" : "ai",
+    op: op === "lte" ? "lte" : "gte",
+    threshold: Math.max(0, Math.min(100, Number(threshold) || 0)),
+  };
+  const why = String(reason || "").trim().slice(0, 400);
+  if (why) body.reason = why;
+  return mutate("/api/v1/admin/jobs/reject-threshold", { body, timeoutMs: BULK_TIMEOUT_MS });
+}
+
 /** Max ads per fresh (cache-bypassing) AI re-check; mirrors API FRESH_MAX_IDS. */
 const RECHECK_FRESH_MAX = 200;
 
@@ -233,11 +245,13 @@ function scoreCut(value) {
  * - ids: explicit ads (checkbox selection). Wins when non-empty.
  * - filter (queue only, used when ids is empty): staff list filter
  *   {aiOp, aiValue, ruleOp, ruleValue, source}; the API picks matching pending ads.
+ * - threshold (queue only, used when ids is empty): {score, op, threshold};
+ *   the API takes EVERY matching pending ad (no limit, no fresh cap).
  * - fresh: ask the AI again (skip cached answer). limit: 1..RECHECK_FRESH_MAX.
  */
 export async function adminStartRecheckMarketFit(
   ids,
-  { scope = "queue", fresh = false, filter = null, limit = null } = {},
+  { scope = "queue", fresh = false, filter = null, limit = null, threshold = null } = {},
 ) {
   const list = Array.isArray(ids)
     ? ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
@@ -248,7 +262,13 @@ export async function adminStartRecheckMarketFit(
     ids: list.slice(0, 2000),
     scope: resolved,
   };
-  if (!list.length) {
+  if (!list.length && threshold && resolved === "queue") {
+    body.threshold = {
+      score: threshold.score === "rule" ? "rule" : "ai",
+      op: threshold.op === "lte" ? "lte" : "gte",
+      threshold: Math.max(0, Math.min(100, Math.round(Number(threshold.threshold) || 0))),
+    };
+  } else if (!list.length) {
     if (!filter || resolved !== "queue") return { ok: false, status: 422, data: {} };
     body.filter = {
       ai_op: filter.aiOp === "lte" ? "lte" : "gte",
@@ -348,13 +368,6 @@ export async function adminCancelJobTidy(jobId) {
   return mutate(`/api/v1/admin/job-tidy/run/${encodeURIComponent(id)}/cancel`, {
     method: "POST",
     timeoutMs: 15_000,
-  });
-}
-
-export async function adminBackfillConfidence({ aiLimit = 40 } = {}) {
-  return mutate("/api/v1/admin/jobs/backfill-confidence", {
-    body: { ai_limit: Math.max(0, Math.min(50, Number(aiLimit) || 0)) },
-    timeoutMs: AI_BATCH_TIMEOUT_MS,
   });
 }
 

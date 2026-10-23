@@ -22,6 +22,7 @@ from app.cabinet_store import (
     get_moderation,
     list_moderation,
     reject_ad,
+    reject_ads_by_threshold,
     staff_close_ad,
     staff_update_ad,
 )
@@ -96,6 +97,27 @@ class ThresholdApproveIn(BaseModel):
     status: str = Field(default="pending", pattern="^(pending|rejected)$")
 
 
+class ThresholdRejectIn(BaseModel):
+    """Queue «Faizə uyğun rədd et»: pending ads only."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    score: str = Field(pattern="^(ai|rule)$")
+    op: str = Field(pattern="^(gte|lte)$")
+    threshold: int = Field(ge=0, le=100)
+    reason: str = Field(default="", max_length=400)
+
+
+class RecheckThresholdIn(BaseModel):
+    """Queue threshold panel: every pending ad with AI/rule op+percent (no cap)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    score: str = Field(pattern="^(ai|rule)$")
+    op: str = Field(pattern="^(gte|lte)$")
+    threshold: int = Field(ge=0, le=100)
+
+
 class RecheckListFilterIn(BaseModel):
     """Same fields as the staff list filter bar (frontend/lib/admin-list-filter.js)."""
 
@@ -118,6 +140,8 @@ class RecheckMarketFitIn(BaseModel):
     # Used only when ids is empty: pending queue ads matching this filter.
     filter: RecheckListFilterIn | None = None
     limit: int | None = Field(default=None, ge=1, le=200)
+    # Used only when ids is empty (queue): all matching pending ads, limit ignored.
+    threshold: RecheckThresholdIn | None = None
 
 
 class JobTidyRunIn(BaseModel):
@@ -278,6 +302,18 @@ def approve_threshold(body: ThresholdApproveIn, _user: VerifiedAccess = Depends(
     )
 
 
+@router.post("/jobs/reject-threshold")
+def reject_threshold(body: ThresholdRejectIn, _user: VerifiedAccess = Depends(require_staff)) -> dict:
+    return _run(
+        lambda: reject_ads_by_threshold(
+            score=body.score,
+            op=body.op,
+            threshold=body.threshold,
+            reason=body.reason,
+        )
+    )
+
+
 @router.post("/jobs/recheck-market-fit")
 def recheck_fit(body: RecheckMarketFitIn, user: VerifiedAccess = Depends(require_staff)) -> dict:
     """Start async recheck; poll GET .../recheck-market-fit/{job_id} for progress."""
@@ -289,6 +325,7 @@ def recheck_fit(body: RecheckMarketFitIn, user: VerifiedAccess = Depends(require
             fresh=body.fresh,
             list_filter=body.filter.model_dump() if body.filter is not None else None,
             limit=body.limit,
+            threshold=body.threshold.model_dump() if body.threshold is not None else None,
         )
     )
 

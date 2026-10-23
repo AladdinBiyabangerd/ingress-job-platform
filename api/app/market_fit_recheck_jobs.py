@@ -4,10 +4,13 @@ POST starts a daemon thread that rechecks one ad at a time. Progress lives in
 the shared jobs DB so any API replica can answer GET polls.
 
 ``fresh`` runs (queue «AI ilə yenidən yoxla») bypass the AI answer cache so the
-model is really asked again; they are capped at ``FRESH_MAX_IDS`` ads per run
-and only one can be active per scope. The gateway's daily budget still applies.
-Targets are either explicit ids (checkbox selection) or, for the queue, the
-staff list filter + limit resolved server-side.
+model is really asked again; only one can be active per scope. The gateway's
+daily budget still applies: a fresh run stops early (status ``budget_stopped``)
+when the AI says it is over budget / switched off, instead of failing every
+remaining ad. Targets are explicit ids (capped at ``FRESH_MAX_IDS`` when
+fresh), the staff list filter + limit, or — for the queue threshold panel —
+every pending ad matching AI/rule op+percent, with no cap. The thread checks
+one ad at a time, so the HTTP start call returns at once and the UI polls.
 """
 
 from __future__ import annotations
@@ -25,6 +28,7 @@ from app.cabinet_store import (
     _connect,
     _now,
     pending_ids_by_list_filter,
+    pending_ids_by_threshold,
     recheck_one,
 )
 
@@ -58,6 +62,8 @@ _MAX_IDS = 2000
 _STALE_SECONDS = 90
 # Fresh (cache-bypassing) reruns cost one provider call per ad.
 FRESH_MAX_IDS = 200
+# AI miss reasons that will fail every remaining ad too → stop the run early.
+_HARD_STOP_ERRORS = frozenset({"ai_budget_exceeded", "ai_disabled", "market_fit_off"})
 
 
 def _ensure(conn) -> None:
@@ -189,21 +195,36 @@ def start_recheck_job(
     fresh: bool = False,
     list_filter: dict[str, Any] | None = None,
     limit: int | None = None,
+    threshold: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Start a background recheck.
 
     ``job_ids`` wins when given (checkbox selection). With no ids and a
     ``list_filter`` (queue only), pending ads matching the filter are taken in
     table order. ``limit`` trims either list; fresh runs are also capped at
-    ``FRESH_MAX_IDS``. Response adds ``requested`` (before trimming) and
-    ``capped``.
+    ``FRESH_MAX_IDS``. With no ids and a ``threshold`` ({score, op,
+    threshold}; queue only) every matching pending ad is taken — no limit and
+    no fresh cap. Response adds ``requested`` (before trimming) and ``capped``.
     """
     if scope not in ("queue", "crawled", "crawl_rejects"):
         raise CabinetError(422, "scope queue, crawled və ya crawl_rejects olmalıdır")
     if limit is not None and (limit < 1 or limit > FRESH_MAX_IDS):
         raise CabinetError(422, f"Limit 1–{FRESH_MAX_IDS} arasında olmalıdır")
     ordered = _normalize_ids(job_ids)
-    if not ordered and list_filter is not None:
+    by_threshold = False
+    if not ordered and threshold is not None:
+        if scope != "queue":
+            raise CabinetError(422, "Faizlə yoxlama yalnız növbə üçündür")
+        ordered = pending_ids_by_threshold(
+            score=str(threshold.get("score") or ""),
+            op=str(threshold.get("op") or ""),
+            threshold=int(threshold.get("threshold") or 0),
+        )
+        if not ordered:
+            raise CabinetError(422, "Bu faizə uyğun gözləyən elan yoxdur")
+        by_threshold = True
+        limit = None
+    elif not ordered and list_filter is not None:
         if scope != "queue":
             raise CabinetError(422, "Filtrlə yoxlama yalnız növbə üçündür")
         ordered = pending_ids_by_list_filter(**list_filter)
@@ -211,11 +232,11 @@ def start_recheck_job(
             raise CabinetError(422, "Filtrə uyğun gözləyən elan yoxdur")
     if not ordered:
         raise CabinetError(422, "Elan seçilməyib")
-    if len(ordered) > _MAX_IDS:
+    if len(ordered) > _MAX_IDS and not by_threshold:
         raise CabinetError(422, f"Birdən çox {_MAX_IDS} elan seçilə bilər")
     requested = len(ordered)
     cut = limit
-    if fresh:
+    if fresh and not by_threshold:
         cut = min(cut or FRESH_MAX_IDS, FRESH_MAX_IDS)
     if cut is not None:
         ordered = ordered[:cut]
@@ -371,6 +392,16 @@ def _finish(job_id: str, *, status: str, error: str = "") -> None:
         _inflight.discard(job_id)
 
 
+def _hard_stop_reason() -> str:
+    """AI miss reason that makes the rest of a fresh run pointless, else ''."""
+    try:
+        from worker.market_fit import last_miss_error
+    except Exception:
+        return ""
+    reason = (last_miss_error or "").strip()
+    return reason if reason in _HARD_STOP_ERRORS else ""
+
+
 def _run_job(job_id: str) -> None:
     try:
         with _LOCK:
@@ -427,6 +458,7 @@ def _run_job(job_id: str) -> None:
             except (TypeError, ValueError):
                 _bump(job_id, fields=["skipped"])
                 continue
+            stop_reason = ""
             if fresh:
                 outcome = recheck_one(ad_id, scope=scope, fresh=True)
             else:
@@ -452,8 +484,16 @@ def _run_job(job_id: str) -> None:
                         ad_id,
                         first_fail,
                     )
+                if fresh:
+                    stop_reason = _hard_stop_reason()
             else:
                 _bump(job_id, fields=["skipped"])
+            if stop_reason:
+                log.warning(
+                    "market_fit recheck job=%s stopped early: %s", job_id[:8], stop_reason
+                )
+                _finish(job_id, status="budget_stopped", error=stop_reason)
+                return
 
         if _should_stop(job_id):
             _finish(job_id, status="cancelled", error=first_fail)
