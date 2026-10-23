@@ -5,7 +5,7 @@ import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { refreshMyApplications } from "../lib/server/refresh";
 import { ApplicationsBoard } from "./applications-board";
-import { LoginLink } from "./login-link";
+import { AuthGate } from "./auth-gate";
 import { useInitialMe } from "./me-seed";
 import { PageChrome } from "./page-chrome";
 import { Shell } from "./shell";
@@ -80,17 +80,13 @@ export function MyApplications({ locale, initialItems = null }) {
             backLabel={t.breadcrumbHome}
             title={t.myApplications}
           />
-          <div className="h2-panel my-applications-gate">
-            <p>{t.applicationsGate}</p>
-            <div className="my-applications-gate-actions">
-              <LoginLink className="btn small board-auth-signin" intent="job_candidate" returnTo={returnTo}>
-                {t.signIn}
-              </LoginLink>
-              <LoginLink className="btn small primary" intent="job_candidate" returnTo={returnTo}>
-                {t.createAccount}
-              </LoginLink>
-            </div>
-          </div>
+          <AuthGate
+            locale={locale}
+            icon="applications"
+            title={t.applicationsGateTitle}
+            message={t.applicationsGate}
+            returnTo={returnTo}
+          />
         </div>
       )}
     </Shell>

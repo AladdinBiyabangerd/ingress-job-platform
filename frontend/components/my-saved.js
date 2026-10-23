@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import { refreshSavedJobs, unsaveJob } from "../lib/server/refresh";
-import { LoginLink } from "./login-link";
+import { AuthGate } from "./auth-gate";
 import { useInitialMe } from "./me-seed";
 import { PageChrome } from "./page-chrome";
 import { preloadSavedIds } from "./save-job-button";
@@ -211,17 +211,13 @@ export function MySaved({
             backLabel={t.breadcrumbHome}
             title={t.savedJobs}
           />
-          <div className="h2-panel my-saved-gate">
-            <p>{t.savedJobsGate}</p>
-            <div className="my-saved-gate-actions">
-              <LoginLink className="btn small board-auth-signin" intent="job_candidate" returnTo={returnTo}>
-                {t.signIn}
-              </LoginLink>
-              <LoginLink className="btn small primary" intent="job_candidate" returnTo={returnTo}>
-                {t.createAccount}
-              </LoginLink>
-            </div>
-          </div>
+          <AuthGate
+            locale={locale}
+            icon="saved"
+            title={t.savedJobsGateTitle}
+            message={t.savedJobsGate}
+            returnTo={returnTo}
+          />
         </div>
       )}
     </Shell>

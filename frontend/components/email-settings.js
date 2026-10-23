@@ -10,7 +10,7 @@ import {
   enableBrowserPush,
   pushSupported,
 } from "../lib/web-push";
-import { LoginLink } from "./login-link";
+import { AuthGate } from "./auth-gate";
 import { PageChrome } from "./page-chrome";
 import { Shell } from "./shell";
 import { useInitialMe } from "./me-seed";
@@ -485,17 +485,13 @@ export function EmailSettings({ locale, initialPrefs = null }) {
             backLabel={t.breadcrumbHome}
             title={t.emailSettingsTitle}
           />
-          <div className="h2-panel es-gate">
-            <p>{t.emailSettingsGate}</p>
-            <div className="es-gate-actions">
-              <LoginLink className="btn small board-auth-signin" intent="job_candidate" returnTo={returnTo}>
-                {t.signIn}
-              </LoginLink>
-              <LoginLink className="btn small primary" intent="job_candidate" returnTo={returnTo}>
-                {t.createAccount}
-              </LoginLink>
-            </div>
-          </div>
+          <AuthGate
+            locale={locale}
+            icon="notifications"
+            title={t.emailSettingsGateTitle}
+            message={t.emailSettingsGate}
+            returnTo={returnTo}
+          />
         </div>
       )}
     </Shell>

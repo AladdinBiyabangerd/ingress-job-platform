@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LoginLink } from "./login-link";
+import { AuthGate } from "./auth-gate";
 import { hrefFor, text } from "../lib/copy";
 import { fetchMe } from "../lib/me-client";
 import {
@@ -1478,25 +1478,13 @@ export function ProfileReview({ locale, initialProfile = null, initialRoles = nu
             backHref={hrefFor(locale, { mode: "profile" })}
             backLabel={t.profileTitle}
           />
-          <div className="h2-panel profile-review-gate">
-            <p>{t.profileGate}</p>
-            <div className="profile-review-gate-actions">
-              <LoginLink
-                className="btn small board-auth-signin"
-                intent="job_candidate"
-                returnTo={hrefFor(locale, { mode: "profileReview" })}
-              >
-                {t.signIn}
-              </LoginLink>
-              <LoginLink
-                className="btn small primary"
-                intent="job_candidate"
-                returnTo={hrefFor(locale, { mode: "profileReview" })}
-              >
-                {t.createAccount}
-              </LoginLink>
-            </div>
-          </div>
+          <AuthGate
+            locale={locale}
+            icon="profile"
+            title={t.profileReviewGateTitle}
+            message={t.profileGate}
+            returnTo={hrefFor(locale, { mode: "profileReview" })}
+          />
         </div>
       )}
     </Shell>
