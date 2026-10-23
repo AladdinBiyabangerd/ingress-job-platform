@@ -36,6 +36,7 @@ import { AdminCrawlRejects } from "./admin-crawl-rejects";
 import { AdminJobTidy } from "./admin-job-tidy";
 import { AdminListFilterBar } from "./admin-list-filter-bar";
 import { AdminOpsStatus } from "./admin-ops-status";
+import { AdminNotificationLog } from "./admin-notification-log";
 import { AdminRecheckProgress } from "./admin-recheck-progress";
 import { ApplyFormFields } from "./apply-form-fields";
 import { CollectedAdmin } from "./collected-admin";
@@ -55,6 +56,7 @@ const ADMIN_TABS = new Set([
   "tidy",
   "ai",
   "ops",
+  "notifs",
 ]);
 
 function normalizeAdminTab(value) {
@@ -682,6 +684,15 @@ export function Admin({
         <button
           type="button"
           role="tab"
+          aria-selected={tab === "notifs"}
+          className={tab === "notifs" ? "on" : ""}
+          onClick={() => selectTab("notifs")}
+        >
+          {t.notifLogTab}
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={tab === "manual"}
           className={tab === "manual" ? "on" : ""}
           onClick={() => selectTab("manual")}
@@ -1118,6 +1129,7 @@ export function Admin({
           <AdminAiFlags locale={locale} initial={initialAiFlags} />
         </div>
       ) : null}
+      {tab === "notifs" ? <AdminNotificationLog locale={locale} /> : null}
       {tab === "ops" || seenOps ? (
         <div hidden={tab !== "ops"}>
           <AdminOpsStatus locale={locale} />

@@ -16,15 +16,18 @@ from typing import Any
 
 from app.email_prefs import (
     already_logged,
+    claim_email,
     day_key,
     digest_enabled,
     ensure_email_tables,
+    finish_email,
     get_prefs,
     high_match_enabled,
     list_candidate_user_ids,
-    log_email,
     marketing_sent_today,
     period_key_for_digest,
+    prune_skip_log,
+    record_skip,
     unsubscribe_url,
 )
 logger = logging.getLogger("ingress-job.digests")
@@ -129,13 +132,28 @@ def _weekday_iso(when: datetime) -> int:
 
 
 def _due_for_digest(prefs: dict, *, when: datetime) -> bool:
+    """Is a digest due in the period that contains ``when``?
+
+    Daily: every day. Weekly: from the chosen weekday to the end of that ISO
+    week, so a Monday that was missed (deploy, SMTP error, daily cap) is caught
+    up on Tuesday–Sunday. Biweekly: from the chosen weekday of the first week of
+    the pair through the end of the second week. The per-period email_log row
+    (status ``sent``) keeps it to one digest per period.
+    """
     if not digest_enabled(prefs):
         return False
-    # Daily digests ignore send_weekday; weekly/biweekly wait for that ISO weekday.
-    if prefs.get("frequency") != "daily":
-        if int(prefs.get("send_weekday") or 0) != _weekday_iso(when):
-            return False
-    return True
+    frequency = prefs.get("frequency")
+    if frequency == "daily":
+        return True
+    try:
+        chosen = int(prefs.get("send_weekday") or 0)
+    except (TypeError, ValueError):
+        chosen = 0
+    if frequency == "biweekly":
+        iso = when.isocalendar()
+        if (iso.week - 1) % 2 == 1:
+            return True  # second week of the pair: the chosen day has passed
+    return _weekday_iso(when) >= chosen
 
 
 def _recipient(user_id: str) -> str:
@@ -144,19 +162,50 @@ def _recipient(user_id: str) -> str:
     return (contact_email_for(user_id) or "").strip().lower()
 
 
-def _top_matches(conn, *, user_id: str, limit: int, lang: str) -> list[dict]:
-    """Best current matches (no freshness filter). Used by digests + engagement."""
+def _top_matches(
+    conn,
+    *,
+    user_id: str,
+    limit: int,
+    lang: str,
+    fresh_since: datetime | None = None,
+) -> list[dict]:
+    """Best current matches. Used by digests + engagement.
+
+    With ``fresh_since`` the list is the top ``limit`` plus every other gated
+    match created on/after that date (searched over the whole scored list, not
+    only the top N), so a new 78% ad ranked 25th still counts as fresh.
+    """
     from app.matching import matches_payload
 
-    payload = matches_payload(conn, user_id=user_id, limit=max(limit, 20), lang=lang)
+    since_key = fresh_since.date().isoformat() if fresh_since is not None else None
+    if since_key:
+        payload = matches_payload(
+            conn,
+            user_id=user_id,
+            limit=max(limit, 20),
+            lang=lang,
+            fresh_since=since_key,
+        )
+    else:
+        payload = matches_payload(conn, user_id=user_id, limit=max(limit, 20), lang=lang)
     if not payload.get("matching_consent"):
         return []
-    items = payload.get("matches") or []
-    return list(items)[:limit]
+    items = list(payload.get("matches") or [])[:limit]
+    if since_key:
+        seen = {item.get("job_id") for item in items}
+        for item in payload.get("fresh_matches") or []:
+            if item.get("job_id") in seen:
+                continue
+            seen.add(item.get("job_id"))
+            items.append(item)
+    return items
 
 
 def _matches_since(conn, *, user_id: str, since: datetime, limit: int, lang: str) -> list[dict]:
-    items = _top_matches(conn, user_id=user_id, limit=max(limit, 20), lang=lang)
+    items = _top_matches(
+        conn, user_id=user_id, limit=max(limit, 20), lang=lang, fresh_since=since
+    )
     since_key = since.date().isoformat()
     fresh: list[dict] = []
     for item in items:
@@ -261,6 +310,37 @@ def _build_digest_body(
     return "\n".join(lines).strip() + "\n"
 
 
+class SendResult:
+    """Outcome of one SMTP send. Truthy only when the server accepted it."""
+
+    __slots__ = ("ok", "reason")
+
+    def __init__(self, ok: bool, reason: str = "") -> None:
+        self.ok = bool(ok)
+        self.reason = "" if ok else (reason or "send_failed")
+
+    def __bool__(self) -> bool:
+        return self.ok
+
+    def __repr__(self) -> str:
+        return f"SendResult(ok={self.ok}, reason={self.reason!r})"
+
+
+_UNCONFIGURED_LOGGED_AT = 0.0
+
+
+def _log_unconfigured(what: str) -> None:
+    """Loud, but at most every 10 minutes (one line per run, not per user)."""
+    import time
+
+    global _UNCONFIGURED_LOGGED_AT
+    now = time.monotonic()
+    if now - _UNCONFIGURED_LOGGED_AT < 600:
+        return
+    _UNCONFIGURED_LOGGED_AT = now
+    logger.error("marketing email not sent: %s is not configured", what)
+
+
 def send_marketing_email(
     *,
     to: str,
@@ -268,27 +348,32 @@ def send_marketing_email(
     body: str,
     unsubscribe_link: str,
     html_body: str | None = None,
-) -> None:
+) -> SendResult:
     """Like notifications.send_email, plus List-Unsubscribe headers.
 
     Plaintext ``body`` is always set; optional ``html_body`` is added as
-    multipart/alternative for HTML-capable clients.
+    multipart/alternative for HTML-capable clients. Returns a SendResult —
+    callers mark the email_log row ``sent`` only when it is truthy.
     """
     host = (os.environ.get("EMAIL_HOST") or "").strip()
-    if not host or not to:
-        return
+    if not to:
+        return SendResult(False, "no_recipient")
+    if not host:
+        _log_unconfigured("EMAIL_HOST")
+        return SendResult(False, "smtp_unconfigured")
     from app.notifications import _from_address, env_bool
     import smtplib
 
     address = _from_address()
     if not address:
-        return
+        _log_unconfigured("DEFAULT_FROM_EMAIL / EMAIL_HOST_USER")
+        return SendResult(False, "no_from_address")
     try:
         port = int(os.environ.get("EMAIL_PORT") or "587")
         timeout = int(os.environ.get("EMAIL_TIMEOUT") or "20")
     except ValueError:
-        logger.warning("digest email was not sent")
-        return
+        logger.error("marketing email not sent: EMAIL_PORT / EMAIL_TIMEOUT invalid")
+        return SendResult(False, "bad_smtp_config")
     message = EmailMessage()
     message["Subject"] = subject
     message["From"] = formataddr(("Ingress Job", address))
@@ -320,8 +405,54 @@ def send_marketing_email(
                 client.quit()
             except Exception:
                 pass
-    except Exception:
-        logger.warning("digest email was not sent")
+    except Exception as exc:
+        logger.warning("marketing email was not sent (%s)", type(exc).__name__)
+        return SendResult(False, f"smtp_error:{type(exc).__name__}")
+    return SendResult(True)
+
+
+def deliver_logged_email(
+    conn,
+    *,
+    user_id: str,
+    kind: str,
+    period_key: str,
+    to: str,
+    meta: str,
+    subject: str,
+    body: str,
+    html_body: str | None,
+    unsubscribe_link: str,
+) -> str:
+    """Claim the email_log row, send, then mark it sent/failed.
+
+    Returns ``"sent"`` or a skip/failure reason. A failed send leaves a
+    ``failed`` row that the next hourly run retries (EMAIL_SEND_MAX_ATTEMPTS).
+    """
+    if not claim_email(
+        conn,
+        user_id=user_id,
+        kind=kind,
+        period_key=period_key,
+        to_email=to,
+        meta=meta,
+    ):
+        return "already_sent"
+    try:
+        outcome = send_marketing_email(
+            to=to,
+            subject=subject,
+            body=body,
+            html_body=html_body,
+            unsubscribe_link=unsubscribe_link,
+        )
+    except Exception as exc:  # never leave a row stuck in 'sending'
+        logger.exception("marketing email crashed")
+        outcome = SendResult(False, f"error:{type(exc).__name__}")
+    ok = bool(outcome)
+    reason = "" if ok else str(getattr(outcome, "reason", "") or "send_failed")
+    finish_email(conn, user_id=user_id, kind=kind, period_key=period_key, ok=ok, reason=reason)
+    return "sent" if ok else f"send_failed:{reason}"
 
 
 def send_digest_for_user(conn, *, user_id: str, when: datetime | None = None) -> dict[str, Any]:
@@ -431,27 +562,24 @@ def send_digest_for_user(conn, *, user_id: str, when: datetime | None = None) ->
         unsubscribe_url=unsub,
         intro=ai_intro or "",
     )
-    if not log_email(
+    outcome = deliver_logged_email(
         conn,
         user_id=user_id,
         kind="digest",
         period_key=period,
-        to_email=to,
-        status="sent",
+        to=to,
         meta=json.dumps(
             {"match_count": len(matches), "ai_intro": ai_status},
             ensure_ascii=False,
         ),
-    ):
-        result["reason"] = "already_sent"
-        return result
-    send_marketing_email(
-        to=to,
         subject=pack["digest_subject"],
         body=body,
         html_body=html_body,
         unsubscribe_link=unsub,
     )
+    if outcome != "sent":
+        result["reason"] = outcome
+        return result
     result["status"] = "sent"
     result["period_key"] = period
     result["match_count"] = len(matches)
@@ -535,24 +663,21 @@ def send_high_match_for_user(conn, *, user_id: str, when: datetime | None = None
         unsubscribe_url=unsub,
         tip=str(best.get("explanation") or ""),
     )
-    if not log_email(
+    outcome = deliver_logged_email(
         conn,
         user_id=user_id,
         kind="high_match",
         period_key=period,
-        to_email=to,
-        status="sent",
-        meta=json.dumps({"job_id": job_id, "score": best.get("score")}, ensure_ascii=False),
-    ):
-        result["reason"] = "already_sent"
-        return result
-    send_marketing_email(
         to=to,
+        meta=json.dumps({"job_id": job_id, "score": best.get("score")}, ensure_ascii=False),
         subject=subject,
         body=body,
         html_body=html_body,
         unsubscribe_link=unsub,
     )
+    if outcome != "sent":
+        result["reason"] = outcome
+        return result
     result["status"] = "sent"
     result["job_id"] = job_id
     result["period_key"] = period
@@ -572,6 +697,7 @@ def run_email_jobs(*, dry_run: bool = False) -> dict[str, Any]:
     stats = {
         "digest_sent": 0,
         "digest_skipped": 0,
+        "digest_failed": 0,
         "high_match_sent": 0,
         "high_match_skipped": 0,
         "users": 0,
@@ -581,6 +707,8 @@ def run_email_jobs(*, dry_run: bool = False) -> dict[str, Any]:
         conn = _connect()
         try:
             ensure_email_tables(conn)
+            if not dry_run:
+                prune_skip_log(conn)
             users = list_candidate_user_ids(conn)
             stats["users"] = len(users)
             for index, user_id in enumerate(users):
@@ -589,11 +717,20 @@ def run_email_jobs(*, dry_run: bool = False) -> dict[str, Any]:
                     if _due_for_digest(prefs, when=when):
                         stats["digest_skipped"] += 1
                     continue
-                digest_result = send_digest_for_user(conn, user_id=user_id, when=when)
+                try:
+                    digest_result = send_digest_for_user(conn, user_id=user_id, when=when)
+                except Exception:
+                    # One broken profile must not stop everyone else's digest.
+                    logger.exception("digest failed for one user")
+                    digest_result = {"status": "skipped", "reason": "error"}
                 if digest_result.get("status") == "sent":
                     stats["digest_sent"] += 1
                 else:
                     stats["digest_skipped"] += 1
+                    reason = str(digest_result.get("reason") or "")
+                    if reason.startswith("send_failed"):
+                        stats["digest_failed"] = int(stats.get("digest_failed") or 0) + 1
+                    record_skip(conn, user_id=user_id, kind="digest", reason=reason, when=when)
                 if BATCH_PAUSE_EVERY > 0 and (index + 1) % BATCH_PAUSE_EVERY == 0:
                     conn.commit()
             conn.commit()

@@ -70,6 +70,8 @@ DEFAULT_LIMIT = 20
 # For-you may return every gated match; home paginates client-side.
 MAX_LIMIT = 500
 RERANK_POOL = 50
+# Upper bound on fresh (lookback-window) matches returned for alerts.
+FRESH_MATCHES_CAP = 200
 
 # Legacy component weights (kept for tests / callers of location_score helpers).
 W_SKILLS = 0.45
@@ -646,7 +648,15 @@ def matches_payload(
     lang: str | None = None,
     role: str | None = None,
     allow_ai_provider: bool = False,
+    fresh_since: str | None = None,
 ) -> dict:
+    """Scored matches for the user.
+
+    ``fresh_since`` (ISO date) also returns ``fresh_matches``: every gated
+    match created on/after that date across the whole scored list (rule
+    order, capped at FRESH_MATCHES_CAP) — alerts must not miss a new ad just
+    because it ranks below the top ``limit``.
+    """
     ensure_profile_tables(conn)
     ensure_match_tables(conn)
     chosen_limit = clamp_limit(limit)
@@ -734,6 +744,13 @@ def matches_payload(
         )
     ]
     gated.sort(key=lambda row: (-row["score"], -row["job_id"]))
+    if fresh_since:
+        since_key = str(fresh_since)[:10]
+        base["fresh_matches"] = [
+            item
+            for item in gated
+            if str(item.get("created_at") or "")[:10] >= since_key
+        ][:FRESH_MATCHES_CAP]
     # AI only re-orders the head; the tail keeps rule order and honest scores.
     rerank_head = gated[:RERANK_POOL]
     tail = gated[RERANK_POOL:]

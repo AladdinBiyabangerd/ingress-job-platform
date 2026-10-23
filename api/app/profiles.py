@@ -437,6 +437,25 @@ def contact_email_for(subject: str) -> str:
     return (row["email"] or "").strip().lower()
 
 
+def subject_for_contact_email(email: str) -> str:
+    """Reverse lookup for staff tools: account subject that uses this address."""
+    address = (email or "").strip().lower()
+    if not address or len(address) > EMAIL_MAX:
+        return ""
+    with _LOCK:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT subject FROM contact_emails WHERE email = ? ORDER BY updated_at DESC LIMIT 1",
+                (address,),
+            ).fetchone()
+        finally:
+            conn.close()
+    if row is None:
+        return ""
+    return str(row["subject"] or "").strip()
+
+
 def save_transaction(
     *,
     state: str,

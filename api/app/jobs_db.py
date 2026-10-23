@@ -190,6 +190,7 @@ _NO_ID_TABLES = {
     "market_fit_recheck_jobs",
     "job_tidy_jobs",
     "match_feedback",
+    "notification_skip_log",
     "oidc_transactions",
     "role_skill_weight",
     "skill_pair_daily",

@@ -466,6 +466,28 @@ def read_ai_flags(_user: VerifiedAccess = Depends(require_staff)) -> dict:
             conn.close()
 
 
+@router.get("/notification-log")
+def read_notification_log(
+    user: str = "",
+    days: int = 30,
+    limit: int = 200,
+    _user: VerifiedAccess = Depends(require_staff),
+) -> dict:
+    """Per-user email / in-app / push delivery log with skip reasons (staff)."""
+    from app.cabinet_store import _LOCK, _connect
+    from app.notification_log import build_notification_log
+
+    query = (user or "").strip()[:255]
+    with _LOCK:
+        conn = _connect()
+        try:
+            payload = build_notification_log(conn, user=query, days=days, limit=limit)
+            conn.commit()
+            return payload
+        finally:
+            conn.close()
+
+
 @router.get("/ops-status")
 def read_ops_status(
     days: int = 7,

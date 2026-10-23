@@ -310,6 +310,132 @@ def log_engagement(
         return False
 
 
+def logged_channels(
+    conn,
+    *,
+    user_id: str,
+    kind: str,
+    period_key: str,
+    job_id: int | None = None,
+) -> list[str] | None:
+    """Channels already delivered for this engagement key, or None if no row."""
+    ensure_engagement_tables(conn)
+    row = conn.execute(
+        """
+        SELECT channels FROM engagement_log
+        WHERE user_id = ? AND kind = ? AND period_key = ? AND job_id = ?
+        """,
+        ((user_id or "").strip(), kind, period_key, job_key(job_id)),
+    ).fetchone()
+    if row is None:
+        return None
+    raw = row["channels"] if hasattr(row, "keys") and "channels" in row.keys() else row[0]
+    try:
+        data = json.loads(raw or "[]")
+    except (TypeError, ValueError):
+        data = []
+    return [str(x) for x in data] if isinstance(data, list) else []
+
+
+def add_logged_channel(
+    conn,
+    *,
+    user_id: str,
+    kind: str,
+    period_key: str,
+    channel: str,
+    job_id: int | None = None,
+) -> None:
+    current = logged_channels(
+        conn, user_id=user_id, kind=kind, period_key=period_key, job_id=job_id
+    )
+    if current is None or channel in current:
+        return
+    conn.execute(
+        """
+        UPDATE engagement_log SET channels = ?
+        WHERE user_id = ? AND kind = ? AND period_key = ? AND job_id = ?
+        """,
+        (
+            json.dumps(current + [channel], ensure_ascii=False),
+            (user_id or "").strip(),
+            kind,
+            period_key,
+            job_key(job_id),
+        ),
+    )
+
+
+# Engagement kind -> email_log kind (match_new mails are logged as high_match).
+EMAIL_KIND_FOR = {
+    "match_new": "high_match",
+    "match_near": "match_near",
+    "profile_nudge": "profile_nudge",
+    "coach_weekly": "coach_weekly",
+}
+
+
+def _record_email_skip(conn, *, user_id: str, kind: str, reason: str, when: datetime) -> None:
+    from app.email_prefs import record_skip
+
+    record_skip(
+        conn,
+        user_id=user_id,
+        kind=f"{EMAIL_KIND_FOR.get(kind, kind)}_email",
+        reason=reason or "not_sent",
+        when=when,
+    )
+
+
+def job_email_done(conn, *, user_id: str, job_id: int | None) -> bool:
+    """True once this ad was emailed (high_match or match_near) — any day.
+
+    Also true when the send failed EMAIL_SEND_MAX_ATTEMPTS times, so a broken
+    address does not keep the same ad at the head of the queue forever.
+    """
+    from app.email_prefs import EMAIL_SEND_MAX_ATTEMPTS, ensure_email_tables
+
+    jid = job_key(job_id)
+    if jid <= 0:
+        return False
+    ensure_email_tables(conn)
+    row = conn.execute(
+        """
+        SELECT 1 FROM email_log
+        WHERE user_id = ? AND kind IN ('high_match', 'match_near')
+          AND period_key LIKE ?
+          AND (status = 'sent' OR (status = 'failed' AND attempts >= ?))
+        LIMIT 1
+        """,
+        ((user_id or "").strip(), f"%:{jid}", EMAIL_SEND_MAX_ATTEMPTS),
+    ).fetchone()
+    return row is not None
+
+
+def match_email_possible(
+    conn,
+    *,
+    user_id: str,
+    kind: str,
+    prefs: dict[str, Any],
+    when: datetime,
+) -> bool:
+    """Could a match email go out right now (prefs, daily cap, address)?"""
+    from app.email_prefs import (
+        day_key,
+        high_match_enabled,
+        marketing_sent_today,
+        match_near_enabled,
+    )
+
+    enabled = high_match_enabled(prefs) if kind == "match_new" else match_near_enabled(prefs)
+    if not enabled:
+        return False
+    if marketing_sent_today(conn, user_id=user_id, day=day_key(when=when)):
+        return False
+    return bool(_recipient(user_id))
+
+
 def dump_payload(data: dict[str, Any] | None) -> str:
     if not data:
         return ""
@@ -722,25 +848,51 @@ def resolve_match_candidate(
     kind: str,
     fresh: list[dict[str, Any]],
     catalog: list[dict[str, Any]],
+    email_possible: bool = True,
 ) -> tuple[dict[str, Any] | None, str]:
     """Pick match_new/near: prefer lookback-fresh jobs, else unseen catalog.
 
-    Returns (match, source) where source is ``fresh``, ``catalog``, or ``""``.
-    Catalog picks skip jobs already logged for this kind (lifetime dedup) so
-    confirmed users still get daily in-app/push when no brand-new ads match.
+    Returns (match, source) where source is ``fresh``, ``fresh_email`` (seen
+    in-app before, only the email is still owed), ``catalog``, or ``""``.
+
+    Per-user per-ad dedupe: a fresh ad that was already emailed is never
+    picked again. One already shown in-app is re-picked only while an email
+    could actually go out now (``email_possible``) — then just the email is
+    sent. Catalog picks skip jobs already logged for this kind (lifetime).
     """
     if kind not in MATCH_ENGINE_KINDS:
         return None, ""
     selector = select_match_new if kind == "match_new" else select_match_near
-    picked = selector(fresh)
+    unseen_fresh: list[dict[str, Any]] = []
+    email_owed: list[dict[str, Any]] = []
+    for raw in fresh:
+        item = _normalize_match_item(raw)
+        if item is None:
+            continue
+        if job_email_done(conn, user_id=user_id, job_id=item["job_id"]):
+            continue
+        if job_ever_logged(conn, user_id=user_id, kind=kind, job_id=item["job_id"]):
+            if email_possible:
+                email_owed.append(raw)
+            continue
+        unseen_fresh.append(raw)
+    picked = selector(unseen_fresh)
     if picked is not None:
         return picked, "fresh"
+    picked = selector(email_owed)
+    if picked is not None:
+        return picked, "fresh_email"
 
     unseen: list[dict[str, Any]] = []
+    fresh_ids = {
+        item["job_id"] for item in (_normalize_match_item(r) for r in fresh) if item is not None
+    }
     for raw in catalog:
         item = _normalize_match_item(raw)
         if item is None:
             continue
+        if item["job_id"] in fresh_ids:
+            continue  # fresh ads were handled above (deduped there)
         if job_ever_logged(conn, user_id=user_id, kind=kind, job_id=item["job_id"]):
             continue
         unseen.append(raw)
@@ -819,30 +971,29 @@ def _send_match_new_email(
     prefs: dict[str, Any],
     when: datetime,
     growth_line: str = "",
-) -> bool:
+) -> str:
     """Email channel for match_new — logs as high_match (merged prefs/cap)."""
-    from app.digests import COPY, send_marketing_email
+    from app.digests import COPY, deliver_logged_email
     from app.email_clicks import tracked_job_url
     from app.email_prefs import (
         already_logged as email_already_logged,
         day_key,
         high_match_enabled,
-        log_email,
         marketing_sent_today,
         unsubscribe_url,
     )
 
     if not high_match_enabled(prefs):
-        return False
+        return "disabled"
     if marketing_sent_today(conn, user_id=user_id, day=day_key(when=when)):
-        return False
+        return "daily_limit"
     to = _recipient(user_id)
     if not to:
-        return False
+        return "no_email"
     job_id = int(match["job_id"])
     period = period_key_for_job(when=when, job_id=job_id)
     if email_already_logged(conn, user_id=user_id, kind="high_match", period_key=period):
-        return False
+        return "already_sent"
     # One high-match alert per UTC day (legacy digests rule).
     day = day_key(when=when)
     row = conn.execute(
@@ -855,7 +1006,7 @@ def _send_match_new_email(
         (user_id, f"{day}:%"),
     ).fetchone()
     if row is not None:
-        return False
+        return "daily_alert_limit"
 
     lang = _lang(prefs.get("language"))
     pack = COPY[lang]
@@ -863,7 +1014,7 @@ def _send_match_new_email(
     score_pct = round(float(match["score"]) * 100)
     url = tracked_job_url(user_id, job_id=job_id, kind="high_match", lang=lang)
     if not url or not unsub:
-        return False
+        return "no_app_url"
     subject = pack["high_subject"].format(title=match.get("title") or "")
     body = pack["high_body"].format(
         title=match.get("title") or "",
@@ -886,24 +1037,18 @@ def _send_match_new_email(
         unsubscribe_url=unsub,
         tip=html_tip,
     )
-    if not log_email(
+    return deliver_logged_email(
         conn,
         user_id=user_id,
         kind="high_match",
         period_key=period,
-        to_email=to,
-        status="sent",
-        meta=json.dumps({"job_id": job_id, "score": match.get("score"), "via": "match_new"}, ensure_ascii=False),
-    ):
-        return False
-    send_marketing_email(
         to=to,
+        meta=json.dumps({"job_id": job_id, "score": match.get("score"), "via": "match_new"}, ensure_ascii=False),
         subject=subject,
         body=body,
         html_body=html_body,
         unsubscribe_link=unsub,
     )
-    return True
 
 
 def _send_match_near_email(
@@ -914,29 +1059,28 @@ def _send_match_near_email(
     prefs: dict[str, Any],
     when: datetime,
     growth: dict[str, Any],
-) -> bool:
-    from app.digests import COPY, send_marketing_email
+) -> str:
+    from app.digests import COPY, deliver_logged_email
     from app.email_clicks import tracked_job_url
     from app.email_prefs import (
         already_logged as email_already_logged,
         day_key,
-        log_email,
         marketing_sent_today,
         match_near_enabled,
         unsubscribe_url,
     )
 
     if not match_near_enabled(prefs):
-        return False
+        return "disabled"
     if marketing_sent_today(conn, user_id=user_id, day=day_key(when=when)):
-        return False
+        return "daily_limit"
     to = _recipient(user_id)
     if not to:
-        return False
+        return "no_email"
     job_id = int(match["job_id"])
     period = period_key_for_job(when=when, job_id=job_id)
     if email_already_logged(conn, user_id=user_id, kind="match_near", period_key=period):
-        return False
+        return "already_sent"
 
     lang = _lang(prefs.get("language"))
     pack = NEAR_EMAIL_COPY[lang]
@@ -945,7 +1089,7 @@ def _send_match_near_email(
     score_pct = round(float(match["score"]) * 100)
     url = tracked_job_url(user_id, job_id=job_id, kind="match_near", lang=lang)
     if not url or not unsub:
-        return False
+        return "no_app_url"
     growth_line = _growth_email_line(growth, lang=lang)
     subject = pack["subject"].format(title=match.get("title") or "")
     body = pack["body"].format(
@@ -967,24 +1111,18 @@ def _send_match_near_email(
         unsubscribe_url=unsub,
         tip=tip,
     )
-    if not log_email(
+    return deliver_logged_email(
         conn,
         user_id=user_id,
         kind="match_near",
         period_key=period,
-        to_email=to,
-        status="sent",
-        meta=json.dumps({"job_id": job_id, "score": match.get("score")}, ensure_ascii=False),
-    ):
-        return False
-    send_marketing_email(
         to=to,
+        meta=json.dumps({"job_id": job_id, "score": match.get("score")}, ensure_ascii=False),
         subject=subject,
         body=body,
         html_body=html_body,
         unsubscribe_link=unsub,
     )
-    return True
 
 
 def fanout_match_event(
@@ -997,8 +1135,14 @@ def fanout_match_event(
     when: datetime,
     allow_inapp: bool = True,
     allow_email: bool = True,
+    email_only: bool = False,
 ) -> dict[str, Any]:
-    """Insert in-app notification + optional email; always attempt engagement_log dedup."""
+    """Insert in-app notification + optional email; always attempt engagement_log dedup.
+
+    ``email_only``: the user already saw this ad in-app/push on an earlier day
+    (the email was blocked then) — send just the email, no second in-app note,
+    no push and no AI copy call.
+    """
     result: dict[str, Any] = {
         "user_id": user_id,
         "kind": kind,
@@ -1038,19 +1182,22 @@ def fanout_match_event(
         role = str(career.get("role") or "").strip()
     if not role:
         role = str(payload.get("role") or "").strip()
-    copy, ai_status = maybe_engagement_copy(
-        conn,
-        kind=kind,
-        locale=lang,
-        job_id=job_id,
-        job_title=match.get("title") or "",
-        score=match.get("score"),
-        have=match.get("have") or [],
-        missing=match.get("missing") or [],
-        has_academy=has_academy,
-        role=role,
-        when=when,
-    )
+    if email_only:
+        copy, ai_status = {"title": "", "body": ""}, "skipped_email_only"
+    else:
+        copy, ai_status = maybe_engagement_copy(
+            conn,
+            kind=kind,
+            locale=lang,
+            job_id=job_id,
+            job_title=match.get("title") or "",
+            score=match.get("score"),
+            have=match.get("have") or [],
+            missing=match.get("missing") or [],
+            has_academy=has_academy,
+            role=role,
+            when=when,
+        )
     payload["ai_title"] = copy["title"]
     payload["ai_body"] = copy["body"]
     result["ai_status"] = ai_status
@@ -1060,7 +1207,7 @@ def fanout_match_event(
 
     channels: list[str] = []
 
-    if allow_inapp:
+    if allow_inapp and not email_only:
         from app.notifications import insert_notification
 
         note = insert_notification(
@@ -1078,11 +1225,11 @@ def fanout_match_event(
         if note is not None:
             channels.append("in_app")
 
-    emailed = False
+    email_status = ""
     if allow_email:
         if kind == "match_new":
             tip = _growth_email_line(growth or {}, lang=lang) if growth else ""
-            emailed = _send_match_new_email(
+            email_status = _send_match_new_email(
                 conn,
                 user_id=user_id,
                 match=match,
@@ -1091,7 +1238,7 @@ def fanout_match_event(
                 growth_line=tip,
             )
         elif kind == "match_near":
-            emailed = _send_match_near_email(
+            email_status = _send_match_near_email(
                 conn,
                 user_id=user_id,
                 match=match,
@@ -1099,11 +1246,14 @@ def fanout_match_event(
                 when=when,
                 growth=growth or {"missing_names": match.get("missing") or []},
             )
-        if emailed:
+        if email_status == "sent":
             channels.append("email")
+        else:
+            _record_email_skip(conn, user_id=user_id, kind=kind, reason=email_status, when=when)
+    result["email"] = email_status
 
     cta = str(payload.get("cta_href") or f"/jobs/{job_id}")
-    if _maybe_send_push(
+    if not email_only and _maybe_send_push(
         conn,
         user_id=user_id,
         prefs=prefs,
@@ -1303,26 +1453,25 @@ def _send_profile_nudge_email(
     when: datetime,
     reasons: list[str],
     period: str,
-) -> bool:
-    from app.digests import COPY, send_marketing_email
+) -> str:
+    from app.digests import COPY, deliver_logged_email
     from app.email_prefs import (
         already_logged as email_already_logged,
         day_key,
-        log_email,
         marketing_sent_today,
         profile_nudge_enabled,
         unsubscribe_url,
     )
 
     if not profile_nudge_enabled(prefs):
-        return False
+        return "disabled"
     if marketing_sent_today(conn, user_id=user_id, day=day_key(when=when)):
-        return False
+        return "daily_limit"
     to = _recipient(user_id)
     if not to:
-        return False
+        return "no_email"
     if email_already_logged(conn, user_id=user_id, kind="profile_nudge", period_key=period):
-        return False
+        return "already_sent"
 
     lang = _lang(prefs.get("language"))
     pack = NUDGE_EMAIL_COPY[lang]
@@ -1330,7 +1479,7 @@ def _send_profile_nudge_email(
     unsub = unsubscribe_url(user_id, lang=lang)
     url = _app_url("/profile/review", lang=lang)
     if not url or not unsub:
-        return False
+        return "no_app_url"
     reason = _nudge_reason_text(reasons, lang=lang)
     subject = pack["subject"]
     body = pack["body"].format(reason=reason)
@@ -1343,24 +1492,18 @@ def _send_profile_nudge_email(
         profile_url=url,
         unsubscribe_url=unsub,
     )
-    if not log_email(
+    return deliver_logged_email(
         conn,
         user_id=user_id,
         kind="profile_nudge",
         period_key=period,
-        to_email=to,
-        status="sent",
-        meta=json.dumps({"reasons": reasons}, ensure_ascii=False),
-    ):
-        return False
-    send_marketing_email(
         to=to,
+        meta=json.dumps({"reasons": reasons}, ensure_ascii=False),
         subject=subject,
         body=body,
         html_body=html_body,
         unsubscribe_link=unsub,
     )
-    return True
 
 
 def _send_coach_weekly_email(
@@ -1371,26 +1514,25 @@ def _send_coach_weekly_email(
     when: datetime,
     ctx: dict[str, Any],
     period: str,
-) -> bool:
-    from app.digests import COPY, send_marketing_email
+) -> str:
+    from app.digests import COPY, deliver_logged_email
     from app.email_prefs import (
         already_logged as email_already_logged,
         coach_weekly_enabled,
         day_key,
-        log_email,
         marketing_sent_today,
         unsubscribe_url,
     )
 
     if not coach_weekly_enabled(prefs):
-        return False
+        return "disabled"
     if marketing_sent_today(conn, user_id=user_id, day=day_key(when=when)):
-        return False
+        return "daily_limit"
     to = _recipient(user_id)
     if not to:
-        return False
+        return "no_email"
     if email_already_logged(conn, user_id=user_id, kind="coach_weekly", period_key=period):
-        return False
+        return "already_sent"
 
     lang = _lang(prefs.get("language"))
     pack = COACH_EMAIL_COPY[lang]
@@ -1398,7 +1540,7 @@ def _send_coach_weekly_email(
     unsub = unsubscribe_url(user_id, lang=lang)
     url = _app_url("/me/insights/roadmap", lang=lang)
     if not url or not unsub:
-        return False
+        return "no_app_url"
     role = str(ctx.get("role") or "").strip() or "—"
     must_list = [str(x).strip() for x in (ctx.get("must_learn") or []) if str(x).strip()]
     strong_list = [str(x).strip() for x in (ctx.get("already_strong") or []) if str(x).strip()]
@@ -1424,24 +1566,18 @@ def _send_coach_weekly_email(
         insights_url=url,
         unsubscribe_url=unsub,
     )
-    if not log_email(
+    return deliver_logged_email(
         conn,
         user_id=user_id,
         kind="coach_weekly",
         period_key=period,
-        to_email=to,
-        status="sent",
-        meta=json.dumps({"role": role}, ensure_ascii=False),
-    ):
-        return False
-    send_marketing_email(
         to=to,
+        meta=json.dumps({"role": role}, ensure_ascii=False),
         subject=subject,
         body=body,
         html_body=html_body,
         unsubscribe_link=unsub,
     )
-    return True
 
 
 def fanout_profile_nudge(
@@ -1513,15 +1649,22 @@ def fanout_profile_nudge(
         if note is not None:
             channels.append("in_app")
 
-    if allow_email and _send_profile_nudge_email(
-        conn,
-        user_id=user_id,
-        prefs=prefs,
-        when=when,
-        reasons=reasons,
-        period=period,
-    ):
-        channels.append("email")
+    if allow_email:
+        email_status = _send_profile_nudge_email(
+            conn,
+            user_id=user_id,
+            prefs=prefs,
+            when=when,
+            reasons=reasons,
+            period=period,
+        )
+        result["email"] = email_status
+        if email_status == "sent":
+            channels.append("email")
+        else:
+            _record_email_skip(
+                conn, user_id=user_id, kind="profile_nudge", reason=email_status, when=when
+            )
 
     if _maybe_send_push(
         conn,
@@ -1620,15 +1763,22 @@ def fanout_coach_weekly(
         if note is not None:
             channels.append("in_app")
 
-    if allow_email and _send_coach_weekly_email(
-        conn,
-        user_id=user_id,
-        prefs=prefs,
-        when=when,
-        ctx=ctx,
-        period=period,
-    ):
-        channels.append("email")
+    if allow_email:
+        email_status = _send_coach_weekly_email(
+            conn,
+            user_id=user_id,
+            prefs=prefs,
+            when=when,
+            ctx=ctx,
+            period=period,
+        )
+        result["email"] = email_status
+        if email_status == "sent":
+            channels.append("email")
+        else:
+            _record_email_skip(
+                conn, user_id=user_id, kind="coach_weekly", reason=email_status, when=when
+            )
 
     if _maybe_send_push(
         conn,
@@ -1879,6 +2029,54 @@ def insights_payload(
     return base
 
 
+def _retry_weekly_email(
+    conn,
+    *,
+    user_id: str,
+    kind: str,
+    prefs: dict[str, Any],
+    when: datetime,
+    week: str,
+    done: list[str],
+    dry_run: bool,
+    ctx: dict[str, Any] | None = None,
+    reasons: list[str] | None = None,
+) -> tuple[str, str]:
+    """Weekly kinds (profile_nudge / coach_weekly) already shown this week.
+
+    The week counts as done only for the channels that were delivered. If the
+    email was blocked (e.g. Monday's digest used the daily email slot) it is
+    retried on later days of the same ISO week — email only, no second in-app
+    note, no push, no AI call. Returns (status, reason).
+    """
+    if "email" in done:
+        return "skipped", "already_logged"
+    if dry_run:
+        return "would_send", "email_retry"
+    if kind == "coach_weekly":
+        status = _send_coach_weekly_email(
+            conn, user_id=user_id, prefs=prefs, when=when, ctx=ctx or {}, period=week
+        )
+    else:
+        status = _send_profile_nudge_email(
+            conn,
+            user_id=user_id,
+            prefs=prefs,
+            when=when,
+            reasons=list(reasons or []),
+            period=week,
+        )
+    if status == "sent":
+        add_logged_channel(
+            conn, user_id=user_id, kind=kind, period_key=week, channel="email", job_id=0
+        )
+        return "sent", "email_retry"
+    _record_email_skip(conn, user_id=user_id, kind=kind, reason=status, when=when)
+    if status in {"disabled", "already_sent"}:
+        return "skipped", "already_logged"
+    return "skipped", f"email_{status}"
+
+
 def process_user_engagement(
     conn,
     *,
@@ -1912,7 +2110,9 @@ def process_user_engagement(
         from app.digests import _top_matches
 
         since = moment - timedelta(hours=ENGAGEMENT_LOOKBACK_HOURS)
-        catalog = _top_matches(conn, user_id=user_id, limit=20, lang=lang)
+        # Top 20 for the catalog fallback + every fresh ad in the whole scored
+        # list (not only those that happen to rank in the top 20).
+        catalog = _top_matches(conn, user_id=user_id, limit=20, lang=lang, fresh_since=since)
         since_key = since.date().isoformat()
         fresh: list[dict[str, Any]] = []
         for item in catalog:
@@ -1927,6 +2127,9 @@ def process_user_engagement(
                 kind=kind,
                 fresh=fresh,
                 catalog=catalog,
+                email_possible=match_email_possible(
+                    conn, user_id=user_id, kind=kind, prefs=prefs, when=moment
+                ),
             )
             if match is None:
                 out["reasons"][kind] = "none"
@@ -1947,7 +2150,8 @@ def process_user_engagement(
                 prefs=prefs,
                 when=moment,
                 allow_inapp=inapp_left > 0,
-                allow_email=source == "fresh",
+                allow_email=source in {"fresh", "fresh_email"},
+                email_only=source == "fresh_email",
             )
             out[kind] = result.get("status") or "skipped"
             out["reasons"][kind] = result.get("reason") or source
@@ -1970,10 +2174,21 @@ def process_user_engagement(
         if coach_ctx is None and "coach_weekly" not in out["reasons"]:
             out["reasons"]["coach_weekly"] = "no_role"
         elif coach_ctx is not None:
-            if already_logged(
+            coach_done = logged_channels(
                 conn, user_id=user_id, kind="coach_weekly", period_key=week, job_id=0
-            ):
-                out["reasons"]["coach_weekly"] = "already_logged"
+            )
+            if coach_done is not None:
+                out["coach_weekly"], out["reasons"]["coach_weekly"] = _retry_weekly_email(
+                    conn,
+                    user_id=user_id,
+                    kind="coach_weekly",
+                    prefs=prefs,
+                    when=moment,
+                    week=week,
+                    done=coach_done,
+                    dry_run=dry_run,
+                    ctx=coach_ctx,
+                )
             elif dry_run:
                 out["coach_weekly"] = "would_send"
             else:
@@ -2000,10 +2215,25 @@ def process_user_engagement(
         out["reasons"]["coach_weekly"] = reason
 
     nudge_reasons = profile_nudge_reasons(profile, when=moment)
+    nudge_done = (
+        logged_channels(conn, user_id=user_id, kind="profile_nudge", period_key=week, job_id=0)
+        if nudge_reasons
+        else None
+    )
     if not nudge_reasons:
         out["reasons"]["profile_nudge"] = "not_needed"
-    elif already_logged(conn, user_id=user_id, kind="profile_nudge", period_key=week, job_id=0):
-        out["reasons"]["profile_nudge"] = "already_logged"
+    elif nudge_done is not None:
+        out["profile_nudge"], out["reasons"]["profile_nudge"] = _retry_weekly_email(
+            conn,
+            user_id=user_id,
+            kind="profile_nudge",
+            prefs=prefs,
+            when=moment,
+            week=week,
+            done=nudge_done,
+            dry_run=dry_run,
+            reasons=nudge_reasons,
+        )
     elif dry_run:
         out["profile_nudge"] = "would_send"
     else:
@@ -2049,21 +2279,31 @@ def run_engagement_jobs(*, dry_run: bool = False) -> dict[str, Any]:
             ensure_engagement_tables(conn)
             users = list_engagement_user_ids(conn)
             stats["users"] = len(users)
+            from app.email_prefs import record_skip
+
             for user_id in users:
-                result = process_user_engagement(
-                    conn,
-                    user_id=user_id,
-                    when=when,
-                    dry_run=dry_run,
-                )
+                try:
+                    result = process_user_engagement(
+                        conn,
+                        user_id=user_id,
+                        when=when,
+                        dry_run=dry_run,
+                    )
+                except Exception:
+                    # One broken profile must not stop everyone else's alerts.
+                    logger.exception("engagement failed for one user")
+                    result = {"reasons": {kind: "error" for kind in kinds}}
                 for kind in kinds:
                     status = result.get(kind)
+                    reason = str(result.get("reasons", {}).get(kind) or "")
                     if status in {"sent", "would_send"}:
                         stats[kind] = int(stats.get(kind) or 0) + 1
-                    elif result.get("reasons", {}).get(kind) == "already_logged":
+                    elif reason == "already_logged":
                         stats["skipped_dedup"] = int(stats["skipped_dedup"]) + 1
                     else:
                         stats["skipped"] = int(stats["skipped"]) + 1
+                        if not dry_run:
+                            record_skip(conn, user_id=user_id, kind=kind, reason=reason, when=when)
                 stats["ai_applied"] = int(stats["ai_applied"]) + int(result.get("ai_applied") or 0)
             conn.commit()
         finally:

@@ -6,13 +6,35 @@ import hashlib
 import hmac
 import os
 import secrets
-from datetime import datetime, timezone
+import logging
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import quote
 
 FREQUENCIES = ("daily", "weekly", "biweekly", "important_only", "none")
 LOCALES = ("az", "en", "ru")
 WEEKDAYS = frozenset(range(7))  # 0=Mon … 6=Sun
+
+logger = logging.getLogger("ingress-job.email_prefs")
+
+
+def _env_int(name: str, default: int, *, lo: int, hi: int) -> int:
+    try:
+        value = int(os.environ.get(name) or default)
+    except ValueError:
+        return default
+    return max(lo, min(hi, value))
+
+
+# A failed send stays retryable until this many attempts for the same period.
+EMAIL_SEND_MAX_ATTEMPTS = _env_int("EMAIL_SEND_MAX_ATTEMPTS", 3, lo=1, hi=20)
+# A row left in 'sending' (process died mid-send) is retryable after this long.
+EMAIL_SENDING_STALE_MINUTES = 30
+SKIP_LOG_KEEP_DAYS = 45
+# Reasons that fire every hour by design and say nothing useful in the log.
+_QUIET_SKIP_REASONS = frozenset(
+    {"", "not_due", "already_sent", "already_logged", "fresh", "catalog", "sent"}
+)
 # Users with no saved prefs row never chose a cadence: weekly digest on Monday.
 # Mail still needs emails consent and no unsubscribe (marketing_allowed).
 DEFAULT_FREQUENCY = "weekly"
@@ -43,17 +65,37 @@ CREATE TABLE IF NOT EXISTS email_log (
     status TEXT NOT NULL DEFAULT 'sent',
     meta TEXT NOT NULL DEFAULT '{}',
     created_at TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 1,
+    reason TEXT NOT NULL DEFAULT '',
     UNIQUE (user_id, kind, period_key)
 );
 
 CREATE INDEX IF NOT EXISTS email_log_user_created ON email_log(user_id, created_at);
 CREATE INDEX IF NOT EXISTS email_log_kind_period ON email_log(kind, period_key);
+
+CREATE TABLE IF NOT EXISTS notification_skip_log (
+    user_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    day TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    hits INTEGER NOT NULL DEFAULT 1,
+    last_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, kind, day, reason)
+);
+
+CREATE INDEX IF NOT EXISTS notification_skip_user_day ON notification_skip_log(user_id, day);
 """
 
 _PREF_COLUMNS = {
     "match_near": "INTEGER NOT NULL DEFAULT 1",
     "coach_weekly": "INTEGER NOT NULL DEFAULT 1",
     "push_enabled": "INTEGER NOT NULL DEFAULT 1",
+}
+
+# email_log columns added after launch (old sqlite files / Postgres tables).
+_LOG_COLUMNS = {
+    "attempts": "INTEGER NOT NULL DEFAULT 1",
+    "reason": "TEXT NOT NULL DEFAULT ''",
 }
 
 
@@ -67,6 +109,10 @@ def ensure_email_tables(conn) -> None:
     for name, decl in _PREF_COLUMNS.items():
         if name not in cols:
             conn.execute(f"ALTER TABLE email_prefs ADD COLUMN {name} {decl}")
+    log_cols = {row[1] for row in conn.execute("PRAGMA table_info(email_log)")}
+    for name, decl in _LOG_COLUMNS.items():
+        if name not in log_cols:
+            conn.execute(f"ALTER TABLE email_log ADD COLUMN {name} {decl}")
     from app.email_clicks import ensure_email_click_tables
 
     ensure_email_click_tables(conn)
@@ -443,16 +489,170 @@ def day_key(*, when: datetime | None = None) -> str:
     return moment.date().isoformat()
 
 
+def _parse_ts(raw: object) -> datetime | None:
+    text = str(raw or "").strip()
+    if not text:
+        return None
+    try:
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        moment = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment
+
+
+def _sending_cutoff() -> str:
+    moment = datetime.now(timezone.utc) - timedelta(minutes=EMAIL_SENDING_STALE_MINUTES)
+    return moment.isoformat(timespec="seconds")
+
+
 def already_logged(conn, *, user_id: str, kind: str, period_key: str) -> bool:
+    """True when no further send attempt should be made for this period.
+
+    ``sent`` is final. ``failed`` stays retryable until EMAIL_SEND_MAX_ATTEMPTS;
+    a fresh ``sending`` row (another run is mid-send) blocks, a stale one not.
+    """
     ensure_email_tables(conn)
     row = conn.execute(
         """
-        SELECT 1 FROM email_log
+        SELECT status, attempts, created_at FROM email_log
         WHERE user_id = ? AND kind = ? AND period_key = ?
         """,
         (user_id, kind, period_key),
     ).fetchone()
-    return row is not None
+    if row is None:
+        return False
+    keys = row.keys() if hasattr(row, "keys") else []
+    status = str((row["status"] if "status" in keys else row[0]) or "sent")
+    try:
+        attempts = int((row["attempts"] if "attempts" in keys else row[1]) or 0)
+    except (TypeError, ValueError):
+        attempts = 0
+    created = row["created_at"] if "created_at" in keys else row[2]
+    if status == "failed":
+        return attempts >= EMAIL_SEND_MAX_ATTEMPTS
+    if status == "sending":
+        moment = _parse_ts(created)
+        if moment is None:
+            return False
+        return moment.isoformat(timespec="seconds") >= _sending_cutoff()
+    return True
+
+
+def claim_email(
+    conn,
+    *,
+    user_id: str,
+    kind: str,
+    period_key: str,
+    to_email: str = "",
+    meta: str = "{}",
+) -> bool:
+    """Reserve (user, kind, period) before SMTP so two runs never double-send.
+
+    Inserts a ``sending`` row, or re-claims a retryable ``failed`` / stale
+    ``sending`` row. Returns False when the period is already done or busy.
+    """
+    ensure_email_tables(conn)
+    try:
+        cur = conn.execute(
+            """
+            INSERT INTO email_log (
+                user_id, kind, period_key, to_email, status, meta, created_at,
+                attempts, reason
+            ) VALUES (?, ?, ?, ?, 'sending', ?, ?, 1, '')
+            ON CONFLICT(user_id, kind, period_key) DO UPDATE SET
+                status = 'sending',
+                to_email = excluded.to_email,
+                meta = excluded.meta,
+                created_at = excluded.created_at,
+                attempts = email_log.attempts + 1,
+                reason = ''
+            WHERE (email_log.status = 'failed' AND email_log.attempts < ?)
+               OR (email_log.status = 'sending' AND email_log.created_at < ?)
+            """,
+            (
+                user_id,
+                kind,
+                period_key,
+                to_email or "",
+                meta or "{}",
+                _now(),
+                EMAIL_SEND_MAX_ATTEMPTS,
+                _sending_cutoff(),
+            ),
+        )
+    except Exception:
+        logger.exception("email_log claim failed (%s)", kind)
+        return False
+    return int(getattr(cur, "rowcount", 0) or 0) > 0
+
+
+def finish_email(
+    conn,
+    *,
+    user_id: str,
+    kind: str,
+    period_key: str,
+    ok: bool,
+    reason: str = "",
+) -> None:
+    """Mark a claimed row ``sent`` (only after SMTP accepted it) or ``failed``."""
+    conn.execute(
+        """
+        UPDATE email_log SET status = ?, reason = ?, created_at = ?
+        WHERE user_id = ? AND kind = ? AND period_key = ?
+        """,
+        (
+            "sent" if ok else "failed",
+            "" if ok else (reason or "send_failed")[:200],
+            _now(),
+            user_id,
+            kind,
+            period_key,
+        ),
+    )
+
+
+def record_skip(
+    conn,
+    *,
+    user_id: str,
+    kind: str,
+    reason: str,
+    when: datetime | None = None,
+) -> None:
+    """Count why a notification did not go out (one row per user/kind/day/reason)."""
+    text = str(reason or "").strip()[:80]
+    subject = (user_id or "").strip()
+    if not subject or text in _QUIET_SKIP_REASONS:
+        return
+    try:
+        ensure_email_tables(conn)
+        conn.execute(
+            """
+            INSERT INTO notification_skip_log (user_id, kind, day, reason, hits, last_at)
+            VALUES (?, ?, ?, ?, 1, ?)
+            ON CONFLICT(user_id, kind, day, reason) DO UPDATE SET
+                hits = notification_skip_log.hits + 1,
+                last_at = excluded.last_at
+            """,
+            (subject, str(kind or "")[:40], day_key(when=when), text, _now()),
+        )
+    except Exception:
+        logger.exception("notification_skip_log write failed")
+
+
+def prune_skip_log(conn, *, keep_days: int = SKIP_LOG_KEEP_DAYS) -> None:
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=keep_days)).date().isoformat()
+    try:
+        ensure_email_tables(conn)
+        conn.execute("DELETE FROM notification_skip_log WHERE day < ?", (cutoff,))
+    except Exception:
+        logger.exception("notification_skip_log prune failed")
 
 
 def marketing_sent_today(conn, *, user_id: str, day: str | None = None) -> bool:

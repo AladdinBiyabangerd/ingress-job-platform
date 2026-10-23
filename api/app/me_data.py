@@ -256,6 +256,14 @@ def delete_my_data(*, user_id: str) -> dict:
             except Exception:
                 pass
             try:
+                # Probe first: a failing DELETE would roll back the Postgres txn.
+                if list(conn.execute("PRAGMA table_info(notification_skip_log)")):
+                    conn.execute(
+                        "DELETE FROM notification_skip_log WHERE user_id = ?", (subject,)
+                    )
+            except Exception:
+                pass
+            try:
                 conn.execute("DELETE FROM email_click WHERE user_id = ?", (subject,))
             except Exception:
                 pass
